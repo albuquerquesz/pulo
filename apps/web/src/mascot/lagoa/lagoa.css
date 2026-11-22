@@ -1,0 +1,102 @@
+/*
+ * Loops ambientes da lagoa. Cada elemento só anima com a classe .lagoa-ativo
+ * (planoDeAnimacao e movimento.loops); sem ela fica no quadro inicial.
+ * Duração e atraso vêm inline (animation-duration, animation-delay).
+ */
+.lagoa-ondinha,
+.lagoa-folha-esquerda,
+.lagoa-folha-direita,
+.lagoa-vagalume,
+.lagoa-gota {
+  transform-box: view-box;
+  animation-timing-function: cubic-bezier(0.445, 0.05, 0.55, 0.95);
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  animation-fill-mode: backwards;
+}
+
+.lagoa-ondinha {
+  opacity: 0.35;
+  transform: translateX(-4px);
+}
+.lagoa-ondinha.lagoa-ativo {
+  animation-name: lagoa-ondinha;
+}
+@keyframes lagoa-ondinha {
+  from {
+    opacity: 0.35;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(4px);
+  }
+}
+
+.lagoa-folha-esquerda {
+  transform: translateY(-1.5px);
+}
+.lagoa-folha-esquerda.lagoa-ativo {
+  animation-name: lagoa-folha-esquerda;
+}
+@keyframes lagoa-folha-esquerda {
+  from {
+    transform: translateY(-1.5px);
+  }
+  to {
+    transform: translateY(1.5px);
+  }
+}
+
+.lagoa-folha-direita {
+  transform: translateY(1.5px);
+}
+.lagoa-folha-direita.lagoa-ativo {
+  animation-name: lagoa-folha-direita;
+}
+@keyframes lagoa-folha-direita {
+  from {
+    transform: translateY(1.5px);
+  }
+  to {
+    transform: translateY(-1.5px);
+  }
+}
+
+.lagoa-vagalume {
+  opacity: 0.25;
+  transform: translate(-5px, 4px);
+}
+.lagoa-vagalume.lagoa-ativo {
+  animation-name: lagoa-vagalume;
+}
+@keyframes lagoa-vagalume {
+  from {
+    opacity: 0.25;
+    transform: translate(-5px, 4px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(5px, -4px);
+  }
+}
+
+/* gota: cai e some, sem voltar */
+.lagoa-gota {
+  animation-duration: 1000ms;
+  animation-timing-function: cubic-bezier(0.55, 0.085, 0.68, 0.53);
+  animation-direction: normal;
+}
+.lagoa-gota.lagoa-ativo {
+  animation-name: lagoa-gota;
+}
+@keyframes lagoa-gota {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0.1;
+    transform: translateY(46px);
+  }
+}
