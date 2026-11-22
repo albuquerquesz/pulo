@@ -1,8 +1,7 @@
-import { Platform } from 'react-native';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { FROG_EVENT_MS } from '@pulo/core/config/decisions';
-import { createAsyncStorageAdapter, createDefaultAdapter, createStorageRepository } from '@/data';
+import { createDefaultAdapter, createStorageRepository } from '@/data';
 import type { DemoClock } from '@pulo/core/demo';
 import { systemClock } from '@pulo/core/domain/clock';
 import type { WeeklyAiClient } from '@pulo/core/domain/ia';
@@ -63,7 +62,7 @@ export interface AppProviderProps {
 }
 
 export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbertura }: AppProviderProps) {
-  const repoReal = useMemo<Repository>(() => repoInicial ?? createStorageRepository(Platform.OS === 'web' ? createDefaultAdapter() : createAsyncStorageAdapter()), [repoInicial]);
+  const repoReal = useMemo<Repository>(() => repoInicial ?? createStorageRepository(createDefaultAdapter()), [repoInicial]);
   const relogioReal = relogioInicial ?? systemClock;
   const [ativo, setAtivo] = useState<{ repo: Repository; clock: Clock; demoClock: DemoClock | null }>(() => ({
     repo: repoReal,
@@ -74,7 +73,7 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
   const [carregando, setCarregando] = useState(true);
   const [versao, setVersao] = useState(0);
   const refresh = useCallback(() => setVersao((v) => v + 1), []);
-  const aiClient = useMemo(() => criarClienteDeIa(process.env.EXPO_PUBLIC_WEEKLY_AI_ENDPOINT), []);
+  const aiClient = useMemo(() => criarClienteDeIa(`${import.meta.env.VITE_API_URL}/weekly-ai`), []);
 
   // Eventos do sapo
   const [evento, setEvento] = useState<FrogEvent | null>(null);

@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { GETTING_TO_KNOW_TEXT, proposalLabel } from '@pulo/core/domain/ia';
 import type { BlockSlot, Period, WeeklyProposal } from '@pulo/core/domain/types';
 import { estadoDoSapo, Lagoa } from '@/mascot';
-import { useTheme } from '@/theme';
 import { Botao, Cartao, EstadoVazio, Texto } from '@/ui';
 
-import { agoraDaLagoa, dentroDoDiaDoUsuario, Secao, slotTexto, Tela, useApp, useCarregar } from '../app';
+import { agoraDaLagoa, dentroDoDiaDoUsuario, Secao, slotTexto, Tela, useApp, useCarregar, useLadoDoConteudo } from '../app';
 import {
   aceitar,
   carregarSemana,
@@ -19,7 +17,9 @@ import {
   type Decisao,
 } from './logic';
 
-const PERIODOS: { chave: Period; rotulo: string }[] = [
+type OpcaoDePeriodo = { chave: Period; rotulo: string };
+
+const PERIODOS: OpcaoDePeriodo[] = [
   { chave: 'manha', rotulo: 'Manhã' },
   { chave: 'tarde', rotulo: 'Tarde' },
   { chave: 'noite', rotulo: 'Noite' },
@@ -28,9 +28,8 @@ const PERIODOS: { chave: Period; rotulo: string }[] = [
 const PASSO_MIN = 30;
 
 export function SemanaScreen() {
-  const { repo, clock, user, aiClient, evento, emitirEvento, mostrarAviso, refresh, versao } = useApp();
-  const t = useTheme();
-  const { width } = useWindowDimensions();
+  const { repo, clock, user, aiClient, evento, emitirEvento, mostrarAviso, refresh } = useApp();
+  const ladoDoConteudo = useLadoDoConteudo();
   const [analisando, setAnalisando] = useState(false);
   const [conhecendo, setConhecendo] = useState(false);
   const [proposta, setProposta] = useState<WeeklyProposal | null>(null);
@@ -73,7 +72,7 @@ export function SemanaScreen() {
   if (estado.tipo === 'carregando') {
     return (
       <Tela titulo="Semana">
-        <View accessibilityRole="progressbar" accessibilityLabel="Carregando a semana" style={[styles.esqueleto, { backgroundColor: t.cores.line }]} />
+        <div role="progressbar" aria-label="Carregando a semana" className="h-60 rounded-md bg-line opacity-60" />
       </Tela>
     );
   }
@@ -94,7 +93,7 @@ export function SemanaScreen() {
     activeEvent: evento,
     withinUserDay: dentroDoDiaDoUsuario(user, d.hoje ? clock.now() : 0),
   });
-  const lado = Math.min(Math.min(width, 480) - 32, 260);
+  const lado = Math.min(ladoDoConteudo, 260);
   const r = d.resumo;
 
   const comDecisao = (dec: Decisao, mensagem: string) => {
@@ -145,7 +144,7 @@ export function SemanaScreen() {
 
   return (
     <Tela titulo="Semana">
-      <View style={styles.centro}>
+      <div className="flex justify-center">
         <Lagoa
           fase={d.mascote.phase}
           resumo={r}
@@ -153,11 +152,11 @@ export function SemanaScreen() {
           estadoDoSapo={humor}
           tamanho={lado}
         />
-      </View>
+      </div>
 
       <Secao titulo="Como foi até agora">
         <Cartao>
-          <View style={styles.coluna}>
+          <div className="flex flex-col gap-2">
             {PERIODOS.map((p) => (
               <Texto key={p.chave}>
                 {p.rotulo}: {r.focusMinutesByPeriod[p.chave]} min de foco
@@ -168,43 +167,43 @@ export function SemanaScreen() {
               {r.restDays === 1 ? 'dia' : 'dias'} de descanso
             </Texto>
             <Texto variante="subtitulo">{r.stable ? 'Semana estável. A lagoa está firme.' : 'A semana ainda está se formando.'}</Texto>
-          </View>
+          </div>
         </Cartao>
       </Secao>
 
       <Secao titulo="Uma ideia para sua semana">
         {proposta && proposta.state !== 'negada' && proposta.state !== 'expirada' ? (
           <Cartao testID="cartao-proposta">
-            <View style={styles.coluna}>
+            <div className="flex flex-col gap-2">
               <Texto variante="legenda" cor="muted">
                 {proposalLabel(proposta.origin)}
               </Texto>
               <Texto>{proposta.patternText}</Texto>
               {proposta.reasonText ? <Texto cor="muted">{proposta.reasonText}</Texto> : null}
               {proposta.changes.map((c, i) => (
-                <View key={`${c.blockId}-${i}`} style={styles.coluna}>
+                <div key={`${c.blockId}-${i}`} className="flex flex-col gap-2">
                   <Texto>Antes: {slotTexto(c.from)}</Texto>
                   <Texto variante="subtitulo">Depois: {slotTexto(i === 0 && editando ? editando : c.to)}</Texto>
-                </View>
+                </div>
               ))}
 
               {proposta.state === 'pendente' && !editando && (
-                <View style={styles.coluna}>
+                <div className="flex flex-col gap-2">
                   <Botao titulo="Aceitar" onPress={() => void aoAceitar()} />
                   <Botao titulo="Editar horário" variante="agua" onPress={() => setEditando({ ...proposta.changes[0].to })} />
                   <Botao titulo="Negar" variante="fantasma" onPress={() => void aoNegar()} />
-                </View>
+                </div>
               )}
 
               {proposta.state === 'pendente' && editando && (
-                <View style={styles.coluna}>
-                  <View style={styles.linha}>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
                     <Botao titulo="30 min antes" variante="fantasma" largura="auto" onPress={() => mudar(-PASSO_MIN)} />
                     <Botao titulo="30 min depois" variante="fantasma" largura="auto" onPress={() => mudar(PASSO_MIN)} />
-                  </View>
+                  </div>
                   <Botao titulo="Salvar horário" onPress={() => void aoSalvarEdicao()} />
                   <Botao titulo="Cancelar" variante="fantasma" onPress={() => setEditando(null)} />
-                </View>
+                </div>
               )}
 
               {proposta.state !== 'pendente' && (
@@ -212,7 +211,7 @@ export function SemanaScreen() {
               )}
               {decisao ? <Botao titulo="Desfazer" variante="fantasma" onPress={() => void aoDesfazer()} testID="desfazer" /> : null}
               {erro ? <Texto cor="atencao">{erro}</Texto> : null}
-            </View>
+            </div>
           </Cartao>
         ) : proposta?.state === 'negada' ? (
           <Texto cor="muted">Sem ideias novas por agora. Seguimos do seu jeito.</Texto>
@@ -229,10 +228,3 @@ export function SemanaScreen() {
     </Tela>
   );
 }
-
-const styles = StyleSheet.create({
-  esqueleto: { height: 240, borderRadius: 20, opacity: 0.6 },
-  centro: { alignItems: 'center' },
-  coluna: { gap: 8 },
-  linha: { flexDirection: 'row', gap: 8 },
-});

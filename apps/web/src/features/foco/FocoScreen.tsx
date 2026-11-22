@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
 
 import { CHECKIN_QUESTION } from '@pulo/core/domain/checkin';
 import { timerSnapshot } from '@pulo/core/domain/foco';
 import type { Energy, FrogEvent } from '@pulo/core/domain/types';
 import { Sapo } from '@/mascot';
-import { useTheme } from '@/theme';
 import { AnelTimer, Balao, Botao, ChipEnergia, Texto, type EstadoDoAnel } from '@/ui';
 
 import { confirmar, Tela, useApp } from '../app';
@@ -29,7 +26,6 @@ const ENERGIAS: Energy[] = [1, 2, 3, 4, 5];
 
 export function FocoScreen() {
   const { repo, clock, user, versao, refresh, emitirEvento, evento, mostrarAviso } = useApp();
-  const t = useTheme();
   const [estado, setEstado] = useState<EstadoDoFoco>(FOCO_OCIOSO);
   const [, setTique] = useState(0);
   const [confirmando, setConfirmando] = useState(false);
@@ -50,31 +46,29 @@ export function FocoScreen() {
     [emitirEvento, mostrarAviso, refresh],
   );
 
-  // Ao focar a aba (ou ao mudar a versão), lê a sessão. Sessão em andamento aparece direto.
-  useFocusEffect(
-    useCallback(() => {
-      if (!user) return;
-      let vivo = true;
-      void abrirFoco(repo, clock, user).then((e) => {
-        if (!vivo) return;
-        // Não apaga o resultado recém mostrado (concluída ou interrompida) se nada está em andamento.
-        setEstado((atual) => (e.fase === 'ocioso' && (atual.fase === 'concluida' || atual.fase === 'interrompida') ? atual : e));
-        if (e.fase === 'concluida') {
-          setRespondeu(false);
-          if (e.feliz) emitirEvento('feliz');
-          if (e.marco) {
-            emitirEvento('pouso');
-            mostrarAviso({ mensagem: 'Seu sapo cresceu! Olha só a lagoa nova.' });
-          }
-          refresh();
+  // Ao abrir a tela (ou ao mudar a versão), lê a sessão. Sessão em andamento aparece direto.
+  useEffect(() => {
+    if (!user) return;
+    let vivo = true;
+    void abrirFoco(repo, clock, user).then((e) => {
+      if (!vivo) return;
+      // Não apaga o resultado recém mostrado (concluída ou interrompida) se nada está em andamento.
+      setEstado((atual) => (e.fase === 'ocioso' && (atual.fase === 'concluida' || atual.fase === 'interrompida') ? atual : e));
+      if (e.fase === 'concluida') {
+        setRespondeu(false);
+        if (e.feliz) emitirEvento('feliz');
+        if (e.marco) {
+          emitirEvento('pouso');
+          mostrarAviso({ mensagem: 'Seu sapo cresceu! Olha só a lagoa nova.' });
         }
-      });
-      return () => {
-        vivo = false;
-      };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [repo, clock, user, versao]),
-  );
+        refresh();
+      }
+    });
+    return () => {
+      vivo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repo, clock, user, versao]);
 
   // O relógio de tela só redesenha: o valor sempre vem da conta por horário.
   const ativa = estado.fase === 'ativa';
@@ -106,7 +100,7 @@ export function FocoScreen() {
 
   const pedirParar = async () => {
     setConfirmando(true);
-    const ok = await confirmar(TEXTO_PARAR, TEXTO_PARAR_DETALHE, 'Parar por agora', 'Continuar focando');
+    const ok = await confirmar(TEXTO_PARAR, TEXTO_PARAR_DETALHE);
     setConfirmando(false);
     if (ok) aplicar(await parar(repo, clock, user));
   };
@@ -119,10 +113,10 @@ export function FocoScreen() {
 
   return (
     <Tela titulo="Foco">
-      <View style={styles.centro}>
+      <div className="flex flex-col items-center gap-2">
         <FocoSapo evento={evento} humor={humor} />
         <AnelTimer remainingMs={restante} totalMs={total} estado={anel} testID="anel-timer" />
-      </View>
+      </div>
 
       {estado.fase === 'ocioso' && (
         <>
@@ -132,14 +126,14 @@ export function FocoScreen() {
       )}
 
       {ativa && (
-        <View style={styles.acoes}>
+        <div className="flex flex-col gap-3">
           {snap.state === 'pausado' ? (
             <Botao titulo="Retomar" variante="foco" onPress={async () => aplicar(await retomar(repo, clock, user))} />
           ) : (
             <Botao titulo="Pausar" variante="agua" onPress={async () => aplicar(await pausar(repo, clock, user))} />
           )}
           <Botao titulo="Parar por agora" variante="fantasma" desativado={confirmando} rotulo="Parar o foco por agora" onPress={() => void pedirParar()} />
-        </View>
+        </div>
       )}
 
       {estado.fase === 'concluida' && (
@@ -150,15 +144,15 @@ export function FocoScreen() {
             testID="foco-concluido"
           />
           {estado.perguntarEnergia && !respondeu ? (
-            <View style={styles.acoes}>
+            <div className="flex flex-col gap-3">
               <Texto variante="subtitulo">{CHECKIN_QUESTION}</Texto>
-              <View style={styles.energias}>
+              <div className="flex flex-wrap gap-2">
                 {ENERGIAS.map((n) => (
                   <ChipEnergia key={n} nivel={n} onPress={(v) => void energia(v)} />
                 ))}
-              </View>
+              </div>
               <Botao titulo="Agora não" variante="fantasma" onPress={() => setRespondeu(true)} />
-            </View>
+            </div>
           ) : null}
           <Botao titulo="Novo foco" variante="foco" onPress={async () => aplicar(await iniciar(repo, clock, user))} />
         </>
@@ -174,7 +168,9 @@ export function FocoScreen() {
   );
 }
 
-function FocoSapo({ evento, humor }: { evento: FrogEvent | null; humor: 'feliz' | 'focado' | 'parado' }) {
+type FocoSapoProps = { evento: FrogEvent | null; humor: 'feliz' | 'focado' | 'parado' };
+
+function FocoSapo({ evento, humor }: FocoSapoProps) {
   const { user, repo, versao } = useApp();
   const [fase, setFase] = useState<1 | 2 | 3 | 4>(1);
   useEffect(() => {
@@ -183,9 +179,3 @@ function FocoSapo({ evento, humor }: { evento: FrogEvent | null; humor: 'feliz' 
   const estado = evento === 'pouso' || evento === 'surpreso' || evento === 'feliz' ? evento : humor;
   return <Sapo fase={fase} estado={estado} tamanho={200} />;
 }
-
-const styles = StyleSheet.create({
-  centro: { alignItems: 'center', gap: 8 },
-  acoes: { gap: 12 },
-  energias: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-});

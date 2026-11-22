@@ -1,0 +1,121 @@
+import type { User } from '@pulo/core/domain/types';
+import { useEffect, useState } from 'react';
+
+import { authClient, lerConta, salvarMetadata, type Conta } from '@/auth/client';
+import { Sapo } from '@/mascot';
+import { Botao, Cartao, Texto } from '@/ui';
+
+import { Tela } from '../app';
+
+const PROXIMO_TEMA: Record<User['theme'], User['theme']> = { sistema: 'claro', claro: 'escuro', escuro: 'sistema' };
+
+type EstadoDaConta = { tipo: 'carregando' } | { tipo: 'fora' } | { tipo: 'dentro'; conta: Conta } | { tipo: 'erro'; mensagem: string };
+
+async function lerEstadoDaConta(): Promise<EstadoDaConta> {
+  try {
+    const { data } = await authClient.getSession();
+    if (!data) return { tipo: 'fora' };
+    return { tipo: 'dentro', conta: await lerConta() };
+  } catch (e) {
+    return { tipo: 'erro', mensagem: e instanceof Error ? e.message : 'Não deu para ler a conta.' };
+  }
+}
+
+/** Tela provisória para testar o login com Google e os metadados da conta. */
+export function WelcomeScreen() {
+  const [estado, setEstado] = useState<EstadoDaConta>({ tipo: 'carregando' });
+  const [ocupado, setOcupado] = useState(false);
+
+  useEffect(() => {
+    let vivo = true;
+    void lerEstadoDaConta().then((novo) => {
+      if (vivo) setEstado(novo);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  const entrar = async () => {
+    setOcupado(true);
+    const { error } = await authClient.signIn.social({ provider: 'google', callbackURL: `${window.location.origin}/welcome` });
+    if (error) setEstado({ tipo: 'erro', mensagem: error.message ?? 'Não deu para entrar.' });
+    setOcupado(false);
+  };
+
+  const sair = async () => {
+    setOcupado(true);
+    await authClient.signOut();
+    setEstado({ tipo: 'fora' });
+    setOcupado(false);
+  };
+
+  const mudar = async (conta: Conta, patch: Parameters<typeof salvarMetadata>[0]) => {
+    setOcupado(true);
+    try {
+      setEstado({ tipo: 'dentro', conta: { ...conta, metadata: await salvarMetadata(patch) } });
+    } catch (e) {
+      setEstado({ tipo: 'erro', mensagem: e instanceof Error ? e.message : 'Erro ao salvar.' });
+    }
+    setOcupado(false);
+  };
+
+  return (
+    <Tela semBarra>
+      <div className="flex justify-center pt-6">
+        <Sapo fase={1} estado="feliz" tamanho={160} />
+      </div>
+      <Texto como="h1" variante="display" className="text-center">
+        Boas vindas ao Pulo
+      </Texto>
+
+      {estado.tipo === 'carregando' ? <Texto cor="muted" className="text-center">Conferindo sua conta...</Texto> : null}
+
+      {estado.tipo === 'fora' ? (
+        <>
+          <Texto cor="muted" className="text-center">
+            Entre com sua conta Google para guardar suas preferências.
+          </Texto>
+          <Botao titulo="Entrar com Google" carregando={ocupado} onPress={() => void entrar()} testID="entrar-google" />
+        </>
+      ) : null}
+
+      {estado.tipo === 'dentro' ? (
+        <>
+          <Cartao>
+            <Texto variante="subtitulo">{estado.conta.user.name}</Texto>
+            <Texto cor="muted">{estado.conta.user.email}</Texto>
+          </Cartao>
+          <Cartao>
+            <Texto variante="legenda" cor="muted">
+              metadata salvo na conta
+            </Texto>
+            <pre className="overflow-x-auto text-sm text-ink" data-testid="metadata">
+              {JSON.stringify(estado.conta.metadata, null, 2)}
+            </pre>
+          </Cartao>
+          <Botao
+            titulo={`Tema: ${estado.conta.metadata.theme} (trocar)`}
+            variante="agua"
+            desativado={ocupado}
+            onPress={() => void mudar(estado.conta, { theme: PROXIMO_TEMA[estado.conta.metadata.theme] })}
+          />
+          <Botao
+            titulo={estado.conta.metadata.onboarding.completed ? 'Desmarcar onboarding' : 'Marcar onboarding como feito'}
+            variante="agua"
+            desativado={ocupado}
+            onPress={() => void mudar(estado.conta, { onboardingCompleted: !estado.conta.metadata.onboarding.completed })}
+          />
+          <Botao titulo="Sair" variante="fantasma" desativado={ocupado} onPress={() => void sair()} />
+        </>
+      ) : null}
+
+      {estado.tipo === 'erro' ? (
+        <Cartao>
+          <Texto cor="atencao">{estado.mensagem}</Texto>
+          <Botao titulo="Tentar de novo" variante="fantasma" onPress={() => void lerEstadoDaConta().then(setEstado)} />
+        </Cartao>
+      ) : null}
+    </Tela>
+  );
+}

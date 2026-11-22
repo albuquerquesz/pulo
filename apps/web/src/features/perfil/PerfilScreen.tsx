@@ -1,22 +1,20 @@
-import { StyleSheet, Switch, View } from 'react-native';
-
 import type { User } from '@pulo/core/domain/types';
-import { useTheme } from '@/theme';
+
 import { Botao, Cartao, Texto } from '@/ui';
 
 import { confirmar, Secao, Tela, useApp } from '../app';
 import { EscolhaDeHora } from './HorarioDoDia';
 
-const TEMAS: { chave: User['theme']; rotulo: string }[] = [
+type OpcaoDeTema = { chave: User['theme']; rotulo: string };
+
+const TEMAS: OpcaoDeTema[] = [
   { chave: 'claro', rotulo: 'Claro' },
   { chave: 'escuro', rotulo: 'Escuro' },
   { chave: 'sistema', rotulo: 'Sistema' },
 ];
 
 export function PerfilScreen() {
-  const app = useApp();
-  const { user, atualizarPerfil, apagarDados, demo, demoClock, enableDemo, disableDemo, refresh } = app;
-  const t = useTheme();
+  const { user, atualizarPerfil, apagarDados, demo, demoClock, enableDemo, disableDemo, refresh } = useApp();
   if (!user) return null;
 
   const inicio = Math.round(user.dayStartMinutes / 60);
@@ -26,8 +24,6 @@ export function PerfilScreen() {
     const ok = await confirmar(
       'Apagar todos os meus dados?',
       'Isso remove seu sapo, sua rotina e seu progresso deste aparelho. Não dá para desfazer.',
-      'Apagar tudo',
-      'Cancelar',
     );
     if (ok) await apagarDados();
   };
@@ -42,43 +38,45 @@ export function PerfilScreen() {
       </Secao>
 
       <Secao titulo="Aparência">
-        <View style={styles.linha} accessibilityRole="radiogroup">
+        <div className="flex gap-2" role="radiogroup" aria-label="Tema">
           {TEMAS.map((o) => (
             <Cartao
               key={o.chave}
               selecionado={user.theme === o.chave}
               onPress={() => void atualizarPerfil({ theme: o.chave })}
               rotulo={`Tema ${o.rotulo.toLowerCase()}`}
-              style={styles.tema}
+              className="min-h-12 flex-1 justify-center"
             >
-              <Texto style={styles.centro}>{o.rotulo}</Texto>
+              <Texto className="text-center">{o.rotulo}</Texto>
             </Cartao>
           ))}
-        </View>
-        <View style={styles.linhaSwitch}>
-          <Texto style={styles.expande}>Reduzir movimento</Texto>
-          <Switch
-            value={user.reduceMotion}
-            onValueChange={(v) => void atualizarPerfil({ reduceMotion: v })}
-            accessibilityLabel="Reduzir movimento"
-            trackColor={{ false: t.cores.line, true: t.cores.agua }}
+        </div>
+        <label className="flex min-h-12 cursor-pointer items-center gap-3">
+          <Texto como="span" className="flex-1">
+            Reduzir movimento
+          </Texto>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={user.reduceMotion}
+            onChange={(e) => void atualizarPerfil({ reduceMotion: e.target.checked })}
+            aria-label="Reduzir movimento"
+            className="size-6 accent-agua"
           />
-        </View>
+        </label>
       </Secao>
 
       <Secao titulo="Modo demo">
         {demo && demoClock ? (
           <Cartao testID="painel-demo">
-            <View style={styles.coluna}>
-              <Texto>Modo demo, dados de exemplo. Nada aqui é seu de verdade.</Texto>
-              <Botao titulo="Avançar 1 dia" variante="agua" onPress={() => { demoClock.advanceDays(1); refresh(); }} />
-              <Botao titulo="Avançar 1 semana" variante="agua" onPress={() => { demoClock.advanceWeeks(1); refresh(); }} />
-              <Botao titulo="Reiniciar o demo" variante="fantasma" onPress={() => void enableDemo()} />
-              <Botao titulo="Desligar modo demo" variante="fantasma" onPress={() => void disableDemo()} />
-              <Texto variante="legenda" cor="muted">
-                Hoje no demo: {demoClock.today()}
-              </Texto>
-            </View>
+            <Texto>Modo demo, dados de exemplo. Nada aqui é seu de verdade.</Texto>
+            <Botao titulo="Avançar 1 dia" variante="agua" onPress={() => { demoClock.advanceDays(1); refresh(); }} />
+            <Botao titulo="Avançar 1 semana" variante="agua" onPress={() => { demoClock.advanceWeeks(1); refresh(); }} />
+            <Botao titulo="Reiniciar o demo" variante="fantasma" onPress={() => void enableDemo()} />
+            <Botao titulo="Desligar modo demo" variante="fantasma" onPress={() => void disableDemo()} />
+            <Texto variante="legenda" cor="muted">
+              Hoje no demo: {demoClock.today()}
+            </Texto>
           </Cartao>
         ) : (
           <Cartao onPress={() => void enableDemo()} rotulo="Ligar modo demo, com dados de exemplo">
@@ -96,12 +94,3 @@ export function PerfilScreen() {
     </Tela>
   );
 }
-
-const styles = StyleSheet.create({
-  linha: { flexDirection: 'row', gap: 8 },
-  tema: { flex: 1, minHeight: 48, justifyContent: 'center' },
-  centro: { textAlign: 'center' },
-  linhaSwitch: { flexDirection: 'row', alignItems: 'center', minHeight: 48 },
-  expande: { flex: 1 },
-  coluna: { gap: 8 },
-});

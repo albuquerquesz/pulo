@@ -5,3 +5,4 @@ export * from './format';
 export * from './Tela';
 export * from './useCarregar';
 export * from './confirmar';
+export * from './useLargura';

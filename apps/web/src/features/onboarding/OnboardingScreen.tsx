@@ -1,18 +1,15 @@
-import { useRouter } from 'expo-router';
+import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
 
-import { ONBOARDING_PADRAO, Tela, useApp } from '../app';
 import { Sapo } from '@/mascot';
-import { useTheme } from '@/theme';
 import { Botao, Texto } from '@/ui';
 
+import { ONBOARDING_PADRAO, Tela, useApp } from '../app';
 import { EscolhaDeHora } from '../perfil/HorarioDoDia';
 
 export function OnboardingScreen() {
   const { concluirOnboarding } = useApp();
-  const router = useRouter();
-  const t = useTheme();
+  const navigate = useNavigate();
   const [nome, setNome] = useState(ONBOARDING_PADRAO.frogName);
   const [inicio, setInicio] = useState(ONBOARDING_PADRAO.startHour);
   const [fim, setFim] = useState(ONBOARDING_PADRAO.endHour);
@@ -22,7 +19,7 @@ export function OnboardingScreen() {
     setSalvando(true);
     try {
       await concluirOnboarding({ frogName: nome, startHour: inicio, endHour: fim });
-      router.replace('/');
+      await navigate({ to: '/', replace: true });
     } finally {
       setSalvando(false);
     }
@@ -30,44 +27,38 @@ export function OnboardingScreen() {
 
   return (
     <Tela semBarra>
-      <View style={styles.centro}>
+      <div className="flex justify-center">
         <Sapo fase={1} estado="feliz" tamanho={180} />
-      </View>
-      <Texto variante="display" accessibilityRole="header">
+      </div>
+      <Texto como="h1" variante="display">
         Oi, eu sou o Pulo
       </Texto>
       <Texto cor="muted">Vamos cuidar da sua lagoa juntos, no seu ritmo. Só três coisas antes de começar.</Texto>
 
-      <View style={styles.campo}>
-        <Texto variante="subtitulo">Como vai se chamar seu sapo?</Texto>
-        <TextInput
+      <label className="flex flex-col gap-2">
+        <Texto como="span" variante="subtitulo">
+          Como vai se chamar seu sapo?
+        </Texto>
+        <input
           value={nome}
-          onChangeText={setNome}
+          onChange={(e) => setNome(e.target.value)}
           placeholder="Pulo"
-          placeholderTextColor={t.cores.muted}
           maxLength={24}
-          accessibilityLabel="Nome do sapo"
-          style={[
-            styles.input,
-            { color: t.cores.ink, backgroundColor: t.cores.surface, borderColor: t.cores.line, fontFamily: t.fontesProntas ? t.fonte.regular : undefined },
-          ]}
-          testID="nome-do-sapo"
+          aria-label="Nome do sapo"
+          data-testid="nome-do-sapo"
+          className="min-h-12 rounded-[16px] border-2 border-line bg-surface px-3.5 text-base text-ink placeholder:text-muted"
         />
-      </View>
+      </label>
 
-      <View style={styles.campo}>
-        <Texto variante="subtitulo">Seu dia</Texto>
+      <section className="flex flex-col gap-2">
+        <Texto como="h2" variante="subtitulo">
+          Seu dia
+        </Texto>
         <EscolhaDeHora rotulo="O dia começa às" horas={inicio} min={0} max={Math.min(22, fim - 1)} onChange={setInicio} />
         <EscolhaDeHora rotulo="O dia termina às" horas={fim} min={inicio + 1} max={24} onChange={setFim} />
-      </View>
+      </section>
 
       <Botao titulo="Começar" carregando={salvando} onPress={() => void comecar()} testID="comecar" />
     </Tela>
   );
 }
-
-const styles = StyleSheet.create({
-  centro: { alignItems: 'center' },
-  campo: { gap: 8 },
-  input: { minHeight: 48, borderWidth: 2, borderRadius: 16, paddingHorizontal: 14, fontSize: 16 },
-});

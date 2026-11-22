@@ -1,14 +1,12 @@
-import { useRouter } from 'expo-router';
+import { useNavigate } from '@tanstack/react-router';
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { CHECKIN_LOW_ENERGY_COPY, CHECKIN_QUESTION } from '@pulo/core/domain/checkin';
 import { estadoDoSapo, Lagoa } from '@/mascot';
-import { useTheme } from '@/theme';
 import { Balao, Botao, Cartao, ChipEnergia, EstadoVazio, Texto } from '@/ui';
 import type { Energy } from '@pulo/core/domain/types';
 
-import { agoraDaLagoa, blocoTexto, dentroDoDiaDoUsuario, Secao, Tela, useApp, useCarregar } from '../app';
+import { agoraDaLagoa, blocoTexto, dentroDoDiaDoUsuario, Secao, Tela, useApp, useCarregar, useLadoDoConteudo } from '../app';
 import {
   alternarHabito,
   carregarHoje,
@@ -28,9 +26,8 @@ export const TEXTO_DE_ERRO = 'A lagoa ficou sem sinal. Seus dados estão salvos 
 export function HojeScreen() {
   const app = useApp();
   const { repo, clock, user, evento, emitirEvento, mostrarAviso, refresh } = app;
-  const router = useRouter();
-  const t = useTheme();
-  const { width } = useWindowDimensions();
+  const navigate = useNavigate();
+  const lado = useLadoDoConteudo();
   const [salto, setSalto] = useState(0);
   const aoMudarMarco = useCallback(
     (marco: boolean) => {
@@ -49,18 +46,16 @@ export function HojeScreen() {
     return dados;
   });
 
-  const lado = Math.min(width, 480) - 32;
-
   if (!user) return null;
 
   if (estado.tipo === 'carregando') {
     return (
       <Tela titulo="Hoje">
-        <View accessibilityLabel="Carregando a lagoa" accessibilityRole="progressbar" style={styles.esqueleto}>
-          <View style={[styles.bloco, { height: lado * 0.6, backgroundColor: t.cores.line }]} />
-          <View style={[styles.bloco, { height: 48, backgroundColor: t.cores.line }]} />
-          <View style={[styles.bloco, { height: 96, backgroundColor: t.cores.line }]} />
-        </View>
+        <div aria-label="Carregando a lagoa" role="progressbar" className="flex flex-col gap-3">
+          <div className="rounded-md bg-line opacity-60" style={{ height: lado * 0.6 }} />
+          <div className="h-12 rounded-md bg-line opacity-60" />
+          <div className="h-24 rounded-md bg-line opacity-60" />
+        </div>
       </Tela>
     );
   }
@@ -110,7 +105,7 @@ export function HojeScreen() {
       return;
     }
     refresh();
-    router.navigate('/foco');
+    await navigate({ to: '/foco' });
   };
 
   const energia = async (nivel: Energy) => {
@@ -146,7 +141,7 @@ export function HojeScreen() {
 
   return (
     <Tela titulo="Hoje">
-      <View style={styles.lagoa}>
+      <div className="flex justify-center">
         <Lagoa
           fase={d.mascote.phase}
           resumo={d.resumo}
@@ -155,21 +150,19 @@ export function HojeScreen() {
           tamanho={lado}
           saltoDoSapo={salto}
         />
-      </View>
+      </div>
       <Balao texto={fraseDoSapo(humor, d)} />
 
       <Secao titulo={CHECKIN_QUESTION}>
-        <View style={styles.energias} accessibilityRole="radiogroup">
+        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Energia agora">
           {ENERGIAS.map((n) => (
             <ChipEnergia key={n} nivel={n} selecionado={d.energia === n} onPress={(v) => void energia(v)} />
           ))}
-        </View>
+        </div>
         {d.energia !== null && d.energia <= 2 ? (
           <Cartao>
-            <View style={styles.coluna}>
-              <Texto>{CHECKIN_LOW_ENERGY_COPY}</Texto>
-              <Botao titulo="Quero um dia de descanso" variante="agua" onPress={() => void descansar()} desativado={d.descansoHoje} />
-            </View>
+            <Texto>{CHECKIN_LOW_ENERGY_COPY}</Texto>
+            <Botao titulo="Quero um dia de descanso" variante="agua" onPress={() => void descansar()} desativado={d.descansoHoje} />
           </Cartao>
         ) : null}
       </Secao>
@@ -187,14 +180,14 @@ export function HojeScreen() {
           <Texto cor="muted">Nenhum bloco hoje. Que tal aproveitar para descansar?</Texto>
         ) : (
           d.blocos.map(({ bloco, feito }) => (
-            <Cartao key={bloco.id} style={styles.linha}>
-              <View style={styles.linhaTexto}>
+            <Cartao key={bloco.id} className="flex-row items-center justify-between">
+              <div className="flex-1">
                 <Texto variante="subtitulo">{bloco.title ?? (bloco.kind === 'foco' ? 'Foco' : 'Descanso')}</Texto>
                 <Texto cor="muted" variante="legenda">
                   {blocoTexto(bloco.startMinutes, bloco.durationMinutes)}
                   {feito ? ', feito' : ''}
                 </Texto>
-              </View>
+              </div>
               {feito ? null : bloco.kind === 'foco' ? (
                 <Botao
                   titulo="Focar"
@@ -216,19 +209,26 @@ export function HojeScreen() {
           <Texto cor="muted">Nenhum hábito para hoje.</Texto>
         ) : (
           d.habitos.map(({ habito: h, feito }) => (
-            <Pressable
+            <button
               key={h.id}
-              onPress={() => void habito(h.id, feito)}
-              accessibilityRole="checkbox"
-              accessibilityLabel={h.title}
-              accessibilityState={{ checked: feito }}
-              style={[styles.habito, { backgroundColor: t.cores.surface, borderColor: feito ? t.cores.sapoBorda : t.cores.line }]}
+              type="button"
+              onClick={() => void habito(h.id, feito)}
+              role="checkbox"
+              aria-label={h.title}
+              aria-checked={feito}
+              className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-md border bg-surface px-3 text-left ${feito ? 'border-sapo-borda' : 'border-line'}`}
             >
-              <View style={[styles.caixa, { backgroundColor: feito ? t.cores.sapo : 'transparent', borderColor: feito ? t.cores.sapoBorda : t.cores.muted }]}>
-                {feito ? <Texto variante="legenda" cor="inkSobreAcao">✓</Texto> : null}
-              </View>
-              <Texto style={feito ? styles.riscado : undefined}>{h.title}</Texto>
-            </Pressable>
+              <span className={`flex size-7 items-center justify-center rounded-[8px] border-2 ${feito ? 'border-sapo-borda bg-sapo' : 'border-muted'}`}>
+                {feito ? (
+                  <Texto como="span" variante="legenda" cor="inkSobreAcao">
+                    ✓
+                  </Texto>
+                ) : null}
+              </span>
+              <Texto como="span" className={feito ? 'line-through opacity-70' : ''}>
+                {h.title}
+              </Texto>
+            </button>
           ))
         )}
       </Secao>
@@ -243,16 +243,3 @@ export function HojeScreen() {
     </Tela>
   );
 }
-
-const styles = StyleSheet.create({
-  esqueleto: { gap: 12 },
-  bloco: { borderRadius: 20, opacity: 0.6 },
-  lagoa: { alignItems: 'center' },
-  energias: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  coluna: { gap: 8 },
-  linha: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  linhaTexto: { flex: 1 },
-  habito: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 20, paddingHorizontal: 12 },
-  caixa: { width: 28, height: 28, borderRadius: 8, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  riscado: { textDecorationLine: 'line-through', opacity: 0.7 },
-});

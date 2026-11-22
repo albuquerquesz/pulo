@@ -1,11 +1,10 @@
-import { useFocusEffect } from 'expo-router';
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { useApp } from './AppProvider';
 
 export type EstadoDeCarga<T> = { tipo: 'carregando' } | { tipo: 'erro' } | { tipo: 'ok'; dados: T };
 
-/** Carrega ao focar a aba e sempre que `refresh()` é chamado. Mantém os dados antigos durante a recarga. */
+/** Carrega ao abrir a tela e sempre que `refresh()` é chamado. Mantém os dados antigos durante a recarga. */
 export function useCarregar<T>(fn: () => Promise<T>): { estado: EstadoDeCarga<T>; recarregar: () => Promise<void> } {
   const { versao } = useApp();
   const [estado, setEstado] = useState<EstadoDeCarga<T>>({ tipo: 'carregando' });
@@ -25,17 +24,15 @@ export function useCarregar<T>(fn: () => Promise<T>): { estado: EstadoDeCarga<T>
     }
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      vivo.current = true;
-      void recarregar();
-      return () => {
-        vivo.current = false;
-      };
-      // `versao` entra de propósito: refresh() recarrega a tela.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [recarregar, versao]),
-  );
+  useEffect(() => {
+    vivo.current = true;
+    void recarregar();
+    return () => {
+      vivo.current = false;
+    };
+    // `versao` entra de propósito: refresh() recarrega a tela.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recarregar, versao]);
 
   return { estado, recarregar };
 }
