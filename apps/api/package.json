@@ -21,6 +21,7 @@
     "@pulo/core": "*",
     "@types/node": "^26.6.6",
     "auth": "^1.7.27",
+    "better-call": "^1.4.6",
     "typescript": "~6.0.3",
     "vitest": "^5.1.1",
     "wrangler": "^4.166.0"

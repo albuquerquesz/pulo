@@ -2,23 +2,10 @@ import { computeCandidates } from '@pulo/core/domain/ia/candidates';
 import { buildAiRequest } from '@pulo/core/domain/ia/request';
 import { generateDemoData } from '@pulo/core/demo/generate';
 import { summarizeDemoWeek } from '@pulo/core/demo/summary';
-import { readFileSync } from 'node:fs';
-import { DatabaseSync } from 'node:sqlite';
 import { createApp } from './app';
+import { createTestDatabase, testEnv } from './testing';
 
-// Banco SQLite em memória com as mesmas migrações do D1.
-const database = new DatabaseSync(':memory:');
-database.exec(readFileSync(new URL('../migrations/0001_better_auth.sql', import.meta.url), 'utf8'));
-
-const env = {
-  DB: { prepare: () => { throw new Error('use o SQLite do teste'); }, batch: async () => [], exec: async () => null },
-  BETTER_AUTH_SECRET: 'test-secret-test-secret-test-secret-00',
-  BETTER_AUTH_URL: 'http://localhost:8787',
-  GOOGLE_CLIENT_ID: 'google-client-id',
-  GOOGLE_CLIENT_SECRET: 'google-client-secret',
-};
-
-const app = createApp(env, database);
+const app = createApp(testEnv, createTestDatabase());
 
 describe('API', () => {
   it('responde /health', async () => {

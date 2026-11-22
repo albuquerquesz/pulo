@@ -50,6 +50,15 @@ Config em `apps/api/wrangler.jsonc`. Segredos vão por `npx wrangler secret put 
 - `POST /weekly-ai`: sugestão semanal da IA
 - `/api/auth/*`: Better Auth. Login com Google em `POST /api/auth/sign-in/social` com `{ "provider": "google", "callbackURL": "..." }`,
   sessão em `GET /api/auth/get-session`, saída em `POST /api/auth/sign-out`
+- `GET /api/me`: usuário logado e metadados
+- `PATCH /api/me/metadata`: muda `theme`, `reduceMotion`, `timezone` ou `onboardingCompleted`
+
+### Metadados do usuário
+
+Coluna JSON `metadata` na tabela `user` (no D1 é TEXT com `json_valid`; no Postgres seria jsonb).
+O formato e a validação ficam em `packages/core/domain/user-metadata.ts`, usados pela API e pelo app:
+`version`, `theme`, `reduceMotion`, `timezone` e `onboarding { completed, completedAt }`.
+Rotina, hábitos e nome do sapo continuam só no aparelho.
 
 ### Auth e banco
 
