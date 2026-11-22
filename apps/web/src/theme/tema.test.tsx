@@ -1,10 +1,11 @@
-import { act } from 'react';
-import { Text } from 'react-native';
-import { createRoot } from 'test-renderer';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+import { render } from '@testing-library/react';
 
 import { darkColors, lightColors, motion } from './tokens';
 import { montarTema, resolverEsquema, resolverMovimento, resolverReduzirMovimento } from './tema';
-import { TemaProvider, useTheme } from './useTheme';
+import { TemaProvider, useTheme, type TemaProviderProps } from './useTheme';
 
 describe('resolverEsquema', () => {
   test.each([
@@ -48,33 +49,47 @@ describe('montarTema', () => {
 });
 
 describe('useTheme', () => {
-  async function ler(props: Parameters<typeof TemaProvider>[0] extends infer P ? Partial<P> : never) {
+  function ler(props: Partial<TemaProviderProps>) {
     let tema: ReturnType<typeof useTheme> | undefined;
     function Sonda() {
       tema = useTheme();
-      return <Text>ok</Text>;
+      return <span>ok</span>;
     }
-    const root = createRoot();
-    await act(async () => {
-      root.render(
-        <TemaProvider carregarFontes={false} {...props}>
-          <Sonda />
-        </TemaProvider>,
-      );
-    });
+    render(
+      <TemaProvider raiz={false} {...props}>
+        <Sonda />
+      </TemaProvider>,
+    );
     return tema!;
   }
 
-  test('devolve o tema escuro quando o sistema é escuro', async () => {
-    expect((await ler({ sistema: { esquema: 'dark' } })).esquema).toBe('escuro');
+  test('devolve o tema escuro quando o sistema é escuro', () => {
+    expect((ler({ sistema: { esquema: 'dark' } })).esquema).toBe('escuro');
   });
-  test('override do Perfil vale sobre o sistema', async () => {
-    expect((await ler({ sistema: { esquema: 'dark' }, tema: 'claro' })).esquema).toBe('claro');
-    expect((await ler({ sistema: { esquema: 'light' }, tema: 'escuro' })).cores).toBe(darkColors);
+  test('override do Perfil vale sobre o sistema', () => {
+    expect((ler({ sistema: { esquema: 'dark' }, tema: 'claro' })).esquema).toBe('claro');
+    expect((ler({ sistema: { esquema: 'light' }, tema: 'escuro' })).cores).toBe(darkColors);
   });
-  test('flag do Perfil liga reduzir movimento mesmo sem o sistema', async () => {
-    const t = await ler({ sistema: { reduzirMovimento: false }, reduzirMovimento: true });
+  test('flag do Perfil liga reduzir movimento mesmo sem o sistema', () => {
+    const t = ler({ sistema: { reduzirMovimento: false }, reduzirMovimento: true });
     expect(t.reduzirMovimento).toBe(true);
     expect(t.movimento.loops).toBe(false);
+  });
+});
+
+describe('styles.css', () => {
+  // Os testes rodam a partir de apps/web.
+  const css = readFileSync(join(process.cwd(), 'src/styles.css'), 'utf8').toLowerCase();
+  const nomeCss = (nome: string) => nome.replace(/[A-Z]/g, (l) => `-${l.toLowerCase()}`);
+
+  test('cores claras e de ação batem com os tokens', () => {
+    for (const [nome, valor] of Object.entries(lightColors)) {
+      expect(css).toContain(`--pulo-${nomeCss(nome)}: ${valor.toLowerCase()};`);
+    }
+  });
+  test('cores escuras de fundo e texto batem com os tokens', () => {
+    for (const nome of ['bg', 'surface', 'line', 'ink', 'muted'] as const) {
+      expect(css).toContain(`--pulo-${nome}: ${darkColors[nome].toLowerCase()};`);
+    }
   });
 });
