@@ -11,9 +11,9 @@
  *   provedor real, implemente `ProviderAdapter` num arquivo novo e registre em
  *   `createProviderFromEnv`. Nenhum SDK de IA está instalado.
  */
-import { validateAiOutput } from '../src/domain/ia/validate';
-import { AI_TONES } from '../src/domain/ia/limits';
-import type { WeeklyAiRequest } from '../src/domain/ia/request';
+import { validateAiOutput } from '@pulo/core/domain/ia/validate';
+import { AI_TONES } from '@pulo/core/domain/ia/limits';
+import type { WeeklyAiRequest } from '@pulo/core/domain/ia/request';
 
 export interface ProviderAdapter {
   /** Recebe o prompt e devolve o texto bruto do modelo (esperado: JSON). */

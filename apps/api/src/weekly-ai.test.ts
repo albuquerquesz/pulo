@@ -1,14 +1,14 @@
-import { computeCandidates } from '../src/domain/ia/candidates';
-import { buildAiRequest } from '../src/domain/ia/request';
-import { generateDemoData } from '../src/demo/generate';
-import { summarizeDemoWeek } from '../src/demo/summary';
+import { computeCandidates } from '@pulo/core/domain/ia/candidates';
+import { buildAiRequest } from '@pulo/core/domain/ia/request';
+import { generateDemoData } from '@pulo/core/demo/generate';
+import { summarizeDemoWeek } from '@pulo/core/demo/summary';
 import { createProviderFromEnv, FakeProvider, handleWeeklyAi, parseRequestBody } from './weekly-ai';
 
 const d = generateDemoData();
 const s = summarizeDemoWeek('2026-11-16', d.sessions, d.checkIns, d.restDays, 5);
 const body = buildAiRequest(s, computeCandidates(s, d.blocks));
 
-describe('server/weekly-ai', () => {
+describe('weekly-ai', () => {
   it('responde 200 com saída validada usando o provedor falso', async () => {
     const provider = new FakeProvider();
     const res = await handleWeeklyAi({ method: 'POST', body }, { provider });
