@@ -22,8 +22,8 @@ jobs:
       - run: npm ci
       - run: npx turbo run lint typecheck build
 
-  deploy-api:
-    name: Deploy da API
+  deploy:
+    name: Deploy da API e do web
     needs: check
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -35,10 +35,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # A tarefa deploy roda typecheck e testes da API antes do wrangler deploy.
-      - run: npx turbo run deploy --filter=@pulo/api
+      # A tarefa deploy roda typecheck e testes antes de publicar cada Worker (pulo-api e pulo-web).
+      - run: npx turbo run deploy --filter=@pulo/api --filter=@pulo/web
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - name: Smoke test
-        run: curl -fsS https://pulo-api.albqvictor.workers.dev/health
+        run: |
+          curl -fsS https://pulo-api.albqvictor.workers.dev/health
+          curl -fsS -o /dev/null https://pulo-web.albqvictor.workers.dev/welcome

@@ -2,7 +2,7 @@
   "$schema": "https://turborepo.com/schema.json",
   "ui": "stream",
   "globalEnv": [
-    "EXPO_PUBLIC_*",
+    "VITE_*",
     "PULO_*",
     "PORT"
   ],
