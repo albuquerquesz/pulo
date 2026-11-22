@@ -4,25 +4,26 @@
   "private": true,
   "description": "API do Pulo em Hono, rodando no Cloudflare Workers.",
   "scripts": {
-    "dev": "wrangler dev --port 8787",
+    "dev": "wrangler d1 migrations apply DB --local && wrangler dev --port 8787",
     "build": "wrangler deploy --dry-run --outdir dist",
-    "deploy": "wrangler deploy",
-    "test": "jest",
+    "deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy",
+    "db:generate": "auth generate --config auth.schema.ts -y",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@better-auth/core": "^1.7.27",
+    "@better-auth/expo": "^1.7.27",
+    "better-auth": "^1.7.27",
     "hono": "^4.13.20"
   },
   "devDependencies": {
     "@pulo/core": "*",
-    "@types/jest": "30.0.0",
-    "jest": "~30.5.2",
-    "jest-expo": "~58.0.15",
+    "@types/node": "^26.6.6",
+    "auth": "^1.7.27",
     "typescript": "~6.0.3",
+    "vitest": "^5.1.1",
     "wrangler": "^4.166.0"
   },
-  "jest": {
-    "preset": "jest-expo/node",
-    "testTimeout": 20000
-  }
+  "type": "module"
 }
