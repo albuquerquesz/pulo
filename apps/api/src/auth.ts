@@ -25,6 +25,13 @@ export function createAuth(env: AuthEnv, origins: string[], database: AuthDataba
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
     trustedOrigins: [...origins, APP_SCHEME],
+    user: {
+      additionalFields: {
+        // JSON com preferências e progresso (ver @pulo/core/domain/user-metadata).
+        // Só a rota /api/me/metadata escreve aqui, com validação.
+        metadata: { type: 'json', required: false, input: false },
+      },
+    },
     socialProviders: {
       google: {
         clientId: env.GOOGLE_CLIENT_ID,
