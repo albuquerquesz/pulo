@@ -16,5 +16,8 @@
   "jest": {
     "preset": "jest-expo/node",
     "testTimeout": 20000
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
   }
 }
