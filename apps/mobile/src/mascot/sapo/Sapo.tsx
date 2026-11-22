@@ -166,12 +166,13 @@ function Camada({ fase, estado, loops, saltos, fadeMs, tamanho, saltoKey, saindo
       return;
     }
     if (!saltos || saindo) return;
-    pulo.value = withSequence(
+    // `.set()` em vez de `.value =`: valores lidos no efeito anterior (regra do React Compiler).
+    pulo.set(withSequence(
       withTiming(-tamanho * 0.12, { duration: 160, easing: Easing.out(Easing.quad) }),
       withTiming(0, { duration: 150, easing: Easing.in(Easing.quad) }),
-    );
-    sqy.value = withDelay(310, withSequence(withTiming(0.9, { duration: 70 }), withSpring(1, motion.spring)));
-    sqx.value = withDelay(310, withSequence(withTiming(1.08, { duration: 70 }), withSpring(1, motion.spring)));
+    ));
+    sqy.set(withDelay(310, withSequence(withTiming(0.9, { duration: 70 }), withSpring(1, motion.spring))));
+    sqx.set(withDelay(310, withSequence(withTiming(1.08, { duration: 70 }), withSpring(1, motion.spring))));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saltoKey]);
 

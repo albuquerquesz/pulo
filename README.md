@@ -39,6 +39,9 @@ A API roda no Cloudflare Workers como `pulo-api`: https://pulo-api.albqvictor.wo
 npm run deploy   # roda typecheck e testes, depois wrangler deploy
 ```
 
+No GitHub, todo push na `main` roda lint, typecheck e build e, se passar, faz o deploy da API
+(`.github/workflows/ci.yml`, com os secrets `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID`).
+
 Config em `apps/api/wrangler.jsonc`. Segredos vão por `npx wrangler secret put PULO_AI_API_KEY` dentro de `apps/api`, nunca no repositório.
 
 ## Estrutura
