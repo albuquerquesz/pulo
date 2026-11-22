@@ -170,9 +170,6 @@ export function FocoScreen() {
           <Botao titulo="Recomeçar" variante="foco" onPress={async () => aplicar(await iniciar(repo, clock, user))} />
         </>
       )}
-      <Texto variante="legenda" cor="muted" style={{ color: t.cores.muted }}>
-        O tempo vem do relógio, então ele segue certo mesmo com a aba em segundo plano.
-      </Texto>
     </Tela>
   );
 }
