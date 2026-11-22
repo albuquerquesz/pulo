@@ -4,8 +4,8 @@
  * - O app chama POST com { summary, candidates, tone } (ver src/domain/ia/request.ts).
  * - Este arquivo valida o corpo (lista de permissão), monta o prompt, chama um
  *   `ProviderAdapter` e valida a saída antes de devolver.
- * - A CHAVE do provedor só existe aqui, lida de variáveis de ambiente do host
- *   (por exemplo PULO_AI_PROVIDER e PULO_AI_API_KEY). Nunca vai para o app nem
+ * - A CHAVE do provedor só existe aqui, lida do ambiente do Worker
+ *   (PULO_AI_PROVIDER como var e PULO_AI_API_KEY como secret). Nunca vai para o app nem
  *   para o repositório. Sem chave, `createProviderFromEnv` usa o provedor FALSO.
  * - Provedor, modelo e hospedagem são decisão aberta do Victor. Para ligar um
  *   provedor real, implemente `ProviderAdapter` num arquivo novo e registre em
@@ -109,12 +109,17 @@ export class FakeProvider implements ProviderAdapter {
 }
 
 /**
- * Escolhe o provedor pelo ambiente do servidor. Variáveis (definidas só no host, nunca commitadas):
+ * Escolhe o provedor pelo ambiente do servidor. Variáveis do Worker, nunca commitadas:
  *   PULO_AI_PROVIDER  nome do provedor (vazio ou "fake" usa o provedor falso)
- *   PULO_AI_API_KEY   chave do provedor
+ *   PULO_AI_API_KEY   chave do provedor (secret: npx wrangler secret put PULO_AI_API_KEY)
  * Provedor real ainda não implementado: decisão aberta do Victor.
  */
-export function createProviderFromEnv(env: Record<string, string | undefined>): ProviderAdapter {
+export type AiEnv = {
+  PULO_AI_PROVIDER?: string;
+  PULO_AI_API_KEY?: string;
+};
+
+export function createProviderFromEnv(env: AiEnv): ProviderAdapter {
   const name = env.PULO_AI_PROVIDER;
   if (!name || name === 'fake') return new FakeProvider();
   if (!env.PULO_AI_API_KEY) throw new Error('PULO_AI_API_KEY ausente no ambiente do servidor');

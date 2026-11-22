@@ -1,0 +1,12 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "pulo-api",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-11-22",
+  "observability": { "enabled": true },
+  "vars": {
+    // Origens liberadas no CORS, separadas por vírgula.
+    "PULO_CORS_ORIGIN": "http://localhost:8081"
+  }
+  // Chave do provedor de IA: `npx wrangler secret put PULO_AI_API_KEY`. Nunca neste arquivo.
+}

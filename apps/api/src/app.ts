@@ -1,13 +1,15 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { createProviderFromEnv, handleWeeklyAi } from './weekly-ai';
+import { type AiEnv, createProviderFromEnv, handleWeeklyAi } from './weekly-ai';
 
-type Env = Record<string, string | undefined>;
+export type ApiEnv = AiEnv & {
+  PULO_CORS_ORIGIN?: string;
+};
 
 const DEFAULT_ORIGIN = 'http://localhost:8081';
 
-/** Monta a API. O ambiente é injetado para os testes não dependerem de process.env. */
-export function createApp(env: Env) {
+/** Monta a API. O ambiente é injetado para os testes não dependerem do runtime. */
+export function createApp(env: ApiEnv) {
   const provider = createProviderFromEnv(env);
   const origins = (env.PULO_CORS_ORIGIN ?? DEFAULT_ORIGIN).split(',');
 
