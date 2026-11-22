@@ -57,6 +57,9 @@
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"
     },
-    "testTimeout": 20000
+    "testTimeout": 20000,
+    "setupFiles": [
+      "<rootDir>/jest.setup.js"
+    ]
   }
 }
