@@ -23,7 +23,7 @@ Na raiz, cada comando roda em todos os pacotes via Turborepo:
 - `npm run lint`        ESLint do app (eslint-config-expo)
 - `npm run dev`         app web (8081) e API com wrangler dev (8787) juntos
 - `npm run deploy`      typecheck, testes e deploy do Worker
-- `npm test`            testes (Jest, preset jest-expo)
+- `npm test`            testes (Jest no app e no core, Vitest na API)
 - `npm run typecheck`   tsc sem emitir
 - `npm run build`       web estática em `apps/mobile/dist/` e API em `apps/api/dist/` (dry run do Worker)
 - Só um pacote: `npx turbo run test --filter=@pulo/core`
@@ -36,4 +36,6 @@ Na raiz, cada comando roda em todos os pacotes via Turborepo:
 - `apps/mobile` (`@pulo/mobile`): `src/app` rotas (Expo Router), `src/theme` tokens e `useTheme`, `src/ui` componentes,
   `src/mascot` sapo e lagoa, `src/features` telas, `src/data` adaptador do AsyncStorage.
 - `apps/api` (`@pulo/api`): Hono no Cloudflare Workers (`pulo-api`). `src/weekly-ai.ts` é a função da IA, `src/app.ts` as rotas,
-  `src/worker.ts` a entrada do Worker, `wrangler.jsonc` a config. Segredos só por `wrangler secret put`.
+  `src/auth.ts` o Better Auth (Google, D1 `pulo-db`), `src/worker.ts` a entrada do Worker, `wrangler.jsonc` a config.
+  Migrações SQL em `migrations/`, geradas com `npm run db:generate`. Testes com Vitest (o Better Auth é só ESM).
+  Segredos só por `wrangler secret put`.
