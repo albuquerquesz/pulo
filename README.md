@@ -1,56 +1,48 @@
-# Welcome to your Expo app 👋
+# Pulo
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Um app de hábitos e foco, sem culpa, com um sapo que cresce junto com você.
+Feito em Expo (React Native, Expo Router, TypeScript), com saída web estática.
 
-## Get started
+Cada dia de cuidado conta: foco concluído, uma sessão parada na metade ou um dia de descanso.
+O sapo nunca volta uma fase, e a lagoa ao redor dele muda conforme os dias de cuidado.
+Uma sugestão semanal propõe mudar um horário, e nada muda sem a sua aprovação.
 
-1. Install dependencies
+## Rodar
 
-   ```bash
-   npm install
-   ```
+Requer Node 20 ou mais novo.
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```sh
+npm install
+npx expo start --web
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Modo demo, com 4 semanas de dados sintéticos: abra o endereço com `?demo=1`.
 
-### Other setup steps
+## Testes e exportação
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```sh
+npm test
+npm run typecheck
+npx expo export --platform web   # gera dist/
+```
 
-## Learn more
+## Estrutura
 
-To learn more about developing your project with Expo, look at the following resources:
+- `src/app`: rotas (Expo Router)
+- `src/domain`: regras puras (dias de cuidado, fases, semana, foco, IA semanal)
+- `src/data`: repositórios em memória e em armazenamento local
+- `src/theme`, `src/ui`, `src/mascot`: tema, componentes, sapo e lagoa
+- `src/demo`: modo demo com dados sintéticos e relógio controlável
+- `src/config/decisions.ts`: todas as decisões do produto em um lugar
+- `server/`: função de servidor da IA semanal (provedor trocável, chave só por variável de ambiente)
+- `docs/specs/pulo`: as 10 specs do projeto
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Privacidade
 
-## Join the community
+Os dados ficam no aparelho. A IA semanal recebe só um resumo agregado, nunca títulos, nomes ou texto livre.
+Sem endereço de IA configurado, as sugestões vêm de regras simples e aparecem como "Sugestão".
+Todos os dados do modo demo são sintéticos.
 
-Join our community of developers creating universal apps.
+## Licença
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+MIT. Veja [LICENSE](LICENSE).
