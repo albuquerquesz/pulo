@@ -28,15 +28,25 @@ Só um pacote: `npx turbo run dev --filter=@pulo/mobile`.
 ```sh
 npm test
 npm run typecheck
-npm run build   # apps/mobile/dist (web estática) e apps/api/dist (servidor Node)
+npm run build   # apps/mobile/dist (web estática) e apps/api/dist (bundle do Worker)
 ```
+
+## Deploy da API
+
+A API roda no Cloudflare Workers como `pulo-api`: https://pulo-api.albqvictor.workers.dev
+
+```sh
+npm run deploy   # roda typecheck e testes, depois wrangler deploy
+```
+
+Config em `apps/api/wrangler.jsonc`. Segredos vão por `npx wrangler secret put PULO_AI_API_KEY` dentro de `apps/api`, nunca no repositório.
 
 ## Estrutura
 
 ```
 apps/
   mobile/   @pulo/mobile  Expo: rotas, telas, tema, componentes, sapo e lagoa
-  api/      @pulo/api     Hono no Node: GET /health e POST /weekly-ai
+  api/      @pulo/api     Hono no Cloudflare Workers: GET /health e POST /weekly-ai
 packages/
   core/     @pulo/core    regras puras, sem React Native: domínio, decisões, repositórios e modo demo
 docs/specs/pulo           as 10 specs do projeto
@@ -45,7 +55,7 @@ docs/specs/pulo           as 10 specs do projeto
 - `packages/core/config/decisions.ts`: todas as decisões do produto em um lugar
 - `apps/api/src/weekly-ai.ts`: IA semanal com provedor trocável. A chave fica só no ambiente do servidor
   (`PULO_AI_PROVIDER`, `PULO_AI_API_KEY`). Sem chave, usa o provedor falso.
-- Variáveis da API: `PORT` (padrão 8787) e `PULO_CORS_ORIGIN` (padrão `http://localhost:8081`, aceita lista separada por vírgula).
+- `PULO_CORS_ORIGIN` (var no `wrangler.jsonc`): origens liberadas no CORS, separadas por vírgula.
 
 ## Privacidade
 

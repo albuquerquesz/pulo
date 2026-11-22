@@ -1,7 +1,7 @@
 # Pulo: guia para agentes
 
 App do hackathon em Expo SDK 58 (React Native, Expo Router, TypeScript), com saída web estática.
-Monorepo com npm workspaces e Turborepo: `apps/mobile` (Expo), `apps/api` (Hono) e `packages/core` (regras puras).
+Monorepo com npm workspaces e Turborepo: `apps/mobile` (Expo), `apps/api` (Hono no Cloudflare Workers) e `packages/core` (regras puras).
 Specs em `docs/specs/pulo/` (01 a 10). Leia só as da sua parte.
 
 ## Regras
@@ -18,10 +18,11 @@ Specs em `docs/specs/pulo/` (01 a 10). Leia só as da sua parte.
 ## Comandos
 Node portátil em `/data/tools/node/bin` (ponha no PATH).
 Na raiz, cada comando roda em todos os pacotes via Turborepo:
-- `npm run dev`         app web (8081) e API (8787) juntos
+- `npm run dev`         app web (8081) e API com wrangler dev (8787) juntos
+- `npm run deploy`      typecheck, testes e deploy do Worker (precisa de aprovação do Victor)
 - `npm test`            testes (Jest, preset jest-expo)
 - `npm run typecheck`   tsc sem emitir
-- `npm run build`       web estática em `apps/mobile/dist/` e API em `apps/api/dist/`
+- `npm run build`       web estática em `apps/mobile/dist/` e API em `apps/api/dist/` (dry run do Worker)
 - Só um pacote: `npx turbo run test --filter=@pulo/core`
 - Dependência do app: `cd apps/mobile && npx expo install <pacote>` (versões compatíveis com o SDK)
 
@@ -31,4 +32,5 @@ Na raiz, cada comando roda em todos os pacotes via Turborepo:
   Dentro do core os imports são relativos (o alias `@/` é só do app).
 - `apps/mobile` (`@pulo/mobile`): `src/app` rotas (Expo Router), `src/theme` tokens e `useTheme`, `src/ui` componentes,
   `src/mascot` sapo e lagoa, `src/features` telas, `src/data` adaptador do AsyncStorage.
-- `apps/api` (`@pulo/api`): Hono no Node. `src/weekly-ai.ts` é a função da IA, `src/app.ts` as rotas.
+- `apps/api` (`@pulo/api`): Hono no Cloudflare Workers (`pulo-api`). `src/weekly-ai.ts` é a função da IA, `src/app.ts` as rotas,
+  `src/worker.ts` a entrada do Worker, `wrangler.jsonc` a config. Segredos só por `wrangler secret put`.
