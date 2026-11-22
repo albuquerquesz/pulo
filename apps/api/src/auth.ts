@@ -1,5 +1,4 @@
 import type { BetterAuthOptions, D1Database } from '@better-auth/core';
-import { expo } from '@better-auth/expo';
 import { betterAuth } from 'better-auth';
 
 export type AuthEnv = {
@@ -12,9 +11,6 @@ export type AuthEnv = {
 
 export type AuthDatabase = BetterAuthOptions['database'];
 
-/** Esquema do app (app.json), para o login voltar ao app nativo. */
-const APP_SCHEME = 'pulo://';
-
 /**
  * Better Auth com login pelo Google. O banco é o D1 do Worker por padrão;
  * os testes e a geração do schema passam outro banco SQLite.
@@ -24,7 +20,7 @@ export function createAuth(env: AuthEnv, origins: string[], database: AuthDataba
     database,
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
-    trustedOrigins: [...origins, APP_SCHEME],
+    trustedOrigins: origins,
     user: {
       additionalFields: {
         // JSON com preferências e progresso (ver @pulo/core/domain/user-metadata).
@@ -38,7 +34,6 @@ export function createAuth(env: AuthEnv, origins: string[], database: AuthDataba
         clientSecret: env.GOOGLE_CLIENT_SECRET,
       },
     },
-    plugins: [expo()],
     advanced: {
       // Sempre checar a origem, inclusive nos testes (o padrão do Better Auth desliga em NODE_ENV=test).
       disableOriginCheck: false,

@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@better-auth/core": "^1.7.27",
-    "@better-auth/expo": "^1.7.27",
     "better-auth": "^1.7.27",
     "hono": "^4.13.20"
   },

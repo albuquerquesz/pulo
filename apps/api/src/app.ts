@@ -9,7 +9,7 @@ export type ApiEnv = AiEnv &
     PULO_CORS_ORIGIN?: string;
   };
 
-const DEFAULT_ORIGIN = 'http://localhost:8081';
+const DEFAULT_ORIGIN = 'http://localhost:3000';
 
 /** Monta a API. O ambiente é injetado para os testes não dependerem do runtime. */
 export function createApp(env: ApiEnv, database?: AuthDatabase, now = Date.now) {

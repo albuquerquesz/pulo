@@ -4,7 +4,7 @@ import { createAuth } from './auth';
 import { createTestDatabase, signIn, testEnv } from './testing';
 
 const NOW = 1_795_000_000_000;
-const ORIGINS = ['http://localhost:8081'];
+const ORIGINS = ['http://localhost:3000'];
 
 function setup() {
   const database = createTestDatabase();

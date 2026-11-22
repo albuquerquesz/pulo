@@ -14,7 +14,7 @@
   ],
   "vars": {
     // Origens liberadas no CORS e no Better Auth, separadas por vírgula.
-    "PULO_CORS_ORIGIN": "http://localhost:8081",
+    "PULO_CORS_ORIGIN": "http://localhost:3000,https://pulo-web.albqvictor.workers.dev",
     "BETTER_AUTH_URL": "https://pulo-api.albqvictor.workers.dev"
   }
   // Secrets (nunca neste arquivo): BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET.
