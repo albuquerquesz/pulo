@@ -1,8 +1,8 @@
 # Pulo
 
 Um app de hábitos e foco, sem culpa, com um sapo que cresce junto com você.
-Feito em Expo (React Native, Expo Router, TypeScript), com saída web estática.
-Monorepo com npm workspaces e Turborepo.
+App web mobile first em TanStack Start (React, TypeScript, Tailwind v4), com API em Hono.
+Tudo roda no Cloudflare Workers. Monorepo com npm workspaces e Turborepo.
 
 Cada dia de cuidado conta: foco concluído, uma sessão parada na metade ou um dia de descanso.
 O sapo nunca volta uma fase, e a lagoa ao redor dele muda conforme os dias de cuidado.
@@ -14,32 +14,36 @@ Requer Node 20 ou mais novo.
 
 ```sh
 npm install
-cp apps/mobile/.env.example apps/mobile/.env.local   # liga o app na API local
+cp apps/api/.dev.vars.example apps/api/.dev.vars   # secrets locais da API (Google e Better Auth)
 npm run dev
 ```
 
-Sobe o app web em http://localhost:8081 e a API em http://localhost:8787.
+Sobe o app web em http://localhost:3000 e a API em http://localhost:8787.
 Modo demo, com 4 semanas de dados sintéticos: abra o endereço com `?demo=1`.
+Login com Google (tela provisória): http://localhost:3000/welcome
 
-Só um pacote: `npx turbo run dev --filter=@pulo/mobile`.
+Só um pacote: `npx turbo run dev --filter=@pulo/web`.
 
 ## Testes e exportação
 
 ```sh
 npm test
 npm run typecheck
-npm run build   # apps/mobile/dist (web estática) e apps/api/dist (bundle do Worker)
+npm run build   # apps/web/dist (Worker do TanStack Start) e apps/api/dist (bundle do Worker)
 ```
 
-## Deploy da API
+## Deploy
 
-A API roda no Cloudflare Workers como `pulo-api`: https://pulo-api.albqvictor.workers.dev
+- Web: `pulo-web` no Cloudflare Workers, https://pulo-web.albqvictor.workers.dev
+- API: `pulo-api` no Cloudflare Workers, https://pulo-api.albqvictor.workers.dev
+
+## Deploy da API
 
 ```sh
 npm run deploy   # roda typecheck e testes, depois wrangler deploy
 ```
 
-No GitHub, todo push na `main` roda lint, typecheck e build e, se passar, faz o deploy da API
+No GitHub, todo push na `main` roda lint, typecheck e build e, se passar, faz o deploy da API e do web
 (`.github/workflows/ci.yml`, com os secrets `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID`).
 
 Config em `apps/api/wrangler.jsonc`. Segredos vão por `npx wrangler secret put <NOME>` dentro de `apps/api`, nunca no repositório.
@@ -69,13 +73,13 @@ Rotina, hábitos e nome do sapo continuam só no aparelho.
 - No Google Cloud, o OAuth Client `pulo-api` precisa dos redirecionamentos
   `https://pulo-api.albqvictor.workers.dev/api/auth/callback/google` e `http://localhost:8787/api/auth/callback/google`.
 - Mudou plugin ou campo do Better Auth? `cd apps/api && npm run db:generate -- --output migrations/000N_nome.sql`.
-- Origens confiáveis: `PULO_CORS_ORIGIN` e o esquema do app `pulo://`.
+- Origens confiáveis: as do `PULO_CORS_ORIGIN`.
 
 ## Estrutura
 
 ```
 apps/
-  mobile/   @pulo/mobile  Expo: rotas, telas, tema, componentes, sapo e lagoa
+  web/      @pulo/web     TanStack Start: rotas, telas, tema (Tailwind), componentes, sapo e lagoa
   api/      @pulo/api     Hono no Cloudflare Workers: auth (Better Auth + Google), IA semanal
 packages/
   core/     @pulo/core    regras puras, sem React Native: domínio, decisões, repositórios e modo demo
