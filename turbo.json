@@ -1,11 +1,19 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "stream",
-  "globalEnv": ["EXPO_PUBLIC_*", "PULO_*", "PORT"],
+  "globalEnv": [
+    "EXPO_PUBLIC_*",
+    "PULO_*",
+    "PORT"
+  ],
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "dist/**"
+      ]
     },
     "test": {
       "outputs": []
@@ -19,6 +27,13 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "deploy": {
+      "dependsOn": [
+        "typecheck",
+        "test"
+      ],
+      "cache": false
     }
   }
 }
