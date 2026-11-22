@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 
 import { useApp } from './AppProvider';
 
@@ -10,7 +10,10 @@ export function useCarregar<T>(fn: () => Promise<T>): { estado: EstadoDeCarga<T>
   const { versao } = useApp();
   const [estado, setEstado] = useState<EstadoDeCarga<T>>({ tipo: 'carregando' });
   const fnRef = useRef(fn);
-  fnRef.current = fn;
+  // Guarda a função mais recente fora do render, antes dos efeitos que a chamam.
+  useLayoutEffect(() => {
+    fnRef.current = fn;
+  });
   const vivo = useRef(true);
 
   const recarregar = useCallback(async () => {
