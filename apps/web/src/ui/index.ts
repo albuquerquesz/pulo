@@ -1,5 +1,5 @@
 export { Texto } from './Texto';
-export type { TextoProps, VarianteDeTexto } from './Texto';
+export type { CorDeTexto, TextoProps, VarianteDeTexto } from './Texto';
 export { Botao } from './Botao';
 export type { BotaoProps, VarianteDeBotao } from './Botao';
 export { Cartao } from './Cartao';
@@ -16,4 +16,3 @@ export { EstadoVazio } from './EstadoVazio';
 export type { EstadoVazioProps } from './EstadoVazio';
 export { BarraAbas } from './BarraAbas';
 export type { AbaDaBarra, BarraAbasProps } from './BarraAbas';
-export { Galeria } from './Galeria';
