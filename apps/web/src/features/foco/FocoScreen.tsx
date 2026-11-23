@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { CHECKIN_QUESTION } from '@pulo/core/domain/checkin';
 import { timerSnapshot } from '@pulo/core/domain/foco';
-import type { Energy, FrogEvent } from '@pulo/core/domain/types';
+import type { FrogEvent } from '@pulo/core/domain/types';
 import { Sapo } from '@/mascot';
-import { AnelTimer, Balao, Botao, ChipEnergia, Texto, type EstadoDoAnel } from '@/ui';
+import { AnelTimer, Balao, Botao, type EstadoDoAnel } from '@/ui';
 
 import { confirmar, Tela, useApp } from '../app';
-import { registrarEnergia } from '../hoje/logic';
 import {
   abrirFoco,
   concluir,
@@ -22,20 +20,16 @@ import {
   type EstadoDoFoco,
 } from './logic';
 
-const ENERGIAS: Energy[] = [1, 2, 3, 4, 5];
-
 export function FocoScreen() {
   const { repo, clock, user, versao, refresh, emitirEvento, evento, mostrarAviso } = useApp();
   const [estado, setEstado] = useState<EstadoDoFoco>(FOCO_OCIOSO);
   const [, setTique] = useState(0);
   const [confirmando, setConfirmando] = useState(false);
-  const [respondeu, setRespondeu] = useState(false);
   const concluindo = useRef(false);
 
   const aplicar = useCallback(
     (e: EstadoDoFoco) => {
       setEstado(e);
-      if (e.fase === 'concluida' || e.fase === 'interrompida') setRespondeu(false);
       if (e.feliz) emitirEvento('feliz');
       if (e.marco) {
         emitirEvento('pouso');
@@ -55,7 +49,6 @@ export function FocoScreen() {
       // Não apaga o resultado recém mostrado (concluída ou interrompida) se nada está em andamento.
       setEstado((atual) => (e.fase === 'ocioso' && (atual.fase === 'concluida' || atual.fase === 'interrompida') ? atual : e));
       if (e.fase === 'concluida') {
-        setRespondeu(false);
         if (e.feliz) emitirEvento('feliz');
         if (e.marco) {
           emitirEvento('pouso');
@@ -105,12 +98,6 @@ export function FocoScreen() {
     if (ok) aplicar(await parar(repo, clock, user));
   };
 
-  const energia = async (n: Energy) => {
-    await registrarEnergia(repo, clock, user, n);
-    setRespondeu(true);
-    refresh();
-  };
-
   return (
     <Tela titulo="Foco">
       <div className="flex flex-col items-center gap-2">
@@ -143,17 +130,6 @@ export function FocoScreen() {
             rabo="cima"
             testID="foco-concluido"
           />
-          {estado.perguntarEnergia && !respondeu ? (
-            <div className="flex flex-col gap-3">
-              <Texto variante="subtitulo">{CHECKIN_QUESTION}</Texto>
-              <div className="flex flex-wrap gap-2">
-                {ENERGIAS.map((n) => (
-                  <ChipEnergia key={n} nivel={n} onPress={(v) => void energia(v)} />
-                ))}
-              </div>
-              <Botao titulo="Agora não" variante="fantasma" onPress={() => setRespondeu(true)} />
-            </div>
-          ) : null}
           <Botao titulo="Novo foco" variante="foco" onPress={async () => aplicar(await iniciar(repo, clock, user))} />
         </>
       )}

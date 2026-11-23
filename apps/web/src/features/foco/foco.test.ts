@@ -3,7 +3,6 @@ import { fixedClock } from '@pulo/core/domain/clock';
 import { sp } from '@pulo/core/domain/test-utils';
 
 import { concluirOnboarding } from '../app/core';
-import { registrarEnergia } from '../hoje/logic';
 import { abrirFoco, concluir, iniciar, parar, pausar, retomar, TEXTO_CONCLUIU_FORA } from './logic';
 
 const clock = () => fixedClock(sp(2026, 11, 23, 10, 0));
@@ -41,7 +40,7 @@ describe('Foco', () => {
     expect(r.sessao?.pausedMs).toBe(10 * MIN);
   });
 
-  test('reabrir depois do fim mostra que concluiu fora, com sapo feliz e pergunta de energia', async () => {
+  test('reabrir depois do fim mostra que concluiu fora, com sapo feliz', async () => {
     const { repo, c, user } = await novo();
     await iniciar(repo, c, user);
     c.advance(40 * MIN);
@@ -49,20 +48,17 @@ describe('Foco', () => {
     expect(e.fase).toBe('concluida');
     expect(e.concluiuFora).toBe(true);
     expect(e.feliz).toBe(true);
-    expect(e.perguntarEnergia).toBe(true);
     expect(TEXTO_CONCLUIU_FORA).toBe('Você concluiu enquanto estava fora');
     // o fim é o calculado, não a hora da reabertura
     expect(e.sessao?.endedAt).toBe(sp(2026, 11, 23, 10, 25));
   });
 
-  test('concluir com a tela aberta guarda a sessão e não repete a pergunta se já respondeu energia', async () => {
+  test('concluir com a tela aberta guarda a sessão', async () => {
     const { repo, c, user } = await novo();
-    await registrarEnergia(repo, c, user, 4);
     await iniciar(repo, c, user);
     c.advance(25 * MIN);
     const e = await concluir(repo, c, user);
     expect(e.fase).toBe('concluida');
-    expect(e.perguntarEnergia).toBe(false);
     expect((await repo.listSessions())[0].state).toBe('concluida');
   });
 

@@ -4,8 +4,6 @@ export { Botao } from './Botao';
 export type { BotaoProps, VarianteDeBotao } from './Botao';
 export { Cartao } from './Cartao';
 export type { CartaoProps } from './Cartao';
-export { ChipEnergia, IconeDeEnergia, ROTULO_DE_ENERGIA } from './ChipEnergia';
-export type { ChipEnergiaProps } from './ChipEnergia';
 export { AnelTimer, formatarTempo, descricaoDoAnel } from './AnelTimer';
 export type { AnelTimerProps, EstadoDoAnel } from './AnelTimer';
 export { Balao } from './Balao';

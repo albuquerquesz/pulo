@@ -1,10 +1,8 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useCallback, useState } from 'react';
 
-import { CHECKIN_LOW_ENERGY_COPY, CHECKIN_QUESTION } from '@pulo/core/domain/checkin';
 import { estadoDoSapo, Lagoa } from '@/mascot';
-import { Balao, Botao, Cartao, ChipEnergia, EstadoVazio, Texto } from '@/ui';
-import type { Energy } from '@pulo/core/domain/types';
+import { Balao, Botao, Cartao, EstadoVazio, Texto } from '@/ui';
 
 import { agoraDaLagoa, blocoTexto, dentroDoDiaDoUsuario, Secao, Tela, useApp, useCarregar, useLadoDoConteudo } from '../app';
 import {
@@ -14,12 +12,10 @@ import {
   concluirDescansoDoBloco,
   diaDeDescanso,
   fraseDoSapo,
-  registrarEnergia,
+  progressoDaFase,
   type DadosHoje,
 } from './logic';
 import { criarPlanoInicial } from '@pulo/core/domain/routine';
-
-const ENERGIAS: Energy[] = [1, 2, 3, 4, 5];
 
 export const TEXTO_DE_ERRO = 'A lagoa ficou sem sinal. Seus dados estão salvos aqui.';
 
@@ -72,7 +68,7 @@ export function HojeScreen() {
   const dentroDoDia = dentroDoDiaDoUsuario(user, d.agora);
   const humor = estadoDoSapo({
     phase: d.mascote.phase,
-    latestEnergyToday: d.energia,
+    interruptedFocusToday: d.focosInterrompidosHoje,
     focusRunning: d.sessaoAtiva !== null,
     aiAnalyzing: false,
     activeEvent: evento,
@@ -108,11 +104,6 @@ export function HojeScreen() {
     await navigate({ to: '/foco' });
   };
 
-  const energia = async (nivel: Energy) => {
-    await registrarEnergia(repo, clock, user, nivel);
-    refresh();
-  };
-
   const descansar = async () => {
     const r = await diaDeDescanso(repo, clock, user);
     emitirEvento('feliz');
@@ -139,6 +130,8 @@ export function HojeScreen() {
     refresh();
   };
 
+  const proximo = d.proximoBloco;
+
   return (
     <Tela titulo="Hoje">
       <div className="flex justify-center">
@@ -153,88 +146,87 @@ export function HojeScreen() {
       </div>
       <Balao texto={fraseDoSapo(humor, d)} />
 
-      <Secao titulo={CHECKIN_QUESTION}>
-        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Energia agora">
-          {ENERGIAS.map((n) => (
-            <ChipEnergia key={n} nivel={n} selecionado={d.energia === n} onPress={(v) => void energia(v)} />
-          ))}
-        </div>
-        {d.energia !== null && d.energia <= 2 ? (
-          <Cartao>
-            <Texto>{CHECKIN_LOW_ENERGY_COPY}</Texto>
-            <Botao titulo="Quero um dia de descanso" variante="agua" onPress={() => void descansar()} desativado={d.descansoHoje} />
-          </Cartao>
-        ) : null}
-      </Secao>
+      {d.sessaoAtiva ? (
+        <Botao titulo="Voltar ao foco" variante="foco" rotulo="Voltar ao foco em andamento" onPress={() => void comecar()} testID="comecar-foco" />
+      ) : null}
 
-      <Botao
-        titulo={d.sessaoAtiva ? 'Voltar ao foco' : 'Começar foco'}
-        variante="foco"
-        onPress={() => void comecar()}
-        rotulo={d.sessaoAtiva ? 'Voltar ao foco em andamento' : 'Começar foco de 25 minutos'}
-        testID="comecar-foco"
-      />
-
-      <Secao titulo="Blocos de hoje">
-        {d.blocos.length === 0 ? (
-          <Texto cor="muted">Nenhum bloco hoje. Que tal aproveitar para descansar?</Texto>
-        ) : (
-          d.blocos.map(({ bloco, feito }) => (
-            <Cartao key={bloco.id} className="flex-row items-center justify-between">
-              <div className="flex-1">
-                <Texto variante="subtitulo">{bloco.title ?? (bloco.kind === 'foco' ? 'Foco' : 'Descanso')}</Texto>
-                <Texto cor="muted" variante="legenda">
-                  {blocoTexto(bloco.startMinutes, bloco.durationMinutes)}
-                  {feito ? ', feito' : ''}
-                </Texto>
-              </div>
-              {feito ? null : bloco.kind === 'foco' ? (
-                <Botao
-                  titulo="Focar"
-                  variante="fantasma"
-                  largura="auto"
-                  rotulo={`Começar foco do bloco das ${blocoTexto(bloco.startMinutes, bloco.durationMinutes)}`}
-                  onPress={() => void comecar(bloco)}
-                />
-              ) : (
-                <Botao titulo="Feito" variante="agua" largura="auto" rotulo="Marcar descanso como feito" onPress={() => void descansoDoBloco(bloco.id)} />
-              )}
-            </Cartao>
-          ))
-        )}
-      </Secao>
-
-      <Secao titulo="Hábitos">
+      <Secao titulo="Hábitos de hoje">
         {d.habitos.length === 0 ? (
           <Texto cor="muted">Nenhum hábito para hoje.</Texto>
         ) : (
-          d.habitos.map(({ habito: h, feito }) => (
-            <button
-              key={h.id}
-              type="button"
-              onClick={() => void habito(h.id, feito)}
-              role="checkbox"
-              aria-label={h.title}
-              aria-checked={feito}
-              className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-md border bg-surface px-3 text-left ${feito ? 'border-sapo-borda' : 'border-line'}`}
-            >
-              <span className={`flex size-7 items-center justify-center rounded-[8px] border-2 ${feito ? 'border-sapo-borda bg-sapo' : 'border-muted'}`}>
-                {feito ? (
-                  <Texto como="span" variante="legenda" cor="inkSobreAcao">
-                    ✓
-                  </Texto>
-                ) : null}
-              </span>
-              <Texto como="span" className={feito ? 'line-through opacity-70' : ''}>
-                {h.title}
+          <div className="grid grid-cols-2 gap-3">
+            {d.habitos.map(({ habito: h, feito }) => (
+              <button
+                key={h.id}
+                type="button"
+                onClick={() => void habito(h.id, feito)}
+                role="checkbox"
+                aria-label={h.title}
+                aria-checked={feito}
+                className={`flex min-h-24 cursor-pointer flex-col justify-between gap-3 rounded-md border border-b-4 p-3 text-left transition-transform duration-75 active:translate-y-[2px] ${
+                  feito ? 'border-sapo-borda bg-sapo' : 'border-line bg-surface'
+                }`}
+              >
+                <span
+                  className={`flex size-7 items-center justify-center rounded-full border-2 ${feito ? 'border-ink-sobre-acao' : 'border-muted'}`}
+                  aria-hidden="true"
+                >
+                  {feito ? (
+                    <Texto como="span" variante="legenda" cor="inkSobreAcao">
+                      ✓
+                    </Texto>
+                  ) : null}
+                </span>
+                <Texto como="span" variante="subtitulo" cor={feito ? 'inkSobreAcao' : undefined} className="line-clamp-2">
+                  {h.title}
+                </Texto>
+              </button>
+            ))}
+          </div>
+        )}
+        <Texto variante="legenda" cor="muted">
+          {textoDoProgresso(d)}
+        </Texto>
+      </Secao>
+
+      <Secao titulo="Próximo bloco">
+        {proximo ? (
+          <Cartao className="flex-row items-center justify-between gap-3">
+            <div className="flex-1">
+              <Texto variante="subtitulo">
+                {proximo.bloco.title ?? (proximo.bloco.kind === 'foco' ? 'Foco' : 'Descanso')}
               </Texto>
-            </button>
-          ))
+              <Texto cor="muted" variante="legenda">
+                {blocoTexto(proximo.bloco.startMinutes, proximo.bloco.durationMinutes)}
+              </Texto>
+            </div>
+            {proximo.bloco.kind === 'foco' ? (
+              d.sessaoAtiva ? null : (
+                <Botao
+                  titulo="Focar"
+                  variante="foco"
+                  largura="auto"
+                  rotulo={`Começar foco do bloco das ${blocoTexto(proximo.bloco.startMinutes, proximo.bloco.durationMinutes)}`}
+                  onPress={() => void comecar(proximo.bloco)}
+                  testID="comecar-foco"
+                />
+              )
+            ) : (
+              <Botao titulo="Feito" variante="agua" largura="auto" rotulo="Marcar descanso como feito" onPress={() => void descansoDoBloco(proximo.bloco.id)} />
+            )}
+          </Cartao>
+        ) : (
+          <>
+            <Texto cor="muted">Sem mais blocos por hoje.</Texto>
+            {d.sessaoAtiva ? null : (
+              <Botao titulo="Começar um foco livre" variante="agua" rotulo="Começar foco de 25 minutos" onPress={() => void comecar()} testID="comecar-foco" />
+            )}
+          </>
         )}
       </Secao>
 
       <Botao
-        titulo={d.descansoHoje ? 'Hoje é dia de descanso' : 'Dia de descanso'}
+        titulo={d.descansoHoje ? 'Hoje é dia de descanso' : 'Tirar o dia de descanso'}
         variante="fantasma"
         desativado={d.descansoHoje}
         rotulo="Marcar hoje como dia de descanso"
@@ -242,4 +234,14 @@ export function HojeScreen() {
       />
     </Tela>
   );
+}
+
+function textoDoProgresso(d: DadosHoje): string {
+  const feitos = d.habitos.filter((h) => h.feito).length;
+  const total = d.habitos.length;
+  const habitos = total > 0 ? `${feitos} de ${total} ${total === 1 ? 'hábito' : 'hábitos'} hoje. ` : '';
+  const dias = d.mascote.careDays === 1 ? '1 dia de cuidado' : `${d.mascote.careDays} dias de cuidado`;
+  const { faltam } = progressoDaFase(d.mascote.phase, d.mascote.careDays);
+  if (faltam === null) return `${habitos}${dias}, a lagoa está completa.`;
+  return `${habitos}${dias}, ${faltam === 1 ? 'falta 1' : `faltam ${faltam}`} para a próxima fase.`;
 }

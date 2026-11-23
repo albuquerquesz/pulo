@@ -87,7 +87,7 @@ export function SemanaScreen() {
   const d = estado.dados;
   const humor = estadoDoSapo({
     phase: d.mascote.phase,
-    latestEnergyToday: null,
+    interruptedFocusToday: 0,
     focusRunning: false,
     aiAnalyzing: analisando,
     activeEvent: evento,
