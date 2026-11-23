@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "noUncheckedIndexedAccess": true,
+    "types": ["vitest/globals", "node"]
+  },
+  "include": ["src/**/*.ts", "prisma/**/*.ts", "prisma.config.ts", "vitest.config.ts"],
+  "exclude": ["src/generated"]
+}

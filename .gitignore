@@ -49,3 +49,6 @@ example
 .wrangler/
 .dev.vars*
 !.dev.vars.example
+
+# prisma (cliente gerado por `npm run db:generate`)
+packages/db/src/generated/

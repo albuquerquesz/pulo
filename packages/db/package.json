@@ -1,0 +1,43 @@
+{
+  "name": "@pulo/db",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Banco do Pulo: schema Prisma, migrações, cliente gerado, mapeadores e apoio a testes.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts",
+    "./testing/global-setup": "./src/testing/global-setup.ts"
+  },
+  "scripts": {
+    "generate": "prisma generate",
+    "migrate:dev": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "studio": "prisma studio",
+    "seed": "tsx prisma/seed.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@pulo/core": "^1.0.0",
+    "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
+    "embedded-postgres": "^17.12.0-beta.19",
+    "pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "vitest": "^5.1.1"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "prisma": "7.10.1",
+    "zod": "^4.6.7"
+  },
+  "imports": {
+    "#client": {
+      "workerd": "./src/generated/workerd/client.ts",
+      "default": "./src/generated/node/client.ts"
+    }
+  }
+}
