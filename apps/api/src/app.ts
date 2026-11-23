@@ -15,6 +15,7 @@ import { restDayRoutes } from './routes/rest-days';
 import { sessionRoutes } from './routes/sessions';
 import { syncRoutes } from './routes/sync';
 import { weekSummaryRoutes } from './routes/week-summary';
+import { resolveWebConfig } from './web-config';
 import { type AiEnv, createProviderFromEnv, handleWeeklyAi } from './weekly-ai';
 
 export type ApiEnv = AiEnv &
@@ -22,23 +23,21 @@ export type ApiEnv = AiEnv &
     PULO_CORS_ORIGIN?: string;
   };
 
-const DEFAULT_ORIGIN = 'http://localhost:8081';
-
 /**
  * Monta a API. O ambiente e o cliente do banco são injetados: o Worker cria um `Db` por requisição
  * (e o fecha depois), os testes passam o do Postgres de teste.
  */
 export function createApp(env: ApiEnv, db: Db, now = Date.now) {
   const provider = createProviderFromEnv(env);
-  const origins = (env.PULO_CORS_ORIGIN ?? DEFAULT_ORIGIN).split(',');
-  const auth = createAuth(env, origins, db);
+  const web = resolveWebConfig(env);
+  const auth = createAuth(env, web, db);
   const deps: RouteDeps = { auth, db, now };
 
   return new Hono()
     .use(
       '*',
       cors({
-        origin: origins,
+        origin: web.origins,
         credentials: true,
         allowHeaders: ['Content-Type', 'Authorization'],
         allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

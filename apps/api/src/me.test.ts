@@ -3,6 +3,7 @@ import { createApp } from './app';
 import { createAuth } from './auth';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
 import { signIn, testEnv } from './testing';
+import { resolveWebConfig } from './web-config';
 
 const NOW = 1_795_000_000_000;
 const ORIGINS = ['http://localhost:8081'];
@@ -17,7 +18,7 @@ afterAll(async () => {
 });
 
 function setup() {
-  const auth = createAuth(testEnv, ORIGINS, database.db);
+  const auth = createAuth(testEnv, resolveWebConfig(testEnv), database.db);
   return { auth, app: createApp(testEnv, database.db, () => NOW) };
 }
 

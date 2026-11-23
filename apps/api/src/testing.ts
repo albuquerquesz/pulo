@@ -6,6 +6,7 @@ import type { TestDatabase } from '@pulo/db/testing';
 import { serializeSignedCookie } from 'better-call';
 import { type ApiEnv, createApp } from './app';
 import { type Auth, createAuth } from './auth';
+import { resolveWebConfig } from './web-config';
 
 export const testEnv: ApiEnv = {
   DATABASE_URL: 'postgresql://nao-usado-nos-testes',
@@ -41,7 +42,7 @@ export interface TestUser {
 /** App + banco de teste + criação de pessoas logadas, com `now` fixo (ou ajustável por `setNow`). */
 export function createHarness(database: TestDatabase) {
   let now = TEST_NOW;
-  const auth = createAuth(testEnv, [TEST_ORIGIN], database.db);
+  const auth = createAuth(testEnv, resolveWebConfig(testEnv), database.db);
   const app = createApp(testEnv, database.db, () => now);
   let counter = 0;
 
