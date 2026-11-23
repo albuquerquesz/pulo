@@ -46,7 +46,7 @@ function autenticacaoFalsa(opcoes: {
 const syncVazio = (profile: unknown) => ({
   user: { id: PESSOA.id, name: PESSOA.nome, email: PESSOA.email, image: null },
   metadata: { ...DEFAULT_USER_METADATA, profile },
-  blocks: [], habits: [], habitLogs: [], sessions: [], restDays: [], proposals: [], mascot: null, serverTime: 1,
+  blocks: [], habits: [], habitLogs: [], sessions: [], restDays: [], proposals: [], goals: [], mascot: null, serverTime: 1,
 });
 
 const PERFIL = { frogName: 'Pulinho', dayStartMinutes: 420, dayEndMinutes: 1320, createdAt: 1 };
