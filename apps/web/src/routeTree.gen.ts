@@ -14,6 +14,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as AbasIndexRouteImport } from './routes/_abas/index'
 import { Route as AbasFocoRouteImport } from './routes/_abas/foco'
+import { Route as AbasMetasRouteImport } from './routes/_abas/metas'
 import { Route as AbasPerfilRouteImport } from './routes/_abas/perfil'
 import { Route as AbasSemanaRouteImport } from './routes/_abas/semana'
 
@@ -41,6 +42,11 @@ const AbasFocoRoute = AbasFocoRouteImport.update({
   path: '/foco',
   getParentRoute: () => AbasRoute,
 } as any)
+const AbasMetasRoute = AbasMetasRouteImport.update({
+  id: '/metas',
+  path: '/metas',
+  getParentRoute: () => AbasRoute,
+} as any)
 const AbasPerfilRoute = AbasPerfilRouteImport.update({
   id: '/perfil',
   path: '/perfil',
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/welcome': typeof WelcomeRoute
   '/foco': typeof AbasFocoRoute
+  '/metas': typeof AbasMetasRoute
   '/perfil': typeof AbasPerfilRoute
   '/semana': typeof AbasSemanaRoute
 }
@@ -64,6 +71,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/welcome': typeof WelcomeRoute
   '/foco': typeof AbasFocoRoute
+  '/metas': typeof AbasMetasRoute
   '/perfil': typeof AbasPerfilRoute
   '/semana': typeof AbasSemanaRoute
   '/': typeof AbasIndexRoute
@@ -74,21 +82,37 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/welcome': typeof WelcomeRoute
   '/_abas/foco': typeof AbasFocoRoute
+  '/_abas/metas': typeof AbasMetasRoute
   '/_abas/perfil': typeof AbasPerfilRoute
   '/_abas/semana': typeof AbasSemanaRoute
   '/_abas/': typeof AbasIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/onboarding' | '/welcome' | '/foco' | '/perfil' | '/semana'
+  fullPaths:
+    | '/'
+    | '/onboarding'
+    | '/welcome'
+    | '/foco'
+    | '/metas'
+    | '/perfil'
+    | '/semana'
   fileRoutesByTo: FileRoutesByTo
-  to: '/onboarding' | '/welcome' | '/foco' | '/perfil' | '/semana' | '/'
+  to:
+    | '/onboarding'
+    | '/welcome'
+    | '/foco'
+    | '/metas'
+    | '/perfil'
+    | '/semana'
+    | '/'
   id:
     | '__root__'
     | '/_abas'
     | '/onboarding'
     | '/welcome'
     | '/_abas/foco'
+    | '/_abas/metas'
     | '/_abas/perfil'
     | '/_abas/semana'
     | '/_abas/'
@@ -137,6 +161,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AbasFocoRouteImport
       parentRoute: typeof AbasRoute
     }
+    '/_abas/metas': {
+      id: '/_abas/metas'
+      path: '/metas'
+      fullPath: '/metas'
+      preLoaderRoute: typeof AbasMetasRouteImport
+      parentRoute: typeof AbasRoute
+    }
     '/_abas/perfil': {
       id: '/_abas/perfil'
       path: '/perfil'
@@ -156,6 +187,7 @@ declare module '@tanstack/react-router' {
 
 interface AbasRouteChildren {
   AbasFocoRoute: typeof AbasFocoRoute
+  AbasMetasRoute: typeof AbasMetasRoute
   AbasPerfilRoute: typeof AbasPerfilRoute
   AbasSemanaRoute: typeof AbasSemanaRoute
   AbasIndexRoute: typeof AbasIndexRoute
@@ -163,6 +195,7 @@ interface AbasRouteChildren {
 
 const AbasRouteChildren: AbasRouteChildren = {
   AbasFocoRoute: AbasFocoRoute,
+  AbasMetasRoute: AbasMetasRoute,
   AbasPerfilRoute: AbasPerfilRoute,
   AbasSemanaRoute: AbasSemanaRoute,
   AbasIndexRoute: AbasIndexRoute,
