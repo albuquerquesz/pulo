@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import type { AgoraDaLagoa } from '@pulo/core/domain/lagoa';
-import type { Energy, FrogMood, Phase } from '@pulo/core/domain/types';
+import type { FrogMood, Phase } from '@pulo/core/domain/types';
 import { Lagoa } from '@/mascot/lagoa/Lagoa';
 import { Sapo } from '@/mascot/sapo/Sapo';
 import { TemaProvider, useTheme } from '@/theme/useTheme';
@@ -13,7 +13,6 @@ import { Balao } from './Balao';
 import { BarraAbas } from './BarraAbas';
 import { Botao } from './Botao';
 import { Cartao } from './Cartao';
-import { ChipEnergia } from './ChipEnergia';
 import { EstadoVazio } from './EstadoVazio';
 import { Texto } from './Texto';
 import { Toast } from './Toast';
@@ -40,7 +39,6 @@ function Secao({ titulo, children }: { titulo: string; children: ReactNode }) {
 
 function Painel({ tema }: { tema: 'claro' | 'escuro' }) {
   const t = useTheme();
-  const [energia, setEnergia] = useState<Energy>(3);
   const [aba, setAba] = useState('hoje');
   const [salto, setSalto] = useState(0);
   const [estado, setEstado] = useState<FrogMood>('parado');
@@ -63,14 +61,6 @@ function Painel({ tema }: { tema: 'claro' | 'escuro' }) {
         <Cartao onPress={() => undefined} rotulo="Cartão interativo"><Texto>Cartão interativo</Texto></Cartao>
       </Secao>
 
-      <Secao titulo="ChipEnergia">
-        <View style={styles.chips}>
-          {([1, 2, 3, 4, 5] as Energy[]).map((n) => (
-            <ChipEnergia key={n} nivel={n} selecionado={n === energia} onPress={setEnergia} />
-          ))}
-        </View>
-      </Secao>
-
       <Secao titulo="AnelTimer: parado, rodando, pausa, concluído">
         <AnelTimer remainingMs={25 * 60000} totalMs={25 * 60000} estado="parado" tamanho={140} />
         <AnelTimer remainingMs={14 * 60000 + 20000} totalMs={25 * 60000} estado="rodando" tamanho={140} />
@@ -80,7 +70,7 @@ function Painel({ tema }: { tema: 'claro' | 'escuro' }) {
 
       <Secao titulo="Balao">
         <Balao texto="Bom te ver!" linhas={1} />
-        <Balao texto="Hoje sua energia ficou baixa à tarde, então que tal um foco curto de manhã?" linhas={2} />
+        <Balao texto="Hoje seus focos renderam menos à tarde, então que tal um foco curto de manhã?" linhas={2} />
       </Secao>
 
       <Secao titulo="Toast">

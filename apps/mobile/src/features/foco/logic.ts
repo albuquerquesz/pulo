@@ -1,5 +1,3 @@
-import { shouldAskAfterFocus } from '@pulo/core/domain/checkin';
-import { dateKeyOf } from '@pulo/core/domain/day';
 import {
   carregarSessaoAtiva,
   concluirFoco,
@@ -19,8 +17,6 @@ export interface EstadoDoFoco {
   sessao: FocusSession | null;
   /** Terminou enquanto o app estava fechado ou em segundo plano. */
   concluiuFora: boolean;
-  /** Perguntar a energia depois de concluir (opcional). */
-  perguntarEnergia: boolean;
   /** Eventos para o sapo e o aviso. */
   feliz: boolean;
   marco: boolean;
@@ -30,7 +26,6 @@ export const FOCO_OCIOSO: EstadoDoFoco = {
   fase: 'ocioso',
   sessao: null,
   concluiuFora: false,
-  perguntarEnergia: false,
   feliz: false,
   marco: false,
 };
@@ -39,27 +34,15 @@ export const TEXTO_CONCLUIU_FORA = 'Você concluiu enquanto estava fora';
 export const TEXTO_PARAR = 'Parar por agora?';
 export const TEXTO_PARAR_DETALHE = 'Tudo bem parar. O que você já fez conta, sem culpa.';
 
-async function doResultado(
-  repo: Repository,
-  clock: Clock,
-  user: User,
-  o: FocoOutcome,
-  fora: boolean,
-): Promise<EstadoDoFoco> {
+function doResultado(o: FocoOutcome, fora: boolean): EstadoDoFoco {
   if (!o.ended) {
     return { ...FOCO_OCIOSO, fase: 'ativa', sessao: o.session };
   }
   const concluida = o.session.state === 'concluida';
-  let perguntar = false;
-  if (concluida) {
-    const hoje = dateKeyOf(clock.now(), user.timezone);
-    perguntar = shouldAskAfterFocus(await repo.listCheckIns({ from: hoje, to: hoje }), clock.now(), user.timezone);
-  }
   return {
     fase: concluida ? 'concluida' : 'interrompida',
     sessao: o.session,
     concluiuFora: fora && o.concludedWhileAway,
-    perguntarEnergia: perguntar,
     feliz: o.events.includes('bloco_concluido'),
     marco: o.events.includes('marco'),
   };
@@ -69,7 +52,7 @@ async function doResultado(
 export async function abrirFoco(repo: Repository, clock: Clock, user: User): Promise<EstadoDoFoco> {
   const o = await carregarSessaoAtiva(repo, clock, user.timezone);
   if (!o) return FOCO_OCIOSO;
-  return doResultado(repo, clock, user, o, true);
+  return doResultado(o, true);
 }
 
 async function rodar(
@@ -81,7 +64,7 @@ async function rodar(
 ): Promise<EstadoDoFoco> {
   const r = await fn();
   if (!r.ok) return abrirFoco(repo, clock, user);
-  return doResultado(repo, clock, user, r.value, fora);
+  return doResultado(r.value, fora);
 }
 
 export const iniciar = (repo: Repository, clock: Clock, user: User, minutos: number = FOCUS.defaultMinutes) =>

@@ -1,6 +1,6 @@
 import { createMemoryRepository } from '@/data';
 import { fixedClock } from '@pulo/core/domain/clock';
-import { sp } from '@pulo/core/domain/test-utils';
+import { endedSession, sp } from '@pulo/core/domain/test-utils';
 import { criarPlanoInicial } from '@pulo/core/domain/routine';
 import type { Repository, User } from '@pulo/core/domain/types';
 
@@ -12,7 +12,6 @@ import {
   comecarFoco,
   diaDeDescanso,
   fraseDoSapo,
-  registrarEnergia,
 } from './logic';
 
 // segunda-feira, 10h em Sao Paulo
@@ -33,7 +32,7 @@ describe('Hoje', () => {
     expect(d.blocos.length).toBe(3);
     expect(d.habitos.length).toBe(2);
     expect(d.mascote.phase).toBe(1);
-    expect(d.energia).toBeNull();
+    expect(d.focosInterrompidosHoje).toBe(0);
     expect(d.sessaoAtiva).toBeNull();
   });
 
@@ -47,14 +46,11 @@ describe('Hoje', () => {
     expect((await carregarHoje(repo, c, user)).temRotina).toBe(true);
   });
 
-  test('check in registra a energia e vale a última do dia', async () => {
+  test('conta os focos interrompidos de hoje', async () => {
     const { repo, user, c } = await novo();
-    await registrarEnergia(repo, c, user, 2);
-    expect((await carregarHoje(repo, c, user)).energia).toBe(2);
-    c.advance(60_000);
-    await registrarEnergia(repo, c, user, 4);
-    expect((await carregarHoje(repo, c, user)).energia).toBe(4);
-    expect((await repo.listCheckIns()).length).toBe(1);
+    await repo.saveSession(endedSession(sp(2026, 11, 23, 8, 0), 25, 'interrompida', 5));
+    await repo.saveSession(endedSession(sp(2026, 11, 22, 15, 0), 25, 'interrompida', 5));
+    expect((await carregarHoje(repo, c, user)).focosInterrompidosHoje).toBe(1);
   });
 
   test('marcar e desmarcar hábito', async () => {
