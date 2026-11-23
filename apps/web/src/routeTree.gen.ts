@@ -17,6 +17,8 @@ import { Route as AbasFocoRouteImport } from './routes/_abas/foco'
 import { Route as AbasMetasRouteImport } from './routes/_abas/metas'
 import { Route as AbasPerfilRouteImport } from './routes/_abas/perfil'
 import { Route as AbasSemanaRouteImport } from './routes/_abas/semana'
+import { Route as OauthConsentimentoRouteImport } from './routes/oauth/consentimento'
+import { Route as OauthEntrarRouteImport } from './routes/oauth/entrar'
 
 const AbasRoute = AbasRouteImport.update({
   id: '/_abas',
@@ -57,6 +59,16 @@ const AbasSemanaRoute = AbasSemanaRouteImport.update({
   path: '/semana',
   getParentRoute: () => AbasRoute,
 } as any)
+const OauthConsentimentoRoute = OauthConsentimentoRouteImport.update({
+  id: '/oauth/consentimento',
+  path: '/oauth/consentimento',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OauthEntrarRoute = OauthEntrarRouteImport.update({
+  id: '/oauth/entrar',
+  path: '/oauth/entrar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AbasIndexRoute
@@ -66,6 +78,8 @@ export interface FileRoutesByFullPath {
   '/metas': typeof AbasMetasRoute
   '/perfil': typeof AbasPerfilRoute
   '/semana': typeof AbasSemanaRoute
+  '/oauth/consentimento': typeof OauthConsentimentoRoute
+  '/oauth/entrar': typeof OauthEntrarRoute
 }
 export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
@@ -74,6 +88,8 @@ export interface FileRoutesByTo {
   '/metas': typeof AbasMetasRoute
   '/perfil': typeof AbasPerfilRoute
   '/semana': typeof AbasSemanaRoute
+  '/oauth/consentimento': typeof OauthConsentimentoRoute
+  '/oauth/entrar': typeof OauthEntrarRoute
   '/': typeof AbasIndexRoute
 }
 export interface FileRoutesById {
@@ -85,6 +101,8 @@ export interface FileRoutesById {
   '/_abas/metas': typeof AbasMetasRoute
   '/_abas/perfil': typeof AbasPerfilRoute
   '/_abas/semana': typeof AbasSemanaRoute
+  '/oauth/consentimento': typeof OauthConsentimentoRoute
+  '/oauth/entrar': typeof OauthEntrarRoute
   '/_abas/': typeof AbasIndexRoute
 }
 export interface FileRouteTypes {
@@ -97,6 +115,8 @@ export interface FileRouteTypes {
     | '/metas'
     | '/perfil'
     | '/semana'
+    | '/oauth/consentimento'
+    | '/oauth/entrar'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/onboarding'
@@ -105,6 +125,8 @@ export interface FileRouteTypes {
     | '/metas'
     | '/perfil'
     | '/semana'
+    | '/oauth/consentimento'
+    | '/oauth/entrar'
     | '/'
   id:
     | '__root__'
@@ -115,6 +137,8 @@ export interface FileRouteTypes {
     | '/_abas/metas'
     | '/_abas/perfil'
     | '/_abas/semana'
+    | '/oauth/consentimento'
+    | '/oauth/entrar'
     | '/_abas/'
   fileRoutesById: FileRoutesById
 }
@@ -122,6 +146,8 @@ export interface RootRouteChildren {
   AbasRoute: typeof AbasRouteWithChildren
   OnboardingRoute: typeof OnboardingRoute
   WelcomeRoute: typeof WelcomeRoute
+  OauthConsentimentoRoute: typeof OauthConsentimentoRoute
+  OauthEntrarRoute: typeof OauthEntrarRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -182,6 +208,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AbasSemanaRouteImport
       parentRoute: typeof AbasRoute
     }
+    '/oauth/consentimento': {
+      id: '/oauth/consentimento'
+      path: '/oauth/consentimento'
+      fullPath: '/oauth/consentimento'
+      preLoaderRoute: typeof OauthConsentimentoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oauth/entrar': {
+      id: '/oauth/entrar'
+      path: '/oauth/entrar'
+      fullPath: '/oauth/entrar'
+      preLoaderRoute: typeof OauthEntrarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -207,6 +247,8 @@ const rootRouteChildren: RootRouteChildren = {
   AbasRoute: AbasRouteWithChildren,
   OnboardingRoute: OnboardingRoute,
   WelcomeRoute: WelcomeRoute,
+  OauthConsentimentoRoute: OauthConsentimentoRoute,
+  OauthEntrarRoute: OauthEntrarRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

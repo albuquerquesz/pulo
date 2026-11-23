@@ -1,8 +1,11 @@
+import { useState } from 'react';
+
 import type { User } from '@pulo/core/domain/types';
 
 import { Botao, Cartao, Texto } from '@/ui';
 
 import { confirmar, Secao, Tela, useApp } from '../app';
+import { ambienteDoApp, apiUrl } from '../sessao/config';
 import { EscolhaDeHora } from './HorarioDoDia';
 
 type OpcaoDeTema = { chave: User['theme']; rotulo: string };
@@ -94,6 +97,8 @@ export function PerfilScreen() {
         <Botao titulo="Apagar todos os meus dados" variante="fantasma" onPress={() => void apagar()} />
       </Secao>
 
+      {pessoa ? <ConectarIa /> : null}
+
       {pessoa ? (
         <Secao titulo="Sua conta">
           <Texto cor="muted">Você entrou como {pessoa.email}.</Texto>
@@ -101,5 +106,37 @@ export function PerfilScreen() {
         </Secao>
       ) : null}
     </Tela>
+  );
+}
+
+/** Endereço do servidor MCP para colar no Claude (ou outro cliente): a IA entra com a mesma conta e faz o que as telas fazem. */
+function ConectarIa() {
+  const api = apiUrl(ambienteDoApp(), import.meta.env.DEV);
+  const [copiado, setCopiado] = useState(false);
+  if (!api) return null;
+  const endereco = `${api}/mcp`;
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(endereco);
+      setCopiado(true);
+    } catch {
+      setCopiado(false);
+    }
+  };
+  return (
+    <Secao titulo="Conectar uma IA">
+      <Texto cor="muted">
+        Adicione o Pulo como conector MCP no Claude ou em outro app. Ele pede para você entrar e liberar, e depois cuida da sua rotina, hábitos e metas por você.
+      </Texto>
+      <Cartao>
+        <Texto variante="legenda" cor="muted">
+          Endereço do conector
+        </Texto>
+        <Texto className="break-all" data-testid="endereco-mcp">
+          {endereco}
+        </Texto>
+      </Cartao>
+      <Botao titulo={copiado ? 'Copiado' : 'Copiar endereço'} variante="agua" onPress={() => void copiar()} />
+    </Secao>
   );
 }
