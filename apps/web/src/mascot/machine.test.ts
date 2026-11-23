@@ -1,12 +1,10 @@
 import { FROG_EVENT_MS } from '@pulo/core/config/decisions';
-import type { FrogInputs, FrogMood, Phase } from '@pulo/core/domain/types';
+import type { FrogInputs, FrogMood } from '@pulo/core/domain/types';
 
 import {
-  ESTADOS_POR_FASE,
   ROSTO_DO_ESTADO,
   ROTULO_DO_ESTADO,
   estadoDoSapo,
-  estadoParaFase,
   eventoAtivo,
   rotuloDoSapo,
 } from './machine';
@@ -63,27 +61,15 @@ describe('estadoDoSapo', () => {
   });
 });
 
-describe('fases', () => {
+describe('estados', () => {
   const todos = Object.keys(ROSTO_DO_ESTADO) as FrogMood[];
 
-  test('fase 1 pedindo surpreso cai para parado', () => {
-    expect(estadoParaFase(1, 'surpreso')).toBe('parado');
-    expect(estadoParaFase(2, 'focado')).toBe('parado');
-    expect(estadoParaFase(1, 'cansado')).toBe('cansado');
-    expect(estadoParaFase(2, 'feliz')).toBe('feliz');
-  });
-
-  test('fases 3 e 4 têm todos os estados', () => {
-    for (const f of [3, 4] as Phase[]) for (const e of todos) expect(estadoParaFase(f, e)).toBe(e);
-  });
-
-  test('todo estado tem rosto, rótulo e fase com arte', () => {
+  test('todo estado tem rosto e rótulo', () => {
     expect(todos).toHaveLength(8);
     for (const e of todos) {
       expect(ROSTO_DO_ESTADO[e]).toBeDefined();
       expect(ROTULO_DO_ESTADO[e].length).toBeGreaterThan(0);
       expect(rotuloDoSapo(e)).toMatch(/^Sapo, /);
-      expect(ESTADOS_POR_FASE[4]).toContain(e);
     }
   });
 });

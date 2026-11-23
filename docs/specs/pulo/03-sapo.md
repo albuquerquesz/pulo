@@ -47,11 +47,11 @@ Eventos transitórios voltam ao estado de base quando acabam.
 **Fases visuais (arte necessária):**
 | Fase | Sapo | Estados com arte |
 |---|---|---|
-| 1 | Girino | parado, feliz, cansado |
-| 2 | Girino com pernas | parado, feliz, cansado |
+| 1 | Jovem | todos |
+| 2 | Jovem | todos |
 | 3 | Jovem | todos |
 | 4 | Adulto | todos |
-Nas fases 1 e 2, os demais estados caem para `parado` (decisão de escopo minha, para caber no prazo).
+Sem girino: o mascote é sapo desde a fase 1, com todos os estados (decisão do Victor).
 
 **Animações (Reanimated):** respirar (escala 1,04 por 0,96, 3,4 s, loop), piscar a cada 3 a 6 s (intervalo sorteado), pulinho ao marcar um hábito, pouso (squash 1,22 por 0,78 em 120 ms e mola), olhar para o toque (opcional). Todas na thread de UI. Constantes vêm da spec 02.
 

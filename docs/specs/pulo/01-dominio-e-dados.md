@@ -57,10 +57,11 @@ O dia de cuidado é **calculado** a partir dos registros, não gravado. O total 
 **Fases do sapo**, por total de dias de cuidado (valores propostos por mim, decisão do Victor):
 | Fase | Dias de cuidado | Sapo |
 |---|---|---|
-| 1 | 0 a 2 | Girino |
-| 2 | 3 a 7 | Girino com pernas |
+| 1 | 0 a 2 | Sapo jovem |
+| 2 | 3 a 7 | Sapo jovem |
 | 3 | 8 a 14 | Sapo jovem |
 | 4 | 15 ou mais | Sapo adulto |
+O mascote é sempre um sapo, sem girino (decisão do Victor). As fases 1 a 3 mudam a lagoa ao redor; o sapo cresce na fase 4.
 **Nunca regride:** a fase é `max(fase anterior guardada, fase calculada)`. Apagar uma sessão individual não reduz o total (sessões são imutáveis); só "apagar todos os meus dados" zera.
 
 **Resumo da semana (`WeekSummary`)**, entrada da IA e das telas. Semana de segunda a domingo, dia lógico:

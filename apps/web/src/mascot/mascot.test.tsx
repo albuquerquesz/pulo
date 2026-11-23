@@ -22,9 +22,9 @@ describe('Sapo', () => {
     expect(screen.getByRole('img', { name: rotuloDoSapo(estado) })).toBeDefined();
   });
 
-  it('cai para parado quando o girino não tem a arte', () => {
+  it('desenha qualquer humor desde a fase 1, sempre como sapo', () => {
     render(<Sapo fase={1} estado="pensando" />);
-    expect(screen.getByTestId('sapo').getAttribute('aria-label')).toBe(rotuloDoSapo('parado'));
+    expect(screen.getByTestId('sapo').getAttribute('aria-label')).toBe(rotuloDoSapo('pensando'));
   });
 
   it('troca de estado e pula com reduzir movimento, sem loops', () => {

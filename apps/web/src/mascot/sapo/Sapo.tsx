@@ -3,10 +3,9 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import type { FrogMood, Phase } from '@pulo/core/domain/types';
 import { resolverMovimento, useTheme, type MovimentoResolvido } from '@/theme';
 
-import { ROSTO_DO_ESTADO, estadoParaFase, rotuloDoSapo, type Rosto } from '../machine';
+import { ROSTO_DO_ESTADO, rotuloDoSapo, type Rosto } from '../machine';
 import { CURVA, esperar, ir, molaAte, paraQuadros, tocar, trilha, type Formato, type Quadros } from './anim';
-import { BocaDoGirino, Cauda, CorpoDoGirino, OlhoDoGirino, PalpebraDoGirino, PernasDoGirino } from './girino';
-import { BASE_Y, ESCALA_JOVEM, PIVOTS, VIEWBOX } from './geometria';
+import { ESCALA_JOVEM, PIVOTS, VIEWBOX } from './geometria';
 import * as P from './pecas';
 import './sapo.css';
 
@@ -59,7 +58,6 @@ interface CamadaProps {
 
 function Camada({ fase, estado, movimento, tamanho, saltoKey, saindo = false, semSombra }: CamadaProps) {
   const rosto = ROSTO_DO_ESTADO[estado];
-  const girino = fase <= 2;
   const abertos = ABERTOS.includes(rosto.olhos);
   const loops = movimento.loops && !saindo;
   const { saltos, fadeDeEstado: fadeMs, spring: mola, landingSquash: sq } = movimento;
@@ -119,7 +117,7 @@ function Camada({ fase, estado, movimento, tamanho, saltoKey, saindo = false, se
   }, [saltoKey, saltos, saindo, tamanho, mola]);
 
   const [px, py] = PIVOTS.sapo;
-  const escala = fase === 3 ? ESCALA_JOVEM : 1;
+  const escala = fase < 4 ? ESCALA_JOVEM : 1;
   const grupoEscala = `translate(${px} ${py}) scale(${escala}) translate(${-px} ${-py})`;
 
   const extras = (
@@ -165,27 +163,7 @@ function Camada({ fase, estado, movimento, tamanho, saltoKey, saindo = false, se
         >
           {!semSombra && <P.SombraNoChao />}
           <g transform={grupoEscala}>
-            {girino ? (
-              <>
-                <g className="sapo-cauda" style={origem(PIVOTS.girinoCauda)}>
-                  <Cauda />
-                </g>
-                <g className="sapo-respira-girino" style={origem([150, BASE_Y])}>
-                  <CorpoDoGirino />
-                  {fase === 2 && <PernasDoGirino />}
-                  <OlhoDoGirino tipo={rosto.olhos} />
-                  {abertos && (
-                    <g className="sapo-palpebra" style={origem([131, 211])}>
-                      <PalpebraDoGirino />
-                    </g>
-                  )}
-                  <BocaDoGirino tipo={rosto.boca} />
-                </g>
-                <g transform="translate(-49 95)">{rosto.extras.includes('suor') && <P.Suor />}</g>
-                <g transform="translate(30 130) scale(0.8)">{rosto.extras.includes('brilhos') && <P.Brilhos />}</g>
-              </>
-            ) : (
-              <>
+            <>
                 <g className="sapo-respira" style={origem(PIVOTS.sapo)}>
                   <P.Corpo />
                   <P.Barriga />
@@ -220,7 +198,6 @@ function Camada({ fase, estado, movimento, tamanho, saltoKey, saindo = false, se
                 </g>
                 {extras}
               </>
-            )}
           </g>
         </svg>
       </div>
@@ -252,7 +229,7 @@ function useEstadoAnterior(estado: FrogMood, fase: Phase, ativo: boolean, ms: nu
 
 /**
  * O sapo. Estados: parado, feliz, cansado, pensando, surpreso, focado, dormindo, pouso.
- * Nas fases 1 e 2 só há arte para parado, feliz e cansado; os demais caem para parado.
+ * Fases 1 a 3 desenham o sapo jovem; a fase 4, o adulto.
  */
 export function Sapo({ fase, estado = 'parado', tamanho = 220, reducedMotion, salto = 0, semSombra, className, style }: SapoProps) {
   const tema = useTheme();
@@ -260,15 +237,14 @@ export function Sapo({ fase, estado = 'parado', tamanho = 220, reducedMotion, sa
     () => (reducedMotion === undefined ? tema.movimento : resolverMovimento(reducedMotion)),
     [reducedMotion, tema.movimento],
   );
-  const efetivo = estadoParaFase(fase, estado);
-  const anterior = useEstadoAnterior(efetivo, fase, !movimento.saltos, movimento.fadeDeEstado);
+  const anterior = useEstadoAnterior(estado, fase, !movimento.saltos, movimento.fadeDeEstado);
 
   return (
     <div
       className={className}
       style={{ position: 'relative', width: tamanho, height: tamanho, ...style }}
       role="img"
-      aria-label={rotuloDoSapo(efetivo)}
+      aria-label={rotuloDoSapo(estado)}
       aria-live="polite"
       data-testid="sapo"
     >
@@ -284,7 +260,7 @@ export function Sapo({ fase, estado = 'parado', tamanho = 220, reducedMotion, sa
           semSombra={semSombra}
         />
       )}
-      <Camada fase={fase} estado={efetivo} movimento={movimento} tamanho={tamanho} saltoKey={salto} semSombra={semSombra} />
+      <Camada fase={fase} estado={estado} movimento={movimento} tamanho={tamanho} saltoKey={salto} semSombra={semSombra} />
     </div>
   );
 }

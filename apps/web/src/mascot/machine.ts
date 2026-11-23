@@ -1,5 +1,5 @@
 import { FROG_TIRED_MAX_ENERGY } from '@pulo/core/config/decisions';
-import type { FrogInputs, FrogMood, Phase } from '@pulo/core/domain/types';
+import type { FrogInputs, FrogMood } from '@pulo/core/domain/types';
 
 /**
  * Máquina de estados do sapo (spec 03). Função pura sobre FrogInputs.
@@ -13,19 +13,6 @@ export function estadoDoSapo(entrada: FrogInputs): FrogMood {
   if (entrada.latestEnergyToday !== null && entrada.latestEnergyToday <= FROG_TIRED_MAX_ENERGY) return 'cansado';
   if (!entrada.withinUserDay) return 'dormindo';
   return 'parado';
-}
-
-/** Estados que têm arte em cada fase. Fases 1 e 2 (girino): só parado, feliz e cansado. */
-export const ESTADOS_POR_FASE: Record<Phase, readonly FrogMood[]> = {
-  1: ['parado', 'feliz', 'cansado'],
-  2: ['parado', 'feliz', 'cansado'],
-  3: ['parado', 'feliz', 'cansado', 'pensando', 'surpreso', 'focado', 'dormindo', 'pouso'],
-  4: ['parado', 'feliz', 'cansado', 'pensando', 'surpreso', 'focado', 'dormindo', 'pouso'],
-};
-
-/** Estado que de fato é desenhado: sem arte na fase, cai para `parado`. */
-export function estadoParaFase(fase: Phase, estado: FrogMood): FrogMood {
-  return ESTADOS_POR_FASE[fase].includes(estado) ? estado : 'parado';
 }
 
 export const ROTULO_DO_ESTADO: Record<FrogMood, string> = {

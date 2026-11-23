@@ -26,8 +26,6 @@ export const COR = {
   suor: '#8FD3FF',
   zzz: lightColors.descanso,
   impacto: '#C9A46C',
-  girino: '#7FB856',
-  girinoEscuro: '#639C3E',
 } as const;
 
 export const CORPO = { cx: 150, cy: 190, rx: 66, ry: 76 };
@@ -60,10 +58,9 @@ export const PIVOTS = {
   zzz: [248, 46],
   brilhos: [150, 60],
   impacto: [150, BASE_Y],
-  girinoCauda: [180, 232],
 } as const;
 
 export type NomeDePeca = keyof typeof PIVOTS;
 
-/** Escala do sapo jovem (fase 3) em relação ao adulto (fase 4), como no conceito. */
+/** Escala do sapo jovem (fases 1 a 3) em relação ao adulto (fase 4). */
 export const ESCALA_JOVEM = 0.66;
