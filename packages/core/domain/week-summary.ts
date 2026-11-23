@@ -2,12 +2,10 @@ import { STABLE_WEEK_MIN_CARE_DAYS } from '../config/decisions';
 import { effectiveMs, sessionCountsAsCare, sessionDateKey } from './care-days';
 import { periodOf, weekDates, weekEndOf, weekStartOf } from './day';
 import type {
-  CheckIn,
   DateKey,
   FocusSession,
   HabitLog,
   Period,
-  PeriodEnergyStats,
   PeriodSessionStats,
   Repository,
   RestDay,
@@ -25,7 +23,6 @@ export interface WeekSummaryInput {
   weekStart: DateKey;
   timeZone: string;
   sessions: readonly FocusSession[];
-  checkIns: readonly CheckIn[];
   restDays: readonly RestDay[];
   habitLogs?: readonly HabitLog[];
 }
@@ -42,7 +39,6 @@ export function buildWeekSummary(input: WeekSummaryInput): WeekSummary {
 
   const minutesMs = perPeriod(() => 0);
   const sessionStats = perPeriod(() => ({ completed: 0, interrupted: 0 }));
-  const energySum = perPeriod(() => ({ sum: 0, n: 0 }));
   const record = new Set<DateKey>();
   const care = new Set<DateKey>();
   let totalSessions = 0;
@@ -60,15 +56,6 @@ export function buildWeekSummary(input: WeekSummaryInput): WeekSummary {
     if (sessionCountsAsCare(s)) care.add(key);
   }
 
-  let totalCheckIns = 0;
-  for (const c of input.checkIns) {
-    if (!days.has(c.date)) continue;
-    record.add(c.date);
-    totalCheckIns += 1;
-    energySum[c.period].sum += c.energy;
-    energySum[c.period].n += 1;
-  }
-
   const rest = new Set<DateKey>();
   for (const r of input.restDays) {
     if (!days.has(r.date)) continue;
@@ -79,14 +66,11 @@ export function buildWeekSummary(input: WeekSummaryInput): WeekSummary {
   for (const h of input.habitLogs ?? []) if (days.has(h.date)) record.add(h.date);
 
   const sessionsByPeriod = {} as Record<Period, PeriodSessionStats>;
-  const energyByPeriod = {} as Record<Period, PeriodEnergyStats>;
   const focusMinutesByPeriod = {} as Record<Period, number>;
   for (const p of PERIOD_LIST) {
     const { completed, interrupted } = sessionStats[p];
     const total = completed + interrupted;
     sessionsByPeriod[p] = { completed, interrupted, completionRate: total === 0 ? null : completed / total };
-    const e = energySum[p];
-    energyByPeriod[p] = { average: e.n === 0 ? null : e.sum / e.n, checkIns: e.n };
     focusMinutesByPeriod[p] = Math.round(minutesMs[p] / 60_000);
   }
 
@@ -95,8 +79,6 @@ export function buildWeekSummary(input: WeekSummaryInput): WeekSummary {
     weekEnd,
     focusMinutesByPeriod,
     sessionsByPeriod,
-    energyByPeriod,
-    totalCheckIns,
     totalSessions,
     restDays: rest.size,
     careDays: care.size,
@@ -113,11 +95,10 @@ export async function loadWeekSummary(
 ): Promise<WeekSummary> {
   const weekStart = weekStartOf(anyDateInWeek);
   const range = { from: weekStart, to: weekEndOf(weekStart) };
-  const [sessions, checkIns, restDays, habitLogs] = await Promise.all([
+  const [sessions, restDays, habitLogs] = await Promise.all([
     repo.listSessions(),
-    repo.listCheckIns(range),
     repo.listRestDays(),
     repo.listHabitLogs(range),
   ]);
-  return buildWeekSummary({ weekStart, timeZone, sessions, checkIns, restDays, habitLogs });
+  return buildWeekSummary({ weekStart, timeZone, sessions, restDays, habitLogs });
 }

@@ -27,14 +27,8 @@ function summary(over: Partial<WeekSummary> = {}): WeekSummary {
     weekStart: '2026-11-16',
     weekEnd: '2026-11-22',
     focusMinutesByPeriod: { manha: 100, tarde: 25, noite: 0 },
-    sessionsByPeriod: { manha: stats(4, 0), tarde: stats(1, 1), noite: stats(0, 0) },
-    energyByPeriod: {
-      manha: { average: 4.5, checkIns: 4 },
-      tarde: { average: 1.5, checkIns: 4 },
-      noite: { average: null, checkIns: 0 },
-    },
-    totalCheckIns: 8,
-    totalSessions: 6,
+    sessionsByPeriod: { manha: stats(4, 0), tarde: stats(1, 2), noite: stats(0, 0) },
+    totalSessions: 7,
     restDays: 1,
     careDays: 5,
     daysWithRecord: 5,
@@ -54,7 +48,7 @@ const block = (id: string, weekday: 0 | 1 | 2, start: number, dur = 25): Routine
 const blocks = [block('a', 0, 14 * 60 + 30), block('m', 0, 9 * 60)];
 let n = 0;
 const newId = () => `p${++n}`;
-const good = { candidata_escolhida: 0, padrao: 'A tarde rendeu menos', motivo: 'De manhã você tem mais energia', tom: 'leve' };
+const good = { candidata_escolhida: 0, padrao: 'A tarde rendeu menos', motivo: 'De manhã seus focos rendem mais', tom: 'leve' };
 
 describe('candidatas', () => {
   it('gera mover foco da tarde para a manhã sem sobrepor', () => {
@@ -73,15 +67,15 @@ describe('candidatas', () => {
     expect(computeCandidates(summary(), full).filter((c) => c.kind === 'mover_foco')).toHaveLength(0);
   });
 
-  it('exige check ins mínimos no período', () => {
-    const s = summary({ energyByPeriod: { ...summary().energyByPeriod, tarde: { average: 1.5, checkIns: WEEKLY_AI.minCheckInsPerPeriodToCount - 1 } } });
+  it('exige sessões mínimas no período', () => {
+    const s = summary({ sessionsByPeriod: { manha: stats(4, 0), tarde: stats(0, WEEKLY_AI.minSessionsPerPeriodToCount - 1), noite: stats(0, 0) } });
     expect(computeCandidates(s, blocks)).toHaveLength(0);
   });
 
   it('encurta foco com interrupções acima do limite, respeitando mínimo', () => {
     const s = summary({
-      sessionsByPeriod: { manha: stats(4, 0), tarde: stats(0, WEEKLY_AI.maxInterruptionsBeforeShorten + 1), noite: stats(0, 0) },
-      energyByPeriod: { manha: { average: 3, checkIns: 0 }, tarde: { average: 3, checkIns: 0 }, noite: { average: null, checkIns: 0 } },
+      // manhã abaixo do mínimo: não entra na comparação, então só sobra encurtar
+      sessionsByPeriod: { manha: stats(WEEKLY_AI.minSessionsPerPeriodToCount - 1, 0), tarde: stats(0, WEEKLY_AI.maxInterruptionsBeforeShorten + 1), noite: stats(0, 0) },
     });
     const c = computeCandidates(s, blocks);
     expect(c).toHaveLength(1);
@@ -191,7 +185,7 @@ describe('fluxo, reserva e rótulos', () => {
 
   it('poucos dados: conhecendo, sem chamar a IA', async () => {
     const client = new FakeWeeklyAiClient(() => good);
-    for (const s of [summary({ daysWithRecord: 2 }), summary({ totalSessions: 2, totalCheckIns: 2 })]) {
+    for (const s of [summary({ daysWithRecord: 2 }), summary({ totalSessions: 2 })]) {
       const r = await generateWeeklyProposal({ summary: s, blocks, proposals: [], client, now: 1, newId });
       expect(r.kind).toBe('conhecendo');
     }

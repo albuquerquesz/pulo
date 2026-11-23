@@ -1,4 +1,4 @@
-import type { CheckIn, FocusSession, Period, Energy } from './types';
+import type { FocusSession } from './types';
 
 export const TZ = 'America/Sao_Paulo';
 
@@ -25,9 +25,4 @@ export function endedSession(
     state,
     pausedMs,
   };
-}
-
-export function checkIn(date: string, period: Period, energy: Energy, createdAt = 0): CheckIn {
-  n += 1;
-  return { id: `c${n}`, date, period, energy, createdAt };
 }

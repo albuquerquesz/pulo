@@ -60,8 +60,6 @@ export const DEFAULT_TIMEZONE = 'America/Sao_Paulo';
 export const MAX_HABITS_PER_DAY = 5;
 export const BLOCK_MIN_MINUTES = 5;
 export const BLOCK_MAX_MINUTES = 120;
-export const ENERGY_MIN = 1;
-export const ENERGY_MAX = 5;
 
 /** Foco (Pomodoro por horário). Proposta. */
 export const FOCUS = {
@@ -80,14 +78,15 @@ export const FROG_EVENT_MS = {
   feliz: 4000,
 } as const;
 
-/** Energia do dia igual ou abaixo deste valor deixa o sapo cansado. */
-export const FROG_TIRED_MAX_ENERGY = 2;
+/** A partir deste número de focos interrompidos no dia, o sapo fica cansado. */
+export const FROG_TIRED_MIN_INTERRUPTED = 2;
 
 /** IA semanal e candidatas por regra. Propostas. */
 export const WEEKLY_AI = {
   minDaysWithRecord: 3,
-  minSessionsOrCheckIns: 5,
-  minCheckInsPerPeriodToCount: 3,
+  minSessions: 5,
+  /** Sessões num período para ele entrar na comparação entre períodos. */
+  minSessionsPerPeriodToCount: 3,
   maxInterruptionsBeforeShorten: 2,
   maxChangesPerProposal: 2,
   shortenByMinutesOptions: [5, 10],

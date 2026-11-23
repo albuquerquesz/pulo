@@ -46,11 +46,6 @@ export function buildAiRequest(
         interrupted: summary.sessionsByPeriod[p].interrupted,
         completionRate: summary.sessionsByPeriod[p].completionRate,
       })),
-      energyByPeriod: rec((p) => ({
-        average: summary.energyByPeriod[p].average,
-        checkIns: summary.energyByPeriod[p].checkIns,
-      })),
-      totalCheckIns: summary.totalCheckIns,
       totalSessions: summary.totalSessions,
       restDays: summary.restDays,
       careDays: summary.careDays,
