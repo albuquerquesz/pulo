@@ -1,5 +1,6 @@
 import type {
   FocusSession,
+  Goal,
   Habit,
   HabitLog,
   MascotState,
@@ -20,6 +21,7 @@ export function createFakeRepository(): Repository {
   const sessions = new Map<string, FocusSession>();
   const rest = new Map<string, RestDay>();
   const proposals = new Map<string, WeeklyProposal>();
+  const goals = new Map<string, Goal>();
   const inRange = (d: string, r?: { from: string; to: string }) => !r || (d >= r.from && d <= r.to);
   return {
     getUser: async () => user,
@@ -43,6 +45,9 @@ export function createFakeRepository(): Repository {
     deleteRestDay: async (d) => void rest.delete(d),
     listProposals: async () => [...proposals.values()],
     saveProposal: async (p) => void proposals.set(p.id, p),
+    listGoals: async () => [...goals.values()],
+    saveGoal: async (g) => void goals.set(g.id, g),
+    deleteGoal: async (id) => void goals.delete(id),
     getMascotState: async () => mascot,
     saveMascotState: async (m) => void (mascot = m),
     clearAll: async () => {
@@ -54,6 +59,7 @@ export function createFakeRepository(): Repository {
       sessions.clear();
       rest.clear();
       proposals.clear();
+      goals.clear();
     },
   };
 }

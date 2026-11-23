@@ -43,3 +43,14 @@ export const proposalSelect = {
 } as const satisfies Prisma.WeeklyProposalSelect;
 
 export const mascotSelect = { phase: true, careDays: true, updatedAt: true } as const satisfies Prisma.MascotStateSelect;
+
+export const goalSelect = {
+  id: true,
+  title: true,
+  why: true,
+  targetDate: true,
+  state: true,
+  milestones: true,
+  createdAt: true,
+  completedAt: true,
+} as const satisfies Prisma.GoalSelect;

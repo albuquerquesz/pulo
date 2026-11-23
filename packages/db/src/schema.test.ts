@@ -57,6 +57,8 @@ describe('schema do domínio no Postgres', () => {
       t.db.routineBlock.create({ data: { userId: 'u-check', weekday: 1, startMinutes: 0, durationMinutes: 4, kind: 'foco' } }),
       t.db.habit.create({ data: { userId: 'u-check', title: 'x', weekdays: [9] } }),
       t.db.mascotState.create({ data: { userId: 'u-check', phase: 5, careDays: 0, updatedAt: new Date() } }),
+      t.db.goal.create({ data: { userId: 'u-check', title: 'x', state: 'concluida', milestones: [], createdAt: new Date() } }),
+      t.db.goal.create({ data: { userId: 'u-check', title: 'x', state: 'ativa', milestones: {}, createdAt: new Date() } }),
     ];
     for (const attempt of invalid) await expect(attempt).rejects.toThrow();
   });

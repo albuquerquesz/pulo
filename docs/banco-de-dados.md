@@ -15,6 +15,7 @@ erDiagram
   user ||--o{ focus_session : tem
   user ||--o{ rest_day : tem
   user ||--o{ weekly_proposal : tem
+  user ||--o{ goal : tem
   user ||--o| mascot_state : tem
   habit ||--o{ habit_log : registra
   routine_block |o--o{ focus_session : "ocorre em"
@@ -73,6 +74,17 @@ erDiagram
     timestamptz createdAt
     timestamptz decidedAt
   }
+  goal {
+    text id PK
+    text userId FK
+    text title
+    text why
+    date targetDate
+    goal_state state
+    jsonb milestones "GoalMilestone[]"
+    timestamptz createdAt
+    timestamptz completedAt
+  }
   mascot_state {
     text userId PK
     smallint phase "1 a 4"
@@ -91,6 +103,8 @@ Regras que o banco garante (migração `restricoes`, em SQL):
 - fase do sapo de 1 a 4, dia da semana de 0 a 6, duração do bloco de 5 a 120;
 - um `habit_log` por hábito e dia, um `rest_day` por dia, uma `weekly_proposal` por semana, um `mascot_state` por pessoa;
 - `habit_log` só aponta para hábito da mesma pessoa (chave composta `habitId, userId`).
+- `goal` concluída se, e somente se, tem `completedAt`; `milestones` é sempre um array JSON (migração `metas`).
+  O limite de metas ativas (`GOALS.maxActive`) é da API, numa transação serializável.
 
 Convenções de tipo: `DateKey` do domínio ('AAAA-MM-DD', o dia lógico) é `date`; instantes (ms) são `timestamptz`;
 os enums do Prisma têm os mesmos valores das uniões de `packages/core/domain/types.ts`.

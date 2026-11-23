@@ -16,6 +16,7 @@ import type {
   DateRange,
   EntityId,
   FocusSession,
+  Goal,
   Habit,
   HabitLog,
   MascotState,
@@ -30,6 +31,7 @@ import type { z } from 'zod';
 import { type ApiClient, type ApiOptions, createApiClient, readJson } from './api';
 import {
   cloneBlock,
+  cloneGoal,
   cloneHabit,
   cloneHabitLog,
   cloneMascot,
@@ -106,6 +108,7 @@ class ApiRepository implements RemoteRepository {
   private readonly sessions = new Collection<FocusSession>((s) => s.id, cloneSession);
   private readonly restDays = new Collection<RestDay>((r) => r.date, cloneRestDay);
   private readonly proposals = new Collection<WeeklyProposal>((p) => p.id, cloneProposal);
+  private readonly goals = new Collection<Goal>((g) => g.id, cloneGoal);
 
   /** Uma escrita por chave de cada vez, na ordem em que foram pedidas (escritas em chaves diferentes seguem em paralelo). */
   private readonly locks = new Map<string, Promise<void>>();
@@ -133,6 +136,7 @@ class ApiRepository implements RemoteRepository {
     this.sessions.replaceAll(data.sessions);
     this.restDays.replaceAll(data.restDays);
     this.proposals.replaceAll(data.proposals);
+    this.goals.replaceAll(data.goals);
   }
 
   // ---------- Escrita com cache otimista ----------
@@ -420,6 +424,24 @@ class ApiRepository implements RemoteRepository {
     return result;
   }
 
+  // ---------- Metas ----------
+
+  async listGoals(): Promise<Goal[]> {
+    return this.goals.values().sort((a, b) => a.createdAt - b.createdAt);
+  }
+
+  saveGoal(goal: Goal): Promise<void> {
+    return this.write(this.goals, `goal:${goal.id}`, goal.id, goal, async () => {
+      await readJson(await this.client.api.goals[':id'].$put({ param: { id: goal.id }, json: goal }));
+    });
+  }
+
+  deleteGoal(id: EntityId): Promise<void> {
+    return this.write(this.goals, `goal:${id}`, id, null, async () => {
+      await readJson(await this.client.api.goals[':id'].$delete({ param: { id } }));
+    });
+  }
+
   // ---------- Estado do sapo ----------
 
   async getMascotState(): Promise<MascotState | null> {
@@ -438,7 +460,7 @@ class ApiRepository implements RemoteRepository {
     await this.serial('all', () =>
       this.withRetry(async () => {
         await readJson(await this.client.api.data.$delete());
-        for (const collection of [this.blocks, this.habits, this.habitLogs, this.sessions, this.restDays, this.proposals]) {
+        for (const collection of [this.blocks, this.habits, this.habitLogs, this.sessions, this.restDays, this.proposals, this.goals]) {
           collection.clear();
         }
         this.mascot = null;

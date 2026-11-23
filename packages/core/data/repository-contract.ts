@@ -134,6 +134,22 @@ export function defineRepositoryContract(
       }
     });
 
+    it('metas: salvar com marcos, atualizar por id e apagar', async () => {
+      const { r } = await subject();
+      const goal = {
+        id: uid('g'), title: 'Maratona', why: 'saúde', targetDate: '2027-06-01', state: 'ativa' as const,
+        milestones: [{ id: uid('m'), title: '5 km', doneAt: 3 }, { id: uid('m'), title: '10 km' }], createdAt: 1,
+      };
+      await r.saveGoal(goal);
+      const done = { ...goal, state: 'concluida' as const, completedAt: 9 };
+      await r.saveGoal(done);
+      expect(await r.listGoals()).toEqual([done]);
+      (await r.listGoals())[0].milestones[0].title = 'mexido';
+      expect((await r.listGoals())[0].milestones[0].title).toBe('5 km');
+      await r.deleteGoal(goal.id);
+      expect(await r.listGoals()).toEqual([]);
+    });
+
     it('escritas concorrentes não se perdem', async () => {
       const { r } = await subject();
       const h = uid('h');
@@ -154,6 +170,7 @@ export function defineRepositoryContract(
       await r.saveSession({ ...endedSession(1, 25, 'concluida'), id: uid('s') });
       await r.saveRestDay({ date: '2026-11-10' });
       await r.saveProposal({ id: uid('p'), weekStart: '2026-11-09', state: 'pendente', patternText: 'x', changes: [], origin: 'ia', createdAt: 1 });
+      await r.saveGoal({ id: uid('g'), title: 'x', state: 'ativa', milestones: [], createdAt: 1 });
       if (!options.mascotIsServerDerived) await r.saveMascotState({ phase: 3, careDays: 9, updatedAt: 1 });
       await r.clearAll();
       expect(await r.getUser()).toBeNull();
@@ -163,6 +180,7 @@ export function defineRepositoryContract(
       expect(await r.listSessions()).toEqual([]);
       expect(await r.listRestDays()).toEqual([]);
       expect(await r.listProposals()).toEqual([]);
+      expect(await r.listGoals()).toEqual([]);
       expect(await r.getMascotState()).toBeNull();
     });
   });

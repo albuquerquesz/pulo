@@ -2,6 +2,8 @@ export { createDb, type CreateDbOptions, type Db, type QueryEvent } from './clie
 export { dateKeyToDate, dateToDateKey, dateToMs, msToDate } from './dates';
 export {
   focusSessionMapper,
+  goalMapper,
+  goalMilestonesSchema,
   habitLogMapper,
   habitMapper,
   mascotStateMapper,

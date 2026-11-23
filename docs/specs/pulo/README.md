@@ -20,6 +20,7 @@ Prazo: entrega em **30/11/2026 às 23h59**. Estimativa de esforço (minha, não 
 | [08](08-ia-semanal.md) | IA semanal: candidatas por regra, IA opcional, aprovação, reserva | IA | L | 01, 05, 06, 07 | a rever |
 | [09](09-telas-navegacao-e-onboarding.md) | Telas, navegação e onboarding | Casca | M | 02 a 08 | a rever |
 | [10](10-demo-web-e-entrega.md) | Demo, web e entrega: exportação, modo demo, regras do hackathon, plano de 9 dias | Entrega | M | todas | a rever |
+| [11](11-metas.md) | Metas de longo prazo: aba Metas, marcos, limite de ativas | Rotina e foco | M | 01, 02, 09 | feita no web |
 
 ## Como as specs se ligam
 

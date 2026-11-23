@@ -1,6 +1,8 @@
 import type {
   BlockSlot,
   FocusSession,
+  Goal,
+  GoalMilestone,
   Habit,
   HabitLog,
   MascotState,
@@ -16,6 +18,7 @@ import { dateKeyToDate, dateToDateKey, dateToMs, msToDate } from './dates';
 import type {
   Prisma,
   FocusSession as FocusSessionRow,
+  Goal as GoalRow,
   Habit as HabitRow,
   HabitLog as HabitLogRow,
   MascotState as MascotStateRow,
@@ -191,6 +194,49 @@ export const weeklyProposalMapper = {
       origin: proposal.origin,
       createdAt: msToDate(proposal.createdAt),
       decidedAt: proposal.decidedAt === undefined ? null : msToDate(proposal.decidedAt),
+    };
+  },
+};
+
+// ---------- Goal ----------
+
+const goalMilestoneSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  doneAt: z.number().optional(),
+}) satisfies z.ZodType<GoalMilestone, unknown>;
+
+/** Valida o Json `milestones` lido do banco e devolve `GoalMilestone[]` tipado. */
+export const goalMilestonesSchema = z.array(goalMilestoneSchema);
+
+function milestoneToJson(milestone: GoalMilestone): Prisma.InputJsonObject {
+  return { id: milestone.id, title: milestone.title, ...(milestone.doneAt === undefined ? {} : { doneAt: milestone.doneAt }) };
+}
+
+export const goalMapper = {
+  toDomain(row: Omit<GoalRow, 'userId'>): Goal {
+    return {
+      id: row.id,
+      title: row.title,
+      state: row.state,
+      milestones: goalMilestonesSchema.parse(row.milestones),
+      createdAt: dateToMs(row.createdAt),
+      ...(row.why === null ? {} : { why: row.why }),
+      ...(row.targetDate === null ? {} : { targetDate: dateToDateKey(row.targetDate) }),
+      ...(row.completedAt === null ? {} : { completedAt: dateToMs(row.completedAt) }),
+    };
+  },
+  fromDomain(userId: string, goal: Goal): Prisma.GoalUncheckedCreateInput {
+    return {
+      id: goal.id,
+      userId,
+      title: goal.title,
+      why: goal.why ?? null,
+      targetDate: goal.targetDate === undefined ? null : dateKeyToDate(goal.targetDate),
+      state: goal.state,
+      milestones: goal.milestones.map(milestoneToJson),
+      createdAt: msToDate(goal.createdAt),
+      completedAt: goal.completedAt === undefined ? null : msToDate(goal.completedAt),
     };
   },
 };

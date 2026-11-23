@@ -54,6 +54,7 @@ model User {
   focusSessions   FocusSession[]
   restDays        RestDay[]
   weeklyProposals WeeklyProposal[]
+  goals           Goal[]
   mascotState     MascotState?
 
   @@map("user")
@@ -131,6 +132,13 @@ enum ProposalState {
   expirada
 
   @@map("proposal_state")
+}
+
+enum GoalState {
+  ativa
+  concluida
+
+  @@map("goal_state")
 }
 
 enum ProposalOrigin {
@@ -242,6 +250,25 @@ model WeeklyProposal {
   @@unique([id, userId])
   @@unique([userId, weekStart])
   @@map("weekly_proposal")
+}
+
+/// Meta de longo prazo. Os marcos moram num Json (GoalMilestone[], validado por zod no mapeador):
+/// são poucos, sempre lidos e gravados junto com a meta.
+model Goal {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  why         String?
+  targetDate  DateTime? @db.Date
+  state       GoalState
+  milestones  Json      @db.JsonB
+  createdAt   DateTime  @db.Timestamptz(3)
+  completedAt DateTime? @db.Timestamptz(3)
+
+  @@unique([id, userId])
+  @@index([userId, state])
+  @@map("goal")
 }
 
 /// Cache do estado do sapo (derivado). Uma linha por pessoa.

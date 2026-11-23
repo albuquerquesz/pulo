@@ -61,6 +61,12 @@ export const MAX_HABITS_PER_DAY = 5;
 export const BLOCK_MIN_MINUTES = 5;
 export const BLOCK_MAX_MINUTES = 120;
 
+/** Metas de longo prazo. Poucas ativas de cada vez, para cada uma receber atenção de verdade. Proposta. */
+export const GOALS = {
+  maxActive: 3,
+  maxMilestones: 12,
+} as const;
+
 /** Foco (Pomodoro por horário). Proposta. */
 export const FOCUS = {
   defaultMinutes: 25,

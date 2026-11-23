@@ -41,6 +41,7 @@ Nunca há stack trace; erro inesperado vira 500 `erro_interno` e o detalhe fica 
 | 404 | `rota_inexistente` | rota não existe |
 | 409 | `conflito_de_id` | id já usado por outra pessoa (nunca sobrescreve). No lote, `issues` lista `blocks.N.id` ou `habits.N.id` e nada é salvo |
 | 409 | `limite_por_dia` | passaria de `MAX_HABITS_PER_DAY` hábitos ativos no mesmo dia da semana. No lote, `issues` lista `habits.N.weekdays` e nada é salvo |
+| 409 | `limite_de_metas` | passaria de `GOALS.maxActive` metas ativas (concluídas não contam) |
 | 409 | `sessao_em_andamento` | já existe outra sessão em andamento (índice único parcial no banco) |
 | 409 | `sessao_encerrada` | mudança numa sessão `concluida` ou `interrompida` |
 | 409 | `sessao_imutavel` | mudou início, duração planejada ou bloco de uma sessão em andamento |
@@ -78,10 +79,13 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `PUT /api/proposals/:id` | `WeeklyProposal` | `{ proposal }` | 4 |
 | `POST /api/proposals/generate` | `{ date? }` (qualquer dia da semana) | `{ outcome, proposal? }` | 8 sem criar, 9 criando |
 | `POST /api/proposals/:id/decision` | `{ action: 'aceitar' \| 'editar' \| 'negar' \| 'desfazer', change? }` | `{ proposal, blocks }` | 6 aplicando blocos, 5 ao negar, 4 repetindo |
+| `GET /api/goals` | | `{ goals: Goal[] }` (mais antiga primeiro) | 3 |
+| `PUT /api/goals/:id` | `Goal` (marcos dentro) | `{ goal }` | 4 |
+| `DELETE /api/goals/:id` | | `{ deleted }` | 3 |
 | `GET /api/mascot` | | `{ mascot: MascotState \| null }` | 3 |
 | `GET /api/week-summary?date` | | `{ summary: WeekSummary }` | 5 |
-| `GET /api/sync?from&to` | | ver abaixo | 9 |
-| `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, mascot } }` | 8 |
+| `GET /api/sync?from&to` | | ver abaixo (inclui `goals`) | 10 |
+| `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, goals, mascot } }` | 9 |
 
 Já existiam e continuam: `GET /health`, `/api/auth/*`, `GET /api/me`, `PATCH /api/me/metadata`, `POST /weekly-ai`.
 

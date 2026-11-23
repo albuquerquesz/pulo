@@ -1,6 +1,7 @@
 import { syncQuerySchema } from '@pulo/core/api/schemas';
 import {
   focusSessionMapper,
+  goalMapper,
   habitLogMapper,
   habitMapper,
   mascotStateMapper,
@@ -13,6 +14,7 @@ import { type AppEnv, type RouteDeps, queryParams, requireSession } from '../htt
 import { dateFilter, sessionRangeWhere } from '../queries';
 import {
   blockSelect,
+  goalSelect,
   habitLogSelect,
   habitSelect,
   mascotSelect,
@@ -21,14 +23,14 @@ import {
   sessionSelect,
 } from '../selects';
 
-/** Tudo o que o app precisa para abrir: `/api/sync`. Oito leituras fixas numa transação, qualquer volume de dados. */
+/** Tudo o que o app precisa para abrir: `/api/sync`. Nove leituras fixas numa transação, qualquer volume de dados. */
 export function syncRoutes({ auth, db, now }: RouteDeps) {
   return new Hono<AppEnv>().use(requireSession(auth)).get('/', queryParams(syncQuerySchema), async (c) => {
     const { id: userId, name, email, image, metadata } = c.var.user;
     const range = c.req.valid('query');
     const date = dateFilter(range);
 
-    const [blocks, habits, habitLogs, sessions, restDays, proposals, mascot] = await db.$transaction([
+    const [blocks, habits, habitLogs, sessions, restDays, proposals, goals, mascot] = await db.$transaction([
       db.routineBlock.findMany({
         where: { userId },
         select: blockSelect,
@@ -43,6 +45,7 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
       }),
       db.restDay.findMany({ where: { userId, date }, select: restDaySelect, orderBy: { date: 'asc' } }),
       db.weeklyProposal.findMany({ where: { userId }, select: proposalSelect, orderBy: { weekStart: 'desc' } }),
+      db.goal.findMany({ where: { userId }, select: goalSelect, orderBy: { createdAt: 'asc' } }),
       db.mascotState.findUnique({ where: { userId }, select: mascotSelect }),
     ]);
 
@@ -55,6 +58,7 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
       sessions: sessions.map(focusSessionMapper.toDomain),
       restDays: restDays.map(restDayMapper.toDomain),
       proposals: proposals.map(weeklyProposalMapper.toDomain),
+      goals: goals.map(goalMapper.toDomain),
       mascot: mascot === null ? null : mascotStateMapper.toDomain(mascot),
       serverTime: now(),
     });

@@ -1,5 +1,6 @@
 import type {
   FocusSession,
+  Goal,
   Habit,
   HabitLog,
   MascotState,
@@ -10,6 +11,7 @@ import type {
 import { describe, expect, it } from 'vitest';
 import type {
   FocusSession as FocusSessionRow,
+  Goal as GoalRow,
   Habit as HabitRow,
   HabitLog as HabitLogRow,
   MascotState as MascotStateRow,
@@ -20,6 +22,7 @@ import type {
 import { dateKeyToDate, dateToDateKey } from './dates';
 import {
   focusSessionMapper,
+  goalMapper,
   habitLogMapper,
   habitMapper,
   mascotStateMapper,
@@ -133,6 +136,37 @@ describe('mapeadores', () => {
     expect(weeklyProposalMapper.toDomain(row)).toStrictEqual(proposal);
     expect(() => weeklyProposalMapper.toDomain({ ...row, changes: [{ kind: 'apagar' }] })).toThrow();
     expect(() => weeklyProposalMapper.toDomain({ ...row, changes: 'texto' })).toThrow();
+  });
+
+  it('Goal, com e sem os opcionais, valida o Json dos marcos', () => {
+    const goal: Goal = {
+      id: 'g1',
+      title: 'Maratona',
+      why: 'saúde',
+      targetDate: '2027-06-01',
+      state: 'concluida',
+      milestones: [{ id: 'm1', title: '5 km', doneAt: 3 }, { id: 'm2', title: '10 km' }],
+      createdAt: 1,
+      completedAt: 9,
+    };
+    const row: GoalRow = {
+      id: 'g1',
+      userId: USER,
+      title: 'Maratona',
+      why: 'saúde',
+      targetDate: new Date('2027-06-01T00:00:00.000Z'),
+      state: 'concluida',
+      milestones: [{ id: 'm1', title: '5 km', doneAt: 3 }, { id: 'm2', title: '10 km' }],
+      createdAt: new Date(1),
+      completedAt: new Date(9),
+    };
+    expect(goalMapper.fromDomain(USER, goal)).toStrictEqual(row);
+    expect(goalMapper.toDomain(row)).toStrictEqual(goal);
+
+    const simples: Goal = { id: 'g2', title: 'x', state: 'ativa', milestones: [], createdAt: 1 };
+    const simplesRow: GoalRow = { ...row, id: 'g2', title: 'x', why: null, targetDate: null, state: 'ativa', milestones: [], completedAt: null };
+    expect(goalMapper.toDomain(simplesRow)).toStrictEqual(simples);
+    expect(() => goalMapper.toDomain({ ...row, milestones: [{ title: 'sem id' }] })).toThrow();
   });
 
   it('MascotState', () => {
