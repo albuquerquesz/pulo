@@ -23,6 +23,8 @@ export function OnboardingScreen() {
     try {
       await concluirOnboarding({ frogName: nome, startHour: inicio, endHour: fim });
       router.replace('/');
+    } catch {
+      // O aviso de erro já foi mostrado pelo repositório; a pessoa pode tentar de novo.
     } finally {
       setSalvando(false);
     }

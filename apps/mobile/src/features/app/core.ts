@@ -51,7 +51,8 @@ export async function concluirOnboarding(repo: Repository, clock: Clock, dados: 
   await repo.saveUser(user);
   await criarPlanoInicial(repo, now);
   await refreshMascotState(repo, user.timezone, now);
-  return user;
+  // O repositório manda: no servidor o id é o da conta e o horário de criação é o guardado.
+  return (await repo.getUser()) ?? user;
 }
 
 /** "Apagar todos os meus dados": única ação que zera o progresso. */

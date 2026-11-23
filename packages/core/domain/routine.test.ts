@@ -10,6 +10,7 @@ import {
   removerBloco,
 } from './routine';
 import { endedSession, sp } from './test-utils';
+import type { Habit, RoutineBlock } from './types';
 import { WEEKLY_AI } from '../config/decisions';
 
 const base = { weekday: 0 as const, startMinutes: 540, durationMinutes: 25, kind: 'foco' as const };
@@ -118,6 +119,26 @@ describe('blocos', () => {
     await concluirBloco(repo, r.value.id, '2026-11-09');
     await concluirBloco(repo, r.value.id, '2026-11-09');
     expect(await repo.listRestDays()).toEqual([{ date: '2026-11-09' }]);
+  });
+  it('plano inicial usa as escritas em lote quando o repositório as tem (2 chamadas)', async () => {
+    const memoria = createMemoryRepository();
+    const calls: string[] = [];
+    const repo = {
+      ...memoria,
+      saveBlock: () => Promise.reject(new Error('item a item')),
+      saveHabit: () => Promise.reject(new Error('item a item')),
+      saveBlocks: async (blocks: readonly RoutineBlock[]) => {
+        calls.push(`blocos:${blocks.length}`);
+        for (const b of blocks) await memoria.saveBlock(b);
+      },
+      saveHabits: async (habits: readonly Habit[]) => {
+        calls.push(`habitos:${habits.length}`);
+        for (const h of habits) await memoria.saveHabit(h);
+      },
+    };
+    const plan = await criarPlanoInicial(repo, 5);
+    expect(calls.sort()).toEqual([`blocos:${plan.blocks.length}`, 'habitos:2']);
+    expect(await memoria.listBlocks()).toHaveLength(plan.blocks.length);
   });
   it('plano inicial grava blocos válidos e dois hábitos', async () => {
     const repo = createMemoryRepository();

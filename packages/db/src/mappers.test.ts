@@ -1,0 +1,157 @@
+import type {
+  CheckIn,
+  FocusSession,
+  Habit,
+  HabitLog,
+  MascotState,
+  RestDay,
+  RoutineBlock,
+  WeeklyProposal,
+} from '@pulo/core/domain/types';
+import { describe, expect, it } from 'vitest';
+import type {
+  CheckIn as CheckInRow,
+  FocusSession as FocusSessionRow,
+  Habit as HabitRow,
+  HabitLog as HabitLogRow,
+  MascotState as MascotStateRow,
+  RestDay as RestDayRow,
+  RoutineBlock as RoutineBlockRow,
+  WeeklyProposal as WeeklyProposalRow,
+} from '#client';
+import { dateKeyToDate, dateToDateKey } from './dates';
+import {
+  checkInMapper,
+  focusSessionMapper,
+  habitLogMapper,
+  habitMapper,
+  mascotStateMapper,
+  restDayMapper,
+  routineBlockMapper,
+  toEnergy,
+  toPhase,
+  toWeekday,
+  weeklyProposalMapper,
+} from './mappers';
+
+const USER = 'user-1';
+
+describe('datas', () => {
+  it('converte DateKey e Date de ida e volta, em UTC', () => {
+    const date = dateKeyToDate('2026-11-23');
+    expect(date.toISOString()).toBe('2026-11-23T00:00:00.000Z');
+    expect(dateToDateKey(date)).toBe('2026-11-23');
+  });
+
+  it('recusa DateKey malformada ou inexistente', () => {
+    expect(() => dateKeyToDate('23/11/2026')).toThrow(RangeError);
+    expect(() => dateKeyToDate('2026-02-31')).toThrow(RangeError);
+  });
+});
+
+describe('guardas', () => {
+  it('aceitam o intervalo do domínio e recusam o resto', () => {
+    expect(toWeekday(6)).toBe(6);
+    expect(() => toWeekday(7)).toThrow(RangeError);
+    expect(toEnergy(1)).toBe(1);
+    expect(() => toEnergy(0)).toThrow(RangeError);
+    expect(toPhase(4)).toBe(4);
+    expect(() => toPhase(5)).toThrow(RangeError);
+  });
+});
+
+describe('mapeadores', () => {
+  it('RoutineBlock, com e sem título', () => {
+    const block: RoutineBlock = { id: 'b1', weekday: 2, startMinutes: 540, durationMinutes: 25, kind: 'foco', title: 'Estudar' };
+    const row: RoutineBlockRow = { id: 'b1', userId: USER, weekday: 2, startMinutes: 540, durationMinutes: 25, kind: 'foco', title: 'Estudar' };
+    expect(routineBlockMapper.fromDomain(USER, block)).toStrictEqual(row);
+    expect(routineBlockMapper.toDomain(row)).toStrictEqual(block);
+
+    const semTitulo: RoutineBlock = { id: 'b2', weekday: 0, startMinutes: 60, durationMinutes: 5, kind: 'descanso' };
+    const rowSemTitulo: RoutineBlockRow = { ...row, id: 'b2', weekday: 0, startMinutes: 60, durationMinutes: 5, kind: 'descanso', title: null };
+    expect(routineBlockMapper.fromDomain(USER, semTitulo)).toStrictEqual(rowSemTitulo);
+    expect(routineBlockMapper.toDomain(rowSemTitulo)).toStrictEqual(semTitulo);
+  });
+
+  it('Habit', () => {
+    const habit: Habit = { id: 'h1', title: 'Alongar', weekdays: [0, 2, 4], active: true };
+    const row: HabitRow = { id: 'h1', userId: USER, title: 'Alongar', weekdays: [0, 2, 4], active: true };
+    expect(habitMapper.fromDomain(USER, habit)).toStrictEqual(row);
+    expect(habitMapper.toDomain(row)).toStrictEqual(habit);
+  });
+
+  it('HabitLog', () => {
+    const log: HabitLog = { habitId: 'h1', date: '2026-11-22', doneAt: 1_795_000_000_000 };
+    const row: HabitLogRow = { habitId: 'h1', userId: USER, date: new Date('2026-11-22T00:00:00.000Z'), doneAt: new Date(1_795_000_000_000) };
+    expect(habitLogMapper.fromDomain(USER, log)).toStrictEqual(row);
+    expect(habitLogMapper.toDomain(row)).toStrictEqual(log);
+  });
+
+  it('FocusSession em andamento (pausada) e encerrada', () => {
+    const running: FocusSession = { id: 's1', startedAt: 1000, plannedMinutes: 25, state: 'em_andamento', pausedMs: 5000, pausedSince: 9000 };
+    const runningRow: FocusSessionRow = {
+      id: 's1', userId: USER, blockId: null, startedAt: new Date(1000), endedAt: null,
+      plannedMinutes: 25, state: 'em_andamento', pausedMs: 5000, pausedSince: new Date(9000),
+    };
+    const done: FocusSession = { id: 's2', blockId: 'b1', startedAt: 1000, endedAt: 2_000_000, plannedMinutes: 25, state: 'concluida', pausedMs: 0 };
+    const doneRow: FocusSessionRow = {
+      id: 's2', userId: USER, blockId: 'b1', startedAt: new Date(1000), endedAt: new Date(2_000_000),
+      plannedMinutes: 25, state: 'concluida', pausedMs: 0, pausedSince: null,
+    };
+    expect(focusSessionMapper.fromDomain(USER, running)).toStrictEqual(runningRow);
+    expect(focusSessionMapper.toDomain(runningRow)).toStrictEqual(running);
+    expect(focusSessionMapper.fromDomain(USER, done)).toStrictEqual(doneRow);
+    expect(focusSessionMapper.toDomain(doneRow)).toStrictEqual(done);
+  });
+
+  it('CheckIn', () => {
+    const checkIn: CheckIn = { id: 'c1', date: '2026-11-22', period: 'tarde', energy: 4, createdAt: 123456 };
+    const row: CheckInRow = { id: 'c1', userId: USER, date: new Date('2026-11-22T00:00:00.000Z'), period: 'tarde', energy: 4, createdAt: new Date(123456) };
+    expect(checkInMapper.fromDomain(USER, checkIn)).toStrictEqual(row);
+    expect(checkInMapper.toDomain(row)).toStrictEqual(checkIn);
+  });
+
+  it('RestDay', () => {
+    const restDay: RestDay = { date: '2026-11-21' };
+    const row: RestDayRow = { userId: USER, date: new Date('2026-11-21T00:00:00.000Z') };
+    expect(restDayMapper.fromDomain(USER, restDay)).toStrictEqual(row);
+    expect(restDayMapper.toDomain(row)).toStrictEqual(restDay);
+  });
+
+  it('WeeklyProposal valida o Json das mudanças', () => {
+    const slotFrom = { weekday: 1, startMinutes: 900, durationMinutes: 25 };
+    const slotTo = { weekday: 1, startMinutes: 540, durationMinutes: 25 };
+    const proposal: WeeklyProposal = {
+      id: 'p1',
+      weekStart: '2026-11-23',
+      state: 'pendente',
+      patternText: 'Você rende mais de manhã.',
+      changes: [{ kind: 'mover_foco', blockId: 'b1', from: { ...slotFrom, weekday: 1 }, to: { ...slotTo, weekday: 1 } }],
+      origin: 'regra',
+      createdAt: 99,
+    };
+    const row: WeeklyProposalRow = {
+      id: 'p1',
+      userId: USER,
+      weekStart: new Date('2026-11-23T00:00:00.000Z'),
+      state: 'pendente',
+      patternText: 'Você rende mais de manhã.',
+      reasonText: null,
+      changes: [{ kind: 'mover_foco', blockId: 'b1', from: slotFrom, to: slotTo }],
+      origin: 'regra',
+      createdAt: new Date(99),
+      decidedAt: null,
+    };
+    expect(weeklyProposalMapper.fromDomain(USER, proposal)).toStrictEqual(row);
+    expect(weeklyProposalMapper.toDomain(row)).toStrictEqual(proposal);
+    expect(() => weeklyProposalMapper.toDomain({ ...row, changes: [{ kind: 'apagar' }] })).toThrow();
+    expect(() => weeklyProposalMapper.toDomain({ ...row, changes: 'texto' })).toThrow();
+  });
+
+  it('MascotState', () => {
+    const state: MascotState = { phase: 3, careDays: 9, updatedAt: 55 };
+    const row: MascotStateRow = { userId: USER, phase: 3, careDays: 9, updatedAt: new Date(55) };
+    expect(mascotStateMapper.fromDomain(USER, state)).toStrictEqual(row);
+    expect(mascotStateMapper.toDomain(row)).toStrictEqual(state);
+  });
+});

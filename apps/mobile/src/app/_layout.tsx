@@ -6,17 +6,21 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppProvider, useApp } from '@/features/app';
+import { autenticacaoDoApp } from '@/features/sessao/auth';
 import { Texto, Toast } from '@/ui';
 import { TemaProvider, useTheme } from '@/theme';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
+// Um cliente de login por execução do app.
+const autenticacao = autenticacaoDoApp();
 
 export const COLUNA_MAX = 480;
 
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <AppProvider>
+      <AppProvider autenticacao={autenticacao}>
         <TemaDoUsuario>
           <Raiz />
         </TemaDoUsuario>
@@ -36,7 +40,8 @@ function TemaDoUsuario({ children }: { children: ReactNode }) {
 
 function Raiz() {
   const t = useTheme();
-  const { carregando, user, demo, aviso, esconderAviso } = useApp();
+  const { carregando, fase, user, demo, aviso, esconderAviso } = useApp();
+  const dadosProntos = fase === 'pronto';
   const pronto = t.fontesProntas && !carregando;
 
   useEffect(() => {
@@ -58,10 +63,14 @@ function Raiz() {
           </View>
         ) : null}
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: t.cores.bg } }}>
-          <Stack.Protected guard={!!user}>
-            <Stack.Screen name="(tabs)" />
+          <Stack.Protected guard={fase === 'login' || fase === 'sem_conexao'}>
+            <Stack.Screen name="login" />
           </Stack.Protected>
-          <Stack.Protected guard={!user}>
+          <Stack.Protected guard={dadosProntos && !!user}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="rotina" />
+          </Stack.Protected>
+          <Stack.Protected guard={dadosProntos && !user}>
             <Stack.Screen name="onboarding" />
           </Stack.Protected>
           <Stack.Screen name="dev/galeria" />

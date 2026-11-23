@@ -8,7 +8,8 @@
     "moduleDetection": "force",
     "noEmit": true,
     "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
     "types": ["vitest/globals", "node"]
   },
-  "include": ["src/**/*.ts", "auth.schema.ts", "vitest.config.ts"]
+  "include": ["src/**/*.ts", "vitest.config.ts"]
 }

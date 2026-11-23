@@ -11,8 +11,26 @@ concurrency:
 
 jobs:
   check:
-    name: Lint, typecheck e build
+    name: Lint, typecheck, testes e build
     runs-on: ubuntu-latest
+    # Postgres de verdade para os testes do @pulo/db e da API (um banco novo por arquivo de teste).
+    # Sem este serviço os testes subiriam o embedded-postgres sozinhos; o serviço só deixa o CI mais rápido.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      PULO_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -20,8 +38,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx turbo run lint typecheck build
+      - run: npx turbo run lint typecheck test build
 
+  # ATENÇÃO antes de fazer merge da branch feat/db-prisma na main:
+  # 1. O secret do repositório DATABASE_URL (Postgres de produção, conexão direta) precisa existir.
+  # 2. O secret DATABASE_URL do Worker precisa existir (`cd apps/api && npx wrangler secret put DATABASE_URL`).
+  # Sem eles este job falha de propósito, antes de mexer no banco ou no Worker.
   deploy-api:
     name: Deploy da API
     needs: check
@@ -35,6 +57,26 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Conferir os secrets do banco
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: apps/api
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Falta o secret DATABASE_URL do repositório (Settings, Secrets and variables, Actions). Veja o README, seção Banco de dados."
+            exit 1
+          fi
+          if ! npx wrangler secret list | grep -q '"DATABASE_URL"'; then
+            echo "::error::Falta o secret DATABASE_URL no Worker. Rode: cd apps/api && npx wrangler secret put DATABASE_URL"
+            exit 1
+          fi
+      # Aplica as migrações pendentes (só adiciona tabelas e restrições) antes de subir o Worker novo.
+      - name: Migrar o banco (prisma migrate deploy)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run db:deploy
       # A tarefa deploy roda typecheck e testes da API antes do wrangler deploy.
       - run: npx turbo run deploy --filter=@pulo/api
         env:

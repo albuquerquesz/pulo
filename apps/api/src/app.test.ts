@@ -2,10 +2,20 @@ import { computeCandidates } from '@pulo/core/domain/ia/candidates';
 import { buildAiRequest } from '@pulo/core/domain/ia/request';
 import { generateDemoData } from '@pulo/core/demo/generate';
 import { summarizeDemoWeek } from '@pulo/core/demo/summary';
+import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
 import { createApp } from './app';
-import { createTestDatabase, testEnv } from './testing';
+import { testEnv } from './testing';
 
-const app = createApp(testEnv, createTestDatabase());
+let database: TestDatabase;
+let app: ReturnType<typeof createApp>;
+
+beforeAll(async () => {
+  database = await createTestDatabase();
+  app = createApp(testEnv, database.db);
+});
+afterAll(async () => {
+  await database.close();
+});
 
 describe('API', () => {
   it('responde /health', async () => {

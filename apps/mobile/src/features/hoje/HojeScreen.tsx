@@ -240,6 +240,8 @@ export function HojeScreen() {
         rotulo="Marcar hoje como dia de descanso"
         onPress={() => void descansar()}
       />
+
+      <Botao titulo="Editar rotina e hábitos" variante="fantasma" onPress={() => router.push('/rotina')} testID="editar-rotina" />
     </Tela>
   );
 }

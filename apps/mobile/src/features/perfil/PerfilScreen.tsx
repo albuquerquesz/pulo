@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { StyleSheet, Switch, View } from 'react-native';
 
 import type { User } from '@pulo/core/domain/types';
@@ -15,8 +16,9 @@ const TEMAS: { chave: User['theme']; rotulo: string }[] = [
 
 export function PerfilScreen() {
   const app = useApp();
-  const { user, atualizarPerfil, apagarDados, demo, demoClock, enableDemo, disableDemo, refresh } = app;
+  const { user, atualizarPerfil, apagarDados, demo, demoClock, enableDemo, disableDemo, refresh, pessoa, sair } = app;
   const t = useTheme();
+  const router = useRouter();
   if (!user) return null;
 
   const inicio = Math.round(user.dayStartMinutes / 60);
@@ -25,7 +27,9 @@ export function PerfilScreen() {
   const apagar = async () => {
     const ok = await confirmar(
       'Apagar todos os meus dados?',
-      'Isso remove seu sapo, sua rotina e seu progresso deste aparelho. Não dá para desfazer.',
+      demo
+        ? 'Isso remove os dados de exemplo do demo. Sua conta e seus dados de verdade não são tocados.'
+        : 'Isso remove seu sapo, sua rotina e seu progresso da sua conta, em todos os aparelhos. Não dá para desfazer.',
       'Apagar tudo',
       'Cancelar',
     );
@@ -35,6 +39,24 @@ export function PerfilScreen() {
   return (
     <Tela titulo="Perfil">
       <Texto cor="muted">Seu sapo se chama {user.frogName}.</Texto>
+
+      {pessoa ? (
+        <Secao titulo="Sua conta">
+          <Texto cor="muted" testID="conta-email">
+            Você entrou como {pessoa.email}.
+          </Texto>
+          <Botao titulo="Sair da conta" variante="fantasma" onPress={() => void sair()} testID="sair" />
+        </Secao>
+      ) : null}
+
+      <Secao titulo="Sua rotina">
+        <Cartao onPress={() => router.push('/rotina')} rotulo="Editar rotina e hábitos">
+          <Texto>Editar rotina e hábitos</Texto>
+          <Texto variante="legenda" cor="muted">
+            Crie, mude e remova seus blocos de foco e descanso e seus hábitos.
+          </Texto>
+        </Cartao>
+      </Secao>
 
       <Secao titulo="Seu dia">
         <EscolhaDeHora rotulo="Começa às" horas={inicio} min={0} max={Math.min(22, fim - 1)} onChange={(h) => void atualizarPerfil({ dayStartMinutes: h * 60 })} />

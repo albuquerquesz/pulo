@@ -1,0 +1,281 @@
+// Schema do Pulo (PostgreSQL). Fonte única das tabelas: o SQL vem de `npm run db:migrate`.
+//
+// Convenções:
+// - Tabelas do Better Auth (user, session, account, verification) mantêm os nomes e colunas do Better Auth.
+// - Tabelas do domínio: nome snake_case no singular, colunas em camelCase, todas com userId e cascade.
+// - DateKey do domínio (dia lógico, 'AAAA-MM-DD') vira `@db.Date`; instantes (ms) viram timestamptz.
+// - Os valores dos enums são idênticos às uniões de string de packages/core/domain/types.ts.
+
+// Dois clientes com o mesmo schema: o import interno `#client` (package.json, campo imports) escolhe
+// o de workerd quando o bundler usa a condição "workerd" (wrangler) e o de Node nos demais casos
+// (testes, seed, Studio). O wasm do workerd não carrega em Node e vice versa.
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/node"
+  runtime             = "nodejs"
+  moduleFormat        = "esm"
+  importFileExtension = "ts"
+  // join vira o padrão: relações vêm numa query só (JSON agregado + lateral join). Ver docs/banco-de-dados.md.
+  previewFeatures     = ["relationJoins"]
+}
+
+generator clientWorkerd {
+  provider            = "prisma-client"
+  output              = "../src/generated/workerd"
+  runtime             = "workerd"
+  moduleFormat        = "esm"
+  importFileExtension = "ts"
+  // join vira o padrão: relações vêm numa query só (JSON agregado + lateral join). Ver docs/banco-de-dados.md.
+  previewFeatures     = ["relationJoins"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Better Auth ----------
+
+model User {
+  id            String   @id
+  name          String
+  email         String   @unique
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime @db.Timestamptz(3)
+  updatedAt     DateTime @db.Timestamptz(3)
+  /// Preferências e progresso (ver packages/core/domain/user-metadata.ts). Só a rota /api/me/metadata escreve.
+  metadata      Json?    @db.JsonB
+
+  sessions        Session[]
+  accounts        Account[]
+  routineBlocks   RoutineBlock[]
+  habits          Habit[]
+  habitLogs       HabitLog[]
+  focusSessions   FocusSession[]
+  checkIns        CheckIn[]
+  restDays        RestDay[]
+  weeklyProposals WeeklyProposal[]
+  mascotState     MascotState?
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime @db.Timestamptz(3)
+  token     String   @unique
+  createdAt DateTime @db.Timestamptz(3)
+  updatedAt DateTime @db.Timestamptz(3)
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime? @db.Timestamptz(3)
+  refreshTokenExpiresAt DateTime? @db.Timestamptz(3)
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @db.Timestamptz(3)
+  updatedAt             DateTime  @db.Timestamptz(3)
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime @db.Timestamptz(3)
+  createdAt  DateTime @db.Timestamptz(3)
+  updatedAt  DateTime @db.Timestamptz(3)
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ---------- Domínio ----------
+
+enum BlockKind {
+  foco
+  descanso
+
+  @@map("block_kind")
+}
+
+enum FocusSessionState {
+  em_andamento
+  concluida
+  interrompida
+
+  @@map("focus_session_state")
+}
+
+enum Period {
+  manha
+  tarde
+  noite
+
+  @@map("period")
+}
+
+enum ProposalState {
+  pendente
+  aceita
+  editada
+  negada
+  expirada
+
+  @@map("proposal_state")
+}
+
+enum ProposalOrigin {
+  ia
+  regra
+
+  @@map("proposal_origin")
+}
+
+/// Bloco da rotina semanal. weekday: 0 = segunda ... 6 = domingo (CHECK na migração).
+model RoutineBlock {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekday         Int       @db.SmallInt
+  /// Minutos desde 00:00.
+  startMinutes    Int       @db.SmallInt
+  /// 5 a 120 (CHECK na migração).
+  durationMinutes Int       @db.SmallInt
+  kind            BlockKind
+  title           String?
+
+  focusSessions FocusSession[]
+
+  /// Permite upsert seguro por dono: where { id_userId: { id, userId } }.
+  @@unique([id, userId])
+  @@index([userId, weekday, startMinutes])
+  @@map("routine_block")
+}
+
+model Habit {
+  id       String  @id @default(uuid())
+  userId   String
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title    String
+  /// Dias da semana (0 a 6) em que o hábito vale.
+  weekdays Int[]   @db.SmallInt
+  active   Boolean @default(true)
+
+  logs HabitLog[]
+
+  @@unique([id, userId])
+  @@index([userId, active])
+  @@map("habit")
+}
+
+/// Hábito feito em um dia. A chave (habitId, date) garante um registro por hábito e dia.
+model HabitLog {
+  habitId String
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Chave composta com userId: o log só pode apontar para hábito do mesmo dono.
+  habit   Habit    @relation(fields: [habitId, userId], references: [id, userId], onDelete: Cascade)
+  date    DateTime @db.Date
+  doneAt  DateTime @db.Timestamptz(3)
+
+  @@id([habitId, date])
+  @@index([userId, date])
+  @@map("habit_log")
+}
+
+/// Sessão de foco. Uma só `em_andamento` por pessoa (índice único parcial na migração).
+model FocusSession {
+  id             String            @id @default(uuid())
+  userId         String
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Se o bloco for apagado, a sessão fica (histórico) sem bloco.
+  blockId        String?
+  block          RoutineBlock?     @relation(fields: [blockId], references: [id], onDelete: SetNull)
+  startedAt      DateTime          @db.Timestamptz(3)
+  endedAt        DateTime?         @db.Timestamptz(3)
+  plannedMinutes Int               @db.SmallInt
+  state          FocusSessionState
+  /// Tempo total pausado, em ms.
+  pausedMs       Int               @default(0)
+  /// Se está pausada agora, quando a pausa começou.
+  pausedSince    DateTime?         @db.Timestamptz(3)
+
+  @@unique([id, userId])
+  @@index([userId, startedAt])
+  @@index([blockId])
+  @@map("focus_session")
+}
+
+/// Check in de energia (1 a 5, CHECK na migração), ligado ao dia lógico e ao período.
+model CheckIn {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  period    Period
+  energy    Int      @db.SmallInt
+  createdAt DateTime @db.Timestamptz(3)
+
+  @@unique([id, userId])
+  @@index([userId, date])
+  @@map("check_in")
+}
+
+model RestDay {
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date   DateTime @db.Date
+
+  @@id([userId, date])
+  @@map("rest_day")
+}
+
+model WeeklyProposal {
+  id          String         @id @default(uuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Segunda-feira da semana.
+  weekStart   DateTime       @db.Date
+  state       ProposalState
+  patternText String
+  reasonText  String?
+  /// ProposalChange[] (validado por zod no mapeador).
+  changes     Json           @db.JsonB
+  origin      ProposalOrigin
+  createdAt   DateTime       @db.Timestamptz(3)
+  decidedAt   DateTime?      @db.Timestamptz(3)
+
+  @@unique([id, userId])
+  @@unique([userId, weekStart])
+  @@map("weekly_proposal")
+}
+
+/// Cache do estado do sapo (derivado). Uma linha por pessoa.
+model MascotState {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// 1 a 4 (CHECK na migração).
+  phase     Int      @db.SmallInt
+  careDays  Int
+  updatedAt DateTime @db.Timestamptz(3)
+
+  @@map("mascot_state")
+}

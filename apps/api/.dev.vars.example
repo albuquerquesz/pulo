@@ -1,5 +1,11 @@
 # Copie para .dev.vars (ignorado pelo git) para o `wrangler dev`.
+# Banco local: `npm run db:up` (Docker) ou `npm run db:embedded` (sem Docker) e depois `npm run db:deploy`, na raiz.
+DATABASE_URL=postgresql://pulo:pulo@localhost:5432/pulo
 BETTER_AUTH_URL=http://localhost:8787
 BETTER_AUTH_SECRET=gere-com-openssl-rand-base64-32
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
+# Desenvolvimento: app em http://localhost:8081 e API em http://localhost:8787 são o mesmo site (cookie Lax, sem Secure).
+# Opcionais (o padrão serve em dev); em produção veja docs/web-auth.md:
+# PULO_CORS_ORIGIN=http://localhost:8081
+# PULO_COOKIE_DOMAIN=

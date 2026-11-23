@@ -1,0 +1,24 @@
+# PostgreSQL local para o desenvolvimento. Uso: `npm run db:up` (veja o README).
+# Só serve para a sua máquina: a senha abaixo é de desenvolvimento e o banco não é exposto fora do localhost.
+services:
+  postgres:
+    image: postgres:17
+    container_name: pulo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pulo
+      POSTGRES_PASSWORD: pulo
+      POSTGRES_DB: pulo
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pulo-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulo -d pulo"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  pulo-pgdata:
