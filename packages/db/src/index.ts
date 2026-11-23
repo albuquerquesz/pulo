@@ -1,7 +1,6 @@
 export { createDb, type CreateDbOptions, type Db, type QueryEvent } from './client';
 export { dateKeyToDate, dateToDateKey, dateToMs, msToDate } from './dates';
 export {
-  checkInMapper,
   focusSessionMapper,
   habitLogMapper,
   habitMapper,
@@ -9,7 +8,6 @@ export {
   proposalChangesSchema,
   restDayMapper,
   routineBlockMapper,
-  toEnergy,
   toPhase,
   toWeekday,
   weeklyProposalMapper,

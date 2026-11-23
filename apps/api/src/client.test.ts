@@ -1,6 +1,6 @@
 // Prova de tipos ponta a ponta: o cliente `hc<AppType>` do Hono infere rotas, corpos e respostas da própria API.
 // Os `expectTypeOf` são checados pelo `tsc` (npm run typecheck); o resto roda de verdade contra o app.
-import type { CheckIn, FocusSession, Habit, MascotState, RestDay, RoutineBlock, WeekSummary } from '@pulo/core/domain/types';
+import type { FocusSession, Habit, MascotState, RestDay, RoutineBlock, WeekSummary } from '@pulo/core/domain/types';
 import { type ApiErrorBody, apiErrorSchema } from '@pulo/core/api/schemas';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
 import { hc } from 'hono/client';
@@ -61,16 +61,8 @@ describe('hc<AppType>', () => {
     expect(written.session.state).toBe('interrompida');
   });
 
-  it('consultas tipadas: check ins, descanso, resumo da semana e sync', async () => {
+  it('consultas tipadas: descanso, resumo da semana e sync', async () => {
     const client = await typedClient();
-    const checkInId = crypto.randomUUID();
-    await client.api['check-ins'][':id'].$put({
-      param: { id: checkInId },
-      json: { id: checkInId, date: '2026-11-17', period: 'manha', energy: 4, createdAt: TEST_NOW },
-    });
-    const checkIns = await (await client.api['check-ins'].$get({ query: { from: '2026-11-16', to: '2026-11-22' } })).json();
-    expectTypeOf(checkIns.checkIns).toEqualTypeOf<CheckIn[]>();
-    expect(checkIns.checkIns).toHaveLength(1);
 
     const rest = await (await client.api['rest-days'][':date'].$put({ param: { date: '2026-11-18' } })).json();
     expectTypeOf(rest.restDay).toEqualTypeOf<RestDay>();

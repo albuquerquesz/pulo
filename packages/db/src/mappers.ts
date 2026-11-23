@@ -1,7 +1,5 @@
 import type {
   BlockSlot,
-  CheckIn,
-  Energy,
   FocusSession,
   Habit,
   HabitLog,
@@ -17,7 +15,6 @@ import { z } from 'zod';
 import { dateKeyToDate, dateToDateKey, dateToMs, msToDate } from './dates';
 import type {
   Prisma,
-  CheckIn as CheckInRow,
   FocusSession as FocusSessionRow,
   Habit as HabitRow,
   HabitLog as HabitLogRow,
@@ -36,18 +33,11 @@ import type {
 // ---------- Guardas sem cast ----------
 
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const satisfies readonly Weekday[];
-const ENERGIES = [1, 2, 3, 4, 5] as const satisfies readonly Energy[];
 const PHASES = [1, 2, 3, 4] as const satisfies readonly Phase[];
 
 export function toWeekday(value: number): Weekday {
   const found = WEEKDAYS.find((weekday) => weekday === value);
   if (found === undefined) throw new RangeError(`weekday fora de 0 a 6: ${value}`);
-  return found;
-}
-
-export function toEnergy(value: number): Energy {
-  const found = ENERGIES.find((energy) => energy === value);
-  if (found === undefined) throw new RangeError(`energia fora de 1 a 5: ${value}`);
   return found;
 }
 
@@ -149,30 +139,6 @@ export const focusSessionMapper = {
       state: session.state,
       pausedMs: session.pausedMs,
       pausedSince: session.pausedSince === undefined ? null : msToDate(session.pausedSince),
-    };
-  },
-};
-
-// ---------- CheckIn ----------
-
-export const checkInMapper = {
-  toDomain(row: Omit<CheckInRow, 'userId'>): CheckIn {
-    return {
-      id: row.id,
-      date: dateToDateKey(row.date),
-      period: row.period,
-      energy: toEnergy(row.energy),
-      createdAt: dateToMs(row.createdAt),
-    };
-  },
-  fromDomain(userId: string, checkIn: CheckIn): Prisma.CheckInUncheckedCreateInput {
-    return {
-      id: checkIn.id,
-      userId,
-      date: dateKeyToDate(checkIn.date),
-      period: checkIn.period,
-      energy: checkIn.energy,
-      createdAt: msToDate(checkIn.createdAt),
     };
   },
 };

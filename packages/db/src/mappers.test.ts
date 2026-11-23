@@ -1,5 +1,4 @@
 import type {
-  CheckIn,
   FocusSession,
   Habit,
   HabitLog,
@@ -10,7 +9,6 @@ import type {
 } from '@pulo/core/domain/types';
 import { describe, expect, it } from 'vitest';
 import type {
-  CheckIn as CheckInRow,
   FocusSession as FocusSessionRow,
   Habit as HabitRow,
   HabitLog as HabitLogRow,
@@ -21,14 +19,12 @@ import type {
 } from '#client';
 import { dateKeyToDate, dateToDateKey } from './dates';
 import {
-  checkInMapper,
   focusSessionMapper,
   habitLogMapper,
   habitMapper,
   mascotStateMapper,
   restDayMapper,
   routineBlockMapper,
-  toEnergy,
   toPhase,
   toWeekday,
   weeklyProposalMapper,
@@ -53,8 +49,6 @@ describe('guardas', () => {
   it('aceitam o intervalo do domínio e recusam o resto', () => {
     expect(toWeekday(6)).toBe(6);
     expect(() => toWeekday(7)).toThrow(RangeError);
-    expect(toEnergy(1)).toBe(1);
-    expect(() => toEnergy(0)).toThrow(RangeError);
     expect(toPhase(4)).toBe(4);
     expect(() => toPhase(5)).toThrow(RangeError);
   });
@@ -102,13 +96,6 @@ describe('mapeadores', () => {
     expect(focusSessionMapper.toDomain(runningRow)).toStrictEqual(running);
     expect(focusSessionMapper.fromDomain(USER, done)).toStrictEqual(doneRow);
     expect(focusSessionMapper.toDomain(doneRow)).toStrictEqual(done);
-  });
-
-  it('CheckIn', () => {
-    const checkIn: CheckIn = { id: 'c1', date: '2026-11-22', period: 'tarde', energy: 4, createdAt: 123456 };
-    const row: CheckInRow = { id: 'c1', userId: USER, date: new Date('2026-11-22T00:00:00.000Z'), period: 'tarde', energy: 4, createdAt: new Date(123456) };
-    expect(checkInMapper.fromDomain(USER, checkIn)).toStrictEqual(row);
-    expect(checkInMapper.toDomain(row)).toStrictEqual(checkIn);
   });
 
   it('RestDay', () => {

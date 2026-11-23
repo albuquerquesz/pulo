@@ -26,15 +26,6 @@ async function seed(userId: string, scale = 1) {
       return { userId, startedAt: new Date(end.getTime() - 25 * MIN), endedAt: end, plannedMinutes: 25, state: 'concluida' as const };
     }),
   });
-  await database.db.checkIn.createMany({
-    data: Array.from({ length: scale }, (_, i) => ({
-      userId,
-      date: new Date(Date.UTC(2026, 10, 16 + (i % 7))),
-      period: 'manha' as const,
-      energy: 1 + (i % 5),
-      createdAt: at('2026-11-16T12:00:00Z'),
-    })),
-  });
   await database.db.restDay.createMany({ data: [{ userId, date: new Date(Date.UTC(2026, 10, 21)) }] });
   await database.db.habitLog.createMany({
     data: [{ userId, habitId: habit.id, date: new Date(Date.UTC(2026, 10, 18)), doneAt: at('2026-11-18T12:00:00Z') }],
@@ -57,12 +48,11 @@ describe('/api/week-summary', () => {
       weekStart: '2026-11-16',
       timeZone: 'America/Sao_Paulo',
       sessions: [{ id: 's', startedAt: at('2026-11-17T12:35:00Z').getTime(), endedAt: at('2026-11-17T13:00:00Z').getTime(), plannedMinutes: 25, state: 'concluida', pausedMs: 0 }],
-      checkIns: [{ id: 'c', date: '2026-11-16', period: 'manha', energy: 1, createdAt: 0 }],
       restDays: [{ date: '2026-11-21' }],
       habitLogs: [{ habitId: 'h', date: '2026-11-18', doneAt: 0 }],
     });
     expect(summary).toEqual(expected);
-    expect(summary).toMatchObject({ weekStart: '2026-11-16', weekEnd: '2026-11-22', totalSessions: 1, totalCheckIns: 1, restDays: 1, careDays: 2, daysWithRecord: 4 });
+    expect(summary).toMatchObject({ weekStart: '2026-11-16', weekEnd: '2026-11-22', totalSessions: 1, restDays: 1, careDays: 2, daysWithRecord: 3 });
   });
 
   it('ignora o que está fora da semana e usa o fuso da pessoa', async () => {
@@ -83,7 +73,7 @@ describe('/api/week-summary', () => {
     const a = await h.newUser();
     const b = await h.newUser();
     await seed(a.id);
-    expect(await summaryOf(b, '2026-11-18')).toMatchObject({ totalSessions: 0, totalCheckIns: 0, restDays: 0, daysWithRecord: 0 });
+    expect(await summaryOf(b, '2026-11-18')).toMatchObject({ totalSessions: 0, restDays: 0, daysWithRecord: 0 });
     expect((await summaryOf(a, '2026-11-18')).totalSessions).toBe(1);
   });
 
@@ -95,7 +85,7 @@ describe('/api/week-summary', () => {
     const small1 = await queriesOf(database, small, 'GET', '/api/week-summary?date=2026-11-18');
     const big50 = await queriesOf(database, big, 'GET', '/api/week-summary?date=2026-11-18');
     expect(big50).toBe(small1);
-    // 2 de sessão + 4 leituras da semana.
-    expect(small1).toBe(6);
+    // 2 de sessão + 3 leituras da semana.
+    expect(small1).toBe(5);
   });
 });

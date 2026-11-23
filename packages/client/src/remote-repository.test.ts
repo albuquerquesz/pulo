@@ -86,7 +86,6 @@ describe('RemoteRepository: sync e cache', () => {
     await repo.listHabits();
     await repo.listHabitLogs();
     await repo.listSessions();
-    await repo.listCheckIns();
     await repo.listRestDays();
     await repo.listProposals();
     await repo.getMascotState();

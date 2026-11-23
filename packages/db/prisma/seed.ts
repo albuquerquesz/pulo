@@ -1,11 +1,10 @@
 // Dados SINTÉTICOS para desenvolvimento local. Nunca rode contra produção.
 // Uso: DATABASE_URL=... npm run db:seed (na raiz).
-import type { CheckIn, FocusSession, Habit, RoutineBlock } from '@pulo/core/domain/types';
+import type { FocusSession, Habit, RoutineBlock } from '@pulo/core/domain/types';
 import { loadRootEnv } from './load-env';
 import { createDb } from '../src/client';
 import { dateKeyToDate } from '../src/dates';
 import {
-  checkInMapper,
   focusSessionMapper,
   habitLogMapper,
   habitMapper,
@@ -58,13 +57,6 @@ try {
     ),
   });
 
-  const checkIns = [
-    { id: 'seed-c1', date: dateKey(0), period: 'manha', energy: 4, createdAt: START },
-    { id: 'seed-c2', date: dateKey(1), period: 'tarde', energy: 2, createdAt: START + DAY_MS },
-  ] satisfies CheckIn[];
-  await db.checkIn.createMany({
-    data: checkIns.map((checkIn) => checkInMapper.fromDomain(SEED_USER_ID, checkIn)),
-  });
   const sessions = [
     { id: 'seed-f1', blockId: 'seed-b1', startedAt: START, endedAt: START + 25 * 60_000, plannedMinutes: 25, state: 'concluida', pausedMs: 0 },
   ] satisfies FocusSession[];

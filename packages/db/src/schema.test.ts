@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { checkInMapper, focusSessionMapper, habitLogMapper, habitMapper, mascotStateMapper, routineBlockMapper, weeklyProposalMapper } from './mappers';
+import { focusSessionMapper, habitLogMapper, habitMapper, mascotStateMapper, routineBlockMapper, weeklyProposalMapper } from './mappers';
 import { type TestDatabase, createTestDatabase } from './testing';
 
 let t: TestDatabase;
@@ -24,7 +24,6 @@ describe('schema do domínio no Postgres', () => {
     });
     await t.db.habit.create({ data: habitMapper.fromDomain('u-map', { id: 'h1', title: 'Alongar', weekdays: [0, 3], active: true }) });
     await t.db.habitLog.create({ data: habitLogMapper.fromDomain('u-map', { habitId: 'h1', date: '2026-11-22', doneAt: 1000 }) });
-    await t.db.checkIn.create({ data: checkInMapper.fromDomain('u-map', { id: 'ci1', date: '2026-11-22', period: 'manha', energy: 5, createdAt: 2000 }) });
     await t.db.mascotState.create({ data: mascotStateMapper.fromDomain('u-map', { phase: 2, careDays: 4, updatedAt: 3000 }) });
     await t.db.weeklyProposal.create({
       data: weeklyProposalMapper.fromDomain('u-map', {
@@ -34,7 +33,6 @@ describe('schema do domínio no Postgres', () => {
 
     expect(habitMapper.toDomain(await t.db.habit.findUniqueOrThrow({ where: { id: 'h1' } })).weekdays).toStrictEqual([0, 3]);
     expect(habitLogMapper.toDomain(await t.db.habitLog.findFirstOrThrow({ where: { userId: 'u-map' } }))).toStrictEqual({ habitId: 'h1', date: '2026-11-22', doneAt: 1000 });
-    expect(checkInMapper.toDomain(await t.db.checkIn.findUniqueOrThrow({ where: { id: 'ci1' } })).energy).toBe(5);
     expect(mascotStateMapper.toDomain(await t.db.mascotState.findUniqueOrThrow({ where: { userId: 'u-map' } }))).toStrictEqual({ phase: 2, careDays: 4, updatedAt: 3000 });
     expect(weeklyProposalMapper.toDomain(await t.db.weeklyProposal.findUniqueOrThrow({ where: { id: 'wp1' } })).weekStart).toBe('2026-11-23');
   });
@@ -55,7 +53,6 @@ describe('schema do domínio no Postgres', () => {
   it('recusa valores fora do domínio (CHECK)', async () => {
     await createUser('u-check');
     const invalid = [
-      t.db.checkIn.create({ data: { userId: 'u-check', date: new Date('2026-11-22'), period: 'tarde', energy: 6, createdAt: new Date() } }),
       t.db.routineBlock.create({ data: { userId: 'u-check', weekday: 7, startMinutes: 0, durationMinutes: 25, kind: 'foco' } }),
       t.db.routineBlock.create({ data: { userId: 'u-check', weekday: 1, startMinutes: 0, durationMinutes: 4, kind: 'foco' } }),
       t.db.habit.create({ data: { userId: 'u-check', title: 'x', weekdays: [9] } }),

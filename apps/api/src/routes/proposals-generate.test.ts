@@ -198,7 +198,7 @@ describe('POST /api/proposals/generate', () => {
     const createdBig = await queriesOf(database, big, 'POST', '/api/proposals/generate', body);
     const existing = await queriesOf(database, small, 'POST', '/api/proposals/generate', body);
     const existingBig = await queriesOf(database, big, 'POST', '/api/proposals/generate', body);
-    expect({ knowing, created, createdBig, existing, existingBig }).toEqual({ knowing: 8, created: 9, createdBig: 9, existing: 8, existingBig: 8 });
+    expect({ knowing, created, createdBig, existing, existingBig }).toEqual({ knowing: 7, created: 8, createdBig: 8, existing: 7, existingBig: 7 });
   });
 
   describe('privacidade: o que chega ao provedor de IA', () => {
@@ -229,9 +229,8 @@ describe('POST /api/proposals/generate', () => {
 
       // Só estas chaves existem, em qualquer nível (lista de permissão): nada de title, blockId, id, name, email, texto livre.
       const allowed = new Set([
-        'resumo', 'candidatas', 'tom', 'weekStart', 'weekEnd', 'focusMinutesByPeriod', 'sessionsByPeriod', 'energyByPeriod',
-        'manha', 'tarde', 'noite', 'completed', 'interrupted', 'completionRate', 'average', 'checkIns',
-        'totalCheckIns', 'totalSessions', 'restDays', 'careDays', 'daysWithRecord', 'stable',
+        'resumo', 'candidatas', 'tom', 'weekStart', 'weekEnd', 'focusMinutesByPeriod', 'sessionsByPeriod',
+        'manha', 'tarde', 'noite', 'completed', 'interrupted', 'completionRate', 'totalSessions', 'restDays', 'careDays', 'daysWithRecord', 'stable',
         'index', 'kind', 'fromPeriod', 'toPeriod', 'from', 'to', 'weekday', 'startMinutes', 'durationMinutes',
       ]);
       const keys = (value: unknown): string[] =>

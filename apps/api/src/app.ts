@@ -7,7 +7,6 @@ import { originGuard } from './csrf';
 import { type RouteDeps, handleError, handleNotFound } from './http';
 import { meRoutes } from './me';
 import { blockRoutes } from './routes/blocks';
-import { checkInRoutes } from './routes/check-ins';
 import { dataRoutes } from './routes/data';
 import { habitLogRoutes } from './routes/habit-logs';
 import { habitRoutes } from './routes/habits';
@@ -67,7 +66,6 @@ export function createApp(env: ApiEnv, db: Db, now = Date.now, options: AppOptio
     .route('/api/habits', habitRoutes(deps))
     .route('/api/habit-logs', habitLogRoutes(deps))
     .route('/api/sessions', sessionRoutes(deps))
-    .route('/api/check-ins', checkInRoutes(deps))
     .route('/api/rest-days', restDayRoutes(deps))
     .route('/api/proposals', proposalRoutes(deps))
     .route('/api/mascot', mascotRoutes(deps))

@@ -28,14 +28,6 @@ export const sessionSelect = {
   pausedSince: true,
 } as const satisfies Prisma.FocusSessionSelect;
 
-export const checkInSelect = {
-  id: true,
-  date: true,
-  period: true,
-  energy: true,
-  createdAt: true,
-} as const satisfies Prisma.CheckInSelect;
-
 export const restDaySelect = { date: true } as const satisfies Prisma.RestDaySelect;
 
 export const proposalSelect = {

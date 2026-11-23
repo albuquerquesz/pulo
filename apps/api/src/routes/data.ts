@@ -9,12 +9,11 @@ import { type AppEnv, type RouteDeps, requireSession } from '../http';
 export function dataRoutes({ auth, db }: RouteDeps) {
   return new Hono<AppEnv>().use(requireSession(auth)).delete('/', async (c) => {
     const where = { userId: c.var.user.id };
-    const [sessions, blocks, habits, checkIns, restDays, proposals, mascot] = await db.$transaction([
+    const [sessions, blocks, habits, restDays, proposals, mascot] = await db.$transaction([
       db.focusSession.deleteMany({ where }),
       db.routineBlock.deleteMany({ where }),
       // Os registros de hábito saem junto (cascade).
       db.habit.deleteMany({ where }),
-      db.checkIn.deleteMany({ where }),
       db.restDay.deleteMany({ where }),
       db.weeklyProposal.deleteMany({ where }),
       db.mascotState.deleteMany({ where }),
@@ -24,7 +23,6 @@ export function dataRoutes({ auth, db }: RouteDeps) {
         sessions: sessions.count,
         blocks: blocks.count,
         habits: habits.count,
-        checkIns: checkIns.count,
         restDays: restDays.count,
         proposals: proposals.count,
         mascot: mascot.count,
