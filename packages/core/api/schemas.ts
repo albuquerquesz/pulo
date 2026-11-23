@@ -213,6 +213,47 @@ export const weeklyProposalSchema = z
     }
   }) satisfies z.ZodType<WeeklyProposal, unknown>;
 
+/** Corpo de `POST /api/proposals/generate`: o dia da semana desejada (padrão: hoje, no fuso da pessoa). */
+export const generateProposalBodySchema = z.object({ date: dateKeySchema.optional() });
+export type GenerateProposalBody = z.infer<typeof generateProposalBodySchema>;
+
+export const PROPOSAL_OUTCOMES = ['conhecendo', 'existente', 'sem_candidata', 'proposta'] as const;
+export type ProposalOutcomeKind = (typeof PROPOSAL_OUTCOMES)[number];
+
+/** Resposta de `POST /api/proposals/generate`: `conhecendo` e `sem_candidata` não criam nada; os outros trazem a proposta. */
+export const generateProposalResponseSchema = z.discriminatedUnion('outcome', [
+  z.object({ outcome: z.literal('conhecendo') }),
+  z.object({ outcome: z.literal('sem_candidata') }),
+  z.object({ outcome: z.literal('existente'), proposal: weeklyProposalSchema }),
+  z.object({ outcome: z.literal('proposta'), proposal: weeklyProposalSchema }),
+]);
+export type GenerateProposalResponse = z.infer<typeof generateProposalResponseSchema>;
+
+export const PROPOSAL_ACTIONS = ['aceitar', 'editar', 'negar', 'desfazer'] as const;
+export type ProposalAction = (typeof PROPOSAL_ACTIONS)[number];
+
+/** Corpo de `POST /api/proposals/:id/decision`. `editar` traz qual mudança e o novo horário de destino. */
+export const proposalDecisionBodySchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('aceitar') }),
+  z.object({
+    action: z.literal('editar'),
+    change: z.object({
+      index: z.number().int().min(0).max(WEEKLY_AI.maxChangesPerProposal - 1),
+      to: blockSlotSchema,
+    }),
+  }),
+  z.object({ action: z.literal('negar') }),
+  z.object({ action: z.literal('desfazer') }),
+]);
+export type ProposalDecisionBody = z.infer<typeof proposalDecisionBodySchema>;
+
+/** Resposta da decisão: a proposta já atualizada e TODOS os blocos da pessoa (com as mudanças aplicadas ou desfeitas). */
+export const proposalDecisionResponseSchema = z.object({
+  proposal: weeklyProposalSchema,
+  blocks: z.array(routineBlockSchema),
+});
+export type ProposalDecisionResponse = z.infer<typeof proposalDecisionResponseSchema>;
+
 export const mascotStateSchema = z.object({
   phase: phaseSchema,
   careDays: z.number().int().min(0),
@@ -279,6 +320,8 @@ export const API_ERROR_CODES = [
   'proposta_transicao_invalida',
   'proposta_imutavel',
   'semana_ja_tem_proposta',
+  'bloco_mudou',
+  'horario_ocupado',
   'conflito_concorrente',
   'erro_interno',
 ] as const;

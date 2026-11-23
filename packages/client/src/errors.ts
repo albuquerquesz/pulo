@@ -25,6 +25,8 @@ export const MENSAGENS_DA_API = {
   proposta_transicao_invalida: 'Essa sugestão já foi decidida.',
   proposta_imutavel: 'Essa sugestão não pode mais ser alterada.',
   semana_ja_tem_proposta: 'Essa semana já tem uma sugestão.',
+  bloco_mudou: 'Seu bloco mudou desde que a ideia foi feita. Atualize a semana para ver uma nova.',
+  horario_ocupado: 'Esse horário já está ocupado. Tente outro.',
   conflito_concorrente: 'Duas mudanças aconteceram ao mesmo tempo. Tente de novo.',
   erro_interno: 'O servidor tropeçou. Tente de novo daqui a pouco.',
 } as const satisfies Record<ApiErrorCode, string>;
