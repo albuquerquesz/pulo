@@ -78,7 +78,7 @@ export const proposalChangesSchema = z.array(proposalChangeSchema);
 // ---------- RoutineBlock ----------
 
 export const routineBlockMapper = {
-  toDomain(row: RoutineBlockRow): RoutineBlock {
+  toDomain(row: Omit<RoutineBlockRow, 'userId'>): RoutineBlock {
     return {
       id: row.id,
       weekday: toWeekday(row.weekday),
@@ -104,7 +104,7 @@ export const routineBlockMapper = {
 // ---------- Habit ----------
 
 export const habitMapper = {
-  toDomain(row: HabitRow): Habit {
+  toDomain(row: Omit<HabitRow, 'userId'>): Habit {
     return { id: row.id, title: row.title, weekdays: row.weekdays.map(toWeekday), active: row.active };
   },
   fromDomain(userId: string, habit: Habit): Prisma.HabitUncheckedCreateInput {
@@ -115,7 +115,7 @@ export const habitMapper = {
 // ---------- HabitLog ----------
 
 export const habitLogMapper = {
-  toDomain(row: HabitLogRow): HabitLog {
+  toDomain(row: Omit<HabitLogRow, 'userId'>): HabitLog {
     return { habitId: row.habitId, date: dateToDateKey(row.date), doneAt: dateToMs(row.doneAt) };
   },
   fromDomain(userId: string, log: HabitLog): Prisma.HabitLogUncheckedCreateInput {
@@ -126,7 +126,7 @@ export const habitLogMapper = {
 // ---------- FocusSession ----------
 
 export const focusSessionMapper = {
-  toDomain(row: FocusSessionRow): FocusSession {
+  toDomain(row: Omit<FocusSessionRow, 'userId'>): FocusSession {
     return {
       id: row.id,
       startedAt: dateToMs(row.startedAt),
@@ -156,7 +156,7 @@ export const focusSessionMapper = {
 // ---------- CheckIn ----------
 
 export const checkInMapper = {
-  toDomain(row: CheckInRow): CheckIn {
+  toDomain(row: Omit<CheckInRow, 'userId'>): CheckIn {
     return {
       id: row.id,
       date: dateToDateKey(row.date),
@@ -180,7 +180,7 @@ export const checkInMapper = {
 // ---------- RestDay ----------
 
 export const restDayMapper = {
-  toDomain(row: RestDayRow): RestDay {
+  toDomain(row: Omit<RestDayRow, 'userId'>): RestDay {
     return { date: dateToDateKey(row.date) };
   },
   fromDomain(userId: string, restDay: RestDay): Prisma.RestDayUncheckedCreateInput {
@@ -200,7 +200,7 @@ function changeToJson(change: ProposalChange): Prisma.InputJsonObject {
 }
 
 export const weeklyProposalMapper = {
-  toDomain(row: WeeklyProposalRow): WeeklyProposal {
+  toDomain(row: Omit<WeeklyProposalRow, 'userId'>): WeeklyProposal {
     return {
       id: row.id,
       weekStart: dateToDateKey(row.weekStart),
@@ -232,7 +232,7 @@ export const weeklyProposalMapper = {
 // ---------- MascotState ----------
 
 export const mascotStateMapper = {
-  toDomain(row: MascotStateRow): MascotState {
+  toDomain(row: Omit<MascotStateRow, 'userId'>): MascotState {
     return { phase: toPhase(row.phase), careDays: row.careDays, updatedAt: dateToMs(row.updatedAt) };
   },
   fromDomain(userId: string, state: MascotState): Prisma.MascotStateUncheckedCreateInput {
