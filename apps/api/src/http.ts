@@ -6,7 +6,7 @@ import type { Context } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { HTTPException } from 'hono/http-exception';
 import { validator } from 'hono/validator';
-import type { z } from 'zod';
+import { z } from 'zod';
 import type { Auth } from './auth';
 
 /** Cliente do Prisma ou o de dentro de uma transação interativa. */
@@ -85,6 +85,19 @@ function errorBody(error: ApiError): ApiErrorBody {
   return apiErrorSchema.parse({ error: error.code, message: error.message, issues: error.issues });
 }
 
+/** Falha de serialização e deadlock: duas escritas ao mesmo tempo, e quem perdeu pode tentar de novo. */
+const CONFLITOS_DO_POSTGRES = ['40001', '40P01'];
+
+/** Com o adaptador do Postgres, o código original fica em `meta.driverAdapterError.cause.originalCode`. */
+const metaDoAdaptador = z.object({ driverAdapterError: z.object({ cause: z.object({ originalCode: z.string() }) }) });
+
+function codigoDoPostgres(meta: unknown): string | null {
+  const lido = metaDoAdaptador.safeParse(meta);
+  return lido.success ? lido.data.driverAdapterError.cause.originalCode : null;
+}
+
+const conflitoConcorrente = () => new ApiError(409, 'conflito_concorrente', 'Outra escrita aconteceu ao mesmo tempo. Tente de novo.');
+
 /** Erros do Prisma que viram resposta de cliente (o resto é 500 sem detalhes). */
 function fromPrisma(error: Prisma.PrismaClientKnownRequestError): ApiError | null {
   switch (error.code) {
@@ -93,7 +106,10 @@ function fromPrisma(error: Prisma.PrismaClientKnownRequestError): ApiError | nul
     case 'P2003':
       return new ApiError(404, 'referencia_inexistente', 'O registro referenciado não existe.');
     case 'P2034':
-      return new ApiError(409, 'conflito_concorrente', 'Outra escrita aconteceu ao mesmo tempo. Tente de novo.');
+      return conflitoConcorrente();
+    // Consulta crua (SELECT ... FOR UPDATE numa transação Serializable): o código do Postgres vem do adaptador.
+    case 'P2010':
+      return CONFLITOS_DO_POSTGRES.includes(codigoDoPostgres(error.meta) ?? '') ? conflitoConcorrente() : null;
     default:
       return null;
   }
