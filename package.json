@@ -12,7 +12,17 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "deploy": "turbo run deploy"
+    "deploy": "turbo run deploy",
+    "postinstall": "npm run generate -w @pulo/db",
+    "db:up": "docker compose up -d --wait postgres",
+    "db:down": "docker compose down",
+    "db:embedded": "npm run embedded -w @pulo/db",
+    "db:generate": "npm run generate -w @pulo/db",
+    "db:migrate": "npm run migrate:dev -w @pulo/db",
+    "db:deploy": "npm run migrate:deploy -w @pulo/db",
+    "db:status": "npm run migrate:status -w @pulo/db",
+    "db:studio": "npm run studio -w @pulo/db",
+    "db:seed": "npm run seed -w @pulo/db"
   },
   "devDependencies": {
     "turbo": "^2.11.13"

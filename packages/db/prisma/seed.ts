@@ -1,6 +1,7 @@
 // Dados SINTÉTICOS para desenvolvimento local. Nunca rode contra produção.
 // Uso: DATABASE_URL=... npm run db:seed (na raiz).
 import type { CheckIn, FocusSession, Habit, RoutineBlock } from '@pulo/core/domain/types';
+import { loadRootEnv } from './load-env';
 import { createDb } from '../src/client';
 import { dateKeyToDate } from '../src/dates';
 import {
@@ -12,6 +13,8 @@ import {
   restDayMapper,
   routineBlockMapper,
 } from '../src/mappers';
+
+loadRootEnv();
 
 const SEED_USER_ID = 'seed-user-demo';
 const url = process.env.DATABASE_URL;

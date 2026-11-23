@@ -52,3 +52,7 @@ example
 
 # prisma (cliente gerado por `npm run db:generate`)
 packages/db/src/generated/
+
+# banco local sem Docker e variáveis locais
+packages/db/.embedded-pg/
+.env

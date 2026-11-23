@@ -4,25 +4,40 @@
   "globalEnv": [
     "EXPO_PUBLIC_*",
     "PULO_*",
-    "PORT"
+    "PORT",
+    "DATABASE_URL"
   ],
   "tasks": {
     "build": {
       "dependsOn": [
-        "^build"
+        "^build",
+        "^generate",
+        "generate"
       ],
       "outputs": [
         "dist/**"
       ]
     },
     "test": {
-      "outputs": []
+      "outputs": [],
+      "dependsOn": [
+        "^generate",
+        "generate"
+      ]
     },
     "typecheck": {
-      "outputs": []
+      "outputs": [],
+      "dependsOn": [
+        "^generate",
+        "generate"
+      ]
     },
     "lint": {
-      "outputs": []
+      "outputs": [],
+      "dependsOn": [
+        "^generate",
+        "generate"
+      ]
     },
     "dev": {
       "cache": false,
@@ -31,12 +46,22 @@
     "deploy": {
       "dependsOn": [
         "typecheck",
-        "test"
+        "test",
+        "^generate"
       ],
       "cache": false,
       "passThroughEnv": [
         "CLOUDFLARE_API_TOKEN",
         "CLOUDFLARE_ACCOUNT_ID"
+      ]
+    },
+    "generate": {
+      "outputs": [
+        "src/generated/**"
+      ],
+      "inputs": [
+        "prisma/schema.prisma",
+        "prisma.config.ts"
       ]
     }
   }
