@@ -1,4 +1,12 @@
-import type { ApiErrorCode } from '@pulo/core/api/schemas';
+import {
+  type ApiErrorCode,
+  type GenerateProposalBody,
+  type GenerateProposalResponse,
+  type ProposalDecisionBody,
+  type ProposalDecisionResponse,
+  generateProposalResponseSchema,
+  proposalDecisionResponseSchema,
+} from '@pulo/core/api/schemas';
 import type { BatchWrites } from '@pulo/core/data/batch';
 import { systemClock } from '@pulo/core/domain/clock';
 import { inRange } from '@pulo/core/domain/day';
@@ -19,6 +27,7 @@ import type {
   WeeklyProposal,
 } from '@pulo/core/domain/types';
 import { type UserMetadata, applyUserMetadataPatch, metadataPatchFromUser, userFromMetadata } from '@pulo/core/domain/user-metadata';
+import type { z } from 'zod';
 import { type ApiClient, type ApiOptions, createApiClient, readJson } from './api';
 import {
   cloneBlock,
@@ -31,7 +40,7 @@ import {
   cloneSession,
 } from './clone';
 import { Collection } from './collection';
-import { RemoteError } from './errors';
+import { MENSAGENS_DA_API, RemoteError } from './errors';
 import { DEFAULT_HISTORY_DAYS, syncRange } from './sync-range';
 
 export interface RemoteRepositoryOptions extends ApiOptions {
@@ -58,6 +67,17 @@ export interface Account {
  */
 export interface RemoteRepository extends Repository, BatchWrites {
   readonly account: Account;
+  /**
+   * `POST /api/proposals/generate`: o servidor lê os dados, aplica as regras, consulta a IA (se houver) e guarda a proposta.
+   * `date` (qualquer dia da semana) é opcional: o padrão é a semana de agora, pelo relógio do servidor e o fuso da pessoa.
+   * `proposta` e `existente` entram no cache de propostas.
+   */
+  generateProposal(date?: GenerateProposalBody['date']): Promise<GenerateProposalResponse>;
+  /**
+   * `POST /api/proposals/:id/decision`: aceitar, editar, negar ou desfazer, com os blocos aplicados na mesma transação do servidor.
+   * Troca no cache a proposta e os blocos pelo que o servidor devolveu. Se o servidor recusar (ex.: `bloco_mudou`), o cache é relido.
+   */
+  decideProposal(id: EntityId, decision: ProposalDecisionBody): Promise<ProposalDecisionResponse>;
   /** Lê tudo de novo do servidor e troca o cache (ex.: ao voltar de um tempo sem internet). */
   reload(): Promise<void>;
 }
@@ -369,6 +389,54 @@ class ApiRepository implements RemoteRepository {
     return this.write(this.proposals, `proposal:${proposal.id}`, proposal.id, proposal, async () => {
       await readJson(await this.client.api.proposals[':id'].$put({ param: { id: proposal.id }, json: proposal }));
     });
+  }
+
+  async generateProposal(date?: GenerateProposalBody['date']): Promise<GenerateProposalResponse> {
+    const response = await this.callAndParse(
+      'proposal:generate',
+      async () => await this.client.api.proposals.generate.$post({ json: date === undefined ? {} : { date } }),
+      generateProposalResponseSchema,
+    );
+    if (response.outcome === 'proposta' || response.outcome === 'existente') this.proposals.put(response.proposal);
+    return response;
+  }
+
+  async decideProposal(id: EntityId, decision: ProposalDecisionBody): Promise<ProposalDecisionResponse> {
+    try {
+      const response = await this.callAndParse(
+        `proposal:${id}`,
+        async () => await this.client.api.proposals[':id'].decision.$post({ param: { id }, json: decision }),
+        proposalDecisionResponseSchema,
+      );
+      this.proposals.put(response.proposal);
+      this.blocks.replaceAll(response.blocks);
+      return response;
+    } catch (error) {
+      // O servidor é a verdade: se recusou, o cache pode estar atrás (bloco mexido em outro aparelho). Releia sem esconder o erro.
+      if (error instanceof RemoteError && error.kind === 'api') await this.reload().catch(() => undefined);
+      throw error;
+    }
+  }
+
+  /** Uma chamada em série por chave, com repetição em `conflito_concorrente`; a resposta passa pelo schema do contrato. */
+  private async callAndParse<S extends z.ZodType>(
+    lock: string,
+    send: () => Promise<{ ok: boolean; status: number; json(): Promise<unknown> }>,
+    schema: S,
+  ): Promise<z.output<S>> {
+    let result: z.output<S> | undefined;
+    await this.serial(lock, () =>
+      this.withRetry(async () => {
+        const raw = await readJson(await send());
+        const parsed = schema.safeParse(raw);
+        if (!parsed.success) {
+          throw new RemoteError({ kind: 'resposta_invalida', mensagem: MENSAGENS_DA_API.erro_interno, cause: parsed.error });
+        }
+        result = parsed.data;
+      }),
+    );
+    if (result === undefined) throw new RemoteError({ kind: 'resposta_invalida', mensagem: MENSAGENS_DA_API.erro_interno });
+    return result;
   }
 
   // ---------- Estado do sapo ----------
