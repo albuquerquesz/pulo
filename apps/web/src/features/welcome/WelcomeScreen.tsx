@@ -1,13 +1,10 @@
-import type { User } from '@pulo/core/domain/types';
 import { useEffect, useState } from 'react';
 
-import { authClient, lerConta, salvarMetadata, type Conta } from '@/auth/client';
+import { authClient, lerConta, type Conta } from '@/auth/client';
 import { Sapo } from '@/mascot';
 import { Botao, Cartao, Texto } from '@/ui';
 
 import { Tela } from '../app';
-
-const PROXIMO_TEMA: Record<User['theme'], User['theme']> = { sistema: 'claro', claro: 'escuro', escuro: 'sistema' };
 
 type EstadoDaConta = { tipo: 'carregando' } | { tipo: 'fora' } | { tipo: 'dentro'; conta: Conta } | { tipo: 'erro'; mensagem: string };
 
@@ -21,7 +18,7 @@ async function lerEstadoDaConta(): Promise<EstadoDaConta> {
   }
 }
 
-/** Tela provisória para testar o login com Google e os metadados da conta. */
+/** Tela provisória para testar o login com Google. */
 export function WelcomeScreen() {
   const [estado, setEstado] = useState<EstadoDaConta>({ tipo: 'carregando' });
   const [ocupado, setOcupado] = useState(false);
@@ -47,16 +44,6 @@ export function WelcomeScreen() {
     setOcupado(true);
     await authClient.signOut();
     setEstado({ tipo: 'fora' });
-    setOcupado(false);
-  };
-
-  const mudar = async (conta: Conta, patch: Parameters<typeof salvarMetadata>[0]) => {
-    setOcupado(true);
-    try {
-      setEstado({ tipo: 'dentro', conta: { ...conta, metadata: await salvarMetadata(patch) } });
-    } catch (e) {
-      setEstado({ tipo: 'erro', mensagem: e instanceof Error ? e.message : 'Erro ao salvar.' });
-    }
     setOcupado(false);
   };
 
@@ -86,26 +73,6 @@ export function WelcomeScreen() {
             <Texto variante="subtitulo">{estado.conta.user.name}</Texto>
             <Texto cor="muted">{estado.conta.user.email}</Texto>
           </Cartao>
-          <Cartao>
-            <Texto variante="legenda" cor="muted">
-              metadata salvo na conta
-            </Texto>
-            <pre className="overflow-x-auto text-sm text-ink" data-testid="metadata">
-              {JSON.stringify(estado.conta.metadata, null, 2)}
-            </pre>
-          </Cartao>
-          <Botao
-            titulo={`Tema: ${estado.conta.metadata.theme} (trocar)`}
-            variante="agua"
-            desativado={ocupado}
-            onPress={() => void mudar(estado.conta, { theme: PROXIMO_TEMA[estado.conta.metadata.theme] })}
-          />
-          <Botao
-            titulo={estado.conta.metadata.onboarding.completed ? 'Desmarcar onboarding' : 'Marcar onboarding como feito'}
-            variante="agua"
-            desativado={ocupado}
-            onPress={() => void mudar(estado.conta, { onboardingCompleted: !estado.conta.metadata.onboarding.completed })}
-          />
           <Botao titulo="Sair" variante="fantasma" desativado={ocupado} onPress={() => void sair()} />
         </>
       ) : null}
