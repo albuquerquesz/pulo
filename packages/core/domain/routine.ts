@@ -231,10 +231,13 @@ export function planoInicial(now: number): { blocks: RoutineBlock[]; habits: Hab
   return { blocks, habits };
 }
 
-/** Grava o plano de exemplo. */
+/**
+ * Grava o plano de exemplo. Os blocos vão em paralelo (cada um é uma chamada no repositório remoto);
+ * os hábitos um a um, porque o servidor confere o limite por dia numa transação serializável.
+ */
 export async function criarPlanoInicial(repo: Repository, now: number): Promise<{ blocks: RoutineBlock[]; habits: Habit[] }> {
   const plan = planoInicial(now);
-  for (const b of plan.blocks) await repo.saveBlock(b);
+  await Promise.all(plan.blocks.map((b) => repo.saveBlock(b)));
   for (const h of plan.habits) await repo.saveHabit(h);
   return plan;
 }
