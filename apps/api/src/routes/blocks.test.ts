@@ -1,5 +1,5 @@
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
-import { createHarness, queriesOf } from '../testing';
+import { TEST_ORIGIN, createHarness, queriesOf } from '../testing';
 
 let database: TestDatabase;
 let h: ReturnType<typeof createHarness>;
@@ -83,7 +83,7 @@ describe('/api/blocks', () => {
     const me = await h.newUser();
     const res = await h.app.request(`/api/blocks/${uuid()}`, {
       method: 'PUT',
-      headers: { cookie: me.cookie, 'content-type': 'application/json' },
+      headers: { cookie: me.cookie, origin: TEST_ORIGIN, 'content-type': 'application/json' },
       body: '{quebrado',
     });
     expect(res.status).toBe(400);

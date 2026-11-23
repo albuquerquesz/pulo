@@ -236,6 +236,8 @@ export const habitLogParamSchema = z.object({ habitId: idSchema, date: dateKeySc
 /** Códigos estáveis de erro (corpo `{ error, message? }`). Ver docs/api.md. */
 export const API_ERROR_CODES = [
   'nao_autenticado',
+  'origem_nao_permitida',
+  'origem_ausente',
   'corpo_invalido',
   'consulta_invalida',
   'parametro_invalido',

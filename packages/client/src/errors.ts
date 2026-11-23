@@ -6,6 +6,8 @@ export const MENSAGEM_SEM_SINAL = 'A lagoa ficou sem sinal. Confira a internet e
 /** Mensagem em português para cada código da API (docs/api.md). `satisfies` garante que nenhum código fique sem texto. */
 export const MENSAGENS_DA_API = {
   nao_autenticado: 'Sua sessão acabou. Entre de novo para continuar.',
+  origem_nao_permitida: 'Este endereço do app não tem permissão para falar com o servidor.',
+  origem_ausente: 'Não consegui confirmar de onde veio o pedido. Recarregue a página e tente de novo.',
   corpo_invalido: 'Alguma informação não ficou certa. Confira os campos e tente de novo.',
   consulta_invalida: 'Não consegui entender esse pedido. Tente de novo.',
   parametro_invalido: 'Não consegui entender esse pedido. Tente de novo.',

@@ -5,7 +5,7 @@ import { type ApiErrorBody, apiErrorSchema } from '@pulo/core/api/schemas';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
 import { hc } from 'hono/client';
 import type { AppType } from './app';
-import { TEST_NOW, createHarness } from './testing';
+import { TEST_NOW, TEST_ORIGIN, createHarness } from './testing';
 
 let database: TestDatabase;
 let h: ReturnType<typeof createHarness>;
@@ -22,7 +22,7 @@ async function typedClient() {
   const me = await h.newUser();
   const client = hc<AppType>('http://localhost', {
     fetch: async (input: RequestInfo | URL, init?: RequestInit) => h.app.request(input, init),
-    headers: { cookie: me.cookie },
+    headers: { cookie: me.cookie, origin: TEST_ORIGIN },
   });
   return client;
 }

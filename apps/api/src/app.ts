@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { Db } from '@pulo/db';
 import { type AuthEnv, createAuth } from './auth';
+import { originGuard } from './csrf';
 import { type RouteDeps, handleError, handleNotFound } from './http';
 import { meRoutes } from './me';
 import { blockRoutes } from './routes/blocks';
@@ -43,6 +44,7 @@ export function createApp(env: ApiEnv, db: Db, now = Date.now) {
         allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       }),
     )
+    .use('*', originGuard(web.origins))
     .get('/health', (c) => c.json({ ok: true }))
     .on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
     .route('/api/me', meRoutes(auth, now))

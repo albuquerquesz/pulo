@@ -30,7 +30,7 @@ export interface SessionUser {
 
 export type AppEnv = { Variables: { user: SessionUser } };
 
-export type ErrorStatus = 400 | 401 | 404 | 409 | 500;
+export type ErrorStatus = 400 | 401 | 403 | 404 | 409 | 500;
 
 /** Erro esperado: vira JSON `{ error, message? }` com o status certo, sem stack trace. */
 export class ApiError extends Error {
