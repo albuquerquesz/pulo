@@ -11,7 +11,9 @@
     "PULO_CORS_ORIGIN": "http://localhost:8081,http://localhost:3000,https://pulo-web.albqvictor.workers.dev",
     // Opcional: domínio pai do cookie quando o app e a API são subdomínios do mesmo domínio (app.x e api.x). Veja docs/web-auth.md.
     //   "PULO_COOKIE_DOMAIN": "exemplo.com",
-    "BETTER_AUTH_URL": "https://pulo-api.albqvictor.workers.dev"
+    "BETTER_AUTH_URL": "https://pulo-api.albqvictor.workers.dev",
+    // App web: telas de entrar e de consentimento do OAuth do servidor MCP (veja docs/mcp.md).
+    "PULO_WEB_URL": "https://pulo-web.albqvictor.workers.dev"
   }
   // Secrets (nunca neste arquivo): DATABASE_URL, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET.
   // O banco é um PostgreSQL hospedado (Supabase ou similar): `npx wrangler secret put DATABASE_URL`.

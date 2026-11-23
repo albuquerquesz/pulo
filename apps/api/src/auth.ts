@@ -1,9 +1,12 @@
 import type { Db } from '@pulo/db';
+import { oauthProvider } from '@better-auth/oauth-provider';
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
+import { jwt } from 'better-auth/plugins';
+import { MCP_SCOPES, type McpEnv, resolveMcpConfig } from './mcp-config';
 import { type WebConfig, resolveWebConfig } from './web-config';
 
-export type AuthEnv = {
+export type AuthEnv = McpEnv & {
   /** Conexão do Postgres (secret do Worker; em dev, .dev.vars). Direta ou do pooler do Supabase. */
   DATABASE_URL: string;
   BETTER_AUTH_SECRET: string;
@@ -20,6 +23,7 @@ export type AuthEnv = {
  */
 export function createAuth(env: AuthEnv, web: WebConfig, db: Db) {
   const { cookie } = web;
+  const mcp = resolveMcpConfig(env);
   return betterAuth({
     database: prismaAdapter(db, { provider: 'postgresql' }),
     secret: env.BETTER_AUTH_SECRET,
@@ -32,6 +36,28 @@ export function createAuth(env: AuthEnv, web: WebConfig, db: Db) {
         metadata: { type: 'json', required: false, input: false },
       },
     },
+    // O `/token` do plugin jwt emitiria JWT de sessão; só o OAuth emite tokens (ver docs/mcp.md).
+    disabledPaths: ['/token'],
+    plugins: [
+      // Chaves que assinam os access tokens do OAuth (tabela jwks). Sem cabeçalho de JWT nas respostas da sessão.
+      jwt({ disableSettingJwtHeader: true }),
+      // Servidor de autorização OAuth 2.1 para clientes MCP (Claude e outros): registro dinâmico de clientes,
+      // login e consentimento nas telas do app web, tokens com `aud` = o recurso `/mcp`.
+      oauthProvider({
+        loginPage: mcp.loginPage,
+        consentPage: mcp.consentPage,
+        scopes: [...MCP_SCOPES],
+        allowDynamicClientRegistration: true,
+        allowUnauthenticatedClientRegistration: true,
+        // Claude Code, Cursor e outros clientes nativos voltam para http://localhost ou um esquema próprio sem dizer
+        // `application_type`: tratados como nativos; clientes web (claude.ai) seguem exigindo https.
+        clientRegistrationDefaultApplicationType: 'infer',
+        resources: [{ identifier: mcp.resource, name: 'Pulo MCP', allowedScopes: [...MCP_SCOPES] }],
+        clientRegistrationDefaultResources: [mcp.resource],
+        // O Worker monta o Better Auth a cada requisição: semear o recurso uma vez por processo.
+        resourceSeedScope: 'process',
+      }),
+    ],
     socialProviders: {
       google: {
         clientId: env.GOOGLE_CLIENT_ID,

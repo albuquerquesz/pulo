@@ -12,8 +12,11 @@ afterAll(async () => {
   await database.close();
 });
 
-/** Rotas públicas de propósito: saúde, login do Better Auth e a IA semanal (não toca nos dados da pessoa). */
-const PUBLIC = [/^\/health$/, /^\/api\/auth\//, /^\/weekly-ai$/];
+/**
+ * Rotas públicas de propósito: saúde, login do Better Auth, a IA semanal (não toca nos dados da pessoa) e a descoberta do OAuth.
+ * O `/mcp` exige token OAuth e tem o próprio teste (mcp/mcp.test.ts).
+ */
+const PUBLIC = [/^\/health$/, /^\/api\/auth\//, /^\/weekly-ai$/, /^\/\.well-known\//, /^\/mcp$/];
 
 describe('autenticação das rotas de domínio', () => {
   it('toda rota registrada fora da lista pública responde 401 sem sessão', async () => {
