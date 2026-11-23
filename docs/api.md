@@ -5,11 +5,12 @@ devolve nem altera linhas de outra pessoa. Os schemas de entrada e saída moram 
 (`@pulo/core/api/schemas`) e valem para o servidor e para o app.
 
 Cliente tipado no app: `import type { AppType } from '@pulo/api/src/app'` e `hc<AppType>(url, { init: { credentials: 'include' } })`.
+Sessão, cookie, CSRF e variáveis de ambiente: [web-auth.md](web-auth.md).
 O teste `apps/api/src/client.test.ts` prova a inferência de rotas, corpos e respostas.
 
 ## Convenções
 
-- Escrita é upsert com id gerado pelo cliente (uuid, ou `prefixo-xxx-n`): repetir o mesmo `PUT` é seguro e não duplica.
+- Escrita é upsert com id gerado pelo cliente (uuid, ou `prefixo-instante-aleatório` de `newId` do core, com 12 símbolos de `crypto.getRandomValues`): repetir o mesmo `PUT` é seguro e não duplica.
   O id do caminho precisa ser igual ao do corpo (senão 400 `id_divergente`; em hábito feito vale também `data_divergente`).
 - Corpo e respostas espelham `packages/core/domain/types.ts`: `RoutineBlock`, `Habit`, `HabitLog`, `FocusSession`,
   `CheckIn`, `RestDay`, `WeeklyProposal`, `MascotState`. Datas são `DateKey` ('AAAA-MM-DD'), instantes são ms.
@@ -29,6 +30,8 @@ Nunca há stack trace; erro inesperado vira 500 `erro_interno` e o detalhe fica 
 | Status | Código | Quando |
 | --- | --- | --- |
 | 401 | `nao_autenticado` | sem sessão ou cookie inválido |
+| 403 | `origem_nao_permitida` | `PUT`, `PATCH`, `POST` ou `DELETE` em `/api/*` (fora `/api/auth/*`) com `Origin` que não está em `PULO_CORS_ORIGIN` (inclui `null`) |
+| 403 | `origem_ausente` | os mesmos métodos sem `Origin`, mas com cookie ou `Sec-Fetch-Site` (navegador sempre manda `Origin` nestes métodos) |
 | 400 | `corpo_invalido` | JSON quebrado ou fora do schema (energia fora de 1 a 5, duração do bloco fora de 5 a 120, foco planejado fora dos limites de `FOCUS`, sessão incoerente, proposta fora do formato, `weekStart` que não é segunda) |
 | 400 | `consulta_invalida` | `from`/`to`/`date` inválidos, `from` depois de `to`, intervalo do sync maior que 400 dias |
 | 400 | `parametro_invalido` | id ou data inválidos no caminho |
@@ -36,8 +39,8 @@ Nunca há stack trace; erro inesperado vira 500 `erro_interno` e o detalhe fica 
 | 400 | `horario_no_futuro` | instante do app no futuro |
 | 404 | `referencia_inexistente` | hábito (do registro) ou bloco (da sessão) que não existe ou é de outra pessoa |
 | 404 | `rota_inexistente` | rota não existe |
-| 409 | `conflito_de_id` | id já usado por outra pessoa (nunca sobrescreve) |
-| 409 | `limite_por_dia` | passaria de `MAX_HABITS_PER_DAY` hábitos ativos no mesmo dia da semana |
+| 409 | `conflito_de_id` | id já usado por outra pessoa (nunca sobrescreve). No lote, `issues` lista `blocks.N.id` ou `habits.N.id` e nada é salvo |
+| 409 | `limite_por_dia` | passaria de `MAX_HABITS_PER_DAY` hábitos ativos no mesmo dia da semana. No lote, `issues` lista `habits.N.weekdays` e nada é salvo |
 | 409 | `sessao_em_andamento` | já existe outra sessão em andamento (índice único parcial no banco) |
 | 409 | `sessao_encerrada` | mudança numa sessão `concluida` ou `interrompida` |
 | 409 | `sessao_imutavel` | mudou início, duração planejada ou bloco de uma sessão em andamento |
@@ -53,9 +56,11 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | Método e caminho | Corpo | Resposta 200 | Queries |
 | --- | --- | --- | --- |
 | `GET /api/blocks` | | `{ blocks: RoutineBlock[] }` | 3 |
+| `PUT /api/blocks` (lote) | `{ blocks: RoutineBlock[] }`, 1 a 100 | `{ blocks }` | 3 com 1 ou com 100 |
 | `PUT /api/blocks/:id` | `RoutineBlock` | `{ block }` | 3 |
 | `DELETE /api/blocks/:id` | | `{ deleted }` | 3 |
 | `GET /api/habits` | | `{ habits: Habit[] }` | 3 |
+| `PUT /api/habits` (lote) | `{ habits: Habit[] }`, 1 a 50 | `{ habits }` | 4 com 1 ou com 50 |
 | `PUT /api/habits/:id` | `Habit` | `{ habit }` | 4 |
 | `DELETE /api/habits/:id` | | `{ deleted }` (os registros do hábito saem junto) | 3 |
 | `GET /api/habit-logs?from&to` | | `{ habitLogs: HabitLog[] }` | 3 |
@@ -76,6 +81,19 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, checkIns, restDays, proposals, mascot } }` | 9 |
 
 Já existiam e continuam: `GET /health`, `/api/auth/*`, `GET /api/me`, `PATCH /api/me/metadata`, `POST /weekly-ai`.
+
+### Escrita em lote
+
+`PUT /api/blocks` e `PUT /api/habits` existem para o onboarding (o plano de exemplo tem 15 blocos e 2 hábitos: eram 17 chamadas, agora são 2).
+Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBlocks` = 100 e `batchMaxHabits` = 50), resposta com a mesma lista.
+- Cada item segue as regras da rota de um item (`routineBlockSchema` e `habitSchema`, id de outra pessoa, limite por dia).
+  Ids repetidos no mesmo lote dão 400 `corpo_invalido`.
+- Atômico: nada é salvo se algum item falhar. O erro lista os itens: `issues` com `path` `blocks.3.durationMinutes`, `habits.1.title`,
+  `habits.0.weekdays` (409 `limite_por_dia`) ou `blocks.2.id` (409 `conflito_de_id`).
+- Queries constantes: um `INSERT ... SELECT ... FROM unnest(arrays) ON CONFLICT (id) DO UPDATE ... WHERE userId = EXCLUDED.userId`
+  no lugar de um `upsert` por item. No de hábitos há antes uma leitura dos outros hábitos ativos (o limite por dia conta o lote junto com eles),
+  numa transação serializável. Se alguma linha foi pulada por ser de outra pessoa, a transação desfaz e uma query lista quem foi (só no caminho de erro).
+- O `RemoteRepository` expõe `saveBlocks` e `saveHabits` (`BatchWrites` do core); `criarPlanoInicial` os usa quando existem.
 
 ### Regras de cada recurso
 
@@ -154,4 +172,5 @@ propostas e o estado do sapo da pessoa, numa transação. Conta, login e metadad
   `metadataPatchFromUser` do core. `saveMascotState` só atualiza o cache: o sapo é do servidor (a resposta de encerrar sessão e de descanso traz o novo estado).
 - **`clearAll`:** `DELETE /api/data` e depois `PATCH /api/me/metadata` com `profile: null` e `onboardingCompleted: false` (volta ao onboarding; a conta fica).
 - **Erros:** `RemoteError` com `kind` (`rede`, `sessao`, `api`, `resposta_invalida`), `code` (código da tabela acima), `status`, `issues` e `mensagem` em português.
+- **Lote:** `saveBlocks(blocks)` e `saveHabits(habits)` (cache otimista, um `PUT` cada, tudo ou nada com rollback do cache). `saveBlock` e `saveHabit` continuam.
 - **Cookie:** sempre `credentials: 'include'`. O cookie da sessão é HttpOnly e do navegador: o cliente não o lê, não o guarda e não manda cabeçalho `Cookie`.

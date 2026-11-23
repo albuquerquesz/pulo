@@ -7,8 +7,10 @@
   // O pg (via @prisma/adapter-pg) usa node:net e node:tls, que o Workers só expõe com nodejs_compat.
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
-    // Origens liberadas no CORS e no Better Auth, separadas por vírgula.
+    // Origens do app web (CORS com credenciais, origens confiáveis do Better Auth e checagem de Origin nas escritas), separadas por vírgula.
     "PULO_CORS_ORIGIN": "http://localhost:8081",
+    // Opcional: domínio pai do cookie quando o app e a API são subdomínios do mesmo domínio (app.x e api.x). Veja docs/web-auth.md.
+    //   "PULO_COOKIE_DOMAIN": "exemplo.com",
     "BETTER_AUTH_URL": "https://pulo-api.albqvictor.workers.dev"
   }
   // Secrets (nunca neste arquivo): DATABASE_URL, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET.

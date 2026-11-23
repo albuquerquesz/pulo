@@ -29,7 +29,8 @@ ou toque em "Ver o demo" na tela de entrada.
 Variáveis do app (`apps/mobile/.env.local`, veja `apps/mobile/.env.example`):
 `EXPO_PUBLIC_API_URL` (endereço da API; em desenvolvimento, sem ela, vale `http://localhost:8787`) e, opcional,
 `EXPO_PUBLIC_WEEKLY_AI_ENDPOINT` (sem ela, a IA semanal usa `EXPO_PUBLIC_API_URL` + `/weekly-ai`).
-Na web, o endereço do app precisa estar em `PULO_CORS_ORIGIN` da API (o cookie da sessão viaja entre sites, com credenciais).
+O endereço do app precisa estar em `PULO_CORS_ORIGIN` da API (CORS com credenciais, origens confiáveis e checagem de `Origin` nas escritas).
+Sessão, cookie, CSRF e como publicar app e API: [docs/web-auth.md](docs/web-auth.md).
 
 Só um pacote: `npx turbo run dev --filter=@pulo/mobile`.
 
@@ -61,6 +62,7 @@ Config em `apps/api/wrangler.jsonc`. Segredos vão por `npx wrangler secret put 
 - `/api/auth/*`: Better Auth. Login com Google em `POST /api/auth/sign-in/social` com `{ "provider": "google", "callbackURL": "..." }`,
   sessão em `GET /api/auth/get-session`, saída em `POST /api/auth/sign-out`
 - `GET /api/me`: usuário logado e metadados
+- `PUT /api/blocks` e `PUT /api/habits`: escrita em lote (onboarding), veja `docs/api.md`
 - `PATCH /api/me/metadata`: muda `theme`, `reduceMotion`, `timezone`, `onboardingCompleted` ou `profile`
 
 ### Metadados do usuário
@@ -80,7 +82,10 @@ O `User` do app é montado a partir disso (`userFromMetadata` e `metadataPatchFr
 - No Google Cloud, o OAuth Client `pulo-api` precisa dos redirecionamentos
   `https://pulo-api.albqvictor.workers.dev/api/auth/callback/google` e `http://localhost:8787/api/auth/callback/google`.
 - Mudou plugin ou campo do Better Auth? Atualize `packages/db/prisma/schema.prisma` e crie a migração (`npm run db:migrate`).
-- Origens confiáveis: `PULO_CORS_ORIGIN`. O app é só web: a sessão é um cookie HttpOnly gerido pela API.
+- O app é só web: a sessão é um cookie HttpOnly gerido pela API (o app nunca lê nem guarda token). Variáveis de ambiente do Worker (vars, não secrets):
+  `PULO_CORS_ORIGIN` (origens do app, separadas por vírgula; também origens confiáveis do Better Auth e do CSRF),
+  `BETTER_AUTH_URL` (endereço público da API; `https` liga o Secure do cookie) e, opcional, `PULO_COOKIE_DOMAIN` (`exemplo.com`, para `app.exemplo.com` e `api.exemplo.com`).
+  Escritas em `/api/*` com cookie exigem `Origin` de uma origem configurada. Detalhes em [docs/web-auth.md](docs/web-auth.md).
 
 ## Banco de dados
 

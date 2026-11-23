@@ -2,7 +2,7 @@
 
 App do hackathon em Expo SDK 58 (React Native, Expo Router, TypeScript), com saída web estática.
 Monorepo com npm workspaces e Turborepo: `apps/mobile` (Expo), `apps/api` (Hono no Cloudflare Workers), `packages/core` (regras puras), `packages/db` (Prisma e PostgreSQL) e `packages/client` (RemoteRepository sobre a API).
-Specs em `docs/specs/pulo/` (01 a 10). Leia só as da sua parte.
+O app é só web (sem login nativo): a sessão é um cookie HttpOnly da API. Specs em `docs/specs/pulo/` (01 a 10). Leia só as da sua parte.
 
 ## Regras
 - Contratos compartilhados são somente leitura para quem não os criou:
@@ -37,7 +37,7 @@ Na raiz, cada comando roda em todos os pacotes via Turborepo:
 - `apps/mobile` (`@pulo/mobile`): `src/app` rotas (Expo Router), `src/theme` tokens e `useTheme`, `src/ui` componentes,
   `src/mascot` sapo e lagoa, `src/features` telas, `src/data` adaptador do AsyncStorage.
 - `apps/api` (`@pulo/api`): Hono no Cloudflare Workers (`pulo-api`). `src/weekly-ai.ts` é a função da IA, `src/app.ts` as rotas,
-  `src/auth.ts` o Better Auth (Google, adapter do Prisma), `src/routes/*` as rotas de domínio (uma por recurso, veja `docs/api.md`), `src/http.ts` sessão, validação e erros, `src/worker.ts` a entrada do Worker (um cliente de banco por requisição),
+  `src/auth.ts` o Better Auth (Google, adapter do Prisma), `src/routes/*` as rotas de domínio (uma por recurso, veja `docs/api.md`), `src/http.ts` sessão, validação e erros, `src/web-config.ts` cookie e origens a partir do ambiente, `src/csrf.ts` checagem de Origin (veja `docs/web-auth.md`), `src/worker.ts` a entrada do Worker (um cliente de banco por requisição),
   `wrangler.jsonc` a config. Testes com Vitest contra um Postgres de verdade (embedded). Segredos só por `wrangler secret put`.
 - `packages/client` (`@pulo/client`): `createRemoteRepository` (o `Repository` do core sobre `hc<AppType>`; um `GET /api/sync` na abertura, cache em memória,
   escritas otimistas com rollback), `RemoteError` com texto em português. Só importa o TIPO da API. Testes com Vitest rodando a API de verdade
