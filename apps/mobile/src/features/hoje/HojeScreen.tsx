@@ -2,11 +2,9 @@ import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
-import { CHECKIN_LOW_ENERGY_COPY, CHECKIN_QUESTION } from '@pulo/core/domain/checkin';
 import { estadoDoSapo, Lagoa } from '@/mascot';
 import { useTheme } from '@/theme';
-import { Balao, Botao, Cartao, ChipEnergia, EstadoVazio, Texto } from '@/ui';
-import type { Energy } from '@pulo/core/domain/types';
+import { Balao, Botao, Cartao, EstadoVazio, Texto } from '@/ui';
 
 import { agoraDaLagoa, blocoTexto, dentroDoDiaDoUsuario, Secao, Tela, useApp, useCarregar } from '../app';
 import {
@@ -16,12 +14,9 @@ import {
   concluirDescansoDoBloco,
   diaDeDescanso,
   fraseDoSapo,
-  registrarEnergia,
   type DadosHoje,
 } from './logic';
 import { criarPlanoInicial } from '@pulo/core/domain/routine';
-
-const ENERGIAS: Energy[] = [1, 2, 3, 4, 5];
 
 export const TEXTO_DE_ERRO = 'A lagoa ficou sem sinal. Seus dados estão salvos aqui.';
 
@@ -77,7 +72,7 @@ export function HojeScreen() {
   const dentroDoDia = dentroDoDiaDoUsuario(user, d.agora);
   const humor = estadoDoSapo({
     phase: d.mascote.phase,
-    latestEnergyToday: d.energia,
+    interruptedFocusToday: d.focosInterrompidosHoje,
     focusRunning: d.sessaoAtiva !== null,
     aiAnalyzing: false,
     activeEvent: evento,
@@ -111,11 +106,6 @@ export function HojeScreen() {
     }
     refresh();
     router.navigate('/foco');
-  };
-
-  const energia = async (nivel: Energy) => {
-    await registrarEnergia(repo, clock, user, nivel);
-    refresh();
   };
 
   const descansar = async () => {
@@ -157,22 +147,6 @@ export function HojeScreen() {
         />
       </View>
       <Balao texto={fraseDoSapo(humor, d)} />
-
-      <Secao titulo={CHECKIN_QUESTION}>
-        <View style={styles.energias} accessibilityRole="radiogroup">
-          {ENERGIAS.map((n) => (
-            <ChipEnergia key={n} nivel={n} selecionado={d.energia === n} onPress={(v) => void energia(v)} />
-          ))}
-        </View>
-        {d.energia !== null && d.energia <= 2 ? (
-          <Cartao>
-            <View style={styles.coluna}>
-              <Texto>{CHECKIN_LOW_ENERGY_COPY}</Texto>
-              <Botao titulo="Quero um dia de descanso" variante="agua" onPress={() => void descansar()} desativado={d.descansoHoje} />
-            </View>
-          </Cartao>
-        ) : null}
-      </Secao>
 
       <Botao
         titulo={d.sessaoAtiva ? 'Voltar ao foco' : 'Começar foco'}
@@ -250,8 +224,6 @@ const styles = StyleSheet.create({
   esqueleto: { gap: 12 },
   bloco: { borderRadius: 20, opacity: 0.6 },
   lagoa: { alignItems: 'center' },
-  energias: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  coluna: { gap: 8 },
   linha: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   linhaTexto: { flex: 1 },
   habito: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 20, paddingHorizontal: 12 },

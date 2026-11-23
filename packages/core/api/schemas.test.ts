@@ -1,6 +1,5 @@
-import { BLOCK_MAX_MINUTES, BLOCK_MIN_MINUTES, ENERGY_MAX, ENERGY_MIN, FOCUS } from '../config/decisions';
+import { BLOCK_MAX_MINUTES, BLOCK_MIN_MINUTES, FOCUS } from '../config/decisions';
 import {
-  checkInSchema,
   dateKeySchema,
   dateRangeQuerySchema,
   focusSessionSchema,
@@ -12,14 +11,6 @@ import {
 const block = { id: 'b1', weekday: 0, startMinutes: 0, durationMinutes: 30, kind: 'foco' };
 
 describe('schemas da API seguem config/decisions', () => {
-  it('energia vai de ENERGY_MIN a ENERGY_MAX', () => {
-    const checkIn = { id: 'c', date: '2026-11-16', period: 'manha', createdAt: 1 };
-    for (let energy = ENERGY_MIN - 1; energy <= ENERGY_MAX + 1; energy += 1) {
-      const ok = energy >= ENERGY_MIN && energy <= ENERGY_MAX;
-      expect(checkInSchema.safeParse({ ...checkIn, energy }).success).toBe(ok);
-    }
-  });
-
   it('duração do bloco vai de BLOCK_MIN_MINUTES a BLOCK_MAX_MINUTES', () => {
     for (const durationMinutes of [BLOCK_MIN_MINUTES - 1, BLOCK_MIN_MINUTES, BLOCK_MAX_MINUTES, BLOCK_MAX_MINUTES + 1]) {
       const ok = durationMinutes >= BLOCK_MIN_MINUTES && durationMinutes <= BLOCK_MAX_MINUTES;

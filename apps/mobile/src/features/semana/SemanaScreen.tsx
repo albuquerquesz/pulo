@@ -88,7 +88,7 @@ export function SemanaScreen() {
   const d = estado.dados;
   const humor = estadoDoSapo({
     phase: d.mascote.phase,
-    latestEnergyToday: null,
+    interruptedFocusToday: 0,
     focusRunning: false,
     aiAnalyzing: analisando,
     activeEvent: evento,
@@ -238,7 +238,7 @@ export function SemanaScreen() {
           <Texto cor="muted">Estou pensando na sua semana...</Texto>
         ) : conhecendo ? (
           <Cartao>
-            <Texto>{GETTING_TO_KNOW_TEXT}. Mais alguns focos e check ins e eu volto com uma ideia.</Texto>
+            <Texto>{GETTING_TO_KNOW_TEXT}. Mais alguns focos e eu volto com uma ideia.</Texto>
           </Cartao>
         ) : erro ? (
           <Texto cor="atencao">{erro}</Texto>

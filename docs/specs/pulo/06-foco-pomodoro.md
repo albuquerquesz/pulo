@@ -40,7 +40,7 @@ Um timer **baseado em horários**: a sessão guarda quando começou e quanto fic
 
 **Interromper:** confirmação sem culpa ("Parar por agora?"). Registra `interrompida` com o tempo efetivo. Conta como cuidado se o tempo efetivo for pelo menos a metade do planejado (regra da spec 01).
 
-**Ao concluir:** registra a sessão, emite `bloco_concluido` (sapo `feliz`), recalcula dias de cuidado e fase (spec 01) e, se houve marco, emite `marco` (sapo `pouso`). Pergunta opcional "como ficou a energia?" (spec 07).
+**Ao concluir:** registra a sessão, emite `bloco_concluido` (sapo `feliz`), recalcula dias de cuidado e fase (spec 01) e, se houve marco, emite `marco` (sapo `pouso`).
 
 **Sem bloqueio de apps, sem punição, sem ranking.**
 

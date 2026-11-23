@@ -52,7 +52,6 @@ model User {
   habits          Habit[]
   habitLogs       HabitLog[]
   focusSessions   FocusSession[]
-  checkIns        CheckIn[]
   restDays        RestDay[]
   weeklyProposals WeeklyProposal[]
   mascotState     MascotState?
@@ -122,14 +121,6 @@ enum FocusSessionState {
   interrompida
 
   @@map("focus_session_state")
-}
-
-enum Period {
-  manha
-  tarde
-  noite
-
-  @@map("period")
 }
 
 enum ProposalState {
@@ -222,21 +213,6 @@ model FocusSession {
   @@index([userId, startedAt])
   @@index([blockId])
   @@map("focus_session")
-}
-
-/// Check in de energia (1 a 5, CHECK na migração), ligado ao dia lógico e ao período.
-model CheckIn {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date      DateTime @db.Date
-  period    Period
-  energy    Int      @db.SmallInt
-  createdAt DateTime @db.Timestamptz(3)
-
-  @@unique([id, userId])
-  @@index([userId, date])
-  @@map("check_in")
 }
 
 model RestDay {

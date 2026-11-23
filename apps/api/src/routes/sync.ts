@@ -1,6 +1,5 @@
 import { syncQuerySchema } from '@pulo/core/api/schemas';
 import {
-  checkInMapper,
   focusSessionMapper,
   habitLogMapper,
   habitMapper,
@@ -14,7 +13,6 @@ import { type AppEnv, type RouteDeps, queryParams, requireSession } from '../htt
 import { dateFilter, sessionRangeWhere } from '../queries';
 import {
   blockSelect,
-  checkInSelect,
   habitLogSelect,
   habitSelect,
   mascotSelect,
@@ -30,7 +28,7 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
     const range = c.req.valid('query');
     const date = dateFilter(range);
 
-    const [blocks, habits, habitLogs, sessions, checkIns, restDays, proposals, mascot] = await db.$transaction([
+    const [blocks, habits, habitLogs, sessions, restDays, proposals, mascot] = await db.$transaction([
       db.routineBlock.findMany({
         where: { userId },
         select: blockSelect,
@@ -43,7 +41,6 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
         select: sessionSelect,
         orderBy: { startedAt: 'asc' },
       }),
-      db.checkIn.findMany({ where: { userId, date }, select: checkInSelect, orderBy: [{ date: 'asc' }, { createdAt: 'asc' }] }),
       db.restDay.findMany({ where: { userId, date }, select: restDaySelect, orderBy: { date: 'asc' } }),
       db.weeklyProposal.findMany({ where: { userId }, select: proposalSelect, orderBy: { weekStart: 'desc' } }),
       db.mascotState.findUnique({ where: { userId }, select: mascotSelect }),
@@ -56,7 +53,6 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
       habits: habits.map(habitMapper.toDomain),
       habitLogs: habitLogs.map(habitLogMapper.toDomain),
       sessions: sessions.map(focusSessionMapper.toDomain),
-      checkIns: checkIns.map(checkInMapper.toDomain),
       restDays: restDays.map(restDayMapper.toDomain),
       proposals: proposals.map(weeklyProposalMapper.toDomain),
       mascot: mascot === null ? null : mascotStateMapper.toDomain(mascot),

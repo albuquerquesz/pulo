@@ -25,7 +25,6 @@ async function seed(user: TestUser, extra = 0) {
   await database.db.focusSession.create({
     data: { userId, startedAt: new Date(TEST_NOW - 5 * MIN), plannedMinutes: 25, state: 'em_andamento' },
   });
-  await database.db.checkIn.create({ data: { userId, date: day(16), period: 'manha', energy: 4, createdAt: new Date(TEST_NOW) } });
   await database.db.restDay.create({ data: { userId, date: day(17) } });
   await database.db.weeklyProposal.create({
     data: { userId, weekStart: day(16), state: 'pendente', patternText: 'p', changes: [], origin: 'regra', createdAt: new Date(TEST_NOW) },
@@ -39,9 +38,6 @@ async function seed(user: TestUser, extra = 0) {
       plannedMinutes: 25,
       state: 'concluida' as const,
     })),
-  });
-  await database.db.checkIn.createMany({
-    data: Array.from({ length: extra }, (_, i) => ({ userId, date: day(1 + (i % 28)), period: 'tarde' as const, energy: 3, createdAt: new Date(TEST_NOW) })),
   });
   await database.db.restDay.createMany({ data: Array.from({ length: extra }, (_, i) => ({ userId, date: new Date(Date.UTC(2026, 0, 1 + i)) })) });
 }
@@ -69,7 +65,6 @@ describe('/api/sync', () => {
       habits: [],
       habitLogs: [],
       sessions: [],
-      checkIns: [],
       restDays: [],
       proposals: [],
       mascot: null,
@@ -85,13 +80,12 @@ describe('/api/sync', () => {
     expect(body.habits).toHaveLength(1);
     expect(body.habitLogs).toEqual([expect.objectContaining({ date: '2026-11-16' })]);
     expect(body.sessions).toEqual([expect.objectContaining({ state: 'em_andamento' })]);
-    expect(body.checkIns).toEqual([expect.objectContaining({ date: '2026-11-16', energy: 4 })]);
     expect(body.restDays).toEqual([{ date: '2026-11-17' }]);
     expect(body.proposals).toEqual([expect.objectContaining({ weekStart: '2026-11-16', changes: [] })]);
     expect(body.mascot).toEqual({ phase: 2, careDays: 4, updatedAt: TEST_NOW });
 
     const outside = await (await me.call('GET', '/api/sync?from=2026-03-01&to=2026-03-31')).json();
-    expect(outside).toMatchObject({ habitLogs: [], checkIns: [], restDays: [] });
+    expect(outside).toMatchObject({ habitLogs: [], restDays: [] });
     expect(outside.sessions).toHaveLength(1);
     expect(outside.blocks).toHaveLength(1);
   });
@@ -101,7 +95,7 @@ describe('/api/sync', () => {
     const b = await h.newUser();
     await seed(a);
     const body = await (await b.call('GET', `/api/sync${RANGE}`)).json();
-    expect(body).toMatchObject({ blocks: [], habits: [], habitLogs: [], sessions: [], checkIns: [], restDays: [], proposals: [], mascot: null });
+    expect(body).toMatchObject({ blocks: [], habits: [], habitLogs: [], sessions: [], restDays: [], proposals: [], mascot: null });
     expect(body.user.id).toBe(b.id);
   });
 
@@ -112,7 +106,7 @@ describe('/api/sync', () => {
     await seed(big, 50);
     const one = await queriesOf(database, small, 'GET', `/api/sync${RANGE}`);
     expect(await queriesOf(database, big, 'GET', `/api/sync${RANGE}`)).toBe(one);
-    // 2 de sessão + 8 leituras numa transação.
-    expect(one).toBe(10);
+    // 2 de sessão + 7 leituras numa transação.
+    expect(one).toBe(9);
   });
 });

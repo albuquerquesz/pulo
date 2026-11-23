@@ -45,7 +45,6 @@ Mais uma **galeria interna** (rota só de desenvolvimento) que mostra todos os c
 |---|---|
 | `Botao` (primário, foco, agua, fantasma) | normal, pressionado (desce 3 px), desativado, carregando |
 | `Cartao` | normal, selecionado, interativo |
-| `ChipEnergia` (5 níveis, SVG simples) | nenhum, selecionado |
 | `AnelTimer` | parado, rodando, pausa, concluído |
 | `Balao` | uma linha, duas linhas |
 | `Toast` | sucesso, aviso, com ação "desfazer" |

@@ -56,7 +56,7 @@ export function parseRequestBody(body: unknown): WeeklyAiRequest | null {
   if (!b || typeof b !== 'object') return null;
   const s = b.summary as Record<string, unknown> | undefined;
   if (!s || typeof s !== 'object') return null;
-  for (const key of ['focusMinutesByPeriod', 'sessionsByPeriod', 'energyByPeriod']) {
+  for (const key of ['focusMinutesByPeriod', 'sessionsByPeriod']) {
     const rec = s[key] as Record<string, unknown> | undefined;
     if (!rec || !PERIODS.every((p) => p in rec)) return null;
   }

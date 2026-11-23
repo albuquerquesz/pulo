@@ -11,7 +11,6 @@ import type { BatchWrites } from '@pulo/core/data/batch';
 import { systemClock } from '@pulo/core/domain/clock';
 import { inRange } from '@pulo/core/domain/day';
 import type {
-  CheckIn,
   Clock,
   DateKey,
   DateRange,
@@ -31,7 +30,6 @@ import type { z } from 'zod';
 import { type ApiClient, type ApiOptions, createApiClient, readJson } from './api';
 import {
   cloneBlock,
-  cloneCheckIn,
   cloneHabit,
   cloneHabitLog,
   cloneMascot,
@@ -106,7 +104,6 @@ class ApiRepository implements RemoteRepository {
   private readonly habits = new Collection<Habit>((h) => h.id, cloneHabit);
   private readonly habitLogs = new Collection<HabitLog>((l) => logKey(l.habitId, l.date), cloneHabitLog);
   private readonly sessions = new Collection<FocusSession>((s) => s.id, cloneSession);
-  private readonly checkIns = new Collection<CheckIn>((c) => c.id, cloneCheckIn);
   private readonly restDays = new Collection<RestDay>((r) => r.date, cloneRestDay);
   private readonly proposals = new Collection<WeeklyProposal>((p) => p.id, cloneProposal);
 
@@ -134,7 +131,6 @@ class ApiRepository implements RemoteRepository {
     this.habits.replaceAll(data.habits);
     this.habitLogs.replaceAll(data.habitLogs);
     this.sessions.replaceAll(data.sessions);
-    this.checkIns.replaceAll(data.checkIns);
     this.restDays.replaceAll(data.restDays);
     this.proposals.replaceAll(data.proposals);
   }
@@ -343,21 +339,6 @@ class ApiRepository implements RemoteRepository {
     });
   }
 
-  // ---------- Check ins ----------
-
-  async listCheckIns(range?: DateRange): Promise<CheckIn[]> {
-    return this.checkIns
-      .values()
-      .filter((c) => !range || inRange(c.date, range.from, range.to))
-      .sort((a, b) => a.createdAt - b.createdAt);
-  }
-
-  saveCheckIn(checkIn: CheckIn): Promise<void> {
-    return this.write(this.checkIns, `checkin:${checkIn.id}`, checkIn.id, checkIn, async () => {
-      await readJson(await this.client.api['check-ins'][':id'].$put({ param: { id: checkIn.id }, json: checkIn }));
-    });
-  }
-
   // ---------- Dias de descanso ----------
 
   async listRestDays(): Promise<RestDay[]> {
@@ -457,7 +438,7 @@ class ApiRepository implements RemoteRepository {
     await this.serial('all', () =>
       this.withRetry(async () => {
         await readJson(await this.client.api.data.$delete());
-        for (const collection of [this.blocks, this.habits, this.habitLogs, this.sessions, this.checkIns, this.restDays, this.proposals]) {
+        for (const collection of [this.blocks, this.habits, this.habitLogs, this.sessions, this.restDays, this.proposals]) {
           collection.clear();
         }
         this.mascot = null;

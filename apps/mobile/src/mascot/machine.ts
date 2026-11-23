@@ -1,4 +1,4 @@
-import { FROG_TIRED_MAX_ENERGY } from '@pulo/core/config/decisions';
+import { FROG_TIRED_MIN_INTERRUPTED } from '@pulo/core/config/decisions';
 import type { FrogInputs, FrogMood, Phase } from '@pulo/core/domain/types';
 
 /**
@@ -10,7 +10,7 @@ export function estadoDoSapo(entrada: FrogInputs): FrogMood {
   if (entrada.activeEvent) return entrada.activeEvent;
   if (entrada.aiAnalyzing) return 'pensando';
   if (entrada.focusRunning) return 'focado';
-  if (entrada.latestEnergyToday !== null && entrada.latestEnergyToday <= FROG_TIRED_MAX_ENERGY) return 'cansado';
+  if (entrada.interruptedFocusToday >= FROG_TIRED_MIN_INTERRUPTED) return 'cansado';
   if (!entrada.withinUserDay) return 'dormindo';
   return 'parado';
 }

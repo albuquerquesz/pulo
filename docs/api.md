@@ -13,7 +13,7 @@ O teste `apps/api/src/client.test.ts` prova a inferência de rotas, corpos e res
 - Escrita é upsert com id gerado pelo cliente (uuid, ou `prefixo-instante-aleatório` de `newId` do core, com 12 símbolos de `crypto.getRandomValues`): repetir o mesmo `PUT` é seguro e não duplica.
   O id do caminho precisa ser igual ao do corpo (senão 400 `id_divergente`; em hábito feito vale também `data_divergente`).
 - Corpo e respostas espelham `packages/core/domain/types.ts`: `RoutineBlock`, `Habit`, `HabitLog`, `FocusSession`,
-  `CheckIn`, `RestDay`, `WeeklyProposal`, `MascotState`. Datas são `DateKey` ('AAAA-MM-DD'), instantes são ms.
+  `RestDay`, `WeeklyProposal`, `MascotState`. Datas são `DateKey` ('AAAA-MM-DD'), instantes são ms.
 - `DELETE` é idempotente: responde 200 com `{ deleted: n }` (n = 0 se já não existia).
 - `from` e `to` são `DateKey`, opcionais e incluídos nos extremos. Sessões filtram pelo dia lógico de término, no fuso da pessoa
   (`metadata.timezone`, padrão `America/Sao_Paulo`), e a sessão em andamento sempre vem.
@@ -32,7 +32,7 @@ Nunca há stack trace; erro inesperado vira 500 `erro_interno` e o detalhe fica 
 | 401 | `nao_autenticado` | sem sessão ou cookie inválido |
 | 403 | `origem_nao_permitida` | `PUT`, `PATCH`, `POST` ou `DELETE` em `/api/*` (fora `/api/auth/*`) com `Origin` que não está em `PULO_CORS_ORIGIN` (inclui `null`) |
 | 403 | `origem_ausente` | os mesmos métodos sem `Origin`, mas com cookie ou `Sec-Fetch-Site` (navegador sempre manda `Origin` nestes métodos) |
-| 400 | `corpo_invalido` | JSON quebrado ou fora do schema (energia fora de 1 a 5, duração do bloco fora de 5 a 120, foco planejado fora dos limites de `FOCUS`, sessão incoerente, proposta fora do formato, `weekStart` que não é segunda) |
+| 400 | `corpo_invalido` | JSON quebrado ou fora do schema (duração do bloco fora de 5 a 120, foco planejado fora dos limites de `FOCUS`, sessão incoerente, proposta fora do formato, `weekStart` que não é segunda) |
 | 400 | `consulta_invalida` | `from`/`to`/`date` inválidos, `from` depois de `to`, intervalo do sync maior que 400 dias |
 | 400 | `parametro_invalido` | id ou data inválidos no caminho |
 | 400 | `id_divergente`, `data_divergente` | caminho diferente do corpo |
@@ -71,8 +71,6 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `DELETE /api/habit-logs/:habitId/:date` | | `{ deleted }` | 3 |
 | `GET /api/sessions?from&to` | | `{ sessions: FocusSession[] }` | 3 |
 | `PUT /api/sessions/:id` | `FocusSession` | `{ session, mascot: MascotState \| null }` | 4 em andamento, 8 ao encerrar |
-| `GET /api/check-ins?from&to` | | `{ checkIns: CheckIn[] }` | 3 |
-| `PUT /api/check-ins/:id` | `CheckIn` | `{ checkIn }` | 3 |
 | `GET /api/rest-days?from&to` | | `{ restDays: RestDay[] }` | 3 |
 | `PUT /api/rest-days/:date` | (sem corpo) | `{ restDay, mascot: MascotState }` | 7 |
 | `DELETE /api/rest-days/:date` | | `{ deleted, mascot: MascotState }` | 7 |
@@ -81,9 +79,9 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `POST /api/proposals/generate` | `{ date? }` (qualquer dia da semana) | `{ outcome, proposal? }` | 8 sem criar, 9 criando |
 | `POST /api/proposals/:id/decision` | `{ action: 'aceitar' \| 'editar' \| 'negar' \| 'desfazer', change? }` | `{ proposal, blocks }` | 6 aplicando blocos, 5 ao negar, 4 repetindo |
 | `GET /api/mascot` | | `{ mascot: MascotState \| null }` | 3 |
-| `GET /api/week-summary?date` | | `{ summary: WeekSummary }` | 6 |
-| `GET /api/sync?from&to` | | ver abaixo | 10 |
-| `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, checkIns, restDays, proposals, mascot } }` | 9 |
+| `GET /api/week-summary?date` | | `{ summary: WeekSummary }` | 5 |
+| `GET /api/sync?from&to` | | ver abaixo | 9 |
+| `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, mascot } }` | 8 |
 
 Já existiam e continuam: `GET /health`, `/api/auth/*`, `GET /api/me`, `PATCH /api/me/metadata`, `POST /weekly-ai`.
 
@@ -114,7 +112,6 @@ Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBl
 - **Sapo**: ao encerrar uma sessão e ao criar ou apagar um descanso, o servidor recalcula com `computeMascotState` do core
   (a fase e os dias de cuidado nunca regridem) e grava em `mascot_state`. A resposta traz o estado novo (`mascot`; `null` só
   quando a sessão segue em andamento).
-- **Check ins**: energia de 1 a 5. O servidor não impõe um check in por período; o app reusa o id do período.
 - **Propostas**: uma por pessoa e semana (`weekStart` é segunda). `pendente` vai para `aceita`, `editada`, `negada` ou `expirada`.
   Decidida só volta a `pendente` (desfazer) até `WEEKLY_AI.undoSeconds` + 5 s depois de `decidedAt`, pelo relógio do servidor;
   `expirada` é final; repetir a mesma decisão com o mesmo conteúdo é idempotente; `weekStart`, `origin` e `createdAt` não mudam.
@@ -125,7 +122,7 @@ Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBl
 
 ### `GET /api/week-summary?date=AAAA-MM-DD`
 
-`date` é qualquer dia da semana. Quatro leituras por intervalo (sessões, check ins, descansos, hábitos feitos) numa transação e
+`date` é qualquer dia da semana. Três leituras por intervalo (sessões, descansos, hábitos feitos) numa transação e
 `buildWeekSummary` do core, com o fuso de `metadata.timezone` (ou o padrão). Resposta `{ summary: WeekSummary }`.
 
 ### `POST /api/proposals/generate`
@@ -135,13 +132,13 @@ Resposta 200 `{ outcome, proposal? }` (`generateProposalResponseSchema`):
 
 | `outcome` | `proposal` | O que aconteceu |
 | --- | --- | --- |
-| `conhecendo` | não | menos de `WEEKLY_AI.minDaysWithRecord` dias com registro ou de `minSessionsOrCheckIns` sessões e check ins. Nada é criado |
+| `conhecendo` | não | menos de `WEEKLY_AI.minDaysWithRecord` dias com registro ou de `minSessions` sessões. Nada é criado |
 | `existente` | sim | a semana já tinha proposta (uma por semana): devolve a que existe, em qualquer estado |
 | `sem_candidata` | não | nenhuma mudança válida (ou todas em quarentena por `deniedCooldownWeeks`). Nada é criado |
 | `proposta` | sim | proposta nova, `pendente`, guardada. `origin` é `ia` só se a IA respondeu algo válido; senão `regra` |
 
-- Leituras fixas numa transação: as 4 do resumo (sessões, check ins, descansos, hábitos feitos), os blocos e as propostas da janela da
-  quarentena, mais um `INSERT`. Total 8 (sem criar) ou 9 (criando), igual com 1 ou com 50 linhas.
+- Leituras fixas numa transação: as 3 do resumo (sessões, descansos, hábitos feitos), os blocos e as propostas da janela da
+  quarentena, mais um `INSERT`. Total 7 (sem criar) ou 8 (criando), igual com 1 ou com 50 linhas.
 - Privacidade: a IA recebe SÓ o corpo de `buildAiRequest` (resumo agregado e candidatas com enums e horários, sem id de bloco, título,
   nome do sapo, nome ou e-mail da pessoa nem texto livre). A chave do provedor fica no ambiente do Worker. O teste
   `proposals-generate.test.ts` inspeciona o corpo real que chega ao provedor.
@@ -176,17 +173,17 @@ Resposta 200 `{ proposal, blocks }`: a proposta já atualizada e TODOS os blocos
 {
   "user": { "id": "", "name": "", "email": "", "image": null },
   "metadata": { "version": 1, "theme": "sistema", "reduceMotion": false, "timezone": "America/Sao_Paulo", "onboarding": { "completed": false, "completedAt": null }, "profile": null },
-  "blocks": [], "habits": [], "habitLogs": [], "sessions": [], "checkIns": [], "restDays": [],
+  "blocks": [], "habits": [], "habitLogs": [], "sessions": [], "restDays": [],
   "proposals": [], "mascot": null, "serverTime": 1795000000000
 }
 ```
 
-Blocos, hábitos e propostas vêm inteiros; hábitos feitos, check ins e descansos, só do intervalo; sessões do intervalo mais a
+Blocos, hábitos e propostas vêm inteiros; hábitos feitos e descansos, só do intervalo; sessões do intervalo mais a
 em andamento. `serverTime` é o relógio do servidor em ms.
 
 ### `DELETE /api/data`
 
-O `clearAll` do servidor, único jeito de zerar o progresso: apaga blocos, hábitos (e seus registros), sessões, check ins, descansos,
+O `clearAll` do servidor, único jeito de zerar o progresso: apaga blocos, hábitos (e seus registros), sessões, descansos,
 propostas e o estado do sapo da pessoa, numa transação. Conta, login e metadados (tema, fuso, onboarding) ficam.
 
 ## Mapa para o `Repository`
@@ -197,7 +194,6 @@ propostas e o estado do sapo da pessoa, numa transação. Conta, login e metadad
 | `listHabits`, `saveHabit`, `deleteHabit` | `GET /api/habits`, `PUT`, `DELETE /api/habits/:id` |
 | `listHabitLogs(range)`, `saveHabitLog`, `deleteHabitLog` | `GET /api/habit-logs`, `PUT`, `DELETE /api/habit-logs/:habitId/:date` |
 | `listSessions`, `saveSession` | `GET /api/sessions`, `PUT /api/sessions/:id` |
-| `listCheckIns(range)`, `saveCheckIn` | `GET /api/check-ins`, `PUT /api/check-ins/:id` |
 | `listRestDays`, `saveRestDay`, `deleteRestDay` | `GET /api/rest-days`, `PUT`, `DELETE /api/rest-days/:date` |
 | `listProposals`, `saveProposal` | `GET /api/proposals`, `PUT /api/proposals/:id` |
 | `generateProposal`, `decideProposal` (só no `RemoteRepository`) | `POST /api/proposals/generate`, `POST /api/proposals/:id/decision` |
@@ -213,7 +209,7 @@ propostas e o estado do sapo da pessoa, numa transação. Conta, login e metadad
 (mais `account` e `reload()`), sobre `hc<AppType>` (só o tipo da API entra no pacote).
 
 - **Abertura:** um `GET /api/sync` com a janela de `syncRange`: 180 dias para trás e 2 para frente, no fuso padrão (limite do servidor: 400).
-  Blocos, hábitos e propostas vêm inteiros. Hábitos feitos, check ins, descansos e sessões só da janela (mais a sessão em andamento).
+  Blocos, hábitos e propostas vêm inteiros. Hábitos feitos, descansos e sessões só da janela (mais a sessão em andamento).
   O estado do sapo vem do servidor, que conta todo o histórico. Dados mais velhos que a janela não aparecem nas telas.
 - **Leitura:** sempre do cache em memória, sem rede. `reload()` repete o sync.
 - **Escrita:** o cache muda na hora, o `PUT` ou `DELETE` da rota vai em seguida (uma escrita por chave de cada vez, chaves diferentes em paralelo).

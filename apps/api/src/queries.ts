@@ -3,9 +3,9 @@ import { addDays, startOfLogicalDay, weekEndOf } from '@pulo/core/domain/day';
 import type { MascotState, WeekSummary } from '@pulo/core/domain/types';
 import { computeMascotState } from '@pulo/core/domain/phase';
 import { buildWeekSummary } from '@pulo/core/domain/week-summary';
-import { type Db, type Prisma, checkInMapper, dateKeyToDate, focusSessionMapper, habitLogMapper, mascotStateMapper, restDayMapper } from '@pulo/db';
+import { type Db, type Prisma, dateKeyToDate, focusSessionMapper, habitLogMapper, mascotStateMapper, restDayMapper } from '@pulo/db';
 import type { Client } from './http';
-import { checkInSelect, habitLogSelect, mascotSelect, restDaySelect, sessionSelect } from './selects';
+import { habitLogSelect, mascotSelect, restDaySelect, sessionSelect } from './selects';
 
 /** Filtro de uma coluna `date` por intervalo de DateKey (extremos incluídos); sem extremos, sem filtro. */
 export function dateFilter(range: DateRangeQuery): { gte?: Date; lte?: Date } | undefined {
@@ -63,13 +63,12 @@ export async function refreshMascot(client: Client, userId: string, timeZone: st
   return state;
 }
 
-/** As quatro leituras do resumo da semana, para entrar numa `db.$transaction([...])` (ordem: sessões, check ins, descansos, hábitos feitos). */
+/** As três leituras do resumo da semana, para entrar numa `db.$transaction([...])` (ordem: sessões, descansos, hábitos feitos). */
 export function weekSummaryReads(db: Db, userId: string, timeZone: string, weekStart: string) {
   const range = { from: weekStart, to: weekEndOf(weekStart) };
   const date = dateFilter(range);
   return [
     db.focusSession.findMany({ where: sessionRangeWhere(userId, range, timeZone), select: sessionSelect }),
-    db.checkIn.findMany({ where: { userId, date }, select: checkInSelect }),
     db.restDay.findMany({ where: { userId, date }, select: restDaySelect }),
     db.habitLog.findMany({ where: { userId, date }, select: habitLogSelect }),
   ] as const;
@@ -77,7 +76,6 @@ export function weekSummaryReads(db: Db, userId: string, timeZone: string, weekS
 
 type WeekSummaryRows = {
   sessions: Parameters<typeof focusSessionMapper.toDomain>[0][];
-  checkIns: Parameters<typeof checkInMapper.toDomain>[0][];
   restDays: Parameters<typeof restDayMapper.toDomain>[0][];
   habitLogs: Parameters<typeof habitLogMapper.toDomain>[0][];
 };
@@ -87,7 +85,6 @@ export function summaryFromRows(weekStart: string, timeZone: string, rows: WeekS
     weekStart,
     timeZone,
     sessions: rows.sessions.map(focusSessionMapper.toDomain),
-    checkIns: rows.checkIns.map(checkInMapper.toDomain),
     restDays: rows.restDays.map(restDayMapper.toDomain),
     habitLogs: rows.habitLogs.map(habitLogMapper.toDomain),
   });

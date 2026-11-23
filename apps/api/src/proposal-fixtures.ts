@@ -43,23 +43,8 @@ export async function seedProposalWeek(db: Db, userId: string, extra = 0) {
       // Tarde (15h em São Paulo): tudo concluído. Manhã (10h): um concluído e dois interrompidos.
       session(0, 18, 'concluida'), session(1, 18, 'concluida'), session(2, 18, 'concluida'),
       session(0, 13, 'concluida'), session(1, 13, 'interrompida'), session(2, 13, 'interrompida'),
-      // Noite (19h): fora das contas por falta de check ins.
+      // Noite (19h): linhas extras para medir que o número de queries não cresce.
       ...Array.from({ length: extra }, (_, i) => session(i % 7, 22, 'concluida')),
-    ],
-  });
-  const checkIn = (n: number, period: 'manha' | 'tarde' | 'noite', energy: number, i: number) => ({
-    id: `ci-${userId}-${period}-${n}-${i}`,
-    userId,
-    date: day(n),
-    period,
-    energy,
-    createdAt: at(n, 12),
-  });
-  await db.checkIn.createMany({
-    data: [
-      ...[0, 1, 2].map((n) => checkIn(n, 'tarde', 5, 0)),
-      ...[0, 1, 2].map((n) => checkIn(n, 'manha', 2, 0)),
-      ...Array.from({ length: extra }, (_, i) => checkIn(i % 7, 'tarde', 5, i + 1)),
     ],
   });
 }

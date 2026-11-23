@@ -1,0 +1,46 @@
+{
+  "name": "@pulo/web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "App web do Pulo: TanStack Start, mobile first, no Cloudflare Workers.",
+  "scripts": {
+    "dev": "vite dev --port 3000",
+    "build": "vite build",
+    "preview": "vite build && vite preview",
+    "deploy": "vite build && wrangler deploy",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@fontsource/nunito": "^5.3.0",
+    "@pulo/client": "*",
+    "@pulo/core": "*",
+    "@tanstack/react-router": "1.170.46",
+    "@tanstack/react-start": "1.169.7",
+    "better-auth": "^1.7.27",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.26.0",
+    "@eslint/js": "^9.39.5",
+    "@tailwindcss/vite": "^4.1.18",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^26.6.6",
+    "@types/react": "~19.3.0",
+    "@types/react-dom": "~19.3.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.14.0",
+    "jsdom": "^31.0.1",
+    "tailwindcss": "^4.1.18",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.73.0",
+    "vite": "^8.0.0",
+    "vitest": "^5.1.1",
+    "wrangler": "^4.166.0"
+  }
+}

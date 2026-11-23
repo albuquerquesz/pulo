@@ -1,5 +1,4 @@
 import { FOCUS } from '@pulo/core/config/decisions';
-import { registrarCheckIn, latestEnergyToday } from '@pulo/core/domain/checkin';
 import { dateKeyOf, weekdayOf } from '@pulo/core/domain/day';
 import { hasTimeRunOut, iniciarFoco } from '@pulo/core/domain/foco';
 import { habitsForDate, marcarHabito, desmarcarHabito } from '@pulo/core/domain/habits';
@@ -8,7 +7,6 @@ import { blocksForWeekday, concluirBloco, registrarDescanso } from '@pulo/core/d
 import type {
   Clock,
   DateKey,
-  Energy,
   FocusSession,
   FrogMood,
   Habit,
@@ -39,7 +37,8 @@ export interface DadosHoje {
   resumo: WeekSummary;
   blocos: BlocoDoDia[];
   habitos: HabitoDoDia[];
-  energia: Energy | null;
+  /** Focos interrompidos hoje: deixam o sapo cansado. */
+  focosInterrompidosHoje: number;
   descansoHoje: boolean;
   sessaoAtiva: FocusSession | null;
   /** Há algum bloco em toda a rotina (para o estado vazio). */
@@ -50,23 +49,19 @@ export async function carregarHoje(repo: Repository, clock: Clock, user: User): 
   const agora = clock.now();
   const tz = user.timezone;
   const hoje = dateKeyOf(agora, tz);
-  const [blocks, habits, logs, sessions, checkIns, restDays, refresh, resumo] = await Promise.all([
+  const [blocks, habits, logs, sessions, restDays, refresh, resumo] = await Promise.all([
     repo.listBlocks(),
     repo.listHabits(),
     repo.listHabitLogs({ from: hoje, to: hoje }),
     repo.listSessions(),
-    repo.listCheckIns({ from: hoje, to: hoje }),
     repo.listRestDays(),
     refreshMascotState(repo, tz, agora),
     loadWeekSummary(repo, hoje, tz),
   ]);
   const ativa = sessions.find((s) => s.state === 'em_andamento');
   const descansoHoje = restDays.some((r) => r.date === hoje);
-  const feitos = new Set(
-    sessions
-      .filter((s) => s.state === 'concluida' && s.blockId && dateKeyOf(s.startedAt, tz) === hoje)
-      .map((s) => s.blockId as string),
-  );
+  const deHoje = sessions.filter((s) => dateKeyOf(s.startedAt, tz) === hoje);
+  const feitos = new Set(deHoje.filter((s) => s.state === 'concluida' && s.blockId).map((s) => s.blockId as string));
   const blocos = blocksForWeekday(blocks, weekdayOf(hoje)).map((bloco) => ({
     bloco,
     feito: bloco.kind === 'descanso' ? descansoHoje : feitos.has(bloco.id),
@@ -81,15 +76,11 @@ export async function carregarHoje(repo: Repository, clock: Clock, user: User): 
     resumo,
     blocos,
     habitos,
-    energia: latestEnergyToday(checkIns, agora, tz),
+    focosInterrompidosHoje: deHoje.filter((s) => s.state === 'interrompida').length,
     descansoHoje,
     sessaoAtiva: ativa && !hasTimeRunOut(ativa, agora) ? ativa : null,
     temRotina: blocks.length > 0,
   };
-}
-
-export async function registrarEnergia(repo: Repository, clock: Clock, user: User, energia: Energy) {
-  return registrarCheckIn(repo, energia, clock.now(), user.timezone);
 }
 
 export async function alternarHabito(repo: Repository, clock: Clock, user: User, habitId: string, feito: boolean): Promise<boolean> {

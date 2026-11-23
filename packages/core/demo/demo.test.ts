@@ -27,7 +27,7 @@ describe('demo', () => {
     const care = countCareDays(d.sessions, d.restDays);
     expect(care).toBeGreaterThanOrEqual(PHASE_MIN_CARE_DAYS[4]);
     expect(phaseForCareDays(care)).toBe(4);
-    const w = summarizeDemoWeek('2026-11-16', d.sessions, d.checkIns, d.restDays, STABLE_WEEK_MIN_CARE_DAYS);
+    const w = summarizeDemoWeek('2026-11-16', d.sessions, d.restDays, STABLE_WEEK_MIN_CARE_DAYS);
     expect(w.stable).toBe(true);
   });
 
@@ -40,7 +40,7 @@ describe('demo', () => {
 
   it('dá um padrão claro para a IA: candidata mover da tarde para a manhã', () => {
     const d = generateDemoData();
-    const w = summarizeDemoWeek('2026-11-16', d.sessions, d.checkIns, d.restDays, STABLE_WEEK_MIN_CARE_DAYS);
+    const w = summarizeDemoWeek('2026-11-16', d.sessions, d.restDays, STABLE_WEEK_MIN_CARE_DAYS);
     const cands = computeCandidates(w, d.blocks);
     expect(cands.length).toBeGreaterThan(0);
     expect(cands[0].kind).toBe('mover_foco');

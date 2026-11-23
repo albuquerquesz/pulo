@@ -1,0 +1,123 @@
+@import '@fontsource/nunito/600.css';
+@import '@fontsource/nunito/700.css';
+@import '@fontsource/nunito/800.css';
+@import 'tailwindcss';
+
+/*
+ * Tokens da spec 02 (src/theme/tokens.ts) como variáveis CSS.
+ * O esquema vem de data-esquema no <html>; as cores de ação são iguais nos dois.
+ * Mantenha estes valores em sincronia com tokens.ts (há teste para isso).
+ */
+:root {
+  --pulo-bg: #f7f3e3;
+  --pulo-surface: #ffffff;
+  --pulo-line: #e4e0cc;
+  --pulo-ink: #1f2a24;
+  --pulo-muted: #5e6b62;
+  --pulo-sapo: #8fe05a;
+  --pulo-sapo-borda: #6cc23f;
+  --pulo-agua: #3fc9a2;
+  --pulo-agua-borda: #2ea888;
+  --pulo-foco: #ff7a59;
+  --pulo-foco-borda: #d9583a;
+  --pulo-descanso: #6c63b5;
+  --pulo-descanso-borda: #54499a;
+  --pulo-sol: #ffd166;
+  --pulo-atencao: #ffb020;
+  --pulo-on-descanso: #ffffff;
+  /* Texto sobre cores de ação: sempre o ink do tema claro. */
+  --pulo-ink-sobre-acao: #1f2a24;
+  color-scheme: light;
+}
+
+:root[data-esquema='escuro'] {
+  --pulo-bg: #14201a;
+  --pulo-surface: #1d2e25;
+  --pulo-line: #2a3f33;
+  --pulo-ink: #eafff0;
+  --pulo-muted: #9db3a5;
+  color-scheme: dark;
+}
+
+/* Antes do JS (e sem preferência no Perfil), segue o sistema. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-esquema]) {
+    --pulo-bg: #14201a;
+    --pulo-surface: #1d2e25;
+    --pulo-line: #2a3f33;
+    --pulo-ink: #eafff0;
+    --pulo-muted: #9db3a5;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--pulo-bg);
+  --color-surface: var(--pulo-surface);
+  --color-line: var(--pulo-line);
+  --color-ink: var(--pulo-ink);
+  --color-muted: var(--pulo-muted);
+  --color-sapo: var(--pulo-sapo);
+  --color-sapo-borda: var(--pulo-sapo-borda);
+  --color-agua: var(--pulo-agua);
+  --color-agua-borda: var(--pulo-agua-borda);
+  --color-foco: var(--pulo-foco);
+  --color-foco-borda: var(--pulo-foco-borda);
+  --color-descanso: var(--pulo-descanso);
+  --color-descanso-borda: var(--pulo-descanso-borda);
+  --color-sol: var(--pulo-sol);
+  --color-atencao: var(--pulo-atencao);
+  --color-on-descanso: var(--pulo-on-descanso);
+  --color-ink-sobre-acao: var(--pulo-ink-sobre-acao);
+
+  --font-sans: 'Nunito', ui-rounded, system-ui, sans-serif;
+
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+}
+
+/* Tipografia da spec 02: tamanho / altura de linha / peso. */
+@utility texto-display {
+  font-size: 32px;
+  line-height: 36px;
+  font-weight: 800;
+}
+@utility texto-titulo {
+  font-size: 24px;
+  line-height: 28px;
+  font-weight: 800;
+}
+@utility texto-subtitulo {
+  font-size: 18px;
+  line-height: 24px;
+  font-weight: 700;
+}
+@utility texto-corpo {
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 600;
+}
+@utility texto-legenda {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+}
+
+html,
+body {
+  background: var(--pulo-bg);
+  color: var(--pulo-ink);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Reduzir movimento do sistema ou do Perfil: sem transições nem animações. */
+:root[data-reduzir-movimento='true'] *,
+:root[data-reduzir-movimento='true'] *::before,
+:root[data-reduzir-movimento='true'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}

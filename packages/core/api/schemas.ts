@@ -7,13 +7,10 @@ import {
   MAX_HABITS_PER_DAY,
   WEEKLY_AI,
 } from '../config/decisions';
-import { isValidEnergy } from '../domain/checkin';
 import { addDays, isDateKey, weekdayOf } from '../domain/day';
 import type {
   BlockSlot,
-  CheckIn,
   DateKey,
-  Energy,
   FocusSession,
   Habit,
   HabitLog,
@@ -73,11 +70,6 @@ export const msSchema = z.number().int().min(0).max(MAX_EPOCH_MS);
 export const weekdaySchema = z.number().refine(isWeekday, { message: 'dia da semana de 0 a 6' });
 function isWeekday(value: number): value is Weekday {
   return Number.isInteger(value) && value >= 0 && value <= 6;
-}
-
-export const energySchema = z.number().refine(isEnergy, { message: 'energia de 1 a 5' });
-function isEnergy(value: number): value is Energy {
-  return isValidEnergy(value);
 }
 
 export const periodSchema = z.enum(['manha', 'tarde', 'noite']);
@@ -161,14 +153,6 @@ export const focusSessionSchema = z
       issue('pausedSince', 'pausa antes do início');
     }
   }) satisfies z.ZodType<FocusSession, unknown>;
-
-export const checkInSchema = z.object({
-  id: idSchema,
-  date: dateKeySchema,
-  period: periodSchema,
-  energy: energySchema,
-  createdAt: msSchema,
-}) satisfies z.ZodType<CheckIn, unknown>;
 
 export const restDaySchema = z.object({ date: dateKeySchema }) satisfies z.ZodType<RestDay, unknown>;
 

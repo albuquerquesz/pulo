@@ -16,7 +16,7 @@ const PERIOD_TEXT: Record<Period, string> = {
 export function ruleTexts(c: Candidate): { patternText: string; reasonText: string } {
   if (c.kind === 'mover_foco') {
     return {
-      patternText: `Sua energia e seu foco foram menores ${PERIOD_TEXT[c.fromPeriod]} do que ${PERIOD_TEXT[c.toPeriod]}`,
+      patternText: `Seus focos renderam menos ${PERIOD_TEXT[c.fromPeriod]} do que ${PERIOD_TEXT[c.toPeriod]}`,
       reasonText: `Um foco ${PERIOD_TEXT[c.toPeriod]} pode render mais`,
     };
   }

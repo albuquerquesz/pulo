@@ -37,7 +37,7 @@ O regulamento não obriga o júri a instalar nem rodar o projeto, e pede link de
 **Notificações:** fora do MVP. O agendamento do `expo-notifications` é suportado em Android e iOS, não na web (documentação).
 
 **Modo demo** (ligado por um painel no Perfil ou um parâmetro de endereço):
-- Carrega **4 semanas de dados sintéticos** coerentes: blocos, sessões, energia, descansos.
+- Carrega **4 semanas de dados sintéticos** coerentes: blocos, sessões, hábitos, descansos.
 - Controles: **avançar 1 dia**, **avançar 1 semana**, **limpar**.
 - **Relógio injetável** da spec 01 é o que torna isso possível.
 - Mostra um selo claro "Modo demo, dados de exemplo". Não deve se passar por uso real.
@@ -63,14 +63,14 @@ O regulamento não obriga o júri a instalar nem rodar o projeto, e pede link de
 |---|---|
 | 21 e 22/11 | Decidir o sapo, o nome e o público. Criar o repositório e o esqueleto do Expo. Spec 01 em código, spec 02 |
 | 23 e 24/11 | Sapo (03) e lagoa (04): peças, estados, cenário |
-| 25/11 | Rotina (05), check in (07) |
+| 25/11 | Rotina (05) |
 | 26/11 | Foco (06) |
 | 27/11 | IA semanal (08) e a função de servidor |
 | 28/11 | Telas e onboarding (09), integração |
 | 29/11 | Modo demo, polimento, publicar a demo, gravar o vídeo |
 | 30/11 | Revisão final, submissão antes das 18h, congelar |
 
-**Roteiro do vídeo (3 min):** 0:00 problema e público; 0:20 sapo e lagoa; 0:40 um dia (energia, foco, bloco concluído); 1:20 sapo cansado, descanso conta; 1:50 a IA lê a semana, o sapo surpreso, aprovação; 2:30 a lagoa evoluiu; 2:50 fechamento e onde achar a demo. Gravar a tela do demo web, narrar em português, hospedar em um link sem login.
+**Roteiro do vídeo (3 min):** 0:00 problema e público; 0:20 sapo e lagoa; 0:40 um dia (hábitos, foco, bloco concluído); 1:20 sapo cansado, descanso conta; 1:50 a IA lê a semana, o sapo surpreso, aprovação; 2:30 a lagoa evoluiu; 2:50 fechamento e onde achar a demo. Gravar a tela do demo web, narrar em português, hospedar em um link sem login.
 
 ## Testing Decisions
 

@@ -49,7 +49,7 @@ export function proposalRoutes({ auth, db, now, ai, newId }: RouteDeps) {
       const weekStart = weekStartOf(c.req.valid('json').date ?? dateKeyOf(serverNow, metadata.timezone));
       const oldest = dateKeyToDate(addDays(weekStart, -7 * WEEKLY_AI.deniedCooldownWeeks));
 
-      const [sessions, checkIns, restDays, habitLogs, blockRows, proposalRows] = await db.$transaction([
+      const [sessions, restDays, habitLogs, blockRows, proposalRows] = await db.$transaction([
         ...weekSummaryReads(db, userId, metadata.timezone, weekStart),
         db.routineBlock.findMany({ where: { userId }, select: blockSelect }),
         db.weeklyProposal.findMany({
@@ -59,7 +59,7 @@ export function proposalRoutes({ auth, db, now, ai, newId }: RouteDeps) {
       ]);
 
       const outcome = await generateWeeklyProposal({
-        summary: summaryFromRows(weekStart, metadata.timezone, { sessions, checkIns, restDays, habitLogs }),
+        summary: summaryFromRows(weekStart, metadata.timezone, { sessions, restDays, habitLogs }),
         blocks: blockRows.map(routineBlockMapper.toDomain),
         proposals: proposalRows.map(weeklyProposalMapper.toDomain),
         client: ai.client,

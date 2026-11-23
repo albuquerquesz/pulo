@@ -12,7 +12,7 @@ O app precisa responder a três perguntas com a mesma resposta em todas as telas
 
 Um módulo de domínio em TypeScript puro, sem dependência de tela, de armazenamento nem de IA, que:
 
-1. Define as entidades (usuário, bloco de rotina, hábito, sessão de foco, check in, proposta semanal, estado do mascote).
+1. Define as entidades (usuário, bloco de rotina, hábito, sessão de foco, proposta semanal, estado do mascote).
 2. Calcula **dia de cuidado**, **fase do sapo** e **resumo da semana** por funções puras, com relógio injetável.
 3. Garante por construção que o progresso **nunca regride**.
 4. Expõe os dados por uma interface de repositório, para o armazenamento poder ser trocado (local agora, nuvem depois).
@@ -24,7 +24,7 @@ Um módulo de domínio em TypeScript puro, sem dependência de tela, de armazena
 3. Como pessoa usuária, quero que uma sessão de foco interrompida pela metade ainda conte, para não me sentir punida.
 4. Como pessoa usuária, quero que o meu sapo nunca volte para uma fase anterior, mesmo se eu ficar dias sem abrir o app.
 5. Como pessoa usuária, quero que o dia mude às 4h da manhã, para uma sessão feita de madrugada contar para o dia anterior.
-6. Como pessoa usuária, quero registrar minha energia de 1 a 5 e que isso fique ligado ao dia e ao período.
+6. (Cortado: check in de energia, ver spec 07.)
 7. Como pessoa usuária, quero marcar um hábito como feito uma vez por dia.
 8. Como pessoa usuária, quero apagar todos os meus dados quando eu decidir, e só aí o progresso zera.
 9. Como a tela Hoje, quero perguntar "quantos dias de cuidado e qual fase" e receber a mesma resposta que a tela Progresso.
@@ -41,7 +41,6 @@ Um módulo de domínio em TypeScript puro, sem dependência de tela, de armazena
 - `RoutineBlock`: id, dia da semana (0 a 6), início em minutos, duração em minutos, tipo (`foco` ou `descanso`), título opcional.
 - `Habit`: id, título, dias da semana, ativo. `HabitLog`: habitId, data, feitoEm. Máximo de 5 hábitos por dia.
 - `FocusSession`: id, blockId opcional, início, fim opcional, minutos planejados, estado (`em_andamento`, `concluida`, `interrompida`), tempo pausado em ms.
-- `CheckIn`: id, data, período (`manha`, `tarde`, `noite`), energia de 1 a 5, criadoEm.
 - `RestDay`: data. Criado pelo botão "Dia de descanso" ou ao marcar um bloco do tipo `descanso` como feito.
 - `WeeklyProposal`: id, início da semana, estado (`pendente`, `aceita`, `editada`, `negada`, `expirada`), texto do padrão, mudanças (lista), origem (`ia` ou `regra`), criadaEm, decididaEm. Detalhada na spec 08.
 - `MascotState`: fase (1 a 4), diasDeCuidado, atualizadoEm. É **derivado e guardado em cache**, nunca a fonte da verdade.
@@ -57,16 +56,16 @@ O dia de cuidado é **calculado** a partir dos registros, não gravado. O total 
 **Fases do sapo**, por total de dias de cuidado (valores propostos por mim, decisão do Victor):
 | Fase | Dias de cuidado | Sapo |
 |---|---|---|
-| 1 | 0 a 2 | Girino |
-| 2 | 3 a 7 | Girino com pernas |
+| 1 | 0 a 2 | Sapo jovem |
+| 2 | 3 a 7 | Sapo jovem |
 | 3 | 8 a 14 | Sapo jovem |
 | 4 | 15 ou mais | Sapo adulto |
+O mascote é sempre um sapo, sem girino (decisão do Victor). As fases 1 a 3 mudam a lagoa ao redor; o sapo cresce na fase 4.
 **Nunca regride:** a fase é `max(fase anterior guardada, fase calculada)`. Apagar uma sessão individual não reduz o total (sessões são imutáveis); só "apagar todos os meus dados" zera.
 
 **Resumo da semana (`WeekSummary`)**, entrada da IA e das telas. Semana de segunda a domingo, dia lógico:
 - minutos de foco por período (manhã 5h a 12h, tarde 12h a 18h, noite 18h a 23h; faixas propostas);
 - sessões concluídas, interrompidas, e taxa de conclusão por período;
-- energia média por período e número de check ins;
 - dias de descanso e dias de cuidado;
 - **estabilidade**: semana com pelo menos 5 dias de cuidado (proposta minha, usada pela lagoa e pelo sapo "feliz").
 O resumo **não contém títulos, nomes nem texto livre**.
@@ -75,7 +74,7 @@ O resumo **não contém títulos, nomes nem texto livre**.
 
 **Repositório:** uma interface (`Repository`) com leitura e escrita por entidade. A primeira implementação é local; a nuvem entra depois, atrás da mesma interface. O `expo-sqlite` suporta a web, mas exige arquivo wasm e cabeçalhos COOP e COEP no host (documentação do Expo), o que complica hospedagem estática. Por isso o MVP usa um adaptador simples de chave e valor atrás do `Repository`; a biblioteca exata não foi verificada e a decisão final está na spec 10.
 
-**Validação:** energia de 1 a 5; duração de bloco de 5 a 120 minutos; hábitos até 5 por dia.
+**Validação:** duração de bloco de 5 a 120 minutos; hábitos até 5 por dia.
 
 ## Testing Decisions
 

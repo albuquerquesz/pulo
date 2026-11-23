@@ -16,7 +16,7 @@ Prazo: entrega em **30/11/2026 às 23h59**. Estimativa de esforço (minha, não 
 | [04](04-lagoa.md) | Lagoa: 4 fases, 8 itens, reação aos dados, animações do cenário | Mascote e mundo | L | 01, 02, 03 | a rever |
 | [05](05-rotina-habitos-e-blocos.md) | Rotina: hábitos e blocos do dia, mover e desfazer | Rotina e foco | S | 01, 02 | a rever |
 | [06](06-foco-pomodoro.md) | Foco: Pomodoro baseado em horário | Rotina e foco | M | 01, 03 | a rever |
-| [07](07-check-in-de-energia.md) | Check in de energia | Rotina e foco | S | 01, 02 | a rever |
+| [07](07-check-in-de-energia.md) | Check in de energia | Rotina e foco | S | 01, 02 | cortada |
 | [08](08-ia-semanal.md) | IA semanal: candidatas por regra, IA opcional, aprovação, reserva | IA | L | 01, 05, 06, 07 | a rever |
 | [09](09-telas-navegacao-e-onboarding.md) | Telas, navegação e onboarding | Casca | M | 02 a 08 | a rever |
 | [10](10-demo-web-e-entrega.md) | Demo, web e entrega: exportação, modo demo, regras do hackathon, plano de 9 dias | Entrega | M | todas | a rever |

@@ -1,8 +1,8 @@
 # Pulo
 
 Um app de hábitos e foco, sem culpa, com um sapo que cresce junto com você.
-Feito em Expo (React Native, Expo Router, TypeScript), com saída web estática.
-Monorepo com npm workspaces e Turborepo.
+Dois clientes: o web em TanStack Start (React, Tailwind, mobile first) e o app em Expo (React Native, Expo Router), com saída web estática.
+Monorepo com npm workspaces e Turborepo. Web: https://pulo-web.albqvictor.workers.dev
 
 Cada dia de cuidado conta: foco concluído, uma sessão parada na metade ou um dia de descanso.
 O sapo nunca volta uma fase, e a lagoa ao redor dele muda conforme os dias de cuidado.
@@ -22,7 +22,7 @@ npm run db:deploy                                     # aplica as migrações
 npm run dev
 ```
 
-Sobe o app web em http://localhost:8081 e a API em http://localhost:8787.
+Sobe o web TanStack em http://localhost:3000, o app Expo web em http://localhost:8081 e a API em http://localhost:8787.
 O app pede login com Google. Modo demo, sem login e com 4 semanas de dados sintéticos: abra o endereço com `?demo=1`
 ou toque em "Ver o demo" na tela de entrada.
 
@@ -32,26 +32,29 @@ Variáveis do app (`apps/mobile/.env.local`, veja `apps/mobile/.env.example`):
 O endereço do app precisa estar em `PULO_CORS_ORIGIN` da API (CORS com credenciais, origens confiáveis e checagem de `Origin` nas escritas).
 Sessão, cookie, CSRF e como publicar app e API: [docs/web-auth.md](docs/web-auth.md).
 
-Só um pacote: `npx turbo run dev --filter=@pulo/mobile`.
+Variáveis do web: `VITE_API_URL` em `apps/web/.env.development` (API local) e `apps/web/.env.production` (API publicada).
+
+Só um pacote: `npx turbo run dev --filter=@pulo/web` (ou `@pulo/mobile`).
 
 ## Testes e exportação
 
 ```sh
 npm test
 npm run typecheck
-npm run build   # apps/mobile/dist (web estática) e apps/api/dist (bundle do Worker)
+npm run build   # apps/web/dist, apps/mobile/dist (web estática) e apps/api/dist (bundle do Worker)
 ```
 
-## Deploy da API
+## Deploy
 
-A API roda no Cloudflare Workers como `pulo-api`: https://pulo-api.albqvictor.workers.dev
+A API roda no Cloudflare Workers como `pulo-api` (https://pulo-api.albqvictor.workers.dev) e o web como `pulo-web`
+(https://pulo-web.albqvictor.workers.dev).
 
 ```sh
 npm run deploy   # roda typecheck e testes, depois wrangler deploy
 ```
 
-No GitHub, todo push na `main` roda lint, typecheck e build e, se passar, faz o deploy da API
-(`.github/workflows/ci.yml`, com os secrets `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID`).
+No GitHub, todo push na `main` roda lint, typecheck, testes e build e, se passar, aplica as migrações, faz o deploy da API
+e depois o do web (`.github/workflows/ci.yml`, com os secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` e `DATABASE_URL`).
 
 Config em `apps/api/wrangler.jsonc`. Segredos vão por `npx wrangler secret put <NOME>` dentro de `apps/api`, nunca no repositório.
 
@@ -110,7 +113,9 @@ Sem Docker: `npm run db:embedded` sobe um Postgres de verdade (binários do `emb
 dados de acesso do `.env.example`. Os testes usam esse mesmo caminho e criam um banco novo por arquivo de teste,
 então não precisam de Docker nem de nada rodando.
 
-### Produção: Supabase (ainda não criado) ou outro Postgres
+### Produção: Supabase ou outro Postgres
+
+Em produção o banco é o projeto `hackbrasil` do Supabase (São Paulo), pela URL do Session pooler (IPv4, porta 5432).
 
 Tudo é guiado por `DATABASE_URL`, então qualquer Postgres serve.
 
@@ -133,6 +138,7 @@ Nunca commite a URL do banco. O CI aplica as migrações com o secret `DATABASE_
 
 ```
 apps/
+  web/      @pulo/web     TanStack Start no Cloudflare Workers: rotas, telas, tema (Tailwind v4), sapo e lagoa
   mobile/   @pulo/mobile  Expo: rotas, telas, tema, componentes, sapo e lagoa
   api/      @pulo/api     Hono no Cloudflare Workers: auth (Better Auth + Google), IA semanal
 packages/
@@ -150,15 +156,15 @@ docs/specs/pulo           as 10 specs do projeto
 ## Privacidade
 
 - **Conta.** O login é com o Google. O servidor guarda seu nome, e-mail e foto do Google, e a sessão.
-- **Seus dados no app.** Nome do sapo, horário do dia, tema, rotina, hábitos e marcações, sessões de foco, check ins de energia,
+- **Seus dados no app.** Nome do sapo, horário do dia, tema, rotina, hábitos e marcações, sessões de foco,
   dias de descanso, sugestões da semana e o estado do sapo ficam no servidor (PostgreSQL), ligados só à sua conta.
   Só quem entrou na conta consegue ler ou mudar esses dados. A sessão fica num cookie HttpOnly do navegador,
   que o app nunca lê.
-- **Apagar.** "Apagar todos os meus dados", no Perfil, remove da conta a rotina, os hábitos, as sessões, os check ins, os descansos,
+- **Apagar.** "Apagar todos os meus dados", no Perfil, remove da conta a rotina, os hábitos, as sessões, os descansos,
   as sugestões e o sapo, em todos os aparelhos. A conta e o login continuam; sair da conta é outro botão.
 - **Modo demo.** Não pede login nem envia seus dados: usa só dados sintéticos de exemplo, guardados na memória do aparelho
   e descartados ao fechar. Nada do demo vai para o servidor.
-- **IA semanal.** Recebe só um resumo agregado da semana (minutos por período do dia, taxas de conclusão, energia média, contagens),
+- **IA semanal.** Recebe só um resumo agregado da semana (minutos por período do dia, taxas de conclusão, contagens),
   nunca títulos, nome do sapo, e-mail, nome da conta, ids ou texto livre. Na conta, o servidor monta esse resumo e fala com a IA
   (a chave nunca sai dele); no demo, o app envia só dados de exemplo. Sem IA configurada ou se ela falhar, as sugestões vêm de regras
   simples e aparecem como "Sugestão"; só vem "Sugestão da IA" quando a IA realmente respondeu.

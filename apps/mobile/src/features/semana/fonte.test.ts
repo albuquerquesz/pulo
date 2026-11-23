@@ -15,7 +15,7 @@ const PROPOSTA: WeeklyProposal = {
   id: 'proposta-1',
   weekStart: '2026-11-23',
   state: 'pendente',
-  patternText: 'Sua energia e seu foco foram menores de manhã do que à tarde',
+  patternText: 'Seus focos renderam menos de manhã do que à tarde',
   reasonText: 'Um foco à tarde pode render mais',
   changes: [
     {

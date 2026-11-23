@@ -13,7 +13,7 @@ import {
 
 const base: FrogInputs = {
   phase: 3,
-  latestEnergyToday: null,
+  interruptedFocusToday: 0,
   focusRunning: false,
   aiAnalyzing: false,
   activeEvent: null,
@@ -23,18 +23,17 @@ const base: FrogInputs = {
 const tabela: [string, Partial<FrogInputs>, FrogMood][] = [
   ['sem nada: parado', {}, 'parado'],
   ['fora do dia: dormindo', { withinUserDay: false }, 'dormindo'],
-  ['energia 2: cansado', { latestEnergyToday: 2 }, 'cansado'],
-  ['energia 1: cansado', { latestEnergyToday: 1 }, 'cansado'],
-  ['energia 3: parado', { latestEnergyToday: 3 }, 'parado'],
-  ['energia 5: parado', { latestEnergyToday: 5 }, 'parado'],
-  ['cansado vence dormindo', { latestEnergyToday: 1, withinUserDay: false }, 'cansado'],
-  ['foco vence cansado', { focusRunning: true, latestEnergyToday: 1 }, 'focado'],
+  ['2 focos interrompidos: cansado', { interruptedFocusToday: 2 }, 'cansado'],
+  ['3 focos interrompidos: cansado', { interruptedFocusToday: 3 }, 'cansado'],
+  ['1 foco interrompido: parado', { interruptedFocusToday: 1 }, 'parado'],
+  ['cansado vence dormindo', { interruptedFocusToday: 2, withinUserDay: false }, 'cansado'],
+  ['foco vence cansado', { focusRunning: true, interruptedFocusToday: 2 }, 'focado'],
   ['foco vence dormindo', { focusRunning: true, withinUserDay: false }, 'focado'],
   ['IA analisando vence foco', { aiAnalyzing: true, focusRunning: true }, 'pensando'],
   ['feliz vence pensando', { activeEvent: 'feliz', aiAnalyzing: true }, 'feliz'],
-  ['feliz vence foco e cansado', { activeEvent: 'feliz', focusRunning: true, latestEnergyToday: 1 }, 'feliz'],
+  ['feliz vence foco e cansado', { activeEvent: 'feliz', focusRunning: true, interruptedFocusToday: 2 }, 'feliz'],
   ['surpreso durante foco', { activeEvent: 'surpreso', focusRunning: true }, 'surpreso'],
-  ['pouso vence tudo', { activeEvent: 'pouso', aiAnalyzing: true, focusRunning: true, latestEnergyToday: 1, withinUserDay: false }, 'pouso'],
+  ['pouso vence tudo', { activeEvent: 'pouso', aiAnalyzing: true, focusRunning: true, interruptedFocusToday: 2, withinUserDay: false }, 'pouso'],
 ];
 
 describe('estadoDoSapo', () => {
