@@ -1,6 +1,6 @@
-import { Navigate, Outlet, createFileRoute, useLocation, useNavigate } from '@tanstack/react-router';
+import { Outlet, createFileRoute, useLocation, useNavigate } from '@tanstack/react-router';
 
-import { useApp } from '@/features/app';
+import { Redirecionar, useApp } from '@/features/app';
 import { BarraAbas } from '@/ui';
 
 type Aba = { chave: string; rotulo: string; para: '/' | '/foco' | '/semana' | '/perfil' };
@@ -19,8 +19,8 @@ function LayoutDasAbas() {
   const { fase, user } = useApp();
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  if (fase !== 'pronto') return <Navigate to="/welcome" replace />;
-  if (!user) return <Navigate to="/onboarding" replace />;
+  if (fase !== 'pronto') return <Redirecionar para="/welcome" />;
+  if (!user) return <Redirecionar para="/onboarding" />;
 
   const ativa = ABAS.find((a) => a.para === pathname)?.chave ?? 'hoje';
   return (
