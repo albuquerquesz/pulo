@@ -58,7 +58,8 @@ Config em `apps/api/wrangler.jsonc`. Segredos vão por `npx wrangler secret put 
 ### Rotas
 
 - `GET /health`
-- `POST /weekly-ai`: sugestão semanal da IA
+- `POST /weekly-ai`: sugestão semanal da IA (aberta, sem login: usada pelo demo)
+- `POST /api/proposals/generate` e `POST /api/proposals/:id/decision`: a proposta da semana gerada e decidida no servidor (conta), veja `docs/api.md`
 - `/api/auth/*`: Better Auth. Login com Google em `POST /api/auth/sign-in/social` com `{ "provider": "google", "callbackURL": "..." }`,
   sessão em `GET /api/auth/get-session`, saída em `POST /api/auth/sign-out`
 - `GET /api/me`: usuário logado e metadados
@@ -158,8 +159,9 @@ docs/specs/pulo           as 10 specs do projeto
 - **Modo demo.** Não pede login nem envia seus dados: usa só dados sintéticos de exemplo, guardados na memória do aparelho
   e descartados ao fechar. Nada do demo vai para o servidor.
 - **IA semanal.** Recebe só um resumo agregado da semana (minutos por período do dia, taxas de conclusão, energia média, contagens),
-  nunca títulos, nome do sapo, e-mail, nome da conta ou texto livre, e o pedido não leva sua sessão.
-  Sem endereço de IA configurado, as sugestões vêm de regras simples e aparecem como "Sugestão".
+  nunca títulos, nome do sapo, e-mail, nome da conta, ids ou texto livre. Na conta, o servidor monta esse resumo e fala com a IA
+  (a chave nunca sai dele); no demo, o app envia só dados de exemplo. Sem IA configurada ou se ela falhar, as sugestões vêm de regras
+  simples e aparecem como "Sugestão"; só vem "Sugestão da IA" quando a IA realmente respondeu.
 
 ## Licença
 

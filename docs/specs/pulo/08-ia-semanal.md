@@ -1,6 +1,6 @@
 # Spec 08: IA semanal
 
-Status (21/11/2026): A rever.
+Status (23/11/2026): A rever. Na conta, a proposta é gerada e decidida no servidor (`POST /api/proposals/generate` e `/:id/decision`, veja `docs/api.md`), com blocos e estado na mesma transação; o demo segue com o fluxo no app.
 
 Origem: `design-system-conceito.md`, seções 7 (F5) e 8, e `benchmark-app-habitos.md`. Formato `/to-spec`, sem entrevista. Depende das specs 01 (resumo da semana), 05 (mover e encurtar bloco), 06 (sessões) e 07 (energia). É o diferencial do produto e o que sustenta o critério de impacto.
 
