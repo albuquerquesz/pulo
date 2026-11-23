@@ -15,6 +15,10 @@ Requer Node 20 ou mais novo.
 ```sh
 npm install
 cp apps/mobile/.env.example apps/mobile/.env.local   # liga o app na API local
+cp .env.example .env                                  # DATABASE_URL do Postgres local
+cp apps/api/.dev.vars.example apps/api/.dev.vars      # segredos da API (veja "Auth e banco")
+npm run db:up                                         # Postgres no Docker (ou: npm run db:embedded, sem Docker)
+npm run db:deploy                                     # aplica as migrações
 npm run dev
 ```
 
@@ -55,21 +59,61 @@ Config em `apps/api/wrangler.jsonc`. Segredos vão por `npx wrangler secret put 
 
 ### Metadados do usuário
 
-Coluna JSON `metadata` na tabela `user` (no D1 é TEXT com `json_valid`; no Postgres seria jsonb).
+Coluna JSON (`jsonb`) `metadata` na tabela `user`.
 O formato e a validação ficam em `packages/core/domain/user-metadata.ts`, usados pela API e pelo app:
 `version`, `theme`, `reduceMotion`, `timezone` e `onboarding { completed, completedAt }`.
-Rotina, hábitos e nome do sapo continuam só no aparelho.
 
-### Auth e banco
+### Auth
 
-- Banco: Cloudflare D1 `pulo-db` (binding `DB`), migrações em `apps/api/migrations`.
-  O deploy aplica as migrações pendentes antes de subir o Worker; o `npm run dev` aplica no D1 local.
-- Secrets do Worker: `BETTER_AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
-  Em dev, copie `apps/api/.dev.vars.example` para `apps/api/.dev.vars`.
+- Better Auth com o adapter do Prisma (`better-auth/adapters/prisma`). As tabelas `user`, `session`, `account` e
+  `verification` estão no schema do `@pulo/db`.
+- Secrets do Worker: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+  (`npx wrangler secret put <NOME>` dentro de `apps/api`). Em dev, copie `apps/api/.dev.vars.example` para `apps/api/.dev.vars`.
 - No Google Cloud, o OAuth Client `pulo-api` precisa dos redirecionamentos
   `https://pulo-api.albqvictor.workers.dev/api/auth/callback/google` e `http://localhost:8787/api/auth/callback/google`.
-- Mudou plugin ou campo do Better Auth? `cd apps/api && npm run db:generate -- --output migrations/000N_nome.sql`.
+- Mudou plugin ou campo do Better Auth? Atualize `packages/db/prisma/schema.prisma` e crie a migração (`npm run db:migrate`).
 - Origens confiáveis: `PULO_CORS_ORIGIN` e o esquema do app `pulo://`.
+
+## Banco de dados
+
+PostgreSQL com Prisma 7, no pacote `packages/db` (`@pulo/db`): schema, migrações, cliente gerado, mapeadores e apoio a testes.
+Todos os dados do domínio ficam no servidor (login obrigatório); o modo demo continua local, com dados sintéticos.
+Detalhes, diagrama das tabelas e regras contra N+1 em [docs/banco-de-dados.md](docs/banco-de-dados.md).
+
+### Desenvolvimento local
+
+```sh
+cp .env.example .env
+npm run db:up          # Docker Compose: PostgreSQL 17 em localhost:5432 (volume pulo-pgdata)
+npm run db:deploy      # aplica as migrações existentes
+npm run db:seed        # dados sintéticos (só em banco local)
+npm run db:studio      # Prisma Studio
+npm run db:migrate     # cria e aplica uma migração nova depois de mudar o schema.prisma
+npm run db:down        # para o Postgres (o volume fica)
+```
+
+Sem Docker: `npm run db:embedded` sobe um Postgres de verdade (binários do `embedded-postgres`, sem root) com os mesmos
+dados de acesso do `.env.example`. Os testes usam esse mesmo caminho e criam um banco novo por arquivo de teste,
+então não precisam de Docker nem de nada rodando.
+
+### Produção: Supabase (ainda não criado) ou outro Postgres
+
+Tudo é guiado por `DATABASE_URL`, então qualquer Postgres serve.
+
+1. Crie o projeto no Supabase e copie a connection string em Project Settings, Database.
+2. Para migrar (`npm run db:deploy`), use a conexão DIRETA (porta 5432, ou o pooler em modo sessão, também 5432):
+   `postgresql://postgres.<ref>:<senha>@aws-0-<regiao>.pooler.supabase.com:5432/postgres?sslmode=require`.
+   Não rode migrações pelo pooler em modo transação (porta 6543).
+3. Para o Worker, guarde o mesmo valor como secret: `cd apps/api && npx wrangler secret put DATABASE_URL`.
+   O Worker abre uma conexão por requisição; o pooler do Supabase evita estourar o limite de conexões do Postgres.
+4. SSL: o Supabase exige. Mantenha `sslmode=require` na URL.
+5. Hyperdrive (opcional, menos latência): `npx wrangler hyperdrive create pulo-db --connection-string="<URL>"` e
+   acrescente o binding `"hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<id>" }]` no `apps/api/wrangler.jsonc`.
+   O Worker já usa `env.HYPERDRIVE.connectionString` quando o binding existe.
+6. Projetos do plano gratuito do Supabase PAUSAM depois de uns dias sem uso: confirme que o projeto está ativo
+   antes da demonstração.
+
+Nunca commite a URL do banco. O CI aplica as migrações com o secret `DATABASE_URL` do repositório (veja `.github/workflows/ci.yml`).
 
 ## Estrutura
 
@@ -79,6 +123,7 @@ apps/
   api/      @pulo/api     Hono no Cloudflare Workers: auth (Better Auth + Google), IA semanal
 packages/
   core/     @pulo/core    regras puras, sem React Native: domínio, decisões, repositórios e modo demo
+  db/       @pulo/db      Prisma 7 e PostgreSQL: schema, migrações, cliente, mapeadores e apoio a testes
 docs/specs/pulo           as 10 specs do projeto
 ```
 
@@ -89,7 +134,7 @@ docs/specs/pulo           as 10 specs do projeto
 
 ## Privacidade
 
-Os dados ficam no aparelho. A IA semanal recebe só um resumo agregado, nunca títulos, nomes ou texto livre.
+Os dados da conta ficam no servidor (PostgreSQL), só para a pessoa logada, e o modo demo fica no aparelho. A IA semanal recebe só um resumo agregado, nunca títulos, nomes ou texto livre.
 Sem endereço de IA configurado, as sugestões vêm de regras simples e aparecem como "Sugestão".
 Todos os dados do modo demo são sintéticos.
 
