@@ -64,7 +64,7 @@ describe('/api/me', () => {
   it('GET /api/me faz um número fixo e pequeno de queries (sem N+1)', async () => {
     const { app, auth } = setup();
     const { cookie } = await signIn(auth, 'queries@example.com');
-    const { count, queries } = await database.countQueries(() => app.request('/api/me', { headers: { cookie } }));
+    const { count, queries } = await database.countQueries(async () => app.request('/api/me', { headers: { cookie } }));
     expect(count, queries.join('\n')).toBeLessThanOrEqual(2);
   });
 });
