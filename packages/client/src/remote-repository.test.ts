@@ -2,6 +2,7 @@
 // O `fetch` do cliente é o `app.fetch`: nenhuma rede, nenhum mock da API.
 import { createHarness, TEST_NOW, TEST_ORIGIN, type TestUser } from '@pulo/api/src/testing';
 import { MAX_HABITS_PER_DAY } from '@pulo/core/config/decisions';
+import { criarPlanoInicial } from '@pulo/core/domain/routine';
 import { defineRepositoryContract } from '@pulo/core/data/repository-contract';
 import type { Habit, RoutineBlock, User } from '@pulo/core/domain/types';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
@@ -295,5 +296,43 @@ describe('RemoteRepository: erros e rollback', () => {
     const me = await h.newUser();
     const repo = await open(me, (request) => (request.method === 'PUT' ? new Response('<html>502</html>', { status: 502 }) : h.app.fetch(request)));
     await expect(repo.saveBlock(bloco())).rejects.toMatchObject({ kind: 'resposta_invalida', status: 502 });
+  });
+
+  it('escritas em lote: o plano inicial vira 2 chamadas e grava tudo no servidor', async () => {
+    const me = await h.newUser();
+    const { fetch, calls } = recordingFetch();
+    const repo = await open(me, fetch);
+    const plan = await criarPlanoInicial(repo, TEST_NOW);
+    expect(calls.filter((c) => c !== 'GET /api/sync').sort()).toEqual(['PUT /api/blocks', 'PUT /api/habits']);
+    expect(await repo.listBlocks()).toHaveLength(plan.blocks.length);
+
+    const fresh = await open(me);
+    expect((await fresh.listBlocks()).map((b) => b.id).sort()).toEqual(plan.blocks.map((b) => b.id).sort());
+    expect((await fresh.listHabits()).map((x) => x.id).sort()).toEqual(plan.habits.map((x) => x.id).sort());
+  });
+
+  it('lote recusado pelo servidor desfaz o cache inteiro e sobe o erro', async () => {
+    const dona = await h.newUser();
+    const outra = await h.newUser();
+    const alheio = bloco();
+    await (await open(dona)).saveBlock(alheio);
+
+    const repo = await open(outra);
+    const meu = bloco({ weekday: 3 });
+    await expect(repo.saveBlocks([meu, alheio])).rejects.toMatchObject({ kind: 'api', code: 'conflito_de_id', status: 409 });
+    expect(await repo.listBlocks()).toEqual([]);
+
+    const cheio = Array.from({ length: MAX_HABITS_PER_DAY + 1 }, () => habito({ weekdays: [4] }));
+    await expect(repo.saveHabits(cheio)).rejects.toMatchObject({ code: 'limite_por_dia' });
+    expect(await repo.listHabits()).toEqual([]);
+  });
+
+  it('lote vazio não chama o servidor', async () => {
+    const me = await h.newUser();
+    const { fetch, calls } = recordingFetch();
+    const repo = await open(me, fetch);
+    await repo.saveBlocks([]);
+    await repo.saveHabits([]);
+    expect(calls).toEqual(['GET /api/sync']);
   });
 });

@@ -4,6 +4,7 @@ import {
   FOCUS,
   WEEKLY_AI,
 } from '../config/decisions';
+import { supportsBatch } from '../data/batch';
 import { newId } from './ids';
 import { fail, ok, type Result } from './result';
 import type { DateKey, EntityId, Habit, Repository, RoutineBlock, Weekday } from './types';
@@ -232,11 +233,15 @@ export function planoInicial(now: number): { blocks: RoutineBlock[]; habits: Hab
 }
 
 /**
- * Grava o plano de exemplo. Os blocos vão em paralelo (cada um é uma chamada no repositório remoto);
- * os hábitos um a um, porque o servidor confere o limite por dia numa transação serializável.
+ * Grava o plano de exemplo. Com repositório em lote (o remoto) são só 2 chamadas em paralelo, blocos e hábitos, cada uma
+ * atômica no servidor; senão, os blocos vão em paralelo e os hábitos um a um (o limite por dia é conferido a cada gravação).
  */
 export async function criarPlanoInicial(repo: Repository, now: number): Promise<{ blocks: RoutineBlock[]; habits: Habit[] }> {
   const plan = planoInicial(now);
+  if (supportsBatch(repo)) {
+    await Promise.all([repo.saveBlocks(plan.blocks), repo.saveHabits(plan.habits)]);
+    return plan;
+  }
   await Promise.all(plan.blocks.map((b) => repo.saveBlock(b)));
   for (const h of plan.habits) await repo.saveHabit(h);
   return plan;

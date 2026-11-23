@@ -1,4 +1,5 @@
 import { RemoteError } from '@pulo/client';
+import { type BatchRepository, supportsBatch } from '@pulo/core/data/batch';
 import { createMemoryRepository } from '@/data';
 
 import { escolherOrigem } from '../app/origem';
@@ -56,5 +57,20 @@ describe('repositório fechado e avisos de erro', () => {
     await expect(repo.deleteBlock('b')).rejects.toMatchObject({ kind: 'sessao' });
     expect(expirou).toBe(1);
     expect(avisos).toHaveLength(1);
+  });
+
+  test('escritas em lote passam pelo aviso de erro quando o repositório as tem, e somem quando não tem', async () => {
+    const avisos: string[] = [];
+    const falha = new RemoteError({ kind: 'rede', mensagem: 'A lagoa ficou sem sinal.' });
+    const opcoes = { avisar: (m: string) => avisos.push(m), sessaoExpirou: () => undefined };
+    const base = createMemoryRepository();
+    const emLote: BatchRepository = { ...base, saveBlocks: () => Promise.reject(falha), saveHabits: () => Promise.resolve() };
+    const comLote = comAvisosDeErro(emLote, opcoes);
+    expect(supportsBatch(comLote)).toBe(true);
+    if (!supportsBatch(comLote)) return;
+    await expect(comLote.saveBlocks([])).rejects.toBe(falha);
+    await comLote.saveHabits([]);
+    expect(avisos).toEqual(['A lagoa ficou sem sinal.']);
+    expect(supportsBatch(comAvisosDeErro(base, opcoes))).toBe(false);
   });
 });

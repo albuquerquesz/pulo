@@ -1,4 +1,5 @@
 import type { ApiErrorCode } from '@pulo/core/api/schemas';
+import type { BatchWrites } from '@pulo/core/data/batch';
 import { systemClock } from '@pulo/core/domain/clock';
 import { inRange } from '@pulo/core/domain/day';
 import type {
@@ -55,7 +56,7 @@ export interface Account {
  * Escritas atualizam o cache na hora e vão ao servidor com o `PUT` ou `DELETE` da rota; se falharem, o cache volta
  * ao que era e o erro (`RemoteError`, com texto em português) sobe para a tela.
  */
-export interface RemoteRepository extends Repository {
+export interface RemoteRepository extends Repository, BatchWrites {
   readonly account: Account;
   /** Lê tudo de novo do servidor e troca o cache (ex.: ao voltar de um tempo sem internet). */
   reload(): Promise<void>;
@@ -172,6 +173,33 @@ class ApiRepository implements RemoteRepository {
     }
   }
 
+  /**
+   * Como `write`, para vários itens numa só chamada (`PUT /api/blocks` ou `/api/habits`, atômica no servidor).
+   * Se falhar, volta cada item ao que era (só os que ninguém mexeu depois).
+   */
+  private async writeMany<V>(
+    collection: Collection<V>,
+    lock: string,
+    items: readonly V[],
+    keyOf: (item: V) => string,
+    send: () => Promise<void>,
+  ): Promise<void> {
+    const entries = items.map((item) => {
+      const key = keyOf(item);
+      return { key, previous: collection.peek(key), mine: collection.put(item) };
+    });
+    try {
+      await this.serial(lock, () => this.withRetry(send));
+    } catch (error) {
+      for (const { key, previous, mine } of entries) {
+        if (collection.peek(key) !== mine) continue;
+        if (previous === undefined) collection.remove(key);
+        else collection.restore(key, previous);
+      }
+      throw error;
+    }
+  }
+
   private mascotFrom(mascot: MascotState | null): void {
     if (mascot) this.mascot = cloneMascot(mascot);
   }
@@ -212,6 +240,13 @@ class ApiRepository implements RemoteRepository {
     });
   }
 
+  saveBlocks(blocks: readonly RoutineBlock[]): Promise<void> {
+    if (blocks.length === 0) return Promise.resolve();
+    return this.writeMany(this.blocks, 'blocks:batch', blocks, (b) => b.id, async () => {
+      await readJson(await this.client.api.blocks.$put({ json: { blocks: [...blocks] } }));
+    });
+  }
+
   deleteBlock(id: EntityId): Promise<void> {
     return this.write(this.blocks, `block:${id}`, id, null, async () => {
       await readJson(await this.client.api.blocks[':id'].$delete({ param: { id } }));
@@ -227,6 +262,13 @@ class ApiRepository implements RemoteRepository {
   saveHabit(habit: Habit): Promise<void> {
     return this.write(this.habits, `habit:${habit.id}`, habit.id, habit, async () => {
       await readJson(await this.client.api.habits[':id'].$put({ param: { id: habit.id }, json: habit }));
+    });
+  }
+
+  saveHabits(habits: readonly Habit[]): Promise<void> {
+    if (habits.length === 0) return Promise.resolve();
+    return this.writeMany(this.habits, 'habits:batch', habits, (h) => h.id, async () => {
+      await readJson(await this.client.api.habits.$put({ json: { habits: [...habits] } }));
     });
   }
 

@@ -42,6 +42,9 @@ export const API_LIMITS = {
   titleMaxChars: 80,
   proposalTextMaxChars: 280,
   idMaxChars: 64,
+  /** Itens por escrita em lote (`PUT /api/blocks` e `PUT /api/habits`). O onboarding grava 15 blocos e 2 hábitos. */
+  batchMaxBlocks: 100,
+  batchMaxHabits: 50,
 } as const;
 
 /** Id gerado pelo cliente (uuid, ou o formato antigo `prefixo-xxx-n` do core). Entra em caminhos de URL. */
@@ -108,6 +111,22 @@ export const habitSchema = z.object({
   weekdays: z.array(weekdaySchema).min(1).max(7),
   active: z.boolean(),
 }) satisfies z.ZodType<Habit, unknown>;
+
+/** Ids repetidos no mesmo lote: o servidor não consegue gravar duas versões do mesmo item de uma vez. */
+function uniqueIds(field: 'blocks' | 'habits') {
+  return (batch: { blocks?: { id: string }[]; habits?: { id: string }[] }, ctx: z.RefinementCtx) => {
+    const seen = new Set<string>();
+    (batch[field] ?? []).forEach((item, index) => {
+      if (seen.has(item.id)) ctx.addIssue({ code: 'custom', path: [field, index, 'id'], message: 'id repetido no mesmo lote' });
+      seen.add(item.id);
+    });
+  };
+}
+
+/** Corpo de `PUT /api/blocks`: vários blocos de uma vez (tudo ou nada). Cada item segue `routineBlockSchema`. */
+export const blocksBatchSchema = z
+  .object({ blocks: z.array(routineBlockSchema).min(1).max(API_LIMITS.batchMaxBlocks) })
+  .superRefine(uniqueIds('blocks'));
 
 export const habitLogSchema = z.object({
   habitId: idSchema,
@@ -199,6 +218,11 @@ export const mascotStateSchema = z.object({
   careDays: z.number().int().min(0),
   updatedAt: msSchema,
 }) satisfies z.ZodType<MascotState, unknown>;
+
+/** Corpo de `PUT /api/habits`: vários hábitos de uma vez (tudo ou nada). Cada item segue `habitSchema`. */
+export const habitsBatchSchema = z
+  .object({ habits: z.array(habitSchema).min(1).max(API_LIMITS.batchMaxHabits) })
+  .superRefine(uniqueIds('habits'));
 
 // ---------- Consultas ----------
 

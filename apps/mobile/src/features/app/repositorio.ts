@@ -1,4 +1,5 @@
 import { isRemoteError, mensagemDeErro, RemoteError } from '@pulo/client';
+import { type BatchRepository, supportsBatch } from '@pulo/core/data/batch';
 import type { Repository } from '@pulo/core/domain/types';
 
 /** Repositório "fechado": enquanto não há dados (login ou carregando), qualquer uso falha em vez de gravar no lugar errado. */
@@ -55,7 +56,7 @@ export function comAvisosDeErro(repo: Repository, avisos: AvisosDeErro): Reposit
         throw erro;
       }
     };
-  return {
+  const base: Repository = {
     getUser: () => repo.getUser(),
     saveUser: guardar((u) => repo.saveUser(u)),
     listBlocks: () => repo.listBlocks(),
@@ -80,5 +81,13 @@ export function comAvisosDeErro(repo: Repository, avisos: AvisosDeErro): Reposit
     saveMascotState: guardar((m) => repo.saveMascotState(m)),
     clearAll: guardar(() => repo.clearAll()),
   };
+  // Repositório com escritas em lote (o remoto): o lote também avisa em caso de erro.
+  if (!supportsBatch(repo)) return base;
+  const emLote: BatchRepository = {
+    ...base,
+    saveBlocks: guardar((blocos) => repo.saveBlocks(blocos)),
+    saveHabits: guardar((habitos) => repo.saveHabits(habitos)),
+  };
+  return emLote;
 }
 
