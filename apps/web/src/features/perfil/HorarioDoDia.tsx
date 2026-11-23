@@ -1,5 +1,17 @@
 import { Botao, Texto } from '@/ui';
 
+type SinalProps = { mais?: boolean };
+
+/** Menos ou mais, em traço grosso e arredondado como os outros ícones do app. */
+function Sinal({ mais }: SinalProps) {
+  return (
+    <svg width={22} height={22} viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round">
+      <path d="M5 12h14" />
+      {mais ? <path d="M12 5v14" /> : null}
+    </svg>
+  );
+}
+
 import { horaTexto } from '../app';
 
 type EscolhaDeHoraProps = {
@@ -15,11 +27,11 @@ export function EscolhaDeHora({ rotulo, horas, min, max, onChange }: EscolhaDeHo
   return (
     <div className="flex flex-wrap items-center gap-2" role="group" aria-label={`${rotulo}: ${horaTexto(horas * 60)}`}>
       <Texto className="min-w-28 grow">{rotulo}</Texto>
-      <Botao titulo="Menos" rotulo={`Uma hora antes, ${rotulo}`} variante="fantasma" largura="auto" desativado={horas <= min} onPress={() => onChange(horas - 1)} />
+      <Botao titulo="Menos" icone={<Sinal />} rotulo={`Uma hora antes, ${rotulo}`} variante="fantasma" largura="auto" desativado={horas <= min} onPress={() => onChange(horas - 1)} />
       <Texto variante="subtitulo" tabular className="min-w-13 text-center">
         {horaTexto(horas * 60)}
       </Texto>
-      <Botao titulo="Mais" rotulo={`Uma hora depois, ${rotulo}`} variante="fantasma" largura="auto" desativado={horas >= max} onPress={() => onChange(horas + 1)} />
+      <Botao titulo="Mais" icone={<Sinal mais />} rotulo={`Uma hora depois, ${rotulo}`} variante="fantasma" largura="auto" desativado={horas >= max} onPress={() => onChange(horas + 1)} />
     </div>
   );
 }
