@@ -3,7 +3,8 @@ import type { ReactNode } from 'react';
 import { Texto } from '@/ui';
 
 type TelaProps = { titulo?: string; children: ReactNode; semBarra?: boolean };
-type SecaoProps = { titulo: string; children: ReactNode };
+/** `extra` fica à direita do título (um contador, por exemplo). */
+type SecaoProps = { titulo: string; extra?: ReactNode; children: ReactNode };
 
 /**
  * Moldura de cada tela: margens, título e espaço para a barra de abas.
@@ -22,12 +23,15 @@ export function Tela({ titulo, children, semBarra }: TelaProps) {
   );
 }
 
-export function Secao({ titulo, children }: SecaoProps) {
+export function Secao({ titulo, extra, children }: SecaoProps) {
   return (
     <section className="flex flex-col gap-2">
-      <Texto como="h2" variante="subtitulo">
-        {titulo}
-      </Texto>
+      <div className="flex items-baseline justify-between gap-3">
+        <Texto como="h2" variante="subtitulo">
+          {titulo}
+        </Texto>
+        {extra}
+      </div>
       {children}
     </section>
   );

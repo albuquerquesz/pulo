@@ -143,11 +143,23 @@ export function HojeScreen() {
           saltoDoSapo={salto}
         />
       </div>
+      <Texto variante="legenda" cor="muted" className="-mt-2 text-center">
+        {textoDaFase(d)}
+      </Texto>
       {d.sessaoAtiva ? (
         <Botao titulo="Voltar ao foco" variante="foco" rotulo="Voltar ao foco em andamento" onPress={() => void comecar()} testID="comecar-foco" />
       ) : null}
 
-      <Secao titulo="Hábitos de hoje">
+      <Secao
+        titulo="Hábitos de hoje"
+        extra={
+          d.habitos.length > 0 ? (
+            <Texto variante="legenda" cor="muted" tabular>
+              {d.habitos.filter((h) => h.feito).length} de {d.habitos.length}
+            </Texto>
+          ) : null
+        }
+      >
         {d.habitos.length === 0 ? (
           <Texto cor="muted">Nenhum hábito para hoje.</Texto>
         ) : (
@@ -181,9 +193,6 @@ export function HojeScreen() {
             ))}
           </div>
         )}
-        <Texto variante="legenda" cor="muted">
-          {textoDoProgresso(d)}
-        </Texto>
       </Secao>
 
       <Secao titulo="Próximo bloco">
@@ -233,12 +242,9 @@ export function HojeScreen() {
   );
 }
 
-function textoDoProgresso(d: DadosHoje): string {
-  const feitos = d.habitos.filter((h) => h.feito).length;
-  const total = d.habitos.length;
-  const habitos = total > 0 ? `${feitos} de ${total} ${total === 1 ? 'hábito' : 'hábitos'} hoje. ` : '';
+function textoDaFase(d: DadosHoje): string {
   const dias = d.mascote.careDays === 1 ? '1 dia de cuidado' : `${d.mascote.careDays} dias de cuidado`;
   const { faltam } = progressoDaFase(d.mascote.phase, d.mascote.careDays);
-  if (faltam === null) return `${habitos}${dias}, a lagoa está completa.`;
-  return `${habitos}${dias}, ${faltam === 1 ? 'falta 1' : `faltam ${faltam}`} para a próxima fase.`;
+  if (faltam === null) return `${dias}. A lagoa está completa.`;
+  return `${dias}. ${faltam === 1 ? 'Falta 1' : `Faltam ${faltam}`} para a próxima fase.`;
 }
