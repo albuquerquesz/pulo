@@ -15,7 +15,7 @@ Um componente `<Sapo fase estado tamanho />` feito de peças SVG, mais uma **má
 ## User Stories
 
 1. Como pessoa usuária, quero ver o sapo reagir quando termino um bloco de foco.
-2. Como pessoa usuária, quero ver o sapo cansado quando minha energia está baixa, sem cobrança.
+2. Como pessoa usuária, quero ver o sapo cansado depois de alguns focos interrompidos no dia, sem cobrança.
 3. Como pessoa usuária, quero ver o sapo focado enquanto o timer roda.
 4. Como pessoa usuária, quero ver o sapo pensando enquanto a IA analisa e surpreso quando ela acha um padrão.
 5. Como pessoa usuária, quero ver o sapo dormindo fora do meu horário.
@@ -31,7 +31,7 @@ Um componente `<Sapo fase estado tamanho />` feito de peças SVG, mais uma **má
 
 **Estados:** `parado`, `feliz`, `cansado`, `pensando`, `surpreso`, `focado`, `dormindo` e o evento `pouso`. Cada estado é uma combinação de olhos, boca e extras (definida na prancha do conceito).
 
-**Entradas da máquina:** energia mais recente do dia, sessão em andamento (spec 06), análise da IA em curso (spec 08), proposta recém chegada (spec 08), bloco concluído há pouco, mudança de fase ou semana estável (spec 01), horário atual contra o dia do usuário.
+**Entradas da máquina:** focos interrompidos hoje, sessão em andamento (spec 06), análise da IA em curso (spec 08), proposta recém chegada (spec 08), bloco concluído há pouco, mudança de fase ou semana estável (spec 01), horário atual contra o dia do usuário.
 
 **Prioridade (da maior para a menor):**
 1. `pouso` (evento, ~1,2 s) em marco de fase ou semana estável.
@@ -39,7 +39,7 @@ Um componente `<Sapo fase estado tamanho />` feito de peças SVG, mais uma **má
 3. `feliz` (evento, ~4 s) ao concluir um bloco.
 4. `pensando` enquanto a IA analisa.
 5. `focado` com sessão em andamento.
-6. `cansado` se a energia do dia é 1 ou 2.
+6. `cansado` com 2 ou mais focos interrompidos no dia (`FROG_TIRED_MIN_INTERRUPTED`).
 7. `dormindo` fora do dia do usuário.
 8. `parado`.
 Eventos transitórios voltam ao estado de base quando acabam.
@@ -66,7 +66,7 @@ Sem girino: o mascote é sapo desde a fase 1, com todos os estados (decisão do 
 ## Testing Decisions
 
 Máquina testada como função pura, com tabela de entradas e saída. Seam: o objeto de entradas.
-- Sessão em andamento e energia baixa resulta em `focado` (focado vence cansado).
+- Sessão em andamento e focos interrompidos resulta em `focado` (focado vence cansado).
 - Chegada de proposta durante `focado` resulta em `surpreso` por 3 s e depois `focado`.
 - Fora do dia do usuário e sem eventos resulta em `dormindo`.
 - Mudança de fase dispara `pouso` e depois o estado base.

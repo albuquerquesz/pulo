@@ -16,7 +16,7 @@ Navegação com **Expo Router** e **4 abas** (Hoje, Foco, Semana, Perfil), mais 
 
 1. Como pessoa usuária nova, quero escolher o nome do meu sapo e meus horários em um passo e já cair na tela Hoje.
 2. Como pessoa usuária, quero ver na tela Hoje o sapo na lagoa, o plano do dia e um botão para começar o foco.
-3. Como pessoa usuária, quero responder o check de energia na própria tela Hoje.
+3. Como pessoa usuária, quero marcar meus hábitos com um toque, logo abaixo da lagoa.
 4. Como pessoa usuária, quero ter uma aba só para o foco, com o timer e o sapo concentrado.
 5. Como pessoa usuária, quero ver minha semana e a proposta da IA em uma aba própria.
 6. Como pessoa usuária, quero ajustar horários, tema, reduzir movimento e apagar meus dados no Perfil.
@@ -46,7 +46,7 @@ app/
 
 **Primeira abertura:** se não há `User`, vai para `onboarding`. Um passo: nome do sapo, início e fim do dia (padrão 7h e 22h, decisão minha), botão "Começar". Cria o `User`, o plano de exemplo (spec 05) e abre a aba Hoje.
 
-**Hoje:** `Lagoa` com o `Sapo` (specs 04 e 03), `Balao` com uma frase curta, `ChipEnergia` (spec 07), blocos e hábitos do dia (spec 05) e um botão "Começar foco" (spec 06). Estados: **vazio** (sem blocos: sapo e "Vamos montar seu dia?" com botão), **carregando** (lagoa em esqueleto simples), **erro** ("A lagoa ficou sem sinal. Seus dados estão salvos aqui.").
+**Hoje:** `Lagoa` com o `Sapo` (specs 04 e 03), `Balao` com uma frase curta, hábitos do dia em grade de 2 colunas com uma linha de progresso (hábitos feitos, dias de cuidado e quanto falta para a próxima fase), o próximo bloco com "Focar" ou, sem blocos pendentes, "Começar um foco livre" (specs 05 e 06), e "Tirar o dia de descanso" no fim. Estados: **vazio** (sem blocos: sapo e "Vamos montar seu dia?" com botão), **carregando** (lagoa em esqueleto simples), **erro** ("A lagoa ficou sem sinal. Seus dados estão salvos aqui.").
 
 **Foco:** `AnelTimer`, `Sapo` focado, pausar e encerrar (spec 06). Com sessão em andamento, a aba abre direto nela.
 
@@ -81,4 +81,4 @@ Login e contas, deep links, telas de tablet e de modo paisagem, internacionaliza
 
 - **Decisões abertas do Victor:** horário padrão do dia, textos finais, nome do app.
 - A ordem das abas e o conteúdo de Hoje seguem o conceito; ajustes finos saem da revisão visual da prancha.
-- É onde o vídeo de 3 minutos é gravado: vale ensaiar o caminho "um dia" (check de energia, foco, bloco concluído, sapo cansado, IA, lagoa evoluindo) nas telas reais.
+- É onde o vídeo de 3 minutos é gravado: vale ensaiar o caminho "um dia" (hábitos, foco, bloco concluído, sapo cansado, IA, lagoa evoluindo) nas telas reais.
