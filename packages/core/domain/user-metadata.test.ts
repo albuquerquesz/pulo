@@ -14,6 +14,12 @@ describe('metadados do usuário', () => {
   it('banco vazio ou inválido vira o padrão', () => {
     expect(readUserMetadata(null)).toEqual(DEFAULT_USER_METADATA);
     expect(readUserMetadata({ theme: 'roxo' })).toEqual(DEFAULT_USER_METADATA);
+    expect(readUserMetadata('{ quebrado')).toEqual(DEFAULT_USER_METADATA);
+  });
+
+  it('lê o JSON em texto, como o Better Auth grava no banco', () => {
+    const escuro = { ...DEFAULT_USER_METADATA, theme: 'escuro' };
+    expect(readUserMetadata(JSON.stringify(escuro))).toEqual(escuro);
   });
 
   it('aplica preferências e marca o onboarding uma vez só', () => {

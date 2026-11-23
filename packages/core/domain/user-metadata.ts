@@ -85,8 +85,17 @@ function isValidTimezone(timeZone: string) {
 
 /** Lê o que veio do banco. Vazio ou fora do formato vira o padrão. */
 export function readUserMetadata(stored: unknown): UserMetadata {
-  const parsed = userMetadataSchema.safeParse(stored);
+  // O Better Auth grava campos `json` como texto: lido direto do banco (sem passar pela sessão), chega como string.
+  const parsed = userMetadataSchema.safeParse(typeof stored === 'string' ? jsonOuNulo(stored) : stored);
   return parsed.success ? parsed.data : DEFAULT_USER_METADATA;
+}
+
+function jsonOuNulo(texto: string): unknown {
+  try {
+    return JSON.parse(texto);
+  } catch {
+    return null;
+  }
 }
 
 /** Aplica um patch já validado. `now` marca a conclusão do onboarding. */
