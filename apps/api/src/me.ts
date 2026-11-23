@@ -1,29 +1,23 @@
-import {
-  applyUserMetadataPatch,
-  readUserMetadata,
-  userMetadataPatchSchema,
-} from '@pulo/core/domain/user-metadata';
+import { applyUserMetadataPatch, userMetadataPatchSchema } from '@pulo/core/domain/user-metadata';
 import { Hono } from 'hono';
 import type { Auth } from './auth';
+import { type AppEnv, jsonBody, requireSession } from './http';
 
-/** Rotas da conta logada: perfil básico e metadados. */
+/**
+ * Rotas da conta logada: perfil básico e metadados (preferências, onboarding e perfil do app).
+ * Usam o mesmo middleware de sessão e validação das rotas de domínio, para o cliente `hc<AppType>` inferir o corpo.
+ */
 export function meRoutes(auth: Auth, now: () => number) {
-  return new Hono()
-    .get('/', async (c) => {
-      const session = await auth.api.getSession({ headers: c.req.raw.headers });
-      if (!session) return c.json({ error: 'nao_autenticado' }, 401);
-      const { id, name, email, image, metadata } = session.user;
-      return c.json({ user: { id, name, email, image }, metadata: readUserMetadata(metadata) });
+  return new Hono<AppEnv>()
+    .use(requireSession(auth))
+    .get('/', (c) => {
+      const { id, name, email, image, metadata } = c.var.user;
+      return c.json({ user: { id, name, email, image }, metadata });
     })
-    .patch('/metadata', async (c) => {
-      const session = await auth.api.getSession({ headers: c.req.raw.headers });
-      if (!session) return c.json({ error: 'nao_autenticado' }, 401);
-      const patch = userMetadataPatchSchema.safeParse(await c.req.json().catch(() => null));
-      if (!patch.success) return c.json({ error: 'corpo_invalido' }, 400);
-
-      const metadata = applyUserMetadataPatch(readUserMetadata(session.user.metadata), patch.data, now());
+    .patch('/metadata', jsonBody(userMetadataPatchSchema), async (c) => {
+      const metadata = applyUserMetadataPatch(c.var.user.metadata, c.req.valid('json'), now());
       const context = await auth.$context;
-      await context.internalAdapter.updateUser(session.user.id, { metadata });
+      await context.internalAdapter.updateUser(c.var.user.id, { metadata });
       return c.json({ metadata });
     });
 }
