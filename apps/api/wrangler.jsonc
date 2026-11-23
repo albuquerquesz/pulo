@@ -4,19 +4,17 @@
   "main": "src/worker.ts",
   "compatibility_date": "2026-11-22",
   "observability": { "enabled": true },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "pulo-db",
-      "database_id": "ac2e9d19-3c58-4b1a-bfc8-bab090e3bee6",
-      "migrations_dir": "migrations"
-    }
-  ],
+  // O pg (via @prisma/adapter-pg) usa node:net e node:tls, que o Workers só expõe com nodejs_compat.
+  "compatibility_flags": ["nodejs_compat"],
   "vars": {
     // Origens liberadas no CORS e no Better Auth, separadas por vírgula.
     "PULO_CORS_ORIGIN": "http://localhost:8081",
     "BETTER_AUTH_URL": "https://pulo-api.albqvictor.workers.dev"
   }
-  // Secrets (nunca neste arquivo): BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET.
+  // Secrets (nunca neste arquivo): DATABASE_URL, BETTER_AUTH_SECRET, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET.
+  // O banco é um PostgreSQL hospedado (Supabase ou similar): `npx wrangler secret put DATABASE_URL`.
+  // Opcional, para usar o Hyperdrive no lugar da conexão direta (o código já prefere env.HYPERDRIVE):
+  //   npx wrangler hyperdrive create pulo-db --connection-string="<DATABASE_URL>"
+  //   e acrescente aqui: "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<id devolvido>" }]
   // Em dev, ficam em .dev.vars (veja .dev.vars.example).
 }

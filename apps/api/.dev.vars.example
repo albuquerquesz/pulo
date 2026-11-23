@@ -1,4 +1,6 @@
 # Copie para .dev.vars (ignorado pelo git) para o `wrangler dev`.
+# Banco local: `npm run db:up` (Docker) ou `npm run db:embedded` (sem Docker) e depois `npm run db:deploy`, na raiz.
+DATABASE_URL=postgresql://pulo:pulo@localhost:5432/pulo
 BETTER_AUTH_URL=http://localhost:8787
 BETTER_AUTH_SECRET=gere-com-openssl-rand-base64-32
 GOOGLE_CLIENT_ID=

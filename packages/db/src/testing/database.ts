@@ -5,6 +5,13 @@ import { type Db, createDb } from '../client';
 import { createQueryRecorder } from './count-queries';
 import { withDatabase } from './urls';
 
+declare module 'vitest' {
+  export interface ProvidedContext {
+    /** URL de administração do Postgres dos testes e nome do banco modelo, já migrado. */
+    puloPostgres: { adminUrl: string; template: string };
+  }
+}
+
 export interface TestDatabase {
   /** Cliente Prisma do banco deste arquivo de teste (já com o contador de queries ligado). */
   db: Db;

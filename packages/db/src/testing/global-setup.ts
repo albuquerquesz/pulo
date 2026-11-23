@@ -6,13 +6,6 @@ import { withDatabase } from './urls';
 
 export const TEMPLATE_DATABASE = 'pulo_template';
 
-declare module 'vitest' {
-  export interface ProvidedContext {
-    /** URL de administração do Postgres dos testes e nome do banco modelo, já migrado. */
-    puloPostgres: { adminUrl: string; template: string };
-  }
-}
-
 /**
  * Global setup do Vitest: uma instância de Postgres por execução e um banco modelo com as migrações.
  * Cada arquivo de teste clona o modelo (ver `createTestDatabase`).

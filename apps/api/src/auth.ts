@@ -1,27 +1,27 @@
-import type { BetterAuthOptions, D1Database } from '@better-auth/core';
 import { expo } from '@better-auth/expo';
+import type { Db } from '@pulo/db';
 import { betterAuth } from 'better-auth';
+import { prismaAdapter } from 'better-auth/adapters/prisma';
 
 export type AuthEnv = {
-  DB: D1Database;
+  /** Conexão do Postgres (secret do Worker; em dev, .dev.vars). Direta ou do pooler do Supabase. */
+  DATABASE_URL: string;
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
 };
 
-export type AuthDatabase = BetterAuthOptions['database'];
-
 /** Esquema do app (app.json), para o login voltar ao app nativo. */
 const APP_SCHEME = 'pulo://';
 
 /**
- * Better Auth com login pelo Google. O banco é o D1 do Worker por padrão;
- * os testes e a geração do schema passam outro banco SQLite.
+ * Better Auth com login pelo Google. As tabelas (user, session, account, verification) são do schema Prisma
+ * de @pulo/db. O cliente `db` é por requisição: quem chama cria e fecha (ver worker.ts).
  */
-export function createAuth(env: AuthEnv, origins: string[], database: AuthDatabase = env.DB) {
+export function createAuth(env: AuthEnv, origins: string[], db: Db) {
   return betterAuth({
-    database,
+    database: prismaAdapter(db, { provider: 'postgresql' }),
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
     trustedOrigins: [...origins, APP_SCHEME],
