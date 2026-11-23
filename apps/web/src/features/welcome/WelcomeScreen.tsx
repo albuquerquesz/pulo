@@ -1,49 +1,25 @@
-import { useEffect, useState } from 'react';
+import { Navigate } from '@tanstack/react-router';
+import { useState } from 'react';
 
-import { authClient, lerConta, type Conta } from '@/auth/client';
+import { authClient } from '@/auth/client';
 import { Sapo } from '@/mascot';
-import { Botao, Cartao, Texto } from '@/ui';
+import { Botao, Texto } from '@/ui';
 
 import { Tela } from '../app';
 
-type EstadoDaConta = { tipo: 'carregando' } | { tipo: 'fora' } | { tipo: 'dentro'; conta: Conta } | { tipo: 'erro'; mensagem: string };
-
-async function lerEstadoDaConta(): Promise<EstadoDaConta> {
-  try {
-    const { data } = await authClient.getSession();
-    if (!data) return { tipo: 'fora' };
-    return { tipo: 'dentro', conta: await lerConta() };
-  } catch (e) {
-    return { tipo: 'erro', mensagem: e instanceof Error ? e.message : 'Não deu para ler a conta.' };
-  }
-}
-
-/** Tela provisória para testar o login com Google. */
+/** Porta de entrada: login com Google. Já logado, segue para o app. */
 export function WelcomeScreen() {
-  const [estado, setEstado] = useState<EstadoDaConta>({ tipo: 'carregando' });
+  const { data, isPending } = authClient.useSession();
   const [ocupado, setOcupado] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
-  useEffect(() => {
-    let vivo = true;
-    void lerEstadoDaConta().then((novo) => {
-      if (vivo) setEstado(novo);
-    });
-    return () => {
-      vivo = false;
-    };
-  }, []);
+  if (data) return <Navigate to="/" replace />;
 
   const entrar = async () => {
     setOcupado(true);
-    const { error } = await authClient.signIn.social({ provider: 'google', callbackURL: `${window.location.origin}/welcome` });
-    if (error) setEstado({ tipo: 'erro', mensagem: error.message ?? 'Não deu para entrar.' });
-    setOcupado(false);
-  };
-
-  const sair = async () => {
-    setOcupado(true);
-    await authClient.signOut();
-    setEstado({ tipo: 'fora' });
+    setErro(null);
+    const { error } = await authClient.signIn.social({ provider: 'google', callbackURL: `${window.location.origin}/` });
+    if (error) setErro(error.message ?? 'Não deu para entrar.');
     setOcupado(false);
   };
 
@@ -55,33 +31,14 @@ export function WelcomeScreen() {
       <Texto como="h1" variante="display" className="text-center">
         Boas vindas ao Pulo
       </Texto>
-
-      {estado.tipo === 'carregando' ? <Texto cor="muted" className="text-center">Conferindo sua conta...</Texto> : null}
-
-      {estado.tipo === 'fora' ? (
-        <>
-          <Texto cor="muted" className="text-center">
-            Entre com sua conta Google para guardar suas preferências.
-          </Texto>
-          <Botao titulo="Entrar com Google" carregando={ocupado} onPress={() => void entrar()} testID="entrar-google" />
-        </>
-      ) : null}
-
-      {estado.tipo === 'dentro' ? (
-        <>
-          <Cartao>
-            <Texto variante="subtitulo">{estado.conta.user.name}</Texto>
-            <Texto cor="muted">{estado.conta.user.email}</Texto>
-          </Cartao>
-          <Botao titulo="Sair" variante="fantasma" desativado={ocupado} onPress={() => void sair()} />
-        </>
-      ) : null}
-
-      {estado.tipo === 'erro' ? (
-        <Cartao>
-          <Texto cor="atencao">{estado.mensagem}</Texto>
-          <Botao titulo="Tentar de novo" variante="fantasma" onPress={() => void lerEstadoDaConta().then(setEstado)} />
-        </Cartao>
+      <Texto cor="muted" className="text-center">
+        Entre com sua conta Google para começar.
+      </Texto>
+      <Botao titulo="Entrar com Google" carregando={ocupado || isPending} onPress={() => void entrar()} testID="entrar-google" />
+      {erro ? (
+        <Texto cor="atencao" className="text-center">
+          {erro}
+        </Texto>
       ) : null}
     </Tela>
   );

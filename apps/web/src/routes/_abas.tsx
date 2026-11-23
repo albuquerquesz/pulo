@@ -1,5 +1,6 @@
 import { Navigate, Outlet, createFileRoute, useLocation, useNavigate } from '@tanstack/react-router';
 
+import { ExigeConta } from '@/auth/ExigeConta';
 import { useApp } from '@/features/app';
 import { BarraAbas } from '@/ui';
 
@@ -12,7 +13,15 @@ const ABAS: Aba[] = [
   { chave: 'perfil', rotulo: 'Perfil', para: '/perfil' },
 ];
 
-export const Route = createFileRoute('/_abas')({ component: LayoutDasAbas });
+export const Route = createFileRoute('/_abas')({ component: ComConta });
+
+function ComConta() {
+  return (
+    <ExigeConta>
+      <LayoutDasAbas />
+    </ExigeConta>
+  );
+}
 
 /** Abas do app. Sem sapo criado ainda, manda para o onboarding. */
 function LayoutDasAbas() {

@@ -1,5 +1,7 @@
 import type { User } from '@pulo/core/domain/types';
+import { useNavigate } from '@tanstack/react-router';
 
+import { authClient } from '@/auth/client';
 import { Botao, Cartao, Texto } from '@/ui';
 
 import { confirmar, Secao, Tela, useApp } from '../app';
@@ -15,7 +17,13 @@ const TEMAS: OpcaoDeTema[] = [
 
 export function PerfilScreen() {
   const { user, atualizarPerfil, apagarDados, demo, demoClock, enableDemo, disableDemo, refresh } = useApp();
+  const navigate = useNavigate();
   if (!user) return null;
+
+  const sair = async () => {
+    await authClient.signOut();
+    await navigate({ to: '/welcome', replace: true });
+  };
 
   const inicio = Math.round(user.dayStartMinutes / 60);
   const fim = Math.round(user.dayEndMinutes / 60);
@@ -90,6 +98,10 @@ export function PerfilScreen() {
 
       <Secao titulo="Seus dados">
         <Botao titulo="Apagar todos os meus dados" variante="fantasma" onPress={() => void apagar()} />
+      </Secao>
+
+      <Secao titulo="Sua conta">
+        <Botao titulo="Sair da conta" variante="fantasma" onPress={() => void sair()} />
       </Secao>
     </Tela>
   );
