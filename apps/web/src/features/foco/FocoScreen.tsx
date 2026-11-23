@@ -106,10 +106,7 @@ export function FocoScreen() {
       </div>
 
       {estado.fase === 'ocioso' && (
-        <>
-          <Balao texto="Pronto para um foco de 25 minutos? Eu fico com você." rabo="cima" />
-          <Botao titulo="Começar foco" variante="foco" onPress={async () => aplicar(await iniciar(repo, clock, user))} testID="iniciar-foco" />
-        </>
+        <Botao titulo="Começar foco" variante="foco" onPress={async () => aplicar(await iniciar(repo, clock, user))} testID="iniciar-foco" />
       )}
 
       {ativa && (
