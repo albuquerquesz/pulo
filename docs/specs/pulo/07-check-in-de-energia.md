@@ -1,6 +1,6 @@
 # Spec 07: check in de energia
 
-Status (21/11/2026): A rever.
+Status (23/11/2026): **Cortada** por decisão do Victor. O app não pergunta mais a energia; a IA usa a taxa de focos concluídos e o sapo fica cansado com focos interrompidos. O texto abaixo fica só como histórico.
 
 Origem: `design-system-conceito.md`, seção 7 (F4), e `benchmark-app-habitos.md` (check ins do Finch). Formato `/to-spec`, sem entrevista. Depende das specs 01 e 02. Alimenta a spec 08 e o estado `cansado` do sapo (spec 03).
 

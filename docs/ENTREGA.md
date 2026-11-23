@@ -36,4 +36,4 @@ Prazo: 30/11/2026 às 23h59. Alvo interno: 30/11 às 18h. Congelamento de commit
 - [ ] Finalistas em 2/12, confirmar presença até 4/12, final presencial em São Paulo em 12/12
 
 ## Roteiro do vídeo (3 min)
-0:00 problema e público; 0:20 sapo e lagoa; 0:40 um dia (energia, foco, bloco concluído); 1:20 sapo cansado, descanso conta; 1:50 a semana lida, o sapo surpreso, aprovação (rótulo verdadeiro); 2:30 a lagoa evoluiu; 2:50 fechamento e link da demo.
+0:00 problema e público; 0:20 sapo e lagoa; 0:40 um dia (hábitos, foco, bloco concluído); 1:20 sapo cansado, descanso conta; 1:50 a semana lida, o sapo surpreso, aprovação (rótulo verdadeiro); 2:30 a lagoa evoluiu; 2:50 fechamento e link da demo.

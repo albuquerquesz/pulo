@@ -13,7 +13,6 @@ erDiagram
   user ||--o{ habit : tem
   user ||--o{ habit_log : tem
   user ||--o{ focus_session : tem
-  user ||--o{ check_in : tem
   user ||--o{ rest_day : tem
   user ||--o{ weekly_proposal : tem
   user ||--o| mascot_state : tem
@@ -58,14 +57,6 @@ erDiagram
     int pausedMs
     timestamptz pausedSince
   }
-  check_in {
-    text id PK
-    text userId FK
-    date date
-    period period
-    smallint energy "1 a 5"
-    timestamptz createdAt
-  }
   rest_day {
     text userId PK
     date date PK
@@ -97,7 +88,7 @@ Regras que o banco garante (migração `restricoes`, em SQL):
 
 - no máximo UMA `focus_session` com `state = 'em_andamento'` por pessoa (índice único parcial);
 - `em_andamento` se, e somente se, `endedAt` é nulo;
-- energia de 1 a 5, fase do sapo de 1 a 4, dia da semana de 0 a 6, duração do bloco de 5 a 120;
+- fase do sapo de 1 a 4, dia da semana de 0 a 6, duração do bloco de 5 a 120;
 - um `habit_log` por hábito e dia, um `rest_day` por dia, uma `weekly_proposal` por semana, um `mascot_state` por pessoa;
 - `habit_log` só aponta para hábito da mesma pessoa (chave composta `habitId, userId`).
 

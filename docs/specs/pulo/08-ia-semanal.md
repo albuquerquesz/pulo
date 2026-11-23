@@ -2,7 +2,7 @@
 
 Status (23/11/2026): A rever. Na conta, a proposta é gerada e decidida no servidor (`POST /api/proposals/generate` e `/:id/decision`, veja `docs/api.md`), com blocos e estado na mesma transação; o demo segue com o fluxo no app.
 
-Origem: `design-system-conceito.md`, seções 7 (F5) e 8, e `benchmark-app-habitos.md`. Formato `/to-spec`, sem entrevista. Depende das specs 01 (resumo da semana), 05 (mover e encurtar bloco), 06 (sessões) e 07 (energia). É o diferencial do produto e o que sustenta o critério de impacto.
+Origem: `design-system-conceito.md`, seções 7 (F5) e 8, e `benchmark-app-habitos.md`. Formato `/to-spec`, sem entrevista. Depende das specs 01 (resumo da semana), 05 (mover e encurtar bloco) e 06 (sessões). É o diferencial do produto e o que sustenta o critério de impacto.
 
 ## Problem Statement
 
@@ -35,10 +35,10 @@ Um pipeline em quatro passos, em que **a IA nunca decide sozinha o que mudar**:
 
 **Quando roda:** ao abrir a aba Semana quando há dados suficientes e não existe proposta pendente da semana; no domingo; e sob demanda no modo demo. Uma proposta por semana, guardada (`WeeklyProposal`, spec 01).
 
-**Dados mínimos:** pelo menos 3 dias com registro e 5 sessões ou check ins na semana. Abaixo disso, estado "conhecendo sua semana", sem proposta.
+**Dados mínimos:** pelo menos 3 dias com registro e 5 sessões na semana. Abaixo disso, estado "conhecendo sua semana", sem proposta.
 
 **Candidatas por regra** (limites propostos por mim; decisão do Victor):
-- **Mover foco:** se um período tem energia média menor e taxa de conclusão menor que outro com horário livre, propor mover um bloco de foco do período fraco para o forte. Mínimo de 3 check ins no período para contar.
+- **Mover foco:** se um período tem taxa de focos concluídos menor que outro com horário livre, propor mover um bloco de foco do período fraco para o forte. Mínimo de 3 sessões no período para contar.
 - **Encurtar foco:** se um período tem várias interrupções (mais de 2 na semana), propor encurtar o bloco em 5 ou 10 minutos.
 - Máximo de **2 mudanças** por proposta. Só os tipos `mover_foco` e `encurtar_foco` na primeira versão.
 
@@ -48,7 +48,7 @@ Um pipeline em quatro passos, em que **a IA nunca decide sozinha o que mudar**:
 ```json
 {
   "candidata_escolhida": 0,
-  "padrao": "As tardes têm menos energia e mais interrupções",
+  "padrao": "As tardes têm mais interrupções",
   "motivo": "Seu foco rende mais de manhã",
   "tom": "leve"
 }
@@ -70,7 +70,7 @@ A IA devolve o **índice** da candidata e os textos. Os horários vêm das candi
 ## Testing Decisions
 
 Funções puras e testes de contrato com resposta da IA simulada. Seam: o cliente da IA (injetado).
-- Semana com energia baixa à tarde e alta pela manhã gera candidata "mover foco da tarde para a manhã".
+- Semana com focos interrompidos à tarde e concluídos pela manhã gera candidata "mover foco da tarde para a manhã".
 - Menos de 3 dias de dados resulta em "conhecendo sua semana", sem proposta.
 - Candidata com horário ocupado nunca é gerada.
 - Resposta da IA com índice inválido, JSON quebrado ou texto com termo proibido é descartada e vale a regra.
