@@ -160,7 +160,7 @@ export function defineRepositoryContract(
       await r.saveSession({ ...endedSession(1, 25, 'concluida'), id: uid('s') });
       await r.saveCheckIn({ id: uid('c'), date: '2026-11-10', period: 'manha', energy: 3, createdAt: 1 });
       await r.saveRestDay({ date: '2026-11-10' });
-      await r.saveProposal({ id: uid('p'), weekStart: '2026-11-09', state: 'pendente', patternText: '', changes: [], origin: 'ia', createdAt: 1 });
+      await r.saveProposal({ id: uid('p'), weekStart: '2026-11-09', state: 'pendente', patternText: 'x', changes: [], origin: 'ia', createdAt: 1 });
       if (!options.mascotIsServerDerived) await r.saveMascotState({ phase: 3, careDays: 9, updatedAt: 1 });
       await r.clearAll();
       expect(await r.getUser()).toBeNull();
