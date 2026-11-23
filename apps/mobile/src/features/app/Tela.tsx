@@ -20,6 +20,7 @@ export function Tela({ titulo, children, semBarra }: { titulo?: string; children
         { paddingTop: insets.top + t.espacamento.lg, paddingBottom: semBarra ? t.espacamento.xl : ALTURA_DA_BARRA + t.espacamento.xl },
       ]}
       keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
     >
       {titulo ? (
         <Texto variante="titulo" accessibilityRole="header">

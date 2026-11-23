@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { StyleSheet, Switch, View } from 'react-native';
 
 import type { User } from '@pulo/core/domain/types';
@@ -17,6 +18,7 @@ export function PerfilScreen() {
   const app = useApp();
   const { user, atualizarPerfil, apagarDados, demo, demoClock, enableDemo, disableDemo, refresh, pessoa, sair } = app;
   const t = useTheme();
+  const router = useRouter();
   if (!user) return null;
 
   const inicio = Math.round(user.dayStartMinutes / 60);
@@ -46,6 +48,15 @@ export function PerfilScreen() {
           <Botao titulo="Sair da conta" variante="fantasma" onPress={() => void sair()} testID="sair" />
         </Secao>
       ) : null}
+
+      <Secao titulo="Sua rotina">
+        <Cartao onPress={() => router.push('/rotina')} rotulo="Editar rotina e hábitos">
+          <Texto>Editar rotina e hábitos</Texto>
+          <Texto variante="legenda" cor="muted">
+            Crie, mude e remova seus blocos de foco e descanso e seus hábitos.
+          </Texto>
+        </Cartao>
+      </Secao>
 
       <Secao titulo="Seu dia">
         <EscolhaDeHora rotulo="Começa às" horas={inicio} min={0} max={Math.min(22, fim - 1)} onChange={(h) => void atualizarPerfil({ dayStartMinutes: h * 60 })} />

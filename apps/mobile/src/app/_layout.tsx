@@ -68,6 +68,7 @@ function Raiz() {
           </Stack.Protected>
           <Stack.Protected guard={dadosProntos && !!user}>
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="rotina" />
           </Stack.Protected>
           <Stack.Protected guard={dadosProntos && !user}>
             <Stack.Screen name="onboarding" />
