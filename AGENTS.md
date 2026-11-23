@@ -37,7 +37,7 @@ Na raiz, cada comando roda em todos os pacotes via Turborepo:
 - `apps/mobile` (`@pulo/mobile`): `src/app` rotas (Expo Router), `src/theme` tokens e `useTheme`, `src/ui` componentes,
   `src/mascot` sapo e lagoa, `src/features` telas, `src/data` adaptador do AsyncStorage.
 - `apps/api` (`@pulo/api`): Hono no Cloudflare Workers (`pulo-api`). `src/weekly-ai.ts` é a função da IA, `src/app.ts` as rotas,
-  `src/auth.ts` o Better Auth (Google, adapter do Prisma), `src/worker.ts` a entrada do Worker (um cliente de banco por requisição),
+  `src/auth.ts` o Better Auth (Google, adapter do Prisma), `src/routes/*` as rotas de domínio (uma por recurso, veja `docs/api.md`), `src/http.ts` sessão, validação e erros, `src/worker.ts` a entrada do Worker (um cliente de banco por requisição),
   `wrangler.jsonc` a config. Testes com Vitest contra um Postgres de verdade (embedded). Segredos só por `wrangler secret put`.
 - `packages/db` (`@pulo/db`): `prisma/schema.prisma` e `prisma/migrations`, `createDb(url)`, mapeadores `toDomain`/`fromDomain`,
   `@pulo/db/testing` (`createTestDatabase`, `countQueries`). Veja `docs/banco-de-dados.md`. Sem `any`, sem N+1.
