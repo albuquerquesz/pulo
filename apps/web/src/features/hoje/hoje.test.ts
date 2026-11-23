@@ -11,7 +11,6 @@ import {
   carregarHoje,
   comecarFoco,
   diaDeDescanso,
-  fraseDoSapo,
   progressoDaFase,
 } from './logic';
 
@@ -85,7 +84,6 @@ describe('Hoje', () => {
     expect(r.state.careDays).toBe(1);
     const d = await carregarHoje(repo, c, user);
     expect(d.descansoHoje).toBe(true);
-    expect(fraseDoSapo('parado', d)).toMatch(/descansar/i);
   });
 
   test('começar foco guarda uma sessão em andamento ligada ao bloco', async () => {
@@ -103,14 +101,6 @@ describe('Hoje', () => {
     await comecarFoco(repo, c, user, d.blocos[0].bloco);
     c.advance(26 * 60_000);
     expect((await carregarHoje(repo, c, user)).sessaoAtiva).toBeNull();
-  });
-
-  test('o frase do sapo nunca é vazia', async () => {
-    const { repo, user, c } = await novo();
-    const d = await carregarHoje(repo, c, user);
-    for (const m of ['parado', 'feliz', 'cansado', 'pensando', 'surpreso', 'focado', 'dormindo', 'pouso'] as const) {
-      expect(fraseDoSapo(m, d).length).toBeGreaterThan(5);
-    }
   });
 });
 

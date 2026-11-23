@@ -2,7 +2,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useCallback, useState } from 'react';
 
 import { estadoDoSapo, Lagoa } from '@/mascot';
-import { Balao, Botao, Cartao, EstadoVazio, Texto } from '@/ui';
+import { Botao, Cartao, EstadoVazio, Texto } from '@/ui';
 
 import { agoraDaLagoa, blocoTexto, dentroDoDiaDoUsuario, Secao, Tela, useApp, useCarregar, useLadoDoConteudo } from '../app';
 import {
@@ -11,7 +11,6 @@ import {
   comecarFoco,
   concluirDescansoDoBloco,
   diaDeDescanso,
-  fraseDoSapo,
   progressoDaFase,
   type DadosHoje,
 } from './logic';
@@ -144,8 +143,6 @@ export function HojeScreen() {
           saltoDoSapo={salto}
         />
       </div>
-      <Balao texto={fraseDoSapo(humor, d)} />
-
       {d.sessaoAtiva ? (
         <Botao titulo="Voltar ao foco" variante="foco" rotulo="Voltar ao foco em andamento" onPress={() => void comecar()} testID="comecar-foco" />
       ) : null}

@@ -8,7 +8,6 @@ import type {
   Clock,
   DateKey,
   FocusSession,
-  FrogMood,
   Habit,
   MascotState,
   Phase,
@@ -131,30 +130,4 @@ export async function comecarFoco(repo: Repository, clock: Clock, user: User, bl
     plannedMinutes: duracaoDoFoco(bloco),
     ...(bloco ? { blockId: bloco.id } : {}),
   });
-}
-
-/** Frase curta do balão. Tom leve, sem culpa. */
-export function fraseDoSapo(humor: FrogMood, d: Pick<DadosHoje, 'blocos' | 'habitos' | 'descansoHoje'>): string {
-  switch (humor) {
-    case 'cansado':
-      return 'Hoje pede casco. Vamos com calma.';
-    case 'focado':
-      return 'Estou aqui com você. Um foco de cada vez.';
-    case 'feliz':
-      return 'Que pulinho bom!';
-    case 'surpreso':
-      return 'Olha só, notei uma coisa na sua semana!';
-    case 'pouso':
-      return 'Cheguei a um lugar novo da lagoa!';
-    case 'pensando':
-      return 'Deixa eu pensar um pouquinho...';
-    case 'dormindo':
-      return 'Zzz. Amanhã a gente pula de novo.';
-    default: {
-      if (d.descansoHoje) return 'Descansar também é cuidar. A lagoa agradece.';
-      const todos = [...d.blocos.map((b) => b.feito), ...d.habitos.map((h) => h.feito)];
-      if (todos.length > 0 && todos.every(Boolean)) return 'Tudo feito por hoje. Que dia bonito na lagoa!';
-      return 'Um passinho de cada vez, no seu ritmo.';
-    }
-  }
 }

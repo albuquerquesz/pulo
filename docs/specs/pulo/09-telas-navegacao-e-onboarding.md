@@ -46,7 +46,7 @@ app/
 
 **Primeira abertura:** se não há `User`, vai para `onboarding`. Um passo: nome do sapo, início e fim do dia (padrão 7h e 22h, decisão minha), botão "Começar". Cria o `User`, o plano de exemplo (spec 05) e abre a aba Hoje.
 
-**Hoje:** `Lagoa` com o `Sapo` (specs 04 e 03), `Balao` com uma frase curta, hábitos do dia em grade de 2 colunas com uma linha de progresso (hábitos feitos, dias de cuidado e quanto falta para a próxima fase), o próximo bloco com "Focar" ou, sem blocos pendentes, "Começar um foco livre" (specs 05 e 06), e "Tirar o dia de descanso" no fim. Estados: **vazio** (sem blocos: sapo e "Vamos montar seu dia?" com botão), **carregando** (lagoa em esqueleto simples), **erro** ("A lagoa ficou sem sinal. Seus dados estão salvos aqui.").
+**Hoje:** `Lagoa` com o `Sapo` (specs 04 e 03), sem balão de fala, hábitos do dia em grade de 2 colunas com uma linha de progresso (hábitos feitos, dias de cuidado e quanto falta para a próxima fase), o próximo bloco com "Focar" ou, sem blocos pendentes, "Começar um foco livre" (specs 05 e 06), e "Tirar o dia de descanso" no fim. Estados: **vazio** (sem blocos: sapo e "Vamos montar seu dia?" com botão), **carregando** (lagoa em esqueleto simples), **erro** ("A lagoa ficou sem sinal. Seus dados estão salvos aqui.").
 
 **Foco:** `AnelTimer`, `Sapo` focado, pausar e encerrar (spec 06). Com sessão em andamento, a aba abre direto nela.
 
