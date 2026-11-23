@@ -32,11 +32,20 @@ function recordingFetch(): { fetch: FetchLike; calls: string[] } {
   };
 }
 
+/** O navegador mandaria o cookie HttpOnly e o Origin sozinho; no teste (sem navegador) o `fetch` os acrescenta. */
+function asBrowser(me: TestUser, fetch: FetchLike): FetchLike {
+  return (request) => {
+    const headers = new Headers(request.headers);
+    headers.set('cookie', me.cookie);
+    headers.set('origin', TEST_ORIGIN);
+    return fetch(new Request(request, { headers }));
+  };
+}
+
 async function open(me: TestUser, fetch: FetchLike = (request) => h.app.fetch(request)) {
   return createRemoteRepository({
     baseUrl: 'http://api.test',
-    fetch,
-    getHeaders: () => ({ cookie: me.cookie, origin: TEST_ORIGIN }),
+    fetch: asBrowser(me, fetch),
     clock,
     retries: 0,
   });
@@ -265,16 +274,15 @@ describe('RemoteRepository: erros e rollback', () => {
     let tentativas = 0;
     const repo = await createRemoteRepository({
       baseUrl: 'http://api.test',
-      getHeaders: () => ({ cookie: me.cookie }),
       clock,
       retries: 2,
-      fetch: (request) => {
+      fetch: asBrowser(me, (request) => {
         if (request.method === 'PUT') {
           tentativas += 1;
           if (tentativas < 3) return Response.json({ error: 'conflito_concorrente' }, { status: 409 });
         }
         return h.app.fetch(request);
-      },
+      }),
     });
     const b = bloco();
     await repo.saveBlock(b);

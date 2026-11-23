@@ -10,28 +10,17 @@ export interface ApiOptions {
   baseUrl: string;
   /** Padrão: `fetch` global. */
   fetch?: FetchLike;
-  /**
-   * Padrão `include`: o navegador manda o cookie da sessão para a API em outro site (CORS com credenciais).
-   * No nativo o cookie vai por `getHeaders` e o certo é `omit`.
-   */
-  credentials?: RequestCredentials;
-  /** Cabeçalhos extras a cada chamada (no nativo: o `Cookie` guardado pelo cliente do Better Auth). */
-  getHeaders?: () => HeadersInit | Promise<HeadersInit>;
 }
 
 /** Cliente `hc<AppType>`: rotas, corpos e respostas inferidos da própria API, sem `any`. */
 export function createApiClient(options: ApiOptions) {
   const send: FetchLike = options.fetch ?? ((request) => fetch(request));
-  const credentials = options.credentials ?? 'include';
 
   return hc<AppType>(options.baseUrl.replace(/\/+$/, ''), {
     fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
       try {
-        const headers = new Headers(init?.headers);
-        if (options.getHeaders) {
-          new Headers(await options.getHeaders()).forEach((value, key) => headers.set(key, value));
-        }
-        return await send(new Request(input, { ...init, headers, credentials }));
+        // `include`: o navegador manda o cookie HttpOnly da sessão para a API (mesmo site ou outro site, com CORS).
+        return await send(new Request(input, { ...init, credentials: 'include' }));
       } catch (error) {
         throw error instanceof RemoteError ? error : networkError(error);
       }

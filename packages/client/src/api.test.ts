@@ -14,19 +14,13 @@ function capture(): { fetch: FetchLike; requests: Request[] } {
 }
 
 describe('createApiClient', () => {
-  it('manda credenciais por padrão (cookie entre sites) e junta os cabeçalhos extras', async () => {
+  it('manda sempre credenciais (o cookie HttpOnly da sessão vai por conta do navegador)', async () => {
     const { fetch, requests } = capture();
-    const client = createApiClient({ baseUrl: 'http://api.test/', fetch, getHeaders: async () => ({ cookie: 'a=b' }) });
+    const client = createApiClient({ baseUrl: 'http://api.test/', fetch });
     await client.api.blocks.$get();
     expect(requests[0].url).toBe('http://api.test/api/blocks');
     expect(requests[0].credentials).toBe('include');
-    expect(requests[0].headers.get('cookie')).toBe('a=b');
-  });
-
-  it('no nativo dá para omitir as credenciais', async () => {
-    const { fetch, requests } = capture();
-    await createApiClient({ baseUrl: 'http://api.test', fetch, credentials: 'omit' }).api.blocks.$get();
-    expect(requests[0].credentials).toBe('omit');
+    expect(requests[0].headers.get('cookie')).toBeNull();
   });
 
   it('as respostas têm tipo inferido da API, sem any', async () => {

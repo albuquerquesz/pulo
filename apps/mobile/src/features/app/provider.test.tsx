@@ -32,7 +32,6 @@ function autenticacaoFalsa(opcoes: {
     sair: async () => void (chamadas.sair += 1),
     rede: () => ({
       baseUrl: 'http://api.test',
-      credentials: 'omit',
       fetch: (request) => {
         chamadas.rede.push(`${request.method} ${new URL(request.url).pathname}`);
         return opcoes.servidor ? opcoes.servidor(request) : Response.json({ error: 'erro_interno' }, { status: 500 });

@@ -141,7 +141,7 @@ propostas e o estado do sapo da pessoa, numa transação. Conta, login e metadad
 
 ## Cliente no app: `@pulo/client`
 
-`createRemoteRepository({ baseUrl, fetch?, credentials?, getHeaders?, clock?, historyDays?, retries? })` devolve um `Repository` do core
+`createRemoteRepository({ baseUrl, fetch?, clock?, historyDays?, retries? })` devolve um `Repository` do core
 (mais `account` e `reload()`), sobre `hc<AppType>` (só o tipo da API entra no pacote).
 
 - **Abertura:** um `GET /api/sync` com a janela de `syncRange`: 180 dias para trás e 2 para frente, no fuso padrão (limite do servidor: 400).
@@ -154,4 +154,4 @@ propostas e o estado do sapo da pessoa, numa transação. Conta, login e metadad
   `metadataPatchFromUser` do core. `saveMascotState` só atualiza o cache: o sapo é do servidor (a resposta de encerrar sessão e de descanso traz o novo estado).
 - **`clearAll`:** `DELETE /api/data` e depois `PATCH /api/me/metadata` com `profile: null` e `onboardingCompleted: false` (volta ao onboarding; a conta fica).
 - **Erros:** `RemoteError` com `kind` (`rede`, `sessao`, `api`, `resposta_invalida`), `code` (código da tabela acima), `status`, `issues` e `mensagem` em português.
-- **Cookie:** na web `credentials: 'include'` (padrão). No celular o cookie do Better Auth vai em `getHeaders` com `credentials: 'omit'`.
+- **Cookie:** sempre `credentials: 'include'`. O cookie da sessão é HttpOnly e do navegador: o cliente não o lê, não o guarda e não manda cabeçalho `Cookie`.

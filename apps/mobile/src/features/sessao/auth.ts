@@ -1,8 +1,5 @@
-import { expoClient } from '@better-auth/expo/client';
 import { type FetchLike, MENSAGEM_SEM_SINAL, RemoteError } from '@pulo/client';
 import { createAuthClient } from 'better-auth/client';
-import * as SecureStore from 'expo-secure-store';
-import { Platform } from 'react-native';
 
 import { ambienteDoApp, apiUrl } from './config';
 
@@ -12,11 +9,9 @@ export interface PessoaLogada {
   email: string;
 }
 
-/** Opções de rede do `RemoteRepository` para a plataforma (cookie do navegador na web, cabeçalho Cookie no nativo). */
+/** Opções de rede do `RemoteRepository`: o cookie da sessão é do navegador (HttpOnly), o app nunca o lê nem o guarda. */
 export interface RedeDaSessao {
   baseUrl: string;
-  credentials: RequestCredentials;
-  getHeaders?: () => HeadersInit | Promise<HeadersInit>;
   /** Só para testes: troca o `fetch` do repositório remoto. */
   fetch?: FetchLike;
 }
@@ -25,21 +20,19 @@ export interface RedeDaSessao {
 export interface Autenticacao {
   /** `null` = sem sessão. Lança `RemoteError` (`rede`) se não deu para falar com o servidor. */
   sessaoAtual(): Promise<PessoaLogada | null>;
-  /** Abre o login do Google. Na web a página sai para o Google e volta; no celular resolve ao voltar do navegador. */
+  /** Abre o login do Google. A página sai para o Google e volta. */
   entrarComGoogle(): Promise<void>;
   sair(): Promise<void>;
   rede(): RedeDaSessao;
 }
 
-export const ESQUEMA_DO_APP = 'pulo';
 const MENSAGEM_LOGIN = 'Não consegui entrar com o Google. Tente de novo.';
 
-/** Cliente do Better Auth: navegador (cookie cross site com credenciais) ou nativo (plugin do Expo com SecureStore). */
+/**
+ * Cliente do Better Auth no navegador. A sessão é um cookie HttpOnly gerido pelo servidor: as chamadas vão com
+ * `credentials: 'include'` e nenhum token passa pelo JavaScript.
+ */
 export function criarAutenticacao(baseUrl: string): Autenticacao {
-  return Platform.OS === 'web' ? autenticacaoWeb(baseUrl) : autenticacaoNativa(baseUrl);
-}
-
-function autenticacaoWeb(baseUrl: string): Autenticacao {
   const client = createAuthClient({ baseURL: baseUrl, fetchOptions: { credentials: 'include' } });
   return {
     sessaoAtual: () => lerSessao(client.getSession()),
@@ -49,24 +42,7 @@ function autenticacaoWeb(baseUrl: string): Autenticacao {
       if (error) throw new Error(MENSAGEM_LOGIN);
     },
     sair: async () => void (await client.signOut()),
-    rede: () => ({ baseUrl, credentials: 'include' }),
-  };
-}
-
-function autenticacaoNativa(baseUrl: string): Autenticacao {
-  const client = createAuthClient({
-    baseURL: baseUrl,
-    plugins: [expoClient({ scheme: ESQUEMA_DO_APP, storagePrefix: ESQUEMA_DO_APP, storage: SecureStore })],
-  });
-  return {
-    sessaoAtual: () => lerSessao(client.getSession()),
-    entrarComGoogle: async () => {
-      const { error } = await client.signIn.social({ provider: 'google', callbackURL: '/' });
-      if (error) throw new Error(MENSAGEM_LOGIN);
-    },
-    sair: async () => void (await client.signOut()),
-    // O cookie fica no SecureStore: vai à mão no cabeçalho, e `omit` evita o conflito com o do sistema.
-    rede: () => ({ baseUrl, credentials: 'omit', getHeaders: async () => ({ cookie: await client.getCookie() }) }),
+    rede: () => ({ baseUrl }),
   };
 }
 

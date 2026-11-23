@@ -24,13 +24,12 @@ npm run dev
 
 Sobe o app web em http://localhost:8081 e a API em http://localhost:8787.
 O app pede login com Google. Modo demo, sem login e com 4 semanas de dados sintéticos: abra o endereço com `?demo=1`
-ou toque em "Ver o demo" na tela de entrada (é o único jeito no celular).
+ou toque em "Ver o demo" na tela de entrada.
 
 Variáveis do app (`apps/mobile/.env.local`, veja `apps/mobile/.env.example`):
 `EXPO_PUBLIC_API_URL` (endereço da API; em desenvolvimento, sem ela, vale `http://localhost:8787`) e, opcional,
 `EXPO_PUBLIC_WEEKLY_AI_ENDPOINT` (sem ela, a IA semanal usa `EXPO_PUBLIC_API_URL` + `/weekly-ai`).
 Na web, o endereço do app precisa estar em `PULO_CORS_ORIGIN` da API (o cookie da sessão viaja entre sites, com credenciais).
-Para o login no celular, o esquema `pulo://` já é origem confiável da API.
 
 Só um pacote: `npx turbo run dev --filter=@pulo/mobile`.
 
@@ -81,7 +80,7 @@ O `User` do app é montado a partir disso (`userFromMetadata` e `metadataPatchFr
 - No Google Cloud, o OAuth Client `pulo-api` precisa dos redirecionamentos
   `https://pulo-api.albqvictor.workers.dev/api/auth/callback/google` e `http://localhost:8787/api/auth/callback/google`.
 - Mudou plugin ou campo do Better Auth? Atualize `packages/db/prisma/schema.prisma` e crie a migração (`npm run db:migrate`).
-- Origens confiáveis: `PULO_CORS_ORIGIN` e o esquema do app `pulo://`.
+- Origens confiáveis: `PULO_CORS_ORIGIN`. O app é só web: a sessão é um cookie HttpOnly gerido pela API.
 
 ## Banco de dados
 
@@ -147,8 +146,8 @@ docs/specs/pulo           as 10 specs do projeto
 - **Conta.** O login é com o Google. O servidor guarda seu nome, e-mail e foto do Google, e a sessão.
 - **Seus dados no app.** Nome do sapo, horário do dia, tema, rotina, hábitos e marcações, sessões de foco, check ins de energia,
   dias de descanso, sugestões da semana e o estado do sapo ficam no servidor (PostgreSQL), ligados só à sua conta.
-  Só quem entrou na conta consegue ler ou mudar esses dados. No celular a sessão fica no armazenamento seguro do aparelho;
-  na web, num cookie do navegador.
+  Só quem entrou na conta consegue ler ou mudar esses dados. A sessão fica num cookie HttpOnly do navegador,
+  que o app nunca lê.
 - **Apagar.** "Apagar todos os meus dados", no Perfil, remove da conta a rotina, os hábitos, as sessões, os check ins, os descansos,
   as sugestões e o sapo, em todos os aparelhos. A conta e o login continuam; sair da conta é outro botão.
 - **Modo demo.** Não pede login nem envia seus dados: usa só dados sintéticos de exemplo, guardados na memória do aparelho
