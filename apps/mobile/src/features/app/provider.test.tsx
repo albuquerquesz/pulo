@@ -4,10 +4,12 @@ import { act } from 'react';
 import { createRoot } from 'test-renderer';
 
 import { RemoteError } from '@pulo/client';
+import type { ProposalOutcome } from '@pulo/core/domain/ia';
 import { DEFAULT_USER_METADATA } from '@pulo/core/domain/user-metadata';
 import { TemaProvider } from '@/theme/useTheme';
 
 import type { Autenticacao, PessoaLogada } from '../sessao/auth';
+import { carregarSemana } from '../semana/logic';
 import { AppProvider, useApp, type AppValue } from './AppProvider';
 
 const PESSOA: PessoaLogada = { id: 'conta-1', nome: 'Ana', email: 'ana@example.com' };
@@ -115,6 +117,31 @@ describe('AppProvider: de onde vêm os dados', () => {
     expect(app().pessoa).toEqual(PESSOA);
     expect(app().user).toMatchObject({ id: PESSOA.id, frogName: 'Pulinho' });
     expect(chamadas.rede).toEqual(['GET /api/sync']);
+  });
+
+  test('a proposta da semana vem do servidor com sessão e do app no demo (a fonte segue a origem)', async () => {
+    const { auth, chamadas } = autenticacaoFalsa({
+      sessao: async () => PESSOA,
+      servidor: (request) =>
+        new URL(request.url).pathname === '/api/proposals/generate' ? Response.json({ outcome: 'conhecendo' }) : Response.json(syncVazio(PERFIL)),
+    });
+    const conta = await montar({ autenticacao: auth, demoNaAbertura: false });
+    const dadosDaConta = await carregarSemana(conta.app().repo, conta.app().clock, conta.app().user!);
+    let saida: ProposalOutcome | undefined;
+    await act(async () => {
+      saida = await conta.app().propostas.gerar(dadosDaConta);
+    });
+    expect(saida).toEqual({ kind: 'conhecendo' });
+    expect(chamadas.rede).toEqual(['GET /api/sync', 'POST /api/proposals/generate']);
+
+    const demo = autenticacaoFalsa({ sessao: async () => PESSOA });
+    const d = await montar({ autenticacao: demo.auth, demoNaAbertura: true });
+    const dadosDoDemo = await carregarSemana(d.app().repo, d.app().clock, d.app().user!);
+    await act(async () => {
+      saida = await d.app().propostas.gerar(dadosDoDemo);
+    });
+    expect(saida).toMatchObject({ kind: 'proposta', proposal: { origin: 'regra' } });
+    expect(demo.chamadas.rede).toEqual([]);
   });
 
   test('com sessão mas sem perfil: pronto sem User, o que leva ao onboarding', async () => {

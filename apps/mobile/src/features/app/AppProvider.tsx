@@ -12,6 +12,7 @@ import type { Autenticacao, PessoaLogada } from '../sessao/auth';
 import { ambienteDoApp, endpointDaIa } from '../sessao/config';
 import { apagarTodosOsDados, concluirOnboarding, criarClienteDeIa, demoPedidoNaUrl, salvarPerfil, type DadosDoOnboarding } from './core';
 import { criarSessaoDemo } from './demo';
+import { criarFonteDeProposta, criarFonteLocal, type PropostaFonte } from '../semana/fonte';
 import { escolherOrigem } from './origem';
 import { comAvisosDeErro, repositorioFechado } from './repositorio';
 
@@ -33,6 +34,8 @@ export interface AppValue {
   versao: number;
   refresh(): void;
   aiClient: WeeklyAiClient | null;
+  /** De onde vem a proposta da semana e quem aplica a decisão: o servidor (conta) ou o app (demo). Escolhida junto com o repositório. */
+  propostas: PropostaFonte;
 
   demo: boolean;
   demoClock: DemoClock | null;
@@ -89,9 +92,17 @@ interface Ativo {
   repo: Repository;
   clock: Clock;
   demoClock: DemoClock | null;
+  propostas: PropostaFonte;
 }
 
-const SEM_DADOS: Ativo = { repo: repositorioFechado, clock: systemClock, demoClock: null };
+const SEM_AVISOS = { sessaoExpirou: () => undefined };
+
+const SEM_DADOS: Ativo = {
+  repo: repositorioFechado,
+  clock: systemClock,
+  demoClock: null,
+  propostas: criarFonteLocal(repositorioFechado, systemClock, null),
+};
 
 export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbertura, autenticacao = null }: AppProviderProps) {
   const relogioReal = relogioInicial ?? systemClock;
@@ -160,7 +171,7 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
     async (demo: boolean) => {
       try {
         if (!demo && repoInicial) {
-          setAtivo({ repo: repoInicial, clock: relogioReal, demoClock: null });
+          setAtivo({ repo: repoInicial, clock: relogioReal, demoClock: null, propostas: criarFonteLocal(repoInicial, relogioReal, aiClient) });
           setUser(await repoInicial.getUser());
           setFase('pronto');
           return;
@@ -170,21 +181,23 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
         const origem = escolherOrigem({ demo, temSessao: quem !== null });
         if (origem === 'demo') {
           const s = await criarSessaoDemo();
-          setAtivo({ repo: s.repo, clock: s.clock, demoClock: s.clock });
+          setAtivo({ repo: s.repo, clock: s.clock, demoClock: s.clock, propostas: criarFonteDeProposta(origem, { repo: s.repo, clock: s.clock, ia: aiClient, avisos: SEM_AVISOS }) });
           setUser(await s.repo.getUser());
           setFase('pronto');
         } else if (origem === 'remoto' && auth) {
           const remoto = await createRemoteRepository({ ...auth.rede(), clock: systemClock });
+          const sessaoExpirou = () => {
+            setPessoa(null);
+            setUser(null);
+            setAtivo(SEM_DADOS);
+            setFase('login');
+          };
           const repo = comAvisosDeErro(remoto, {
             avisar: (mensagem) => mostrarAvisoRef.current({ mensagem, variante: 'atencao' }),
-            sessaoExpirou: () => {
-              setPessoa(null);
-              setUser(null);
-              setAtivo(SEM_DADOS);
-              setFase('login');
-            },
+            sessaoExpirou,
           });
-          setAtivo({ repo, clock: systemClock, demoClock: null });
+          const propostas = criarFonteDeProposta(origem, { repo, clock: systemClock, ia: aiClient, remoto, avisos: { sessaoExpirou } });
+          setAtivo({ repo, clock: systemClock, demoClock: null, propostas });
           setUser(await repo.getUser());
           setFase('pronto');
         } else {
@@ -201,7 +214,7 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
         setVersao((v) => v + 1);
       }
     },
-    [auth, repoInicial, relogioReal],
+    [auth, repoInicial, relogioReal, aiClient],
   );
 
   const enableDemo = useCallback(() => abrir(true), [abrir]);
@@ -299,6 +312,7 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
       versao,
       refresh,
       aiClient,
+      propostas: ativo.propostas,
       demo: ativo.demoClock !== null,
       demoClock: ativo.demoClock,
       enableDemo,

@@ -8,16 +8,10 @@ import { useTheme } from '@/theme';
 import { Botao, Cartao, EstadoVazio, Texto } from '@/ui';
 
 import { agoraDaLagoa, dentroDoDiaDoUsuario, Secao, slotTexto, Tela, useApp, useCarregar } from '../app';
-import {
-  aceitar,
-  carregarSemana,
-  desfazer,
-  editarHorario,
-  gerarEGuardarProposta,
-  JANELA_DE_DESFAZER_MS,
-  negar,
-  type Decisao,
-} from './logic';
+import { mensagemDeErro } from '@pulo/client';
+
+import type { DecisaoFeita } from './fonte';
+import { carregarSemana, JANELA_DE_DESFAZER_MS } from './logic';
 
 const PERIODOS: { chave: Period; rotulo: string }[] = [
   { chave: 'manha', rotulo: 'Manhã' },
@@ -28,13 +22,13 @@ const PERIODOS: { chave: Period; rotulo: string }[] = [
 const PASSO_MIN = 30;
 
 export function SemanaScreen() {
-  const { repo, clock, user, aiClient, evento, emitirEvento, mostrarAviso, refresh, versao } = useApp();
+  const { repo, clock, user, propostas: fonte, evento, emitirEvento, mostrarAviso, refresh, versao } = useApp();
   const t = useTheme();
   const { width } = useWindowDimensions();
   const [analisando, setAnalisando] = useState(false);
   const [conhecendo, setConhecendo] = useState(false);
   const [proposta, setProposta] = useState<WeeklyProposal | null>(null);
-  const [decisao, setDecisao] = useState<Decisao | null>(null);
+  const [decisao, setDecisao] = useState<DecisaoFeita | null>(null);
   const [editando, setEditando] = useState<BlockSlot | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const gerando = useRef(false);
@@ -47,17 +41,23 @@ export function SemanaScreen() {
     setConhecendo(false);
     if (!dados.proposta && !gerando.current) {
       gerando.current = true;
+      setErro(null);
       setAnalisando(true);
       try {
         // Pequena pausa para o "pensando" ser visto; o cálculo em si é imediato.
         await new Promise((r) => setTimeout(r, 700));
-        const out = await gerarEGuardarProposta(repo, clock, dados, aiClient);
+        const out = await fonte.gerar(dados);
         if (out.kind === 'proposta') {
           setProposta(out.proposal);
           emitirEvento('surpreso');
+        } else if (out.kind === 'existente') {
+          setProposta(out.proposal);
         } else if (out.kind === 'conhecendo') {
           setConhecendo(true);
         }
+      } catch (e) {
+        // Só a fonte remota falha (rede ou servidor): a tela segue de pé com o aviso no lugar da ideia.
+        setErro(mensagemDeErro(e));
       } finally {
         gerando.current = false;
         setAnalisando(false);
@@ -97,7 +97,7 @@ export function SemanaScreen() {
   const lado = Math.min(Math.min(width, 480) - 32, 260);
   const r = d.resumo;
 
-  const comDecisao = (dec: Decisao, mensagem: string) => {
+  const comDecisao = (dec: DecisaoFeita, mensagem: string) => {
     setProposta(dec.proposal);
     setDecisao(dec);
     setEditando(null);
@@ -108,37 +108,55 @@ export function SemanaScreen() {
     refresh();
   };
 
-  const aoAceitar = async () => {
-    if (!proposta) return;
-    const res = await aceitar(repo, clock, proposta);
-    if (res.ok) comDecisao(res.decisao, 'Pronto, ajustei seu bloco.');
-    else setErro(res.mensagem);
-  };
-  const aoSalvarEdicao = async () => {
-    if (!proposta || !editando) return;
-    const res = await editarHorario(repo, clock, proposta, 0, editando);
-    if (res.ok) comDecisao(res.decisao, 'Horário salvo do seu jeito.');
-    else setErro(res.mensagem);
-  };
-  const aoNegar = async () => {
-    if (!proposta) return;
-    setProposta(await negar(repo, clock, proposta));
-    mostrarAviso({ mensagem: 'Tudo bem, sigo como está.' });
-    refresh();
-  };
-  const aoDesfazer = async () => {
-    if (!decisao) return;
-    const antes = await desfazer(repo, clock, decisao.undo);
-    clearTimeout(timerDesfazer.current);
-    setDecisao(null);
-    if (antes) {
-      setProposta(antes);
-      mostrarAviso({ mensagem: 'Desfeito. Seu bloco voltou ao lugar.' });
-    } else {
-      mostrarAviso({ mensagem: 'O tempo para desfazer passou.', variante: 'atencao' });
+  /** Falha de rede ou de sessão na fonte remota: o texto em português vai para a tela em vez de quebrar o fluxo. */
+  const tentar = async (acao: () => Promise<void>) => {
+    try {
+      await acao();
+    } catch (e) {
+      setErro(mensagemDeErro(e));
     }
-    refresh();
   };
+  const aposDecisao = (res: Awaited<ReturnType<typeof fonte.aceitar>>, mensagem: string) => {
+    if (res.ok) comDecisao(res.decisao, mensagem);
+    else {
+      setErro(res.mensagem);
+      // O servidor recusou porque a tela estava desatualizada: recarrega para mostrar a semana como ela está.
+      if (res.recarregar) refresh();
+    }
+  };
+
+  const aoAceitar = () =>
+    tentar(async () => {
+      if (!proposta) return;
+      aposDecisao(await fonte.aceitar(proposta), 'Pronto, ajustei seu bloco.');
+    });
+  const aoSalvarEdicao = () =>
+    tentar(async () => {
+      if (!proposta || !editando) return;
+      aposDecisao(await fonte.editarHorario(proposta, 0, editando), 'Horário salvo do seu jeito.');
+    });
+  const aoNegar = () =>
+    tentar(async () => {
+      if (!proposta) return;
+      setProposta(await fonte.negar(proposta));
+      setErro(null);
+      mostrarAviso({ mensagem: 'Tudo bem, sigo como está.' });
+      refresh();
+    });
+  const aoDesfazer = () =>
+    tentar(async () => {
+      if (!decisao) return;
+      const antes = await fonte.desfazer(decisao);
+      clearTimeout(timerDesfazer.current);
+      setDecisao(null);
+      if (antes) {
+        setProposta(antes);
+        mostrarAviso({ mensagem: 'Desfeito. Seu bloco voltou ao lugar.' });
+      } else {
+        mostrarAviso({ mensagem: 'O tempo para desfazer passou.', variante: 'atencao' });
+      }
+      refresh();
+    });
 
   const mudar = (delta: number) =>
     setEditando((e) => (e ? { ...e, startMinutes: Math.max(0, Math.min(24 * 60 - e.durationMinutes, e.startMinutes + delta)) } : e));
@@ -222,6 +240,8 @@ export function SemanaScreen() {
           <Cartao>
             <Texto>{GETTING_TO_KNOW_TEXT}. Mais alguns focos e check ins e eu volto com uma ideia.</Texto>
           </Cartao>
+        ) : erro ? (
+          <Texto cor="atencao">{erro}</Texto>
         ) : (
           <Texto cor="muted">Sem ideias por esta semana. Está tudo bem como está.</Texto>
         )}
