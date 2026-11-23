@@ -33,7 +33,11 @@ export interface SessionUser {
   metadata: UserMetadata;
 }
 
-export type AppEnv = { Variables: { user: SessionUser } };
+/**
+ * `usuarioInterno` só existe quando a própria API se chama por dentro (o servidor MCP, depois de verificar o token OAuth):
+ * vem do segundo argumento de `app.fetch`, que nenhuma requisição de fora consegue preencher.
+ */
+export type AppEnv = { Variables: { user: SessionUser }; Bindings: { usuarioInterno?: () => Promise<SessionUser | null> } | undefined };
 
 export type ErrorStatus = 400 | 401 | 403 | 404 | 409 | 500;
 
@@ -49,15 +53,22 @@ export class ApiError extends Error {
   }
 }
 
-/** Exige sessão do Better Auth e guarda a pessoa em `c.var.user`. Toda rota de domínio passa por aqui. */
+/** Exige sessão do Better Auth (ou a pessoa já verificada pelo MCP) e guarda em `c.var.user`. Toda rota de domínio passa por aqui. */
 export function requireSession(auth: Auth) {
   return createMiddleware<AppEnv>(async (c, next) => {
-    const session = await auth.api.getSession({ headers: c.req.raw.headers });
-    if (!session) throw new ApiError(401, 'nao_autenticado', 'Entre na sua conta para continuar.');
-    const { id, name, email, image, metadata } = session.user;
-    c.set('user', { id, name, email, image: image ?? null, metadata: readUserMetadata(metadata) });
+    const interno = c.env?.usuarioInterno;
+    const user = interno ? await interno() : await userDaSessao(auth, c.req.raw.headers);
+    if (!user) throw new ApiError(401, 'nao_autenticado', 'Entre na sua conta para continuar.');
+    c.set('user', user);
     await next();
   });
+}
+
+async function userDaSessao(auth: Auth, headers: Headers): Promise<SessionUser | null> {
+  const session = await auth.api.getSession({ headers });
+  if (!session) return null;
+  const { id, name, email, image, metadata } = session.user;
+  return { id, name, email, image: image ?? null, metadata: readUserMetadata(metadata) };
 }
 
 // ---------- Validação com zod ----------

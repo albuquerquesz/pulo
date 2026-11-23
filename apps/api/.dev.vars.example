@@ -9,3 +9,5 @@ GOOGLE_CLIENT_SECRET=
 # Opcionais (o padrão serve em dev); em produção veja docs/web-auth.md:
 # PULO_CORS_ORIGIN=http://localhost:8081
 # PULO_COOKIE_DOMAIN=
+# Telas de entrar e consentimento do OAuth do MCP (padrão http://localhost:3000):
+# PULO_WEB_URL=http://localhost:3000

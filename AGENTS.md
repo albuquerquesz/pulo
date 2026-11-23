@@ -43,7 +43,7 @@ Na raiz, cada comando roda em todos os pacotes via Turborepo:
   origem dos dados, `features/sessao` o login), `src/ui` componentes, `src/mascot` sapo e lagoa em SVG, `src/styles.css` Tailwind v4 com os
   tokens como variáveis CSS. Variáveis `VITE_API_URL` em `.env.development` e `.env.production`. `routeTree.gen.ts` é gerado pelo Vite.
 - `apps/api` (`@pulo/api`): Hono no Cloudflare Workers (`pulo-api`). `src/weekly-ai.ts` é a função da IA, `src/app.ts` as rotas,
-  `src/auth.ts` o Better Auth (Google, adapter do Prisma), `src/routes/*` as rotas de domínio (uma por recurso, veja `docs/api.md`), `src/http.ts` sessão, validação e erros, `src/web-config.ts` cookie e origens a partir do ambiente, `src/csrf.ts` checagem de Origin (veja `docs/web-auth.md`), `src/worker.ts` a entrada do Worker (um cliente de banco por requisição),
+  `src/auth.ts` o Better Auth (Google, adapter do Prisma), `src/routes/*` as rotas de domínio (uma por recurso, veja `docs/api.md`), `src/http.ts` sessão, validação e erros, `src/web-config.ts` cookie e origens a partir do ambiente, `src/csrf.ts` checagem de Origin (veja `docs/web-auth.md`), `src/worker.ts` a entrada do Worker (um cliente de banco por requisição), `src/mcp/*` o servidor MCP com OAuth (veja `docs/mcp.md`),
   `wrangler.jsonc` a config. Testes com Vitest contra um Postgres de verdade (embedded). Segredos só por `wrangler secret put`.
 - `packages/client` (`@pulo/client`): `createRemoteRepository` (o `Repository` do core sobre `hc<AppType>`; um `GET /api/sync` na abertura, cache em memória,
   escritas otimistas com rollback), `RemoteError` com texto em português. Só importa o TIPO da API. Testes com Vitest rodando a API de verdade

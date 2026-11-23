@@ -31,6 +31,7 @@ Variáveis do app (`apps/mobile/.env.local`, veja `apps/mobile/.env.example`):
 `EXPO_PUBLIC_WEEKLY_AI_ENDPOINT` (sem ela, a IA semanal usa `EXPO_PUBLIC_API_URL` + `/weekly-ai`).
 O endereço do app precisa estar em `PULO_CORS_ORIGIN` da API (CORS com credenciais, origens confiáveis e checagem de `Origin` nas escritas).
 Sessão, cookie, CSRF e como publicar app e API: [docs/web-auth.md](docs/web-auth.md).
+Servidor MCP (uma IA usando o Pulo pela pessoa, com OAuth): [docs/mcp.md](docs/mcp.md).
 
 Variáveis do web: `VITE_API_URL` em `apps/web/.env.development` (API local) e `apps/web/.env.production` (API publicada).
 

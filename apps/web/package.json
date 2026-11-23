@@ -14,6 +14,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@better-auth/oauth-provider": "^1.7.27",
     "@fontsource/nunito": "^5.3.0",
     "@pulo/client": "*",
     "@pulo/core": "*",
