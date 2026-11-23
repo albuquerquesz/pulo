@@ -1,3 +1,4 @@
+import { newId } from '@pulo/core/domain/ids';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { Db } from '@pulo/db';
@@ -17,22 +18,36 @@ import { sessionRoutes } from './routes/sessions';
 import { syncRoutes } from './routes/sync';
 import { weekSummaryRoutes } from './routes/week-summary';
 import { resolveWebConfig } from './web-config';
-import { type AiEnv, createProviderFromEnv, handleWeeklyAi } from './weekly-ai';
+import { type AiEnv, type ProviderAdapter, aiClientFromEnv, createProviderFromEnv, handleWeeklyAi, providerAsClient } from './weekly-ai';
 
 export type ApiEnv = AiEnv &
   AuthEnv & {
     PULO_CORS_ORIGIN?: string;
   };
 
+/** Ajustes que só os testes e quem monta a API precisam. */
+export interface AppOptions {
+  /** Provedor de IA (padrão: o do ambiente, falso sem configuração). Passar um provedor liga a IA nas propostas. */
+  provider?: ProviderAdapter;
+  /** Espera máxima pela IA nas propostas (padrão `WEEKLY_AI.timeoutMs`). */
+  aiTimeoutMs?: number;
+}
+
 /**
  * Monta a API. O ambiente e o cliente do banco são injetados: o Worker cria um `Db` por requisição
  * (e o fecha depois), os testes passam o do Postgres de teste.
  */
-export function createApp(env: ApiEnv, db: Db, now = Date.now) {
-  const provider = createProviderFromEnv(env);
+export function createApp(env: ApiEnv, db: Db, now = Date.now, options: AppOptions = {}) {
+  const provider = options.provider ?? createProviderFromEnv(env);
   const web = resolveWebConfig(env);
   const auth = createAuth(env, web, db);
-  const deps: RouteDeps = { auth, db, now };
+  const deps: RouteDeps = {
+    auth,
+    db,
+    now,
+    ai: { client: options.provider ? providerAsClient(options.provider) : aiClientFromEnv(env, provider), timeoutMs: options.aiTimeoutMs },
+    newId: (at) => newId(at, 'proposta'),
+  };
 
   return new Hono()
     .use(

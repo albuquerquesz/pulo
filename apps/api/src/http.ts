@@ -1,4 +1,5 @@
 import { type ApiErrorBody, type ApiErrorCode, apiErrorSchema } from '@pulo/core/api/schemas';
+import type { WeeklyAiClient } from '@pulo/core/domain/ia/client';
 import { type UserMetadata, readUserMetadata } from '@pulo/core/domain/user-metadata';
 import { type Db, Prisma } from '@pulo/db';
 import type { Context } from 'hono';
@@ -17,6 +18,10 @@ export interface RouteDeps {
   /** Um cliente por requisição (o Worker cria e fecha). */
   db: Db;
   now: () => number;
+  /** IA da proposta semanal: `client` é `null` quando o ambiente não pede IA (vale só a regra). `timeoutMs` padrão é `WEEKLY_AI.timeoutMs`. */
+  ai: { client: WeeklyAiClient | null; timeoutMs?: number };
+  /** Id de proposta nova (injetável nos testes). */
+  newId: (now: number) => string;
 }
 
 /** Pessoa da sessão, lida UMA vez por requisição pelo middleware (sem query extra por rota). */

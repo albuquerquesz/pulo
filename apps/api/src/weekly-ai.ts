@@ -13,6 +13,7 @@
  */
 import { validateAiOutput } from '@pulo/core/domain/ia/validate';
 import { AI_TONES } from '@pulo/core/domain/ia/limits';
+import type { WeeklyAiClient } from '@pulo/core/domain/ia/client';
 import type { WeeklyAiRequest } from '@pulo/core/domain/ia/request';
 
 export interface ProviderAdapter {
@@ -124,4 +125,20 @@ export function createProviderFromEnv(env: AiEnv): ProviderAdapter {
   if (!name || name === 'fake') return new FakeProvider();
   if (!env.PULO_AI_API_KEY) throw new Error('PULO_AI_API_KEY ausente no ambiente do servidor');
   throw new Error(`Provedor "${name}" ainda não implementado`);
+}
+
+/**
+ * Liga o provedor ao pipeline do core (`generateWeeklyProposal`), no servidor: o cliente recebe SÓ o corpo montado por
+ * `buildAiRequest` (resumo agregado e candidatas sem id de bloco nem título) e devolve o texto cru do modelo, que o core valida.
+ */
+export function providerAsClient(provider: ProviderAdapter): WeeklyAiClient {
+  return { suggest: (request) => provider.complete(buildPrompt(request)) };
+}
+
+/**
+ * A IA só entra na geração de propostas quando o ambiente pede (`PULO_AI_PROVIDER` preenchido, ou um provedor injetado).
+ * Sem isso vale só a regra e a proposta é rotulada "Sugestão": o provedor falso nunca se passa por IA em produção.
+ */
+export function aiClientFromEnv(env: AiEnv, provider: ProviderAdapter): WeeklyAiClient | null {
+  return env.PULO_AI_PROVIDER ? providerAsClient(provider) : null;
 }

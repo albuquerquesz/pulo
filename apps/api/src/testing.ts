@@ -1,10 +1,10 @@
 // Apoio só para os testes da API: ambiente fictício e login sem passar pelo Google.
 // O banco é o Postgres de teste do @pulo/db (createTestDatabase), um banco novo por arquivo.
 import { randomUUID } from 'node:crypto';
-import { DEFAULT_USER_METADATA } from '@pulo/core/domain/user-metadata';
+import { DEFAULT_USER_METADATA, type UserMetadata } from '@pulo/core/domain/user-metadata';
 import type { TestDatabase } from '@pulo/db/testing';
 import { serializeSignedCookie } from 'better-call';
-import { type ApiEnv, createApp } from './app';
+import { type ApiEnv, type AppOptions, createApp } from './app';
 import { type Auth, createAuth } from './auth';
 import { resolveWebConfig } from './web-config';
 
@@ -36,17 +36,17 @@ export type TestApp = ReturnType<typeof createApp>;
 export interface TestUser {
   id: string;
   cookie: string;
-  call(method: 'GET' | 'PUT' | 'DELETE' | 'PATCH', path: string, body?: unknown): Promise<Response>;
+  call(method: 'GET' | 'PUT' | 'POST' | 'DELETE' | 'PATCH', path: string, body?: unknown): Promise<Response>;
 }
 
 /** App + banco de teste + criação de pessoas logadas, com `now` fixo (ou ajustável por `setNow`). */
-export function createHarness(database: TestDatabase) {
+export function createHarness(database: TestDatabase, options: AppOptions = {}) {
   let now = TEST_NOW;
   const auth = createAuth(testEnv, resolveWebConfig(testEnv), database.db);
-  const app = createApp(testEnv, database.db, () => now);
+  const app = createApp(testEnv, database.db, () => now, options);
   let counter = 0;
 
-  async function newUser(metadata?: { timezone: string }): Promise<TestUser> {
+  async function newUser(metadata?: Partial<UserMetadata>): Promise<TestUser> {
     counter += 1;
     const { user, cookie } = await signIn(auth, `pessoa${counter}-${randomUUID()}@example.com`);
     if (metadata) {
@@ -72,7 +72,7 @@ export function createHarness(database: TestDatabase) {
 export async function queriesOf(
   database: TestDatabase,
   user: TestUser,
-  method: 'GET' | 'PUT' | 'DELETE',
+  method: 'GET' | 'PUT' | 'POST' | 'DELETE',
   path: string,
   body?: unknown,
   expectedStatus = 200,
