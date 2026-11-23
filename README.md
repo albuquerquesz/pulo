@@ -23,7 +23,14 @@ npm run dev
 ```
 
 Sobe o app web em http://localhost:8081 e a API em http://localhost:8787.
-Modo demo, com 4 semanas de dados sintéticos: abra o endereço com `?demo=1`.
+O app pede login com Google. Modo demo, sem login e com 4 semanas de dados sintéticos: abra o endereço com `?demo=1`
+ou toque em "Ver o demo" na tela de entrada (é o único jeito no celular).
+
+Variáveis do app (`apps/mobile/.env.local`, veja `apps/mobile/.env.example`):
+`EXPO_PUBLIC_API_URL` (endereço da API; em desenvolvimento, sem ela, vale `http://localhost:8787`) e, opcional,
+`EXPO_PUBLIC_WEEKLY_AI_ENDPOINT` (sem ela, a IA semanal usa `EXPO_PUBLIC_API_URL` + `/weekly-ai`).
+Na web, o endereço do app precisa estar em `PULO_CORS_ORIGIN` da API (o cookie da sessão viaja entre sites, com credenciais).
+Para o login no celular, o esquema `pulo://` já é origem confiável da API.
 
 Só um pacote: `npx turbo run dev --filter=@pulo/mobile`.
 
@@ -55,13 +62,15 @@ Config em `apps/api/wrangler.jsonc`. Segredos vão por `npx wrangler secret put 
 - `/api/auth/*`: Better Auth. Login com Google em `POST /api/auth/sign-in/social` com `{ "provider": "google", "callbackURL": "..." }`,
   sessão em `GET /api/auth/get-session`, saída em `POST /api/auth/sign-out`
 - `GET /api/me`: usuário logado e metadados
-- `PATCH /api/me/metadata`: muda `theme`, `reduceMotion`, `timezone` ou `onboardingCompleted`
+- `PATCH /api/me/metadata`: muda `theme`, `reduceMotion`, `timezone`, `onboardingCompleted` ou `profile`
 
 ### Metadados do usuário
 
 Coluna JSON (`jsonb`) `metadata` na tabela `user`.
 O formato e a validação ficam em `packages/core/domain/user-metadata.ts`, usados pela API e pelo app:
-`version`, `theme`, `reduceMotion`, `timezone` e `onboarding { completed, completedAt }`.
+`version`, `theme`, `reduceMotion`, `timezone`, `onboarding { completed, completedAt }` e `profile`
+(`frogName`, `dayStartMinutes`, `dayEndMinutes`, `createdAt`; nulo até o onboarding terminar, e contas antigas sem ele continuam válidas).
+O `User` do app é montado a partir disso (`userFromMetadata` e `metadataPatchFromUser`, no mesmo arquivo).
 
 ### Auth
 
@@ -123,6 +132,7 @@ apps/
   api/      @pulo/api     Hono no Cloudflare Workers: auth (Better Auth + Google), IA semanal
 packages/
   core/     @pulo/core    regras puras, sem React Native: domínio, decisões, repositórios e modo demo
+  client/   @pulo/client  RemoteRepository: o Repository do core sobre a API (cliente tipado do Hono), com cache e erros em português
   db/       @pulo/db      Prisma 7 e PostgreSQL: schema, migrações, cliente, mapeadores e apoio a testes
 docs/specs/pulo           as 10 specs do projeto
 ```
@@ -134,9 +144,18 @@ docs/specs/pulo           as 10 specs do projeto
 
 ## Privacidade
 
-Os dados da conta ficam no servidor (PostgreSQL), só para a pessoa logada, e o modo demo fica no aparelho. A IA semanal recebe só um resumo agregado, nunca títulos, nomes ou texto livre.
-Sem endereço de IA configurado, as sugestões vêm de regras simples e aparecem como "Sugestão".
-Todos os dados do modo demo são sintéticos.
+- **Conta.** O login é com o Google. O servidor guarda seu nome, e-mail e foto do Google, e a sessão.
+- **Seus dados no app.** Nome do sapo, horário do dia, tema, rotina, hábitos e marcações, sessões de foco, check ins de energia,
+  dias de descanso, sugestões da semana e o estado do sapo ficam no servidor (PostgreSQL), ligados só à sua conta.
+  Só quem entrou na conta consegue ler ou mudar esses dados. No celular a sessão fica no armazenamento seguro do aparelho;
+  na web, num cookie do navegador.
+- **Apagar.** "Apagar todos os meus dados", no Perfil, remove da conta a rotina, os hábitos, as sessões, os check ins, os descansos,
+  as sugestões e o sapo, em todos os aparelhos. A conta e o login continuam; sair da conta é outro botão.
+- **Modo demo.** Não pede login nem envia seus dados: usa só dados sintéticos de exemplo, guardados na memória do aparelho
+  e descartados ao fechar. Nada do demo vai para o servidor.
+- **IA semanal.** Recebe só um resumo agregado da semana (minutos por período do dia, taxas de conclusão, energia média, contagens),
+  nunca títulos, nome do sapo, e-mail, nome da conta ou texto livre, e o pedido não leva sua sessão.
+  Sem endereço de IA configurado, as sugestões vêm de regras simples e aparecem como "Sugestão".
 
 ## Licença
 

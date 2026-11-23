@@ -1,7 +1,7 @@
 # Pulo: guia para agentes
 
 App do hackathon em Expo SDK 58 (React Native, Expo Router, TypeScript), com saída web estática.
-Monorepo com npm workspaces e Turborepo: `apps/mobile` (Expo), `apps/api` (Hono no Cloudflare Workers), `packages/core` (regras puras) e `packages/db` (Prisma e PostgreSQL).
+Monorepo com npm workspaces e Turborepo: `apps/mobile` (Expo), `apps/api` (Hono no Cloudflare Workers), `packages/core` (regras puras), `packages/db` (Prisma e PostgreSQL) e `packages/client` (RemoteRepository sobre a API).
 Specs em `docs/specs/pulo/` (01 a 10). Leia só as da sua parte.
 
 ## Regras
@@ -39,5 +39,10 @@ Na raiz, cada comando roda em todos os pacotes via Turborepo:
 - `apps/api` (`@pulo/api`): Hono no Cloudflare Workers (`pulo-api`). `src/weekly-ai.ts` é a função da IA, `src/app.ts` as rotas,
   `src/auth.ts` o Better Auth (Google, adapter do Prisma), `src/routes/*` as rotas de domínio (uma por recurso, veja `docs/api.md`), `src/http.ts` sessão, validação e erros, `src/worker.ts` a entrada do Worker (um cliente de banco por requisição),
   `wrangler.jsonc` a config. Testes com Vitest contra um Postgres de verdade (embedded). Segredos só por `wrangler secret put`.
+- `packages/client` (`@pulo/client`): `createRemoteRepository` (o `Repository` do core sobre `hc<AppType>`; um `GET /api/sync` na abertura, cache em memória,
+  escritas otimistas com rollback), `RemoteError` com texto em português. Só importa o TIPO da API. Testes com Vitest rodando a API de verdade
+  (`app.fetch`) no Postgres de teste e a suíte `@pulo/core/data/repository-contract`.
+- `apps/mobile`, de onde vêm os dados: `features/app/AppProvider.tsx` é o ÚNICO lugar que decide (`origem.ts`): demo = memória sintética (sem login),
+  sessão = RemoteRepository, senão tela de login (`features/sessao`). Telas novas não escolhem repositório: usam `useApp().repo`.
 - `packages/db` (`@pulo/db`): `prisma/schema.prisma` e `prisma/migrations`, `createDb(url)`, mapeadores `toDomain`/`fromDomain`,
   `@pulo/db/testing` (`createTestDatabase`, `countQueries`). Veja `docs/banco-de-dados.md`. Sem `any`, sem N+1.

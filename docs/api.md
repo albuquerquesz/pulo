@@ -110,7 +110,7 @@ Já existiam e continuam: `GET /health`, `/api/auth/*`, `GET /api/me`, `PATCH /a
 ```json
 {
   "user": { "id": "", "name": "", "email": "", "image": null },
-  "metadata": { "version": 1, "theme": "sistema", "reduceMotion": false, "timezone": "America/Sao_Paulo", "onboarding": { "completed": false, "completedAt": null } },
+  "metadata": { "version": 1, "theme": "sistema", "reduceMotion": false, "timezone": "America/Sao_Paulo", "onboarding": { "completed": false, "completedAt": null }, "profile": null },
   "blocks": [], "habits": [], "habitLogs": [], "sessions": [], "checkIns": [], "restDays": [],
   "proposals": [], "mascot": null, "serverTime": 1795000000000
 }
@@ -138,3 +138,20 @@ propostas e o estado do sapo da pessoa, numa transação. Conta, login e metadad
 | `getMascotState` (`saveMascotState` não existe: o servidor calcula) | `GET /api/mascot` |
 | `getUser` | `GET /api/me` e `metadata` do `GET /api/sync` |
 | `clearAll` | `DELETE /api/data` |
+
+## Cliente no app: `@pulo/client`
+
+`createRemoteRepository({ baseUrl, fetch?, credentials?, getHeaders?, clock?, historyDays?, retries? })` devolve um `Repository` do core
+(mais `account` e `reload()`), sobre `hc<AppType>` (só o tipo da API entra no pacote).
+
+- **Abertura:** um `GET /api/sync` com a janela de `syncRange`: 180 dias para trás e 2 para frente, no fuso padrão (limite do servidor: 400).
+  Blocos, hábitos e propostas vêm inteiros. Hábitos feitos, check ins, descansos e sessões só da janela (mais a sessão em andamento).
+  O estado do sapo vem do servidor, que conta todo o histórico. Dados mais velhos que a janela não aparecem nas telas.
+- **Leitura:** sempre do cache em memória, sem rede. `reload()` repete o sync.
+- **Escrita:** o cache muda na hora, o `PUT` ou `DELETE` da rota vai em seguida (uma escrita por chave de cada vez, chaves diferentes em paralelo).
+  Se falhar, volta o que era (só se ninguém mexeu na mesma chave depois) e sobe um `RemoteError`. `conflito_concorrente` é repetido (padrão 2 vezes).
+- **Usuário:** `getUser` e `saveUser` usam `metadata.profile` e as preferências (`PATCH /api/me/metadata`), via `userFromMetadata` e
+  `metadataPatchFromUser` do core. `saveMascotState` só atualiza o cache: o sapo é do servidor (a resposta de encerrar sessão e de descanso traz o novo estado).
+- **`clearAll`:** `DELETE /api/data` e depois `PATCH /api/me/metadata` com `profile: null` e `onboardingCompleted: false` (volta ao onboarding; a conta fica).
+- **Erros:** `RemoteError` com `kind` (`rede`, `sessao`, `api`, `resposta_invalida`), `code` (código da tabela acima), `status`, `issues` e `mensagem` em português.
+- **Cookie:** na web `credentials: 'include'` (padrão). No celular o cookie do Better Auth vai em `getHeaders` com `credentials: 'omit'`.
