@@ -4,6 +4,7 @@ import {
   BLOCK_MAX_MINUTES,
   BLOCK_MIN_MINUTES,
   FOCUS,
+  GOALS,
   MAX_HABITS_PER_DAY,
   WEEKLY_AI,
 } from '../config/decisions';
@@ -12,6 +13,8 @@ import type {
   BlockSlot,
   DateKey,
   FocusSession,
+  Goal,
+  GoalMilestone,
   Habit,
   HabitLog,
   MascotState,
@@ -37,6 +40,8 @@ const MAX_EPOCH_MS = 8_640_000_000_000_000;
 /** Limite técnico (não é decisão de produto) dos textos livres. */
 export const API_LIMITS = {
   titleMaxChars: 80,
+  /** O porquê de uma meta. */
+  goalWhyMaxChars: 200,
   proposalTextMaxChars: 280,
   idMaxChars: 64,
   /** Itens por escrita em lote (`PUT /api/blocks` e `PUT /api/habits`). O onboarding grava 15 blocos e 2 hábitos. */
@@ -244,6 +249,30 @@ export const mascotStateSchema = z.object({
   updatedAt: msSchema,
 }) satisfies z.ZodType<MascotState, unknown>;
 
+export const goalMilestoneSchema = z.object({
+  id: idSchema,
+  title: titleSchema,
+  doneAt: msSchema.optional(),
+}) satisfies z.ZodType<GoalMilestone, unknown>;
+
+export const goalSchema = z
+  .object({
+    id: idSchema,
+    title: titleSchema,
+    why: z.string().trim().min(1).max(API_LIMITS.goalWhyMaxChars).optional(),
+    targetDate: dateKeySchema.optional(),
+    state: z.enum(['ativa', 'concluida']),
+    milestones: z.array(goalMilestoneSchema).max(GOALS.maxMilestones),
+    createdAt: msSchema,
+    completedAt: msSchema.optional(),
+  })
+  .superRefine((goal, ctx) => {
+    const issue = (path: string, message: string) => ctx.addIssue({ code: 'custom', path: [path], message });
+    if (goal.state === 'ativa' && goal.completedAt !== undefined) issue('completedAt', 'meta ativa não tem completedAt');
+    if (goal.state === 'concluida' && goal.completedAt === undefined) issue('completedAt', 'meta concluída precisa de completedAt');
+    if (new Set(goal.milestones.map((m) => m.id)).size !== goal.milestones.length) issue('milestones', 'id de marco repetido');
+  }) satisfies z.ZodType<Goal, unknown>;
+
 /** Corpo de `PUT /api/habits`: vários hábitos de uma vez (tudo ou nada). Cada item segue `habitSchema`. */
 export const habitsBatchSchema = z
   .object({ habits: z.array(habitSchema).min(1).max(API_LIMITS.batchMaxHabits) })
@@ -298,6 +327,7 @@ export const API_ERROR_CODES = [
   'rota_inexistente',
   'conflito_de_id',
   'limite_por_dia',
+  'limite_de_metas',
   'sessao_em_andamento',
   'sessao_encerrada',
   'sessao_imutavel',

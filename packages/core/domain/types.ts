@@ -112,6 +112,31 @@ export interface WeeklyProposal {
   decidedAt?: number;
 }
 
+export type GoalState = 'ativa' | 'concluida';
+
+/** Passo de uma meta. `doneAt` existe quando o marco foi riscado. */
+export interface GoalMilestone {
+  id: EntityId;
+  title: string;
+  doneAt?: number;
+}
+
+/**
+ * Meta de longo prazo (meses ou anos), acima dos hábitos e da semana.
+ * Os marcos são os passos que a tornam concreta; `targetDate` é opcional.
+ */
+export interface Goal {
+  id: EntityId;
+  title: string;
+  /** Por que essa meta importa, em uma frase. */
+  why?: string;
+  targetDate?: DateKey;
+  state: GoalState;
+  milestones: GoalMilestone[];
+  createdAt: number;
+  completedAt?: number;
+}
+
 /** Derivado e guardado em cache. Nunca é a fonte da verdade. */
 export interface MascotState {
   phase: Phase;
@@ -180,6 +205,10 @@ export interface Repository {
 
   listProposals(): Promise<WeeklyProposal[]>;
   saveProposal(proposal: WeeklyProposal): Promise<void>;
+
+  listGoals(): Promise<Goal[]>;
+  saveGoal(goal: Goal): Promise<void>;
+  deleteGoal(id: EntityId): Promise<void>;
 
   getMascotState(): Promise<MascotState | null>;
   saveMascotState(state: MascotState): Promise<void>;

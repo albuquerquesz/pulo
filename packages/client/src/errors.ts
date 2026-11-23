@@ -19,6 +19,7 @@ export const MENSAGENS_DA_API = {
   rota_inexistente: 'Esta versão do app não conversa com o servidor. Atualize o app.',
   conflito_de_id: 'Algo saiu errado ao salvar. Tente de novo.',
   limite_por_dia: 'Um dia comporta poucos hábitos. Que tal deixar um para outro dia?',
+  limite_de_metas: 'Já tem metas ativas demais. Conclua ou apague uma para abrir espaço.',
   sessao_em_andamento: 'Já existe um foco em andamento.',
   sessao_encerrada: 'Esse foco já terminou e não pode mais mudar.',
   sessao_imutavel: 'Um foco em andamento não pode mudar de horário ou duração.',
