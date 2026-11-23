@@ -3,6 +3,7 @@
   "ui": "stream",
   "globalEnv": [
     "EXPO_PUBLIC_*",
+    "VITE_*",
     "PULO_*",
     "PORT",
     "DATABASE_URL"
