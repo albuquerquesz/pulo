@@ -1,5 +1,4 @@
 import type {
-  CheckIn,
   FocusSession,
   Habit,
   HabitLog,
@@ -21,7 +20,6 @@ export interface DemoData {
   habits: Habit[];
   habitLogs: HabitLog[];
   sessions: FocusSession[];
-  checkIns: CheckIn[];
   restDays: RestDay[];
 }
 
@@ -44,8 +42,7 @@ const WEEKDAYS: Weekday[] = [0, 1, 2, 3, 4];
 
 /**
  * 4 semanas sintéticas e coerentes, só dados inventados.
- * Padrão para a IA: manhãs com energia alta e focos concluídos; tardes com energia
- * baixa e interrupções. A semana 1 tem dias sem registro (sem culpa) e um descanso.
+ * Padrão para a IA: manhãs com focos concluídos; tardes com interrupções. A semana 1 tem dias sem registro (sem culpa) e um descanso.
  * Em cada semana, de segunda a sexta, há foco; sábado é descanso.
  */
 export function generateDemoData(seed: number = DEMO_DEFAULT_SEED, createdAt = 0): DemoData {
@@ -76,7 +73,6 @@ export function generateDemoData(seed: number = DEMO_DEFAULT_SEED, createdAt = 0
   ];
 
   const sessions: FocusSession[] = [];
-  const checkIns: CheckIn[] = [];
   const habitLogs: HabitLog[] = [];
   const restDays: RestDay[] = [];
 
@@ -113,14 +109,10 @@ export function generateDemoData(seed: number = DEMO_DEFAULT_SEED, createdAt = 0
       // Tarde: na maioria dos dias interrompida (padrão que a IA pode notar).
       const afternoonDone = rnd() < 0.25;
       mk(`demo-sessao-${date}-t`, 'tarde', AFTERNOON_START + int(0, 5), BLOCK_MINUTES, afternoonDone ? 'concluida' : 'interrompida');
-      const mkCheck = (period: 'manha' | 'tarde', min: number, energy: 1 | 2 | 3 | 4 | 5) =>
-        checkIns.push({ id: `demo-checkin-${date}-${period}`, date, period, energy, createdAt: localToMs(date, min) });
-      mkCheck('manha', 8 * 60 + 30, (int(4, 5) as 4 | 5));
-      mkCheck('tarde', 14 * 60, (int(1, 2) as 1 | 2));
       habitLogs.push({ habitId: 'demo-habito-agua', date, doneAt: localToMs(date, 10 * 60) });
       if (wd % 2 === 0) habitLogs.push({ habitId: 'demo-habito-alongar', date, doneAt: localToMs(date, 7 * 60 + 30) });
     }
   }
 
-  return { user, blocks, habits, habitLogs, sessions, checkIns, restDays };
+  return { user, blocks, habits, habitLogs, sessions, restDays };
 }

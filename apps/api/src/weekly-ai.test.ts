@@ -5,7 +5,7 @@ import { summarizeDemoWeek } from '@pulo/core/demo/summary';
 import { createProviderFromEnv, FakeProvider, handleWeeklyAi, parseRequestBody } from './weekly-ai';
 
 const d = generateDemoData();
-const s = summarizeDemoWeek('2026-11-16', d.sessions, d.checkIns, d.restDays, 5);
+const s = summarizeDemoWeek('2026-11-16', d.sessions, d.restDays, 5);
 const body = buildAiRequest(s, computeCandidates(s, d.blocks));
 
 describe('weekly-ai', () => {

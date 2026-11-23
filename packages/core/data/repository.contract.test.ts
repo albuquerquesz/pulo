@@ -82,13 +82,8 @@ describe.each(factories)('contrato do Repository: %s', (_name, make) => {
     expect(await r.listSessions()).toHaveLength(2);
   });
 
-  it('check ins, descanso, propostas e estado do mascote', async () => {
+  it('descanso, propostas e estado do mascote', async () => {
     const r = make();
-    await r.saveCheckIn({ id: 'c', date: '2026-11-10', period: 'manha', energy: 3, createdAt: 1 });
-    await r.saveCheckIn({ id: 'c', date: '2026-11-10', period: 'manha', energy: 4, createdAt: 2 });
-    await r.saveCheckIn({ id: 'd', date: '2026-11-11', period: 'tarde', energy: 2, createdAt: 3 });
-    expect(await r.listCheckIns()).toHaveLength(2);
-    expect(await r.listCheckIns({ from: '2026-11-11', to: '2026-11-11' })).toHaveLength(1);
     await r.saveRestDay({ date: '2026-11-10' });
     await r.saveRestDay({ date: '2026-11-10' });
     expect(await r.listRestDays()).toHaveLength(1);
@@ -120,7 +115,6 @@ describe.each(factories)('contrato do Repository: %s', (_name, make) => {
     await r.saveHabit({ id: 'h', title: 'x', weekdays: [0], active: true });
     await r.saveHabitLog({ habitId: 'h', date: '2026-11-10', doneAt: 1 });
     await r.saveSession(endedSession(1, 25, 'concluida'));
-    await r.saveCheckIn({ id: 'c', date: '2026-11-10', period: 'manha', energy: 3, createdAt: 1 });
     await r.saveRestDay({ date: '2026-11-10' });
     await r.saveProposal({ id: 'p', weekStart: 'x', state: 'pendente', patternText: '', changes: [], origin: 'ia', createdAt: 1 });
     await r.saveMascotState({ phase: 3, careDays: 9, updatedAt: 1 });
@@ -130,7 +124,6 @@ describe.each(factories)('contrato do Repository: %s', (_name, make) => {
     expect(await r.listHabits()).toEqual([]);
     expect(await r.listHabitLogs()).toEqual([]);
     expect(await r.listSessions()).toEqual([]);
-    expect(await r.listCheckIns()).toEqual([]);
     expect(await r.listRestDays()).toEqual([]);
     expect(await r.listProposals()).toEqual([]);
     expect(await r.getMascotState()).toBeNull();

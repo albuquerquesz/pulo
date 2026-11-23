@@ -1,5 +1,4 @@
 import type {
-  CheckIn,
   DateKey,
   DateRange,
   FocusSession,
@@ -21,7 +20,6 @@ export interface Database {
   habits: Habit[];
   habitLogs: HabitLog[];
   sessions: FocusSession[];
-  checkIns: CheckIn[];
   restDays: RestDay[];
   proposals: WeeklyProposal[];
   mascot: MascotState | null;
@@ -35,7 +33,6 @@ export function emptyDatabase(): Database {
     habits: [],
     habitLogs: [],
     sessions: [],
-    checkIns: [],
     restDays: [],
     proposals: [],
     mascot: null,
@@ -111,8 +108,6 @@ export function createRepository(store: DatabaseStore): Repository {
         upsert(db.sessions, clone(session), (s) => s.id === session.id);
       }),
 
-    listCheckIns: (range) => read((db) => db.checkIns.filter((c) => inRange(c.date, range))),
-    saveCheckIn: (checkIn) => write((db) => upsert(db.checkIns, clone(checkIn), (c) => c.id === checkIn.id)),
 
     listRestDays: () => read((db) => db.restDays),
     saveRestDay: (restDay) => write((db) => upsert(db.restDays, clone(restDay), (r) => r.date === restDay.date)),

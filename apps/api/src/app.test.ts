@@ -21,7 +21,7 @@ describe('API', () => {
 
   it('devolve a sugestão do provedor falso', async () => {
     const data = generateDemoData();
-    const summary = summarizeDemoWeek('2026-11-16', data.sessions, data.checkIns, data.restDays, 5);
+    const summary = summarizeDemoWeek('2026-11-16', data.sessions, data.restDays, 5);
     const request = buildAiRequest(summary, computeCandidates(summary, data.blocks));
     const res = await app.request('/weekly-ai', {
       method: 'POST',

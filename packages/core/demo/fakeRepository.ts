@@ -1,5 +1,4 @@
 import type {
-  CheckIn,
   FocusSession,
   Habit,
   HabitLog,
@@ -19,7 +18,6 @@ export function createFakeRepository(): Repository {
   const habits = new Map<string, Habit>();
   let logs: HabitLog[] = [];
   const sessions = new Map<string, FocusSession>();
-  const checkIns = new Map<string, CheckIn>();
   const rest = new Map<string, RestDay>();
   const proposals = new Map<string, WeeklyProposal>();
   const inRange = (d: string, r?: { from: string; to: string }) => !r || (d >= r.from && d <= r.to);
@@ -40,8 +38,6 @@ export function createFakeRepository(): Repository {
     deleteHabitLog: async (h, d) => void (logs = logs.filter((l) => !(l.habitId === h && l.date === d))),
     listSessions: async () => [...sessions.values()],
     saveSession: async (s) => void sessions.set(s.id, s),
-    listCheckIns: async (r) => [...checkIns.values()].filter((c) => inRange(c.date, r)),
-    saveCheckIn: async (c) => void checkIns.set(c.id, c),
     listRestDays: async () => [...rest.values()],
     saveRestDay: async (r) => void rest.set(r.date, r),
     deleteRestDay: async (d) => void rest.delete(d),
@@ -56,7 +52,6 @@ export function createFakeRepository(): Repository {
       habits.clear();
       logs = [];
       sessions.clear();
-      checkIns.clear();
       rest.clear();
       proposals.clear();
     },

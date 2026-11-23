@@ -1,5 +1,5 @@
 import { PERIODS } from '../config/decisions';
-import type { CheckIn, FocusSession, Period, RestDay, WeekSummary } from '../domain/types';
+import type { FocusSession, Period, RestDay, WeekSummary } from '../domain/types';
 import { countCareDays } from './careDays';
 import { addDays, dateKeyOf } from './time';
 
@@ -18,7 +18,6 @@ function periodOfMs(ms: number): Period | null {
 export function summarizeDemoWeek(
   weekStart: string,
   sessions: FocusSession[],
-  checkIns: CheckIn[],
   restDays: RestDay[],
   stableMinCareDays: number,
 ): WeekSummary {
@@ -28,8 +27,6 @@ export function summarizeDemoWeek(
   const focus = zero();
   const done = zero();
   const stopped = zero();
-  const eSum = zero();
-  const eN = zero();
   const days = new Set<string>();
   const wSessions = sessions.filter((s) => inWeek(dateKeyOf(s.startedAt)) && s.state !== 'em_andamento');
   for (const s of wSessions) {
@@ -40,12 +37,6 @@ export function summarizeDemoWeek(
       done[p]++;
       focus[p] += s.plannedMinutes;
     } else stopped[p]++;
-  }
-  const wChecks = checkIns.filter((c) => inWeek(c.date));
-  for (const c of wChecks) {
-    days.add(c.date);
-    eSum[c.period] += c.energy;
-    eN[c.period]++;
   }
   const wRest = restDays.filter((r) => inWeek(r.date));
   wRest.forEach((r) => days.add(r.date));
@@ -60,12 +51,6 @@ export function summarizeDemoWeek(
     weekEnd,
     focusMinutesByPeriod: focus,
     sessionsByPeriod: { manha: stats('manha'), tarde: stats('tarde'), noite: stats('noite') },
-    energyByPeriod: {
-      manha: { average: eN.manha ? eSum.manha / eN.manha : null, checkIns: eN.manha },
-      tarde: { average: eN.tarde ? eSum.tarde / eN.tarde : null, checkIns: eN.tarde },
-      noite: { average: eN.noite ? eSum.noite / eN.noite : null, checkIns: eN.noite },
-    },
-    totalCheckIns: wChecks.length,
     totalSessions: wSessions.length,
     restDays: wRest.length,
     careDays,

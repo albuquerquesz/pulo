@@ -19,7 +19,6 @@ export async function seedRepository(
   for (const h of d.habits) await repo.saveHabit(h);
   for (const l of d.habitLogs) await repo.saveHabitLog(l);
   for (const s of d.sessions) await repo.saveSession(s);
-  for (const c of d.checkIns) await repo.saveCheckIn(c);
   for (const r of d.restDays) await repo.saveRestDay(r);
   const careDays = countCareDays(d.sessions, d.restDays);
   await repo.saveMascotState({ phase: phaseForCareDays(careDays), careDays, updatedAt: now });

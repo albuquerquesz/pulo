@@ -2,7 +2,7 @@ import { PHASE_MIN_CARE_DAYS, STABLE_WEEK_MIN_CARE_DAYS } from '../config/decisi
 import { careDayKeys, countCareDays, sessionCountsAsCare } from './care-days';
 import { addDays, dateKeyOf, periodOf, startOfLogicalDay, weekdayOf, weekStartOf } from './day';
 import { computeMascotState, phaseForCareDays, refreshMascotState, resolvePhase } from './phase';
-import { checkIn, endedSession, sp, TZ } from './test-utils';
+import { endedSession, sp, TZ } from './test-utils';
 import { buildWeekSummary, loadWeekSummary } from './week-summary';
 import { createMemoryRepository } from '../data/memory-repository';
 import type { FocusSession, RestDay } from './types';
@@ -124,7 +124,7 @@ describe('fases do sapo', () => {
 describe('resumo da semana', () => {
   // semana de 2026-11-09 (segunda) a 2026-11-15
   const rest = (d: number): RestDay => ({ date: `2026-11-${String(d).padStart(2, '0')}` });
-  it('agrega minutos por período, sessões e energia', () => {
+  it('agrega minutos por período e sessões', () => {
     const sessions = [
       endedSession(sp(2026, 11, 9, 9), 25, 'concluida'),
       endedSession(sp(2026, 11, 9, 10), 30, 'concluida', 30),
@@ -135,7 +135,6 @@ describe('resumo da semana', () => {
       weekStart: '2026-11-09',
       timeZone: TZ,
       sessions,
-      checkIns: [checkIn('2026-11-09', 'manha', 4), checkIn('2026-11-10', 'manha', 2), checkIn('2026-11-10', 'tarde', 5)],
       restDays: [rest(12)],
     });
     expect(s.weekEnd).toBe('2026-11-15');
@@ -143,9 +142,6 @@ describe('resumo da semana', () => {
     expect(s.sessionsByPeriod.manha).toEqual({ completed: 2, interrupted: 0, completionRate: 1 });
     expect(s.sessionsByPeriod.tarde).toEqual({ completed: 0, interrupted: 1, completionRate: 0 });
     expect(s.sessionsByPeriod.noite.completionRate).toBeNull();
-    expect(s.energyByPeriod.manha).toEqual({ average: 3, checkIns: 2 });
-    expect(s.energyByPeriod.noite).toEqual({ average: null, checkIns: 0 });
-    expect(s.totalCheckIns).toBe(3);
     expect(s.totalSessions).toBe(3);
     expect(s.restDays).toBe(1);
     expect(s.careDays).toBe(2); // 9 (concluídas) e 12 (descanso); a de 10 foi <50%
@@ -156,7 +152,6 @@ describe('resumo da semana', () => {
       weekStart: '2026-11-09',
       timeZone: TZ,
       sessions: [endedSession(sp(2026, 11, 9, 9), 25, 'concluida')],
-      checkIns: [],
       restDays: [],
     });
     const strings: string[] = [];
@@ -172,7 +167,6 @@ describe('resumo da semana', () => {
         weekStart: '2026-11-09',
         timeZone: TZ,
         sessions: Array.from({ length: n }, (_, i) => endedSession(sp(2026, 11, 9 + i, 9), 25, 'concluida')),
-        checkIns: [],
         restDays: [],
       });
     expect(STABLE_WEEK_MIN_CARE_DAYS).toBe(5);

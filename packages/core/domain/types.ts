@@ -14,7 +14,6 @@ export type EntityId = string;
 /** Dia da semana: 0 = segunda ... 6 = domingo (semana de segunda a domingo). */
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export type Period = 'manha' | 'tarde' | 'noite';
-export type Energy = 1 | 2 | 3 | 4 | 5;
 export type Phase = 1 | 2 | 3 | 4;
 
 export interface Clock {
@@ -77,14 +76,6 @@ export interface FocusSession {
   pausedSince?: number;
 }
 
-export interface CheckIn {
-  id: EntityId;
-  date: DateKey;
-  period: Period;
-  energy: Energy;
-  createdAt: number;
-}
-
 export interface RestDay {
   date: DateKey;
 }
@@ -138,24 +129,16 @@ export interface PeriodSessionStats {
   completionRate: number | null;
 }
 
-export interface PeriodEnergyStats {
-  /** Média de 1 a 5, ou null sem check ins. */
-  average: number | null;
-  checkIns: number;
-}
-
 export interface WeekSummary {
   /** Segunda e domingo da semana, DateKey. */
   weekStart: DateKey;
   weekEnd: DateKey;
   focusMinutesByPeriod: Record<Period, number>;
   sessionsByPeriod: Record<Period, PeriodSessionStats>;
-  energyByPeriod: Record<Period, PeriodEnergyStats>;
-  totalCheckIns: number;
   totalSessions: number;
   restDays: number;
   careDays: number;
-  /** Dias com qualquer registro (sessão, check in, descanso ou hábito). */
+  /** Dias com qualquer registro (sessão, descanso ou hábito). */
   daysWithRecord: number;
   /** careDays >= STABLE_WEEK_MIN_CARE_DAYS. */
   stable: boolean;
@@ -190,9 +173,6 @@ export interface Repository {
 
   listSessions(): Promise<FocusSession[]>;
   saveSession(session: FocusSession): Promise<void>;
-
-  listCheckIns(range?: DateRange): Promise<CheckIn[]>;
-  saveCheckIn(checkIn: CheckIn): Promise<void>;
 
   listRestDays(): Promise<RestDay[]>;
   saveRestDay(restDay: RestDay): Promise<void>;
@@ -229,8 +209,8 @@ export type FrogEvent = 'pouso' | 'surpreso' | 'feliz';
  */
 export interface FrogInputs {
   phase: Phase;
-  /** Energia mais recente do dia (1 a 5) ou null. */
-  latestEnergyToday: Energy | null;
+  /** Focos interrompidos hoje (dia lógico). */
+  interruptedFocusToday: number;
   focusRunning: boolean;
   aiAnalyzing: boolean;
   /** Evento transitório ativo agora (já dentro da janela de duração), se houver. */

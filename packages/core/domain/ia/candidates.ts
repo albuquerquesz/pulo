@@ -60,25 +60,19 @@ function findFreeSlot(
 }
 
 function moveCandidates(summary: WeekSummary, blocks: RoutineBlock[]): Candidate[] {
-  const counted = PERIOD_ORDER.filter(
-    (p) =>
-      summary.energyByPeriod[p].checkIns >= WEEKLY_AI.minCheckInsPerPeriodToCount &&
-      summary.energyByPeriod[p].average !== null &&
-      summary.sessionsByPeriod[p].completionRate !== null,
-  );
-  // Período forte: maior energia média entre os que contam.
-  const strong = [...counted].sort(
-    (a, b) => (summary.energyByPeriod[b].average ?? 0) - (summary.energyByPeriod[a].average ?? 0),
-  )[0];
+  const rate = (p: Period) => summary.sessionsByPeriod[p].completionRate ?? 0;
+  const counted = PERIOD_ORDER.filter((p) => {
+    const { completed, interrupted, completionRate } = summary.sessionsByPeriod[p];
+    return completionRate !== null && completed + interrupted >= WEEKLY_AI.minSessionsPerPeriodToCount;
+  });
+  // Período forte: maior taxa de focos concluídos entre os que contam.
+  const strong = [...counted].sort((a, b) => rate(b) - rate(a))[0];
   if (!strong) return [];
-  const sE = summary.energyByPeriod[strong].average as number;
-  const sR = summary.sessionsByPeriod[strong].completionRate as number;
+  const sR = rate(strong);
   const out: Candidate[] = [];
   for (const weak of counted) {
     if (weak === strong) continue;
-    const wE = summary.energyByPeriod[weak].average as number;
-    const wR = summary.sessionsByPeriod[weak].completionRate as number;
-    if (!(wE < sE && wR < sR)) continue;
+    if (rate(weak) >= sR) continue;
     const focus = blocks
       .filter((b) => b.kind === 'foco' && periodOfMinutes(b.startMinutes) === weak)
       .sort((a, b) => a.weekday - b.weekday || a.startMinutes - b.startMinutes);
@@ -176,6 +170,6 @@ export function computeCandidates(
 export function hasEnoughData(summary: WeekSummary): boolean {
   return (
     summary.daysWithRecord >= WEEKLY_AI.minDaysWithRecord &&
-    summary.totalSessions + summary.totalCheckIns >= WEEKLY_AI.minSessionsOrCheckIns
+    summary.totalSessions >= WEEKLY_AI.minSessions
   );
 }
