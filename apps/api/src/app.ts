@@ -8,6 +8,7 @@ import { type RouteDeps, handleError, handleNotFound } from './http';
 import { meRoutes } from './me';
 import { blockRoutes } from './routes/blocks';
 import { dataRoutes } from './routes/data';
+import { goalRoutes } from './routes/goals';
 import { habitLogRoutes } from './routes/habit-logs';
 import { habitRoutes } from './routes/habits';
 import { mascotRoutes } from './routes/mascot';
@@ -68,6 +69,7 @@ export function createApp(env: ApiEnv, db: Db, now = Date.now, options: AppOptio
     .route('/api/sessions', sessionRoutes(deps))
     .route('/api/rest-days', restDayRoutes(deps))
     .route('/api/proposals', proposalRoutes(deps))
+    .route('/api/goals', goalRoutes(deps))
     .route('/api/mascot', mascotRoutes(deps))
     .route('/api/week-summary', weekSummaryRoutes(deps))
     .route('/api/sync', syncRoutes(deps))

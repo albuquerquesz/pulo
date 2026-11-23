@@ -67,6 +67,7 @@ describe('/api/sync', () => {
       sessions: [],
       restDays: [],
       proposals: [],
+      goals: [],
       mascot: null,
       serverTime: TEST_NOW,
     });
@@ -107,6 +108,6 @@ describe('/api/sync', () => {
     const one = await queriesOf(database, small, 'GET', `/api/sync${RANGE}`);
     expect(await queriesOf(database, big, 'GET', `/api/sync${RANGE}`)).toBe(one);
     // 2 de sessão + 7 leituras numa transação.
-    expect(one).toBe(9);
+    expect(one).toBe(10);
   });
 });
