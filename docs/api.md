@@ -42,6 +42,12 @@ Nunca há stack trace; erro inesperado vira 500 `erro_interno` e o detalhe fica 
 | 409 | `conflito_de_id` | id já usado por outra pessoa (nunca sobrescreve). No lote, `issues` lista `blocks.N.id` ou `habits.N.id` e nada é salvo |
 | 409 | `limite_por_dia` | passaria de `MAX_HABITS_PER_DAY` hábitos ativos no mesmo dia da semana. No lote, `issues` lista `habits.N.weekdays` e nada é salvo |
 | 409 | `limite_de_metas` | passaria de `GOALS.maxActive` metas ativas (concluídas não contam) |
+| 404 | `item_inexistente` | compra na ilha de um item que não está no catálogo `ISLAND` |
+| 400 | `preco_divergente` | compra na ilha com `cost` diferente do preço do catálogo |
+| 409 | `ja_comprado` | área já aberta ou enfeite já comprado (inclui a `lagoa`, que já vem aberta, e o mesmo item com outro corpo) |
+| 409 | `fora_de_ordem` | área que não é a próxima do mapa |
+| 409 | `area_fechada` | enfeite de uma área que ainda não foi aberta |
+| 409 | `moscas_insuficientes` | o saldo de moscas não paga o item. A mensagem diz quantas faltam |
 | 409 | `sessao_em_andamento` | já existe outra sessão em andamento (índice único parcial no banco) |
 | 409 | `sessao_encerrada` | mudança numa sessão `concluida` ou `interrompida` |
 | 409 | `sessao_imutavel` | mudou início, duração planejada ou bloco de uma sessão em andamento |
@@ -82,10 +88,12 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `GET /api/goals` | | `{ goals: Goal[] }` (mais antiga primeiro) | 3 |
 | `PUT /api/goals/:id` | `Goal` (marcos dentro) | `{ goal }` | 4 |
 | `DELETE /api/goals/:id` | | `{ deleted }` | 3 |
+| `GET /api/island/purchases` | | `{ purchases: IslandPurchase[] }` (mais antiga primeiro) | 3 |
+| `PUT /api/island/purchases/:item` | `IslandPurchase` | `{ purchase }` | 8 comprando, 7 repetindo |
 | `GET /api/mascot` | | `{ mascot: MascotState \| null }` | 3 |
 | `GET /api/week-summary?date` | | `{ summary: WeekSummary }` | 5 |
-| `GET /api/sync?from&to` | | ver abaixo (inclui `goals`) | 10 |
-| `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, goals, mascot } }` | 9 |
+| `GET /api/sync?from&to` | | ver abaixo (inclui `goals` e `islandPurchases`) | 11 |
+| `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, goals, islandPurchases, mascot } }` | 10 |
 
 Já existiam e continuam: `GET /health`, `/api/auth/*`, `GET /api/me`, `PATCH /api/me/metadata`, `POST /weekly-ai`.
 
@@ -123,6 +131,12 @@ Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBl
   `PUT /api/proposals/:id` só grava a proposta (usado pelo `saveProposal` do `Repository`) e NÃO mexe nos blocos. No app da conta, gerar e decidir
   passam pelas duas rotas abaixo, que aplicam os blocos junto. A regra pura da máquina de estados está em `@pulo/core/api/proposal-state`
   e a da decisão em `@pulo/core/api/proposal-decision`.
+- **Ilha**: compras de áreas e enfeites com moscas (`IslandPurchase`, uma por item e pessoa), imutáveis: não há `DELETE`,
+  só `DELETE /api/data` apaga. O saldo nunca é gravado. No `PUT`, o item do caminho precisa ser igual ao do corpo (`id_divergente`)
+  e `cost` igual ao preço de `ISLAND` (`preco_divergente`, ou `item_inexistente` se o item não existe). Depois, numa transação serializável,
+  o servidor lê todos os hábitos feitos, sessões, descansos, metas e compras da pessoa, monta `estadoDaIlha` e roda `validarCompra` do core
+  (`@pulo/core/domain/ilha`): fora da regra é 409 com o código e a mensagem do core. Duas compras ao mesmo tempo não gastam o mesmo saldo
+  (a perdedora recebe 409 `conflito_concorrente`). Repetir exatamente a mesma compra é 200 sem gravar de novo (retry seguro).
 
 ### `GET /api/week-summary?date=AAAA-MM-DD`
 
@@ -171,24 +185,24 @@ Resposta 200 `{ proposal, blocks }`: a proposta já atualizada e TODOS os blocos
 
 ### `GET /api/sync?from&to`
 
-`from` e `to` obrigatórios, até 400 dias. Oito leituras numa transação, resposta:
+`from` e `to` obrigatórios, até 400 dias. Nove leituras numa transação, resposta:
 
 ```json
 {
   "user": { "id": "", "name": "", "email": "", "image": null },
   "metadata": { "version": 1, "theme": "sistema", "reduceMotion": false, "timezone": "America/Sao_Paulo", "onboarding": { "completed": false, "completedAt": null }, "profile": null },
   "blocks": [], "habits": [], "habitLogs": [], "sessions": [], "restDays": [],
-  "proposals": [], "mascot": null, "serverTime": 1795000000000
+  "proposals": [], "goals": [], "islandPurchases": [], "mascot": null, "serverTime": 1795000000000
 }
 ```
 
-Blocos, hábitos e propostas vêm inteiros; hábitos feitos e descansos, só do intervalo; sessões do intervalo mais a
+Blocos, hábitos, propostas, metas e compras da ilha vêm inteiros; hábitos feitos e descansos, só do intervalo; sessões do intervalo mais a
 em andamento. `serverTime` é o relógio do servidor em ms.
 
 ### `DELETE /api/data`
 
 O `clearAll` do servidor, único jeito de zerar o progresso: apaga blocos, hábitos (e seus registros), sessões, descansos,
-propostas e o estado do sapo da pessoa, numa transação. Conta, login e metadados (tema, fuso, onboarding) ficam.
+propostas, metas, compras da ilha e o estado do sapo da pessoa, numa transação. Conta, login e metadados (tema, fuso, onboarding) ficam.
 
 ## Mapa para o `Repository`
 
@@ -201,9 +215,9 @@ propostas e o estado do sapo da pessoa, numa transação. Conta, login e metadad
 | `listRestDays`, `saveRestDay`, `deleteRestDay` | `GET /api/rest-days`, `PUT`, `DELETE /api/rest-days/:date` |
 | `listProposals`, `saveProposal` | `GET /api/proposals`, `PUT /api/proposals/:id` |
 | `generateProposal`, `decideProposal` (só no `RemoteRepository`) | `POST /api/proposals/generate`, `POST /api/proposals/:id/decision` |
-| `getMascotState` (`saveMascotState` não existe: o servidor calcula) | `POST /api/proposals/generate` | `{ date? }` (qualquer dia da semana) | `{ outcome, proposal? }` | 8 sem criar, 9 criando |
-| `POST /api/proposals/:id/decision` | `{ action: 'aceitar' \| 'editar' \| 'negar' \| 'desfazer', change? }` | `{ proposal, blocks }` | 6 aplicando blocos, 5 ao negar, 4 repetindo |
-| `GET /api/mascot` |
+| `listGoals`, `saveGoal`, `deleteGoal` | `GET /api/goals`, `PUT`, `DELETE /api/goals/:id` |
+| `listIslandPurchases`, `saveIslandPurchase` | `GET /api/island/purchases`, `PUT /api/island/purchases/:item` |
+| `getMascotState` (`saveMascotState` não existe: o servidor calcula) | `GET /api/mascot` |
 | `getUser` | `GET /api/me` e `metadata` do `GET /api/sync` |
 | `clearAll` | `DELETE /api/data` |
 
