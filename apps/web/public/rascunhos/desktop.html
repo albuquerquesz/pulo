@@ -26,9 +26,13 @@ nav button{display:flex;align-items:center;gap:12px;background:none;border:0;bor
 nav button svg{width:20px;height:20px;flex:none}
 nav button:hover{background:color-mix(in srgb,var(--sapo) 14%,transparent);color:var(--ink)}
 nav button.on{background:var(--sapo);color:#1f2a24;box-shadow:inset 0 -3px 0 var(--sapo-b)}
-.me{margin-top:auto;border:1px solid var(--line);border-bottom-width:4px;border-radius:var(--r-md);padding:14px;display:flex;gap:12px;align-items:center}
-.me .ava{width:44px;height:44px;border-radius:50%;background:color-mix(in srgb,var(--sapo) 30%,var(--surface));display:grid;place-items:center}
-.me small{display:block;color:var(--muted);font-size:12px}
+.perfil{margin-top:auto;display:flex;align-items:center;gap:12px;padding:16px 8px 0;border-top:1px solid var(--line)}
+.perfil .ava{width:40px;height:40px;border-radius:50%;background:var(--sapo);color:#1f2a24;display:grid;place-items:center;font-weight:800;font-size:17px;flex:none}
+.perfil .info{display:flex;flex-direction:column;min-width:0;flex:1}
+.perfil .info small{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.perfil .cfg{width:36px;height:36px;border-radius:10px;border:0;background:none;color:var(--muted);display:grid;place-items:center;flex:none}
+.perfil .cfg:hover{background:color-mix(in srgb,var(--sapo) 14%,transparent);color:var(--ink)}
+.perfil .cfg svg{width:20px;height:20px}
 .coin{display:inline-flex;align-items:center;gap:4px;font-weight:800}
 .coin i{width:14px;height:14px;border-radius:50%;background:#FFD166;border:1.5px solid #E0A93A;display:inline-block}
 /* main */
@@ -119,9 +123,10 @@ h2{font-size:18px;font-weight:800}
       <button data-v="metas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 21V4h11l-2 4 2 4H5"/></svg>Metas</button>
       <button data-v="perfil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Perfil</button>
     </nav>
-    <div class="me">
-      <div class="ava"><svg width="30" height="30" viewBox="0 0 40 40"><ellipse cx="20" cy="26" rx="15" ry="11" fill="#8fe05a"/><circle cx="12" cy="13" r="7" fill="#8fe05a"/><circle cx="28" cy="13" r="7" fill="#8fe05a"/><circle cx="12.5" cy="13.5" r="2.2" fill="#1f2a24"/><circle cx="28.5" cy="13.5" r="2.2" fill="#1f2a24"/></svg></div>
-      <div><b>Ana</b><small>Fase 4 · 22 dias de cuidado</small><span class="coin"><i></i>140 moscas</span></div>
+    <div class="perfil" aria-label="Seu perfil">
+      <span class="ava" aria-hidden="true">A</span>
+      <div class="info"><b>Ana</b><small>ana@exemplo.com</small></div>
+      <button class="cfg" data-v="perfil" aria-label="Abrir perfil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
     </div>
   </aside>
 
@@ -282,10 +287,6 @@ h2{font-size:18px;font-weight:800}
       </div>
       <div class="kv"><div><span class="leg">Foco</span><b>226 min</b></div><div><span class="leg">Moscas</span><b>+38</b></div></div>
     </div>
-    <div class="card" style="background:color-mix(in srgb,var(--sol) 22%,var(--surface))">
-      <b>Sem culpa</b>
-      <p class="leg" style="margin-top:4px">Descansar também conta. O sapo nunca volta de fase.</p>
-    </div>
   </aside>
 </div>
 <div class="note">Rascunho de estrutura do desktop, com dados de exemplo. Clique em Hoje, Semana e Foco na sidebar.</div>
@@ -297,6 +298,7 @@ document.querySelectorAll('#nav button').forEach(b=>b.addEventListener('click',(
   const v=b.dataset.v, el=document.getElementById('v-'+v);
   if(el) el.classList.add('on'); else {document.getElementById('v-outro').classList.add('on');document.getElementById('outro-t').textContent=b.textContent.trim();document.getElementById('outro-p').textContent=outros[v];}
 }));
+document.querySelector('.perfil .cfg').addEventListener('click',()=>document.querySelector('#nav button[data-v="perfil"]').click());
 const h=location.hash.slice(1);if(h)document.querySelector('#nav button[data-v="'+h+'"]')?.click();
 </script>
 </body>
