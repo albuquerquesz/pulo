@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { Texto } from './Texto';
 
-export type VarianteDeBotao = 'primario' | 'foco' | 'agua' | 'fantasma';
+export type VarianteDeBotao = 'primario' | 'foco' | 'fantasma';
 
 export type BotaoProps = {
   titulo: string;
@@ -23,7 +23,6 @@ export type BotaoProps = {
 const VARIANTE: Record<VarianteDeBotao, string> = {
   primario: 'bg-sapo border-sapo-borda text-ink-sobre-acao',
   foco: 'bg-foco border-foco-borda text-ink-sobre-acao',
-  agua: 'bg-agua border-agua-borda text-ink-sobre-acao',
   fantasma: 'bg-transparent border-line border-2 text-ink',
 };
 

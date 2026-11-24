@@ -114,7 +114,7 @@ export function FocoScreen() {
           {snap.state === 'pausado' ? (
             <Botao titulo="Retomar" variante="foco" onPress={async () => aplicar(await retomar(repo, clock, user))} />
           ) : (
-            <Botao titulo="Pausar" variante="agua" onPress={async () => aplicar(await pausar(repo, clock, user))} />
+            <Botao titulo="Pausar" onPress={async () => aplicar(await pausar(repo, clock, user))} />
           )}
           <Botao titulo="Parar por agora" variante="fantasma" desativado={confirmando} rotulo="Parar o foco por agora" onPress={() => void pedirParar()} />
         </div>

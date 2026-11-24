@@ -209,7 +209,7 @@ export function SemanaScreen() {
               {proposta.state === 'pendente' && !editando && (
                 <div className="flex flex-col gap-2">
                   <Botao titulo="Aceitar" onPress={() => void aoAceitar()} />
-                  <Botao titulo="Editar horário" variante="agua" onPress={() => setEditando({ ...proposta.changes[0].to })} />
+                  <Botao titulo="Editar horário" onPress={() => setEditando({ ...proposta.changes[0].to })} />
                   <Botao titulo="Negar" variante="fantasma" onPress={() => void aoNegar()} />
                 </div>
               )}

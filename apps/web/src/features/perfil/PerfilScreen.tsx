@@ -75,8 +75,8 @@ export function PerfilScreen() {
         {demo && demoClock ? (
           <Cartao testID="painel-demo">
             <Texto>Modo demo, dados de exemplo. Nada aqui é seu de verdade.</Texto>
-            <Botao titulo="Avançar 1 dia" variante="agua" onPress={() => { demoClock.advanceDays(1); refresh(); }} />
-            <Botao titulo="Avançar 1 semana" variante="agua" onPress={() => { demoClock.advanceWeeks(1); refresh(); }} />
+            <Botao titulo="Avançar 1 dia" onPress={() => { demoClock.advanceDays(1); refresh(); }} />
+            <Botao titulo="Avançar 1 semana" onPress={() => { demoClock.advanceWeeks(1); refresh(); }} />
             <Botao titulo="Reiniciar o demo" variante="fantasma" onPress={() => void enableDemo()} />
             <Botao titulo="Desligar modo demo" variante="fantasma" onPress={() => void disableDemo()} />
             <Texto variante="legenda" cor="muted">
@@ -136,7 +136,7 @@ function ConectarIa() {
           {endereco}
         </Texto>
       </Cartao>
-      <Botao titulo={copiado ? 'Copiado' : 'Copiar endereço'} variante="agua" onPress={() => void copiar()} />
+      <Botao titulo={copiado ? 'Copiado' : 'Copiar endereço'} onPress={() => void copiar()} />
     </Secao>
   );
 }
