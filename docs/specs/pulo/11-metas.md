@@ -1,6 +1,6 @@
 # Spec 11: Metas de longo prazo
 
-Status: feita no app web (23/11/2026). O app Expo ainda não tem a aba.
+Status: feita no app web (23/11/2026).
 
 ## Problem Statement
 
@@ -44,4 +44,4 @@ rota com isolamento entre pessoas e número fixo de queries, e a lógica da tela
 ## Out of Scope
 
 Ligar hábitos ou blocos de foco a uma meta, metas numéricas (ex.: "juntar R$ 10 mil" com valor acumulado),
-lembretes, reordenar marcos, a aba no app Expo.
+lembretes, reordenar marcos.

@@ -1,7 +1,7 @@
 # Pulo
 
 Um app de hábitos e foco, sem culpa, com um sapo que cresce junto com você.
-Dois clientes: o web em TanStack Start (React, Tailwind, mobile first) e o app em Expo (React Native, Expo Router), com saída web estática.
+Cliente web em TanStack Start (React, Tailwind, mobile first), no Cloudflare Workers.
 Monorepo com npm workspaces e Turborepo. Web: https://pulo-web.albqvictor.workers.dev
 
 Cada dia de cuidado conta: foco concluído, uma sessão parada na metade ou um dia de descanso.
@@ -14,7 +14,6 @@ Requer Node 20 ou mais novo.
 
 ```sh
 npm install
-cp apps/mobile/.env.example apps/mobile/.env.local   # liga o app na API local
 cp .env.example .env                                  # DATABASE_URL do Postgres local
 cp apps/api/.dev.vars.example apps/api/.dev.vars      # segredos da API (veja "Auth e banco")
 npm run db:up                                         # Postgres no Docker (ou: npm run db:embedded, sem Docker)
@@ -22,27 +21,24 @@ npm run db:deploy                                     # aplica as migrações
 npm run dev
 ```
 
-Sobe o web TanStack em http://localhost:3000, o app Expo web em http://localhost:8081 e a API em http://localhost:8787.
+Sobe o web TanStack em http://localhost:3000 e a API em http://localhost:8787.
 O app pede login com Google. Modo demo, sem login e com 4 semanas de dados sintéticos: abra o endereço com `?demo=1`
 ou toque em "Ver o demo" na tela de entrada.
 
-Variáveis do app (`apps/mobile/.env.local`, veja `apps/mobile/.env.example`):
-`EXPO_PUBLIC_API_URL` (endereço da API; em desenvolvimento, sem ela, vale `http://localhost:8787`) e, opcional,
-`EXPO_PUBLIC_WEEKLY_AI_ENDPOINT` (sem ela, a IA semanal usa `EXPO_PUBLIC_API_URL` + `/weekly-ai`).
 O endereço do app precisa estar em `PULO_CORS_ORIGIN` da API (CORS com credenciais, origens confiáveis e checagem de `Origin` nas escritas).
 Sessão, cookie, CSRF e como publicar app e API: [docs/web-auth.md](docs/web-auth.md).
 Servidor MCP (uma IA usando o Pulo pela pessoa, com OAuth): [docs/mcp.md](docs/mcp.md).
 
 Variáveis do web: `VITE_API_URL` em `apps/web/.env.development` (API local) e `apps/web/.env.production` (API publicada).
 
-Só um pacote: `npx turbo run dev --filter=@pulo/web` (ou `@pulo/mobile`).
+Só um pacote: `npx turbo run dev --filter=@pulo/web` (ou `@pulo/api`).
 
 ## Testes e exportação
 
 ```sh
 npm test
 npm run typecheck
-npm run build   # apps/web/dist, apps/mobile/dist (web estática) e apps/api/dist (bundle do Worker)
+npm run build   # apps/web/dist e apps/api/dist (bundle do Worker)
 ```
 
 ## Deploy
@@ -140,10 +136,9 @@ Nunca commite a URL do banco. O CI aplica as migrações com o secret `DATABASE_
 ```
 apps/
   web/      @pulo/web     TanStack Start no Cloudflare Workers: rotas, telas, tema (Tailwind v4), sapo e lagoa
-  mobile/   @pulo/mobile  Expo: rotas, telas, tema, componentes, sapo e lagoa
   api/      @pulo/api     Hono no Cloudflare Workers: auth (Better Auth + Google), IA semanal
 packages/
-  core/     @pulo/core    regras puras, sem React Native: domínio, decisões, repositórios e modo demo
+  core/     @pulo/core    regras puras: domínio, decisões, repositórios e modo demo
   client/   @pulo/client  RemoteRepository: o Repository do core sobre a API (cliente tipado do Hono), com cache e erros em português
   db/       @pulo/db      Prisma 7 e PostgreSQL: schema, migrações, cliente, mapeadores e apoio a testes
 docs/specs/pulo           as 10 specs do projeto

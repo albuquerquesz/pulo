@@ -8,7 +8,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     // Origens do app web (CORS com credenciais, origens confiáveis do Better Auth e checagem de Origin nas escritas), separadas por vírgula.
-    "PULO_CORS_ORIGIN": "http://localhost:8081,http://localhost:3000,https://pulo-web.albqvictor.workers.dev",
+    "PULO_CORS_ORIGIN": "http://localhost:3000,https://pulo-web.albqvictor.workers.dev",
     // Opcional: domínio pai do cookie quando o app e a API são subdomínios do mesmo domínio (app.x e api.x). Veja docs/web-auth.md.
     //   "PULO_COOKIE_DOMAIN": "exemplo.com",
     "BETTER_AUTH_URL": "https://pulo-api.albqvictor.workers.dev",

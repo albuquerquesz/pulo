@@ -30,7 +30,7 @@ async function userWithWeek(harness = h, extra = 0, metadata?: Parameters<typeof
 
 describe('POST /api/proposals/generate', () => {
   it('exige sessão e Origin (CSRF)', async () => {
-    expect((await h.app.request('/api/proposals/generate', { method: 'POST', headers: { origin: 'http://localhost:8081' } })).status).toBe(401);
+    expect((await h.app.request('/api/proposals/generate', { method: 'POST', headers: { origin: 'http://localhost:3000' } })).status).toBe(401);
     const me = await h.newUser();
     const semOrigem = await h.app.request('/api/proposals/generate', { method: 'POST', headers: { cookie: me.cookie } });
     expect(semOrigem.status).toBe(403);

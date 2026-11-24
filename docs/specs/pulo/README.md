@@ -1,5 +1,7 @@
 # Specs: app do sapo (nome provisório Pulo)
 
+> Nota de 24/11/2026: o app Expo foi removido. O Pulo tem um cliente só, o web em TanStack Start (`apps/web`). As menções a Expo, React Native e exportação estática nas specs abaixo são do plano original e ficam como histórico.
+
 Origem: `design-system-conceito.md`, `benchmark-app-habitos.md` e `hack-brasil-2026-regulamento.md` (21/11/2026). Cada spec segue o formato `/to-spec` do Matt Pocock, o mesmo já usado em `docs/specs/visor-gaps/` do repositório `vault` (Problem Statement, Solution, User Stories, Implementation Decisions, Testing Decisions, Out of Scope, Further Notes). Sem entrevista, com os fatos do que já foi decidido. O que é decisão do Victor, o que é proposta minha e o que não foi verificado está marcado em cada spec.
 
 A skill `/to-spec` em si não está instalada neste servidor. O formato vem das specs do `vault`. O repositório do hackathon ainda não existe (precisa nascer depois de 4/11 às 21h), então não há tracker nem label `ready-for-agent`: as specs ficam em markdown e vão para `docs/specs/` quando o repositório existir.

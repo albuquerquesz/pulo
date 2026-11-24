@@ -40,7 +40,7 @@ describe('POST /api/proposals/:id/decision', () => {
   it('exige sessão, Origin e corpo válido', async () => {
     const { me, proposal } = await setup();
     const url = `/api/proposals/${proposal.id}/decision`;
-    expect((await h.app.request(url, { method: 'POST', headers: { origin: 'http://localhost:8081', 'content-type': 'application/json' }, body: '{"action":"negar"}' })).status).toBe(401);
+    expect((await h.app.request(url, { method: 'POST', headers: { origin: 'http://localhost:3000', 'content-type': 'application/json' }, body: '{"action":"negar"}' })).status).toBe(401);
     expect((await h.app.request(url, { method: 'POST', headers: { cookie: me.cookie, 'content-type': 'application/json' }, body: '{"action":"negar"}' })).status).toBe(403);
     const slot = { weekday: 1, startMinutes: 600, durationMinutes: 50 };
     for (const body of [{}, { action: 'apagar' }, { action: 'editar' }, { action: 'editar', change: { index: 0, to: { ...slot, durationMinutes: 3 } } }, { action: 'editar', change: { index: 9, to: slot } }, { action: 'editar', change: { index: 0, to: { ...slot, startMinutes: 1430 } } }]) {

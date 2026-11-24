@@ -1,12 +1,10 @@
-# Entrega: checklist e exportação web (spec 10)
+# Entrega: checklist e publicação web (spec 10)
 
 Prazo: 30/11/2026 às 23h59. Alvo interno: 30/11 às 18h. Congelamento de commits de 30/11 23h59 até a final (12/12).
 
-## Exportação web estática
-- `npm run export:web` (equivale a `npx expo export --platform web`), saída em `dist/`.
-- Necessário em `app.json`: `expo.web.output` igual a `"static"` (e `bundler` `metro`). A integração confere e mescla.
-- Host: decisão aberta do Victor. Qualquer host de arquivos estáticos serve, sem cabeçalhos COOP e COEP porque não há expo-sqlite.
-- Conferir localmente: servir `dist/` (por exemplo `npx serve dist`) e abrir a rota inicial e uma rota profunda.
+## Publicação web
+- O web (`apps/web`, TanStack Start) e a API sobem no Cloudflare Workers pelo CI a cada push na `main`.
+- Conferir em https://pulo-web.albqvictor.workers.dev a rota inicial, uma rota profunda e o `?demo=1`.
 - A demo deve ficar no ar durante toda a avaliação e depois do congelamento.
 
 ## Modo demo
@@ -27,7 +25,7 @@ Prazo: 30/11/2026 às 23h59. Alvo interno: 30/11 às 18h. Congelamento de commit
 
 ## Checagens
 - [ ] `npm test` e `npm run typecheck` sem erro
-- [ ] `npm run export:web` sem erro e `dist/` abre localmente
+- [ ] `npm run build` sem erro e o web publicado abre
 - [ ] Busca por chave ou segredo no repositório: `git grep -nEi "api[_-]?key|secret|token|sk-"` sem achados reais
 - [ ] `git log --reverse --format='%H %ad' | head -1` posterior a 4/11 às 21h
 - [ ] Licença que permite ler, executar e testar (MIT, decisão do Victor); README com como rodar e ativar o demo

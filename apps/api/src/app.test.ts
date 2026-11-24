@@ -45,8 +45,8 @@ describe('API', () => {
   it('começa o login com Google e manda para o consentimento', async () => {
     const res = await app.request('/api/auth/sign-in/social', {
       method: 'POST',
-      headers: { 'content-type': 'application/json', origin: 'http://localhost:8081' },
-      body: JSON.stringify({ provider: 'google', callbackURL: 'http://localhost:8081' }),
+      headers: { 'content-type': 'application/json', origin: 'http://localhost:3000' },
+      body: JSON.stringify({ provider: 'google', callbackURL: 'http://localhost:3000' }),
     });
     expect(res.status).toBe(200);
     const { url } = await res.json();
@@ -72,7 +72,7 @@ describe('API', () => {
   });
 
   it('libera CORS só para a origem configurada', async () => {
-    const res = await app.request('/health', { headers: { origin: 'http://localhost:8081' } });
-    expect(res.headers.get('access-control-allow-origin')).toBe('http://localhost:8081');
+    const res = await app.request('/health', { headers: { origin: 'http://localhost:3000' } });
+    expect(res.headers.get('access-control-allow-origin')).toBe('http://localhost:3000');
   });
 });

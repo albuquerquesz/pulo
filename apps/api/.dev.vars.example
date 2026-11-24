@@ -5,9 +5,9 @@ BETTER_AUTH_URL=http://localhost:8787
 BETTER_AUTH_SECRET=gere-com-openssl-rand-base64-32
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-# Desenvolvimento: app em http://localhost:8081 e API em http://localhost:8787 são o mesmo site (cookie Lax, sem Secure).
+# Desenvolvimento: app em http://localhost:3000 e API em http://localhost:8787 são o mesmo site (cookie Lax, sem Secure).
 # Opcionais (o padrão serve em dev); em produção veja docs/web-auth.md:
-# PULO_CORS_ORIGIN=http://localhost:8081
+# PULO_CORS_ORIGIN=http://localhost:3000
 # PULO_COOKIE_DOMAIN=
 # Telas de entrar e consentimento do OAuth do MCP (padrão http://localhost:3000):
 # PULO_WEB_URL=http://localhost:3000
