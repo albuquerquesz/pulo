@@ -1,6 +1,6 @@
 # Sessão web: cookie, CSRF e publicação
 
-O Pulo é só web (Expo exportado como site estático). A sessão é um cookie que a API define e o navegador guarda:
+O Pulo é só web (TanStack Start no Cloudflare Workers). A sessão é um cookie que a API define e o navegador guarda:
 **HttpOnly**, o JavaScript do app nunca o lê e nenhum token fica em `localStorage` ou em memória do app.
 O app só manda `credentials: 'include'` em cada chamada (`@pulo/client` e o cliente do Better Auth) e a API decide o resto.
 
@@ -23,7 +23,7 @@ Tudo sai de variáveis de ambiente, nada fica fixo no código:
 | `Domain` | só com `PULO_COOKIE_DOMAIN`; sem ele o cookie vale só para o host da API |
 | `Path` | `/` |
 
-"Mesmo site": sem `PULO_COOKIE_DOMAIN`, o host da API e o de todas as origens do app são iguais (a porta não conta: `localhost:8081` e `localhost:8787`
+"Mesmo site": sem `PULO_COOKIE_DOMAIN`, o host da API e o de todas as origens do app são iguais (a porta não conta: `localhost:3000` e `localhost:8787`
 são o mesmo site, por isso o dev local funciona com `Lax`). Com `PULO_COOKIE_DOMAIN`, a API e todas as origens estão sob esse domínio
 (`app.exemplo.com` e `api.exemplo.com` sob `exemplo.com`). Se o domínio não cobrir a API ou alguma origem, a API recusa subir (erro de configuração claro).
 Subdomínios irmãos sem `PULO_COOKIE_DOMAIN` são tratados como sites diferentes (`None`), porque sem a lista de sufixos públicos não dá para provar o contrário.
@@ -56,7 +56,7 @@ PULO_COOKIE_DOMAIN=exemplo.com
 ```
 
 Secrets (`npx wrangler secret put <NOME>`): `DATABASE_URL`, `BETTER_AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
-Build do app: `EXPO_PUBLIC_API_URL=https://api.exemplo.com`.
+Build do web: `VITE_API_URL=https://api.exemplo.com`.
 No Google Cloud, redirecionamento autorizado: `https://api.exemplo.com/api/auth/callback/google`.
 
 ### Funciona, com ressalva: `pages.dev` + `workers.dev`
@@ -75,18 +75,18 @@ PULO_CORS_ORIGIN=https://pulo.pages.dev
 
 ### Desenvolvimento local
 
-Sem nada além do padrão: app em `http://localhost:8081`, API em `http://localhost:8787`, `PULO_CORS_ORIGIN` padrão `http://localhost:8081`.
+Sem nada além do padrão: app em `http://localhost:3000`, API em `http://localhost:8787`, `PULO_CORS_ORIGIN` padrão `http://localhost:3000`.
 Cookie `HttpOnly; SameSite=Lax` sem `Secure`.
 
 ## Variáveis (resumo)
 
 | Variável | Onde | Para quê |
 | --- | --- | --- |
-| `PULO_CORS_ORIGIN` | Worker (var) | Origens do app, separadas por vírgula: CORS com credenciais, origens confiáveis do Better Auth, checagem de `Origin`. Padrão `http://localhost:8081` |
+| `PULO_CORS_ORIGIN` | Worker (var) | Origens do app, separadas por vírgula: CORS com credenciais, origens confiáveis do Better Auth, checagem de `Origin`. Padrão `http://localhost:3000` |
 | `BETTER_AUTH_URL` | Worker (var) | Endereço público da API; `https` liga `Secure` e fixa o callback do Google |
 | `PULO_COOKIE_DOMAIN` | Worker (var, opcional) | Domínio pai do cookie para `app.x` e `api.x`. Padrão: só o host da API |
 | `BETTER_AUTH_SECRET`, `DATABASE_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Worker (secrets) | Veja o README |
-| `EXPO_PUBLIC_API_URL` | build do app | Endereço da API |
+| `VITE_API_URL` | build do web | Endereço da API |
 
 ## O que não foi testado em ambiente real
 

@@ -1,6 +1,6 @@
 # Spec 12: Ilha do sapo
 
-Status: feita no app web (24/11/2026). O app Expo ainda não tem a aba.
+Status: feita no app web (24/11/2026).
 
 ## Problem Statement
 
@@ -50,6 +50,5 @@ Nada se perde por falhar, como no resto do app: o que foi comprado fica para sem
 
 ## Fora do escopo
 
-- Aba no app Expo.
 - Arrastar enfeites para outro lugar (cada enfeite tem posição fixa).
 - Mais áreas depois do Farol, eventos sazonais e amigos do sapo.
