@@ -67,6 +67,35 @@ export const GOALS = {
   maxMilestones: 12,
 } as const;
 
+/**
+ * Ilha do sapo (spec 12). Moscas são a moeda: ganhas com cuidado, gastas em enfeites e em áreas novas.
+ * Nada se perde por falhar: o que foi comprado fica para sempre. Proposta.
+ */
+export const ISLAND = {
+  /** Moscas ganhas por cada coisa feita (calculadas a partir dos registros, nunca gravadas). */
+  fliesPer: { habitDone: 1, careSession: 3, restDay: 2, milestoneDone: 3, goalCompleted: 10 },
+  /** Preço para abrir cada área, na ordem do mapa. A primeira já vem aberta. */
+  areaCost: { lagoa: 0, praia: 40, bosque: 90, cachoeira: 160, farol: 250 },
+  /** Preço de cada enfeite. Um enfeite só pode ser comprado com a área dele aberta. */
+  decorCost: {
+    banco: 8,
+    lanterna: 12,
+    ponte: 20,
+    guardaSol: 10,
+    castelo: 15,
+    barco: 25,
+    cogumelos: 12,
+    balanco: 18,
+    casaNaArvore: 35,
+    arcoIris: 15,
+    pedras: 20,
+    deck: 40,
+    bandeirinhas: 15,
+    telescopio: 25,
+    fogueira: 30,
+  },
+} as const;
+
 /** Foco (Pomodoro por horário). Proposta. */
 export const FOCUS = {
   defaultMinutes: 25,

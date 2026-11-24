@@ -150,6 +150,17 @@ export function defineRepositoryContract(
       expect(await r.listGoals()).toEqual([]);
     });
 
+    it('ilha: compras por item, sem duplicar', async () => {
+      const { r } = await subject();
+      await r.saveIslandPurchase({ item: 'banco', cost: 8, createdAt: 1 });
+      await r.saveIslandPurchase({ item: 'praia', cost: 40, createdAt: 2 });
+      const compras = await r.listIslandPurchases();
+      expect([...compras].sort((a, b) => a.createdAt - b.createdAt)).toEqual([
+        { item: 'banco', cost: 8, createdAt: 1 },
+        { item: 'praia', cost: 40, createdAt: 2 },
+      ]);
+    });
+
     it('escritas concorrentes não se perdem', async () => {
       const { r } = await subject();
       const h = uid('h');
@@ -171,6 +182,7 @@ export function defineRepositoryContract(
       await r.saveRestDay({ date: '2026-11-10' });
       await r.saveProposal({ id: uid('p'), weekStart: '2026-11-09', state: 'pendente', patternText: 'x', changes: [], origin: 'ia', createdAt: 1 });
       await r.saveGoal({ id: uid('g'), title: 'x', state: 'ativa', milestones: [], createdAt: 1 });
+      await r.saveIslandPurchase({ item: 'banco', cost: 8, createdAt: 1 });
       if (!options.mascotIsServerDerived) await r.saveMascotState({ phase: 3, careDays: 9, updatedAt: 1 });
       await r.clearAll();
       expect(await r.getUser()).toBeNull();
@@ -181,6 +193,7 @@ export function defineRepositoryContract(
       expect(await r.listRestDays()).toEqual([]);
       expect(await r.listProposals()).toEqual([]);
       expect(await r.listGoals()).toEqual([]);
+      expect(await r.listIslandPurchases()).toEqual([]);
       expect(await r.getMascotState()).toBeNull();
     });
   });

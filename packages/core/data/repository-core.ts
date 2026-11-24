@@ -3,6 +3,7 @@ import type {
   DateRange,
   FocusSession,
   Goal,
+  IslandPurchase,
   Habit,
   HabitLog,
   MascotState,
@@ -24,6 +25,7 @@ export interface Database {
   restDays: RestDay[];
   proposals: WeeklyProposal[];
   goals: Goal[];
+  islandPurchases: IslandPurchase[];
   mascot: MascotState | null;
 }
 
@@ -38,6 +40,7 @@ export function emptyDatabase(): Database {
     restDays: [],
     proposals: [],
     goals: [],
+    islandPurchases: [],
     mascot: null,
   };
 }
@@ -122,6 +125,9 @@ export function createRepository(store: DatabaseStore): Repository {
     listGoals: () => read((db) => db.goals),
     saveGoal: (goal) => write((db) => upsert(db.goals, clone(goal), (g) => g.id === goal.id)),
     deleteGoal: (id) => write((db) => void (db.goals = db.goals.filter((g) => g.id !== id))),
+
+    listIslandPurchases: () => read((db) => db.islandPurchases),
+    saveIslandPurchase: (purchase) => write((db) => upsert(db.islandPurchases, clone(purchase), (p) => p.item === purchase.item)),
 
     getMascotState: () => read((db) => db.mascot),
     saveMascotState: (state) => write((db) => void (db.mascot = clone(state))),
