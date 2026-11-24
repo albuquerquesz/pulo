@@ -22,7 +22,7 @@ export interface PaletaDaLagoa {
 const AGUA_DIA: Record<Phase, string> = { 1: '#8FD3C8', 2: '#4FD1B5', 3: lightColors.agua, 4: '#38B796' };
 const AGUA_FUNDA = '#17305C';
 
-/** Paleta do cenário. O céu é o fundo do app (`--pulo-bg`); a noite aparece na lua, nas estrelas e na água mais funda. */
+/** Paleta do cenário. Sem céu desenhado: a cena fica sobre o fundo do app; a noite aparece na água mais funda e nas cores. */
 export function paletaDaLagoa(fase: Phase, noite: boolean): PaletaDaLagoa {
   if (noite) {
     return {
