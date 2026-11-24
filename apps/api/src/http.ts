@@ -107,6 +107,17 @@ function codigoDoPostgres(meta: unknown): string | null {
   return lido.success ? lido.data.driverAdapterError.cause.originalCode : null;
 }
 
+/**
+ * Conflito detectado no COMMIT de uma transação Serializable: o adaptador do Postgres lança `DriverAdapterError`
+ * (fora do `PrismaClientKnownRequestError`) com `cause.kind` igual a `TransactionWriteConflict`.
+ */
+const erroDoAdaptador = z.object({ name: z.literal('DriverAdapterError'), cause: z.object({ kind: z.string() }) });
+
+function ehConflitoNoCommit(error: Error): boolean {
+  const lido = erroDoAdaptador.safeParse(error);
+  return lido.success && lido.data.cause.kind === 'TransactionWriteConflict';
+}
+
 const conflitoConcorrente = () => new ApiError(409, 'conflito_concorrente', 'Outra escrita aconteceu ao mesmo tempo. Tente de novo.');
 
 /** Erros do Prisma que viram resposta de cliente (o resto é 500 sem detalhes). */
@@ -136,6 +147,7 @@ export function handleError(error: Error, c: Context) {
     const mapped = fromPrisma(error);
     if (mapped) return c.json(errorBody(mapped), mapped.status);
   }
+  if (ehConflitoNoCommit(error)) return c.json(errorBody(conflitoConcorrente()), 409);
   // Só o código vai ao cliente; o detalhe fica no log do Worker.
   console.error('erro_interno', error.name, error.message);
   return c.json(errorBody(new ApiError(500, 'erro_interno', 'Algo deu errado. Tente de novo.')), 500);
