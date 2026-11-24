@@ -153,7 +153,7 @@ export function MetasScreen() {
             />
           ))}
           {d.cabeMais ? (
-            <Botao titulo="Nova meta" variante="agua" onPress={() => setFormulario({ tipo: 'nova' })} testID="nova-meta" />
+            <Botao titulo="Nova meta" onPress={() => setFormulario({ tipo: 'nova' })} testID="nova-meta" />
           ) : (
             <Texto variante="legenda" cor="muted">
               Até {GOALS.maxActive} metas ativas de cada vez, para cada uma receber atenção de verdade.
@@ -315,7 +315,6 @@ function CartaoDeMeta({ meta, hoje, aberta, onAbrir, onMarco, onAdicionarMarco, 
               />
               <Botao
                 titulo="Adicionar marco"
-                variante="agua"
                 largura="auto"
                 tipo="submit"
                 desativado={!novoMarco.trim()}

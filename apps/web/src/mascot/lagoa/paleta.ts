@@ -1,5 +1,5 @@
 import type { Phase } from '@pulo/core/domain/types';
-import { lightColors, nightSky } from '@/theme/tokens';
+import { lightColors } from '@/theme/tokens';
 
 export function mistura(c1: string, c2: string, t: number): string {
   const x = [1, 3, 5].map((j) =>
@@ -9,8 +9,6 @@ export function mistura(c1: string, c2: string, t: number): string {
 }
 
 export interface PaletaDaLagoa {
-  ceuTopo: string;
-  ceuBase: string;
   agua: string;
   margem: string;
   lama: string;
@@ -21,22 +19,13 @@ export interface PaletaDaLagoa {
   noite: boolean;
 }
 
-const CEU_DIA: Record<Phase, [string, string]> = {
-  1: ['#E3F4E6', '#D2EDDC'],
-  2: ['#D4F0F2', '#BFE7EA'],
-  3: ['#C4EAF5', '#A9DCEE'],
-  // fase 4 de dia: entardecer
-  4: ['#F9D5B0', '#FBE6C2'],
-};
 const AGUA_DIA: Record<Phase, string> = { 1: '#8FD3C8', 2: '#4FD1B5', 3: lightColors.agua, 4: '#38B796' };
 const AGUA_FUNDA = '#17305C';
 
-/** Paleta do cenário. Noite: céu #243A6B. Semana estável clareia o céu. */
-export function paletaDaLagoa(fase: Phase, noite: boolean, estavel: boolean): PaletaDaLagoa {
+/** Paleta do cenário. O céu é o fundo do app (`--pulo-bg`); a noite aparece na lua, nas estrelas e na água mais funda. */
+export function paletaDaLagoa(fase: Phase, noite: boolean): PaletaDaLagoa {
   if (noite) {
     return {
-      ceuTopo: nightSky,
-      ceuBase: '#35508F',
       agua: mistura(AGUA_DIA[fase], AGUA_FUNDA, 0.55),
       margem: '#3F6B43',
       lama: '#5C4630',
@@ -47,11 +36,7 @@ export function paletaDaLagoa(fase: Phase, noite: boolean, estavel: boolean): Pa
       noite: true,
     };
   }
-  const [topo, base] = CEU_DIA[fase];
-  const claro = estavel ? 0.45 : 0;
   return {
-    ceuTopo: mistura(topo, '#FFFFFF', claro),
-    ceuBase: mistura(base, '#FFFFFF', claro),
     agua: AGUA_DIA[fase],
     margem: '#7FB35A',
     lama: '#8A6A47',

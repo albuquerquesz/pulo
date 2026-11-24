@@ -28,14 +28,14 @@ const ROTULO: Record<EstadoDoAnel, string> = {
 };
 
 const TRACO: Record<EstadoDoAnel, string> = {
-  parado: 'stroke-agua',
+  parado: 'stroke-sapo',
   rodando: 'stroke-foco',
   pausa: 'stroke-descanso',
   concluido: 'stroke-sapo',
 };
 
 const TRACO_BORDA: Record<EstadoDoAnel, string> = {
-  parado: 'stroke-agua-borda',
+  parado: 'stroke-sapo-borda',
   rodando: 'stroke-foco-borda',
   pausa: 'stroke-descanso-borda',
   concluido: 'stroke-sapo-borda',

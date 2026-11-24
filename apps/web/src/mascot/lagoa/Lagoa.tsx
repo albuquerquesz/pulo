@@ -1,4 +1,4 @@
-import { useId, useMemo, type CSSProperties, type ReactNode } from 'react';
+import { useMemo, type CSSProperties, type ReactNode } from 'react';
 
 import { itensVisiveis, planoDeAnimacao, type AgoraDaLagoa, type ItensVisiveis } from '@pulo/core/domain/lagoa';
 import type { FrogMood, Phase, WeekSummary } from '@pulo/core/domain/types';
@@ -103,15 +103,12 @@ export function Lagoa({ fase, resumo, agora, estadoDoSapo = 'parado', tamanho = 
   const ativo = reducedMotion === undefined ? tema.movimento.loops : resolverMovimento(reducedMotion).loops;
   const itens = useMemo(() => itensVisiveis(resumo, agora), [resumo, agora]);
   const plano = useMemo(() => planoDeAnimacao(itens, reduzir), [itens, reduzir]);
-  const pal = paletaDaLagoa(fase, itens.noite, itens.estavel);
+  const pal = paletaDaLagoa(fase, itens.noite);
   const w = GEOMETRIA_DA_AGUA[fase];
   const tem = (i: ItensVisiveis['todos'][number]) => itens.todos.includes(i);
   const escala = tamanho / 300;
   const rip = mistura(pal.agua, '#FFFFFF', 0.45);
   const wcy = w.cy;
-  // id do gradiente único por instância (várias lagoas na mesma página)
-  const id = useId();
-  const idCeu = `ceu-${id.replace(/[^a-zA-Z0-9_-]/g, '')}`;
 
   // folha do sapo: a maior (direita) com semana estável; senão a menor (esquerda)
   const folhaDireita = tem('folhaVitoriaRegia') && fase >= 3;
@@ -138,18 +135,13 @@ export function Lagoa({ fase, resumo, agora, estadoDoSapo = 'parado', tamanho = 
       data-testid="lagoa"
     >
       <svg width={tamanho} height={tamanho} viewBox="0 0 300 300" style={CAMADA} aria-hidden="true" focusable="false">
-        <defs>
-          <linearGradient id={idCeu} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={pal.ceuTopo} />
-            <stop offset="1" stopColor={pal.ceuBase} />
-          </linearGradient>
-        </defs>
-        <rect width={300} height={300} fill={`url(#${idCeu})`} />
+        {/* Céu = fundo do app, para a lagoa não virar um quadro dentro da tela. */}
+        <rect width={300} height={300} fill="var(--pulo-bg)" />
 
         {pal.noite && (
           <g data-testid="lagoa-lua">
             <ellipse cx={60} cy={56} rx={22} ry={22} fill="#FFF4C9" />
-            <ellipse cx={68} cy={50} rx={20} ry={20} fill={pal.ceuTopo} />
+            <ellipse cx={68} cy={50} rx={20} ry={20} fill="var(--pulo-bg)" />
             {ESTRELAS.map(([x, y]) => (
               <ellipse key={x} cx={x} cy={y} rx={1.8} ry={1.8} fill="#FFFFFF" fillOpacity={0.8} />
             ))}

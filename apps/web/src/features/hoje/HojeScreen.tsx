@@ -218,14 +218,14 @@ export function HojeScreen() {
                 />
               )
             ) : (
-              <Botao titulo="Feito" variante="agua" largura="auto" rotulo="Marcar descanso como feito" onPress={() => void descansoDoBloco(proximo.bloco.id)} />
+              <Botao titulo="Feito" largura="auto" rotulo="Marcar descanso como feito" onPress={() => void descansoDoBloco(proximo.bloco.id)} />
             )}
           </Cartao>
         ) : (
           <>
             <Texto cor="muted">Sem mais blocos por hoje.</Texto>
             {d.sessaoAtiva ? null : (
-              <Botao titulo="Começar um foco livre" variante="agua" rotulo="Começar foco de 25 minutos" onPress={() => void comecar()} testID="comecar-foco" />
+              <Botao titulo="Começar um foco livre" rotulo="Começar foco de 25 minutos" onPress={() => void comecar()} testID="comecar-foco" />
             )}
           </>
         )}
