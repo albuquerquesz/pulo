@@ -92,7 +92,6 @@ const VAGALUMES = [
   [70, 130], [110, 100], [220, 120], [250, 90], [180, 150], [40, 160],
 ] as const;
 
-const ESTRELAS = [[120, 30], [160, 52], [200, 24], [270, 50], [30, 100]] as const;
 const NUVENS = [[200, 40, 22], [224, 46, 18], [178, 48, 16]] as const;
 
 const CAMADA: CSSProperties = { position: 'absolute', inset: 0, display: 'block' };
@@ -135,20 +134,7 @@ export function Lagoa({ fase, resumo, agora, estadoDoSapo = 'parado', tamanho = 
       data-testid="lagoa"
     >
       <svg width={tamanho} height={tamanho} viewBox="0 0 300 300" style={CAMADA} aria-hidden="true" focusable="false">
-        {/* Céu = fundo do app, para a lagoa não virar um quadro dentro da tela. */}
-        <rect width={300} height={300} fill="var(--pulo-bg)" />
-
-        {pal.noite && (
-          <g data-testid="lagoa-lua">
-            <ellipse cx={60} cy={56} rx={22} ry={22} fill="#FFF4C9" />
-            <ellipse cx={68} cy={50} rx={20} ry={20} fill="var(--pulo-bg)" />
-            {ESTRELAS.map(([x, y]) => (
-              <ellipse key={x} cx={x} cy={y} rx={1.8} ry={1.8} fill="#FFFFFF" fillOpacity={0.8} />
-            ))}
-          </g>
-        )}
-        {!pal.noite && fase === 4 && <ellipse cx={236} cy={92} rx={26} ry={26} fill="#FFE29A" fillOpacity={0.85} />}
-
+        {/* Sem céu: a cena fica direto sobre o fundo do app. */}
         {tem('nuvemDeChuva') && (
           <g data-testid="lagoa-nuvem">
             {NUVENS.map(([x, y, r]) => (
