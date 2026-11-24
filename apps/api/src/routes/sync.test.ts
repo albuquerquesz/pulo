@@ -30,6 +30,7 @@ async function seed(user: TestUser, extra = 0) {
     data: { userId, weekStart: day(16), state: 'pendente', patternText: 'p', changes: [], origin: 'regra', createdAt: new Date(TEST_NOW) },
   });
   await database.db.mascotState.create({ data: { userId, phase: 2, careDays: 4, updatedAt: new Date(TEST_NOW) } });
+  await database.db.islandPurchase.create({ data: { userId, item: 'banco', cost: 8, createdAt: new Date(TEST_NOW) } });
   await database.db.focusSession.createMany({
     data: Array.from({ length: extra }, (_, i) => ({
       userId,
@@ -68,6 +69,7 @@ describe('/api/sync', () => {
       restDays: [],
       proposals: [],
       goals: [],
+      islandPurchases: [],
       mascot: null,
       serverTime: TEST_NOW,
     });
@@ -84,11 +86,13 @@ describe('/api/sync', () => {
     expect(body.restDays).toEqual([{ date: '2026-11-17' }]);
     expect(body.proposals).toEqual([expect.objectContaining({ weekStart: '2026-11-16', changes: [] })]);
     expect(body.mascot).toEqual({ phase: 2, careDays: 4, updatedAt: TEST_NOW });
+    expect(body.islandPurchases).toEqual([{ item: 'banco', cost: 8, createdAt: TEST_NOW }]);
 
     const outside = await (await me.call('GET', '/api/sync?from=2026-03-01&to=2026-03-31')).json();
     expect(outside).toMatchObject({ habitLogs: [], restDays: [] });
     expect(outside.sessions).toHaveLength(1);
     expect(outside.blocks).toHaveLength(1);
+    expect(outside.islandPurchases).toHaveLength(1);
   });
 
   it('isolamento: nunca devolve dados de outra pessoa', async () => {
@@ -96,7 +100,7 @@ describe('/api/sync', () => {
     const b = await h.newUser();
     await seed(a);
     const body = await (await b.call('GET', `/api/sync${RANGE}`)).json();
-    expect(body).toMatchObject({ blocks: [], habits: [], habitLogs: [], sessions: [], restDays: [], proposals: [], mascot: null });
+    expect(body).toMatchObject({ blocks: [], habits: [], habitLogs: [], sessions: [], restDays: [], proposals: [], islandPurchases: [], mascot: null });
     expect(body.user.id).toBe(b.id);
   });
 
@@ -107,7 +111,7 @@ describe('/api/sync', () => {
     await seed(big, 50);
     const one = await queriesOf(database, small, 'GET', `/api/sync${RANGE}`);
     expect(await queriesOf(database, big, 'GET', `/api/sync${RANGE}`)).toBe(one);
-    // 2 de sessão + 7 leituras numa transação.
-    expect(one).toBe(10);
+    // 2 de sessão + 9 leituras numa transação.
+    expect(one).toBe(11);
   });
 });

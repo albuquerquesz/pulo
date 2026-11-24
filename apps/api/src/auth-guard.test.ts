@@ -27,6 +27,7 @@ describe('autenticação das rotas de domínio', () => {
         .replace(':id', crypto.randomUUID())
         .replace(':habitId', crypto.randomUUID())
         .replace(':date', '2026-11-16')
+        .replace(':item', 'banco')
         .replace(/\/$/, '');
       const res = await h.app.request(path, { method: route.method });
       expect(res.status, `${route.method} ${route.path}`).toBe(401);

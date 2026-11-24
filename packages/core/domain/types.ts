@@ -137,6 +137,18 @@ export interface Goal {
   completedAt?: number;
 }
 
+/**
+ * Compra na ilha (spec 12): uma área aberta ou um enfeite. Uma por item; nunca muda nem some (só `clearAll`).
+ * O saldo de moscas é calculado a partir dos registros, nunca gravado.
+ */
+export interface IslandPurchase {
+  /** Id do item no catálogo (`ISLAND.areaCost` ou `ISLAND.decorCost`). */
+  item: string;
+  /** Moscas pagas, igual ao preço do catálogo na hora da compra. */
+  cost: number;
+  createdAt: number;
+}
+
 /** Derivado e guardado em cache. Nunca é a fonte da verdade. */
 export interface MascotState {
   phase: Phase;
@@ -209,6 +221,9 @@ export interface Repository {
   listGoals(): Promise<Goal[]>;
   saveGoal(goal: Goal): Promise<void>;
   deleteGoal(id: EntityId): Promise<void>;
+
+  listIslandPurchases(): Promise<IslandPurchase[]>;
+  saveIslandPurchase(purchase: IslandPurchase): Promise<void>;
 
   getMascotState(): Promise<MascotState | null>;
   saveMascotState(state: MascotState): Promise<void>;

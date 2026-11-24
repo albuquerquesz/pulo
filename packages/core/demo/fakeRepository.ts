@@ -1,6 +1,7 @@
 import type {
   FocusSession,
   Goal,
+  IslandPurchase,
   Habit,
   HabitLog,
   MascotState,
@@ -22,6 +23,7 @@ export function createFakeRepository(): Repository {
   const rest = new Map<string, RestDay>();
   const proposals = new Map<string, WeeklyProposal>();
   const goals = new Map<string, Goal>();
+  const compras = new Map<string, IslandPurchase>();
   const inRange = (d: string, r?: { from: string; to: string }) => !r || (d >= r.from && d <= r.to);
   return {
     getUser: async () => user,
@@ -48,6 +50,8 @@ export function createFakeRepository(): Repository {
     listGoals: async () => [...goals.values()],
     saveGoal: async (g) => void goals.set(g.id, g),
     deleteGoal: async (id) => void goals.delete(id),
+    listIslandPurchases: async () => [...compras.values()],
+    saveIslandPurchase: async (c) => void compras.set(c.item, c),
     getMascotState: async () => mascot,
     saveMascotState: async (m) => void (mascot = m),
     clearAll: async () => {
@@ -60,6 +64,7 @@ export function createFakeRepository(): Repository {
       rest.clear();
       proposals.clear();
       goals.clear();
+      compras.clear();
     },
   };
 }

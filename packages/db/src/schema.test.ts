@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { focusSessionMapper, habitLogMapper, habitMapper, mascotStateMapper, routineBlockMapper, weeklyProposalMapper } from './mappers';
+import { focusSessionMapper, habitLogMapper, habitMapper, islandPurchaseMapper, mascotStateMapper, routineBlockMapper, weeklyProposalMapper } from './mappers';
 import { type TestDatabase, createTestDatabase } from './testing';
 
 let t: TestDatabase;
@@ -35,6 +35,9 @@ describe('schema do domínio no Postgres', () => {
     expect(habitLogMapper.toDomain(await t.db.habitLog.findFirstOrThrow({ where: { userId: 'u-map' } }))).toStrictEqual({ habitId: 'h1', date: '2026-11-22', doneAt: 1000 });
     expect(mascotStateMapper.toDomain(await t.db.mascotState.findUniqueOrThrow({ where: { userId: 'u-map' } }))).toStrictEqual({ phase: 2, careDays: 4, updatedAt: 3000 });
     expect(weeklyProposalMapper.toDomain(await t.db.weeklyProposal.findUniqueOrThrow({ where: { id: 'wp1' } })).weekStart).toBe('2026-11-23');
+
+    await t.db.islandPurchase.create({ data: islandPurchaseMapper.fromDomain('u-map', { item: 'banco', cost: 8, createdAt: 5000 }) });
+    expect(islandPurchaseMapper.toDomain(await t.db.islandPurchase.findFirstOrThrow({ where: { userId: 'u-map' } }))).toStrictEqual({ item: 'banco', cost: 8, createdAt: 5000 });
   });
 
   it('só permite uma sessão em andamento por pessoa', async () => {
@@ -59,11 +62,12 @@ describe('schema do domínio no Postgres', () => {
       t.db.mascotState.create({ data: { userId: 'u-check', phase: 5, careDays: 0, updatedAt: new Date() } }),
       t.db.goal.create({ data: { userId: 'u-check', title: 'x', state: 'concluida', milestones: [], createdAt: new Date() } }),
       t.db.goal.create({ data: { userId: 'u-check', title: 'x', state: 'ativa', milestones: {}, createdAt: new Date() } }),
+      t.db.islandPurchase.create({ data: { userId: 'u-check', item: 'banco', cost: -1, createdAt: new Date() } }),
     ];
     for (const attempt of invalid) await expect(attempt).rejects.toThrow();
   });
 
-  it('um registro por hábito e dia, e um dia de descanso por data', async () => {
+  it('um registro por hábito e dia, um dia de descanso por data e uma compra por item', async () => {
     await createUser('u-uniq');
     await t.db.habit.create({ data: { id: 'hu', userId: 'u-uniq', title: 'x', weekdays: [1] } });
     const log = habitLogMapper.fromDomain('u-uniq', { habitId: 'hu', date: '2026-11-22', doneAt: 1 });
@@ -71,6 +75,9 @@ describe('schema do domínio no Postgres', () => {
     await expect(t.db.habitLog.create({ data: log })).rejects.toThrow();
     await t.db.restDay.create({ data: { userId: 'u-uniq', date: new Date('2026-11-22') } });
     await expect(t.db.restDay.create({ data: { userId: 'u-uniq', date: new Date('2026-11-22') } })).rejects.toThrow();
+    const compra = islandPurchaseMapper.fromDomain('u-uniq', { item: 'banco', cost: 8, createdAt: 1 });
+    await t.db.islandPurchase.create({ data: compra });
+    await expect(t.db.islandPurchase.create({ data: compra })).rejects.toThrow();
   });
 
   it('o log de hábito não aponta para hábito de outra pessoa', async () => {
@@ -87,10 +94,12 @@ describe('schema do domínio no Postgres', () => {
     await t.db.habit.create({ data: { id: 'hd', userId: 'u-del', title: 'x', weekdays: [1] } });
     await t.db.habitLog.create({ data: habitLogMapper.fromDomain('u-del', { habitId: 'hd', date: '2026-11-22', doneAt: 1 }) });
     await t.db.mascotState.create({ data: { userId: 'u-del', phase: 1, careDays: 0, updatedAt: new Date() } });
+    await t.db.islandPurchase.create({ data: { userId: 'u-del', item: 'banco', cost: 8, createdAt: new Date() } });
     await t.db.user.delete({ where: { id: 'u-del' } });
     expect(await t.db.habit.count({ where: { userId: 'u-del' } })).toBe(0);
     expect(await t.db.habitLog.count({ where: { userId: 'u-del' } })).toBe(0);
     expect(await t.db.mascotState.count({ where: { userId: 'u-del' } })).toBe(0);
+    expect(await t.db.islandPurchase.count({ where: { userId: 'u-del' } })).toBe(0);
   });
 
   it('apagar o bloco mantém a sessão de foco, sem bloco', async () => {

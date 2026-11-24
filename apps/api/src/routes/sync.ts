@@ -4,6 +4,7 @@ import {
   goalMapper,
   habitLogMapper,
   habitMapper,
+  islandPurchaseMapper,
   mascotStateMapper,
   restDayMapper,
   routineBlockMapper,
@@ -17,6 +18,7 @@ import {
   goalSelect,
   habitLogSelect,
   habitSelect,
+  islandPurchaseSelect,
   mascotSelect,
   proposalSelect,
   restDaySelect,
@@ -30,7 +32,7 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
     const range = c.req.valid('query');
     const date = dateFilter(range);
 
-    const [blocks, habits, habitLogs, sessions, restDays, proposals, goals, mascot] = await db.$transaction([
+    const [blocks, habits, habitLogs, sessions, restDays, proposals, goals, islandPurchases, mascot] = await db.$transaction([
       db.routineBlock.findMany({
         where: { userId },
         select: blockSelect,
@@ -46,6 +48,7 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
       db.restDay.findMany({ where: { userId, date }, select: restDaySelect, orderBy: { date: 'asc' } }),
       db.weeklyProposal.findMany({ where: { userId }, select: proposalSelect, orderBy: { weekStart: 'desc' } }),
       db.goal.findMany({ where: { userId }, select: goalSelect, orderBy: { createdAt: 'asc' } }),
+      db.islandPurchase.findMany({ where: { userId }, select: islandPurchaseSelect, orderBy: { createdAt: 'asc' } }),
       db.mascotState.findUnique({ where: { userId }, select: mascotSelect }),
     ]);
 
@@ -59,6 +62,7 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
       restDays: restDays.map(restDayMapper.toDomain),
       proposals: proposals.map(weeklyProposalMapper.toDomain),
       goals: goals.map(goalMapper.toDomain),
+      islandPurchases: islandPurchases.map(islandPurchaseMapper.toDomain),
       mascot: mascot === null ? null : mascotStateMapper.toDomain(mascot),
       serverTime: now(),
     });

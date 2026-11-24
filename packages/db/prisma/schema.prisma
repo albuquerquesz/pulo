@@ -55,6 +55,7 @@ model User {
   restDays        RestDay[]
   weeklyProposals WeeklyProposal[]
   goals           Goal[]
+  islandPurchases IslandPurchase[]
   mascotState     MascotState?
 
   oauthClients       OauthClient[]
@@ -463,6 +464,21 @@ model Goal {
   @@unique([id, userId])
   @@index([userId, state])
   @@map("goal")
+}
+
+/// Compra da ilha (área ou enfeite), uma por item e pessoa. Imutável: só `DELETE /api/data` apaga.
+/// O saldo de moscas nunca é gravado, sai dos registros (ver packages/core/domain/ilha.ts).
+model IslandPurchase {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Id do item no catálogo (`ISLAND` em packages/core/config/decisions.ts).
+  item      String
+  /// Preço pago, em moscas (CHECK >= 0 na migração).
+  cost      Int
+  createdAt DateTime @db.Timestamptz(3)
+
+  @@id([userId, item])
+  @@map("island_purchase")
 }
 
 /// Cache do estado do sapo (derivado). Uma linha por pessoa.

@@ -31,6 +31,7 @@ async function populate(user: TestUser, extra = 0) {
   await user.call('PUT', `/api/proposals/${proposalId}`, {
     id: proposalId, weekStart: '2026-11-23', state: 'pendente', patternText: 'p', changes: [], origin: 'regra', createdAt: TEST_NOW - 1,
   });
+  await database.db.islandPurchase.create({ data: { userId: user.id, item: 'banco', cost: 8, createdAt: new Date(TEST_NOW - 1) } });
   await database.db.restDay.createMany({
     data: Array.from({ length: extra }, (_, i) => ({ userId: user.id, date: new Date(Date.UTC(2026, 0, 1 + i)) })),
   });
@@ -45,6 +46,7 @@ async function snapshot(user: TestUser) {
     sessions: body.sessions.length,
     restDays: body.restDays.length,
     proposals: body.proposals.length,
+    islandPurchases: body.islandPurchases.length,
     mascot: body.mascot,
   };
 }
@@ -58,14 +60,14 @@ describe('DELETE /api/data', () => {
     const me = await h.newUser();
     await populate(me);
     await me.call('PATCH', '/api/me/metadata', { theme: 'escuro' });
-    expect(await snapshot(me)).toMatchObject({ blocks: 1, habits: 1, habitLogs: 1, sessions: 1, restDays: 1, proposals: 1 });
+    expect(await snapshot(me)).toMatchObject({ blocks: 1, habits: 1, habitLogs: 1, sessions: 1, restDays: 1, proposals: 1, islandPurchases: 1 });
 
     const res = await me.call('DELETE', '/api/data');
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
-      deleted: { sessions: 1, blocks: 1, habits: 1, restDays: 1, proposals: 1, goals: 0, mascot: 1 },
+      deleted: { sessions: 1, blocks: 1, habits: 1, restDays: 1, proposals: 1, goals: 0, islandPurchases: 1, mascot: 1 },
     });
-    expect(await snapshot(me)).toEqual({ blocks: 0, habits: 0, habitLogs: 0, sessions: 0, restDays: 0, proposals: 0, mascot: null });
+    expect(await snapshot(me)).toEqual({ blocks: 0, habits: 0, habitLogs: 0, sessions: 0, restDays: 0, proposals: 0, islandPurchases: 0, mascot: null });
     expect(await database.db.habitLog.count({ where: { userId: me.id } })).toBe(0);
 
     // A conta continua e o tema salvo também.
@@ -99,7 +101,7 @@ describe('DELETE /api/data', () => {
     await populate(big, 50);
     const one = await queriesOf(database, small, 'DELETE', '/api/data');
     expect(await queriesOf(database, big, 'DELETE', '/api/data')).toBe(one);
-    // 2 de sessão + 6 deletes numa transação.
-    expect(one).toBe(9);
+    // 2 de sessão + 8 deletes numa transação.
+    expect(one).toBe(10);
   });
 });

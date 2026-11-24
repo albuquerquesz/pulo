@@ -16,6 +16,7 @@ erDiagram
   user ||--o{ rest_day : tem
   user ||--o{ weekly_proposal : tem
   user ||--o{ goal : tem
+  user ||--o{ island_purchase : tem
   user ||--o| mascot_state : tem
   habit ||--o{ habit_log : registra
   routine_block |o--o{ focus_session : "ocorre em"
@@ -85,6 +86,12 @@ erDiagram
     timestamptz createdAt
     timestamptz completedAt
   }
+  island_purchase {
+    text userId PK
+    text item PK "id do catálogo ISLAND"
+    int cost "moscas, 0 ou mais"
+    timestamptz createdAt
+  }
   mascot_state {
     text userId PK
     smallint phase "1 a 4"
@@ -105,6 +112,9 @@ Regras que o banco garante (migração `restricoes`, em SQL):
 - `habit_log` só aponta para hábito da mesma pessoa (chave composta `habitId, userId`).
 - `goal` concluída se, e somente se, tem `completedAt`; `milestones` é sempre um array JSON (migração `metas`).
   O limite de metas ativas (`GOALS.maxActive`) é da API, numa transação serializável.
+- uma `island_purchase` por pessoa e item (chave primária `userId, item`) e `cost` nunca negativo (migração `ilha`).
+  A compra é imutável e o saldo de moscas não é gravado: sai dos hábitos feitos, sessões, descansos e metas.
+  O preço, a ordem das áreas e o saldo são conferidos pela API (`validarCompra` do core), numa transação serializável.
 
 Convenções de tipo: `DateKey` do domínio ('AAAA-MM-DD', o dia lógico) é `date`; instantes (ms) são `timestamptz`;
 os enums do Prisma têm os mesmos valores das uniões de `packages/core/domain/types.ts`.

@@ -54,3 +54,5 @@ export const goalSelect = {
   createdAt: true,
   completedAt: true,
 } as const satisfies Prisma.GoalSelect;
+
+export const islandPurchaseSelect = { item: true, cost: true, createdAt: true } as const satisfies Prisma.IslandPurchaseSelect;

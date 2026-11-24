@@ -5,6 +5,7 @@ import type {
   GoalMilestone,
   Habit,
   HabitLog,
+  IslandPurchase,
   MascotState,
   Phase,
   ProposalChange,
@@ -21,6 +22,7 @@ import type {
   Goal as GoalRow,
   Habit as HabitRow,
   HabitLog as HabitLogRow,
+  IslandPurchase as IslandPurchaseRow,
   MascotState as MascotStateRow,
   RestDay as RestDayRow,
   RoutineBlock as RoutineBlockRow,
@@ -238,6 +240,17 @@ export const goalMapper = {
       createdAt: msToDate(goal.createdAt),
       completedAt: goal.completedAt === undefined ? null : msToDate(goal.completedAt),
     };
+  },
+};
+
+// ---------- IslandPurchase ----------
+
+export const islandPurchaseMapper = {
+  toDomain(row: Omit<IslandPurchaseRow, 'userId'>): IslandPurchase {
+    return { item: row.item, cost: row.cost, createdAt: dateToMs(row.createdAt) };
+  },
+  fromDomain(userId: string, purchase: IslandPurchase): Prisma.IslandPurchaseUncheckedCreateInput {
+    return { userId, item: purchase.item, cost: purchase.cost, createdAt: msToDate(purchase.createdAt) };
   },
 };
 

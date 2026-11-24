@@ -118,12 +118,19 @@ describe('servidor MCP', () => {
 
     const lista = await (await rpc(token, 'tools/list')).json();
     const nomes = lista.result.tools.map((t: { name: string }) => t.name);
-    expect(nomes).toEqual(expect.arrayContaining(['ver_hoje', 'criar_habito', 'marcar_habito', 'comecar_foco', 'criar_meta', 'decidir_proposta']));
+    expect(nomes).toEqual(expect.arrayContaining(['ver_hoje', 'criar_habito', 'marcar_habito', 'comecar_foco', 'criar_meta', 'decidir_proposta', 'ver_ilha', 'comprar_na_ilha']));
 
     // Conta nova: precisa criar o sapo primeiro, como no onboarding.
     expect((await ferramenta(token, 'ver_hoje')).erro).toBe(true);
     const onboarding = await ferramenta(token, 'concluir_onboarding', { nomeDoSapo: 'Juca', inicioDoDia: 6, fimDoDia: 23 });
     expect(onboarding.dados).toMatchObject({ criado: true, habitos: 2 });
+
+    // Ilha: conta nova não tem moscas, então a compra é recusada com a mensagem da tela.
+    const mapa = await ferramenta(token, 'ver_ilha');
+    expect(mapa.dados).toMatchObject({ saldo: 0, nivel: 1 });
+    expect(mapa.dados.areas[0]).toMatchObject({ id: 'lagoa', estado: 'aberta' });
+    expect(mapa.dados.areas[0].enfeites[0]).toMatchObject({ id: 'banco', custo: 8, comprado: false });
+    expect(await ferramenta(token, 'comprar_na_ilha', { item: 'banco' })).toMatchObject({ erro: true, texto: 'Faltam 8 moscas.' });
 
     const habito = await ferramenta(token, 'criar_habito', { titulo: 'Ler 10 páginas', dias: ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'] });
     expect(habito.dados).toMatchObject({ titulo: 'Ler 10 páginas', ativo: true });

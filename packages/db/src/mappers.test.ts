@@ -3,6 +3,7 @@ import type {
   Goal,
   Habit,
   HabitLog,
+  IslandPurchase,
   MascotState,
   RestDay,
   RoutineBlock,
@@ -14,6 +15,7 @@ import type {
   Goal as GoalRow,
   Habit as HabitRow,
   HabitLog as HabitLogRow,
+  IslandPurchase as IslandPurchaseRow,
   MascotState as MascotStateRow,
   RestDay as RestDayRow,
   RoutineBlock as RoutineBlockRow,
@@ -25,6 +27,7 @@ import {
   goalMapper,
   habitLogMapper,
   habitMapper,
+  islandPurchaseMapper,
   mascotStateMapper,
   restDayMapper,
   routineBlockMapper,
@@ -167,6 +170,13 @@ describe('mapeadores', () => {
     const simplesRow: GoalRow = { ...row, id: 'g2', title: 'x', why: null, targetDate: null, state: 'ativa', milestones: [], completedAt: null };
     expect(goalMapper.toDomain(simplesRow)).toStrictEqual(simples);
     expect(() => goalMapper.toDomain({ ...row, milestones: [{ title: 'sem id' }] })).toThrow();
+  });
+
+  it('IslandPurchase', () => {
+    const purchase: IslandPurchase = { item: 'banco', cost: 8, createdAt: 42 };
+    const row: IslandPurchaseRow = { userId: USER, item: 'banco', cost: 8, createdAt: new Date(42) };
+    expect(islandPurchaseMapper.fromDomain(USER, purchase)).toStrictEqual(row);
+    expect(islandPurchaseMapper.toDomain(row)).toStrictEqual(purchase);
   });
 
   it('MascotState', () => {

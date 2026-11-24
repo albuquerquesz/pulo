@@ -101,6 +101,11 @@ export function repositorioInterno(api: ClienteInterno): Repository {
       await lerJson(await api.api.goals[':id'].$delete({ param: { id } }));
     },
 
+    listIslandPurchases: async () => (await lerJson(await api.api.island.purchases.$get())).purchases,
+    saveIslandPurchase: async (purchase) => {
+      await lerJson(await api.api.island.purchases[':item'].$put({ param: { item: purchase.item }, json: purchase }));
+    },
+
     getMascotState: async () => (await lerJson(await api.api.mascot.$get())).mascot,
     // O servidor calcula o sapo ao gravar sessões e descansos.
     saveMascotState: async () => undefined,
