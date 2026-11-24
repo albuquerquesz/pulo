@@ -6,6 +6,7 @@ export {
   goalMilestonesSchema,
   habitLogMapper,
   habitMapper,
+  islandPurchaseMapper,
   mascotStateMapper,
   proposalChangesSchema,
   restDayMapper,
