@@ -19,6 +19,7 @@ import type {
   Goal,
   Habit,
   HabitLog,
+  IslandPurchase,
   MascotState,
   Repository,
   RestDay,
@@ -34,6 +35,7 @@ import {
   cloneGoal,
   cloneHabit,
   cloneHabitLog,
+  cloneIslandPurchase,
   cloneMascot,
   cloneProposal,
   cloneRestDay,
@@ -109,6 +111,7 @@ class ApiRepository implements RemoteRepository {
   private readonly restDays = new Collection<RestDay>((r) => r.date, cloneRestDay);
   private readonly proposals = new Collection<WeeklyProposal>((p) => p.id, cloneProposal);
   private readonly goals = new Collection<Goal>((g) => g.id, cloneGoal);
+  private readonly islandPurchases = new Collection<IslandPurchase>((p) => p.item, cloneIslandPurchase);
 
   /** Uma escrita por chave de cada vez, na ordem em que foram pedidas (escritas em chaves diferentes seguem em paralelo). */
   private readonly locks = new Map<string, Promise<void>>();
@@ -137,6 +140,7 @@ class ApiRepository implements RemoteRepository {
     this.restDays.replaceAll(data.restDays);
     this.proposals.replaceAll(data.proposals);
     this.goals.replaceAll(data.goals);
+    this.islandPurchases.replaceAll(data.islandPurchases);
   }
 
   // ---------- Escrita com cache otimista ----------
@@ -442,6 +446,20 @@ class ApiRepository implements RemoteRepository {
     });
   }
 
+  // ---------- Ilha ----------
+
+  async listIslandPurchases(): Promise<IslandPurchase[]> {
+    return this.islandPurchases.values().sort((a, b) => a.createdAt - b.createdAt);
+  }
+
+  /** O servidor confere o saldo, a ordem das áreas e o preço; se recusar, a compra sai do cache e o erro sobe. */
+  saveIslandPurchase(purchase: IslandPurchase): Promise<void> {
+    const { item } = purchase;
+    return this.write(this.islandPurchases, `island:${item}`, item, purchase, async () => {
+      await readJson(await this.client.api.island.purchases[':item'].$put({ param: { item }, json: purchase }));
+    });
+  }
+
   // ---------- Estado do sapo ----------
 
   async getMascotState(): Promise<MascotState | null> {
@@ -460,7 +478,8 @@ class ApiRepository implements RemoteRepository {
     await this.serial('all', () =>
       this.withRetry(async () => {
         await readJson(await this.client.api.data.$delete());
-        for (const collection of [this.blocks, this.habits, this.habitLogs, this.sessions, this.restDays, this.proposals, this.goals]) {
+        const collections = [this.blocks, this.habits, this.habitLogs, this.sessions, this.restDays, this.proposals, this.goals, this.islandPurchases];
+        for (const collection of collections) {
           collection.clear();
         }
         this.mascot = null;

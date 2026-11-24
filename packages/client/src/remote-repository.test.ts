@@ -2,11 +2,12 @@
 // O `fetch` do cliente é o `app.fetch`: nenhuma rede, nenhum mock da API.
 import { createHarness, TEST_NOW, TEST_ORIGIN, type TestUser } from '@pulo/api/src/testing';
 import { MAX_HABITS_PER_DAY } from '@pulo/core/config/decisions';
+import { comprarNaIlha } from '@pulo/core/domain/ilha';
 import { criarPlanoInicial } from '@pulo/core/domain/routine';
 import { defineRepositoryContract } from '@pulo/core/data/repository-contract';
 import type { Habit, RoutineBlock, User } from '@pulo/core/domain/types';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
-import { type FetchLike, RemoteError, createRemoteRepository } from './index';
+import { type FetchLike, MENSAGENS_DA_API, RemoteError, createRemoteRepository } from './index';
 
 let database: TestDatabase;
 let h: ReturnType<typeof createHarness>;
@@ -60,10 +61,21 @@ const habito = (extra: Partial<Habit> = {}): Habit => ({ id: uuid(), title: 'Ler
 
 // ---------- O contrato compartilhado do Repository ----------
 
+/**
+ * O servidor só grava uma compra da ilha se a pessoa tem moscas (`validarCompra`). Cada pessoa do contrato ganha
+ * dias de descanso antigos, fora da janela do sync: o servidor conta as moscas, mas o cache (e o contrato) não os vê.
+ */
+async function moscasForaDaJanela(me: TestUser) {
+  await database.db.restDay.createMany({
+    data: Array.from({ length: 50 }, (_, i) => ({ userId: me.id, date: new Date(Date.UTC(2024, 0, 1 + i)) })),
+  });
+}
+
 defineRepositoryContract(
   'RemoteRepository (API real)',
   async () => {
     const me = await h.newUser();
+    await moscasForaDaJanela(me);
     return { repository: await open(me), userId: me.id };
   },
   { mascotIsServerDerived: true },
@@ -205,6 +217,23 @@ describe('RemoteRepository: erros e rollback', () => {
     await expect(repo.saveHabit(sexto)).rejects.toMatchObject({ code: 'limite_por_dia', status: 409 });
     expect((await repo.listHabits()).some((x) => x.id === sexto.id)).toBe(false);
     expect(await repo.listHabits()).toHaveLength(MAX_HABITS_PER_DAY);
+  });
+
+  it('ilha: compra sem moscas é recusada pelo servidor e sai do cache; com moscas, comprarNaIlha grava', async () => {
+    const me = await h.newUser();
+    const repo = await open(me);
+    const banco = { item: 'banco', cost: 8, createdAt: TEST_NOW };
+    await expect(repo.saveIslandPurchase(banco)).rejects.toMatchObject({
+      kind: 'api', code: 'moscas_insuficientes', status: 409, mensagem: MENSAGENS_DA_API.moscas_insuficientes,
+    });
+    expect(await repo.listIslandPurchases()).toEqual([]);
+
+    const habit = habito({ weekdays: [0, 1, 2, 3, 4, 5, 6] });
+    await repo.saveHabit(habit);
+    for (let d = 1; d <= 8; d += 1) await repo.saveHabitLog({ habitId: habit.id, date: `2026-11-${String(d).padStart(2, '0')}`, doneAt: TEST_NOW });
+    const comprado = await comprarNaIlha(repo, clock, 'banco');
+    expect(comprado).toMatchObject({ ok: true, value: { saldo: 0, gastas: 8 } });
+    expect(await (await open(me)).listIslandPurchases()).toEqual([banco]);
   });
 
   it('apagar hábito recusado devolve o hábito e os registros', async () => {
