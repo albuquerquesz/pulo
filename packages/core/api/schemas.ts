@@ -17,6 +17,7 @@ import type {
   GoalMilestone,
   Habit,
   HabitLog,
+  IslandPurchase,
   MascotState,
   Phase,
   ProposalChange,
@@ -273,6 +274,13 @@ export const goalSchema = z
     if (new Set(goal.milestones.map((m) => m.id)).size !== goal.milestones.length) issue('milestones', 'id de marco repetido');
   }) satisfies z.ZodType<Goal, unknown>;
 
+/** Compra da ilha. `item` é um id do catálogo (`ISLAND`); o preço e a ordem quem confere é o servidor (`validarCompra`). */
+export const islandPurchaseSchema = z.object({
+  item: idSchema,
+  cost: z.number().int().min(0),
+  createdAt: msSchema,
+}) satisfies z.ZodType<IslandPurchase, unknown>;
+
 /** Corpo de `PUT /api/habits`: vários hábitos de uma vez (tudo ou nada). Cada item segue `habitSchema`. */
 export const habitsBatchSchema = z
   .object({ habits: z.array(habitSchema).min(1).max(API_LIMITS.batchMaxHabits) })
@@ -308,6 +316,7 @@ export const weekSummaryQuerySchema = z.object({ date: dateKeySchema });
 export const idParamSchema = z.object({ id: idSchema });
 export const dateParamSchema = z.object({ date: dateKeySchema });
 export const habitLogParamSchema = z.object({ habitId: idSchema, date: dateKeySchema });
+export const islandItemParamSchema = z.object({ item: idSchema });
 
 // ---------- Erros ----------
 
@@ -328,6 +337,12 @@ export const API_ERROR_CODES = [
   'conflito_de_id',
   'limite_por_dia',
   'limite_de_metas',
+  'item_inexistente',
+  'preco_divergente',
+  'ja_comprado',
+  'area_fechada',
+  'fora_de_ordem',
+  'moscas_insuficientes',
   'sessao_em_andamento',
   'sessao_encerrada',
   'sessao_imutavel',

@@ -13,6 +13,7 @@ import { dataRoutes } from './routes/data';
 import { goalRoutes } from './routes/goals';
 import { habitLogRoutes } from './routes/habit-logs';
 import { habitRoutes } from './routes/habits';
+import { islandRoutes } from './routes/island';
 import { mascotRoutes } from './routes/mascot';
 import { proposalRoutes } from './routes/proposals';
 import { restDayRoutes } from './routes/rest-days';
@@ -80,6 +81,7 @@ export function createApp(env: ApiEnv, db: Db, now = Date.now, options: AppOptio
     .route('/api/rest-days', restDayRoutes(deps))
     .route('/api/proposals', proposalRoutes(deps))
     .route('/api/goals', goalRoutes(deps))
+    .route('/api/island', islandRoutes(deps))
     .route('/api/mascot', mascotRoutes(deps))
     .route('/api/week-summary', weekSummaryRoutes(deps))
     .route('/api/sync', syncRoutes(deps))

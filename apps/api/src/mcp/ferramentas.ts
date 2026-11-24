@@ -16,6 +16,7 @@ import {
   removerMarco,
   sortGoals,
 } from '@pulo/core/domain/goals';
+import { type EstadoDaIlha, comprarNaIlha, verIlha } from '@pulo/core/domain/ilha';
 import { criarHabito, desmarcarHabito, editarHabito, habitsForDate, marcarHabito, removerHabito } from '@pulo/core/domain/habits';
 import {
   blocksForWeekday,
@@ -80,6 +81,20 @@ const meta = (g: Goal, hoje: DateKey) => ({
   estado: g.state,
   progresso: goalProgress(g),
   marcos: g.milestones.map((m) => ({ id: m.id, titulo: m.title, feito: m.doneAt !== undefined })),
+});
+
+const ilha = (e: EstadoDaIlha) => ({
+  saldo: e.saldo,
+  ganhas: e.ganhas,
+  gastas: e.gastas,
+  nivel: e.nivel,
+  areas: e.areas.map((a) => ({
+    id: a.id,
+    nome: a.nome,
+    custo: a.custo,
+    estado: a.estado,
+    enfeites: a.enfeitesNoMapa.map((en) => ({ id: en.id, nome: en.nome, custo: en.custo, comprado: en.comprado })),
+  })),
 });
 
 // ---------- Respostas ----------
@@ -654,6 +669,40 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
       }),
   );
 
+  // ---------- Ilha ----------
+
+  server.registerTool(
+    'ver_ilha',
+    {
+      title: 'Ver a ilha',
+      description:
+        'A ilha do sapo: saldo de moscas (e de onde vieram), áreas na ordem do mapa (aberta, próxima ou fechada) e enfeites com preço e se já foram comprados.',
+      annotations: LEITURA,
+    },
+    () =>
+      protegido(async () => {
+        await pessoa(repo);
+        return resposta(ilha(await verIlha(repo)));
+      }),
+  );
+
+  server.registerTool(
+    'comprar_na_ilha',
+    {
+      title: 'Comprar na ilha',
+      description:
+        'Gasta moscas para abrir a próxima área ou comprar um enfeite de uma área aberta. Use os ids de ver_ilha. Compras não podem ser desfeitas.',
+      inputSchema: { item: idSchema.describe('Id da área ou do enfeite, como aparece em ver_ilha') },
+      annotations: ESCRITA,
+    },
+    ({ item }) =>
+      protegido(async () => {
+        await pessoa(repo);
+        const r = await comprarNaIlha(repo, clock, item);
+        return deCaso(r, () => r.ok && ilha(r.value));
+      }),
+  );
+
   // ---------- Dados ----------
 
   server.registerTool(
@@ -661,7 +710,7 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     {
       title: 'Apagar todos os dados',
       description:
-        'Apaga sapo, rotina, hábitos, focos, descansos, propostas e metas da conta, em todos os aparelhos. Não dá para desfazer. Só use se a pessoa pediu explicitamente.',
+        'Apaga sapo, rotina, hábitos, focos, descansos, propostas, metas e compras da ilha da conta, em todos os aparelhos. Não dá para desfazer. Só use se a pessoa pediu explicitamente.',
       inputSchema: { confirmacao: z.literal('APAGAR TUDO').describe('Escreva exatamente APAGAR TUDO') },
       annotations: DESTRUTIVA,
     },
