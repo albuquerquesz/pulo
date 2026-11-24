@@ -4,7 +4,7 @@
  * `PULO_COOKIE_DOMAIN` (opcional, para `app.x` e `api.x`). Funções puras, sem I/O.
  */
 export interface WebEnv {
-  /** Origens do app web, separadas por vírgula. Padrão: o Expo web local. */
+  /** Origens do app web, separadas por vírgula. Padrão: o web local (TanStack na porta 3000). */
   PULO_CORS_ORIGIN?: string | undefined;
   /** Endereço público da API (https em produção, http://localhost em dev). */
   BETTER_AUTH_URL: string;
@@ -12,7 +12,7 @@ export interface WebEnv {
   PULO_COOKIE_DOMAIN?: string | undefined;
 }
 
-export const DEFAULT_WEB_ORIGIN = 'http://localhost:8081';
+export const DEFAULT_WEB_ORIGIN = 'http://localhost:3000';
 
 export interface SessionCookieConfig {
   /** HttpOnly sempre: o JavaScript do app nunca lê a sessão. */
@@ -58,7 +58,7 @@ const isUnderDomain = (host: string, domain: string) => host === domain || host.
 
 /**
  * Mesmo site (regra do SameSite, sem a porta): com `PULO_COOKIE_DOMAIN`, quando API e app estão sob o domínio;
- * sem ele, quando o host é o mesmo (`localhost:8081` e `localhost:8787` são o mesmo site).
+ * sem ele, quando o host é o mesmo (`localhost:3000` e `localhost:8787` são o mesmo site).
  */
 function sameSite(apiHost: string, originHost: string, domain: string | undefined): boolean {
   return domain ? isUnderDomain(apiHost, domain) && isUnderDomain(originHost, domain) : apiHost === originHost;

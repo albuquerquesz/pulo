@@ -6,7 +6,7 @@ import { signIn, testEnv } from './testing';
 import { resolveWebConfig } from './web-config';
 
 const NOW = 1_795_000_000_000;
-const ORIGINS = ['http://localhost:8081'];
+const ORIGINS = ['http://localhost:3000'];
 
 let database: TestDatabase;
 

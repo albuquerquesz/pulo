@@ -37,7 +37,7 @@ describe('proteção CSRF por Origin nas rotas com cookie', () => {
   it('outra origem recebe 403 origem_nao_permitida e nada é gravado', async () => {
     const me = await h.newUser();
     const id = uuid();
-    for (const origin of ['https://intruso.example', 'null', 'http://localhost:9999', 'http://localhost:8081.intruso.example']) {
+    for (const origin of ['https://intruso.example', 'null', 'http://localhost:9999', 'http://localhost:3000.intruso.example']) {
       const res = await send(me.cookie, 'PUT', `/api/blocks/${id}`, { origin }, block(id));
       expect(res.status).toBe(403);
       expect((await res.json()).error).toBe('origem_nao_permitida');

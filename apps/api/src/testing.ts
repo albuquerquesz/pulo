@@ -28,7 +28,7 @@ export async function signIn(auth: Auth, email: string) {
 // ---------- Harness das rotas de domínio ----------
 
 export const TEST_NOW = 1_795_000_000_000;
-export const TEST_ORIGIN = 'http://localhost:8081';
+export const TEST_ORIGIN = 'http://localhost:3000';
 
 export type TestApp = ReturnType<typeof createApp>;
 

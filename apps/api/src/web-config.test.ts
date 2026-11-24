@@ -4,10 +4,10 @@ const base = { BETTER_AUTH_URL: 'http://localhost:8787' };
 
 describe('parseOrigins', () => {
   it('normaliza, tira repetidas e barras, e usa o padrão sem valor', () => {
-    expect(parseOrigins(undefined)).toEqual(['http://localhost:8081']);
-    expect(parseOrigins(' https://app.exemplo.com/ , https://app.exemplo.com,http://localhost:8081 ')).toEqual([
+    expect(parseOrigins(undefined)).toEqual(['http://localhost:3000']);
+    expect(parseOrigins(' https://app.exemplo.com/ , https://app.exemplo.com,http://localhost:3000 ')).toEqual([
       'https://app.exemplo.com',
-      'http://localhost:8081',
+      'http://localhost:3000',
     ]);
   });
   it('recusa valor que não é origem http ou https', () => {
@@ -46,7 +46,7 @@ describe('resolveWebConfig', () => {
 
   it('uma origem de outro site basta para exigir None; dev com app local contra API publicada também', () => {
     expect(
-      resolveWebConfig({ BETTER_AUTH_URL: 'https://api.exemplo.com', PULO_CORS_ORIGIN: 'https://api.exemplo.com,http://localhost:8081' }).cookie.sameSite,
+      resolveWebConfig({ BETTER_AUTH_URL: 'https://api.exemplo.com', PULO_CORS_ORIGIN: 'https://api.exemplo.com,http://localhost:3000' }).cookie.sameSite,
     ).toBe('none');
   });
 

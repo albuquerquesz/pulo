@@ -27,7 +27,7 @@ const attributes = (cookie: string) => cookie.split(';').slice(1).map((part) => 
 
 describe('Set-Cookie do login', () => {
   it('dev (localhost, portas diferentes): HttpOnly, Lax, sem Secure e sem Domain', async () => {
-    const cookies = await loginCookies(testEnv, 'http://localhost:8081');
+    const cookies = await loginCookies(testEnv, 'http://localhost:3000');
     expect(cookies.length).toBeGreaterThan(0);
     for (const cookie of cookies) {
       const attrs = attributes(cookie);
