@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rascunho Desktop</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap" />
+<style>
+:root{
+  --bg:#f7f3e3;--surface:#fff;--line:#e4e0cc;--ink:#1f2a24;--muted:#5e6b62;
+  --sapo:#8fe05a;--sapo-b:#6cc23f;--agua:#3fc9a2;--foco:#ff7a59;--foco-b:#d9583a;
+  --descanso:#6c63b5;--sol:#ffd166;--r-sm:12px;--r-md:20px;--r-lg:28px;
+}
+:root[data-theme="dark"]{--bg:#14201a;--surface:#1d2e25;--line:#2a3f33;--ink:#eafff0;--muted:#9db3a5}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#14201a;--surface:#1d2e25;--line:#2a3f33;--ink:#eafff0;--muted:#9db3a5}}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--ink);font:600 15px/1.45 Nunito,ui-rounded,system-ui,sans-serif;min-height:100vh}
+button{font:inherit;color:inherit;cursor:pointer}
+.app{display:grid;grid-template-columns:232px minmax(0,1fr) 340px;min-height:100vh}
+/* sidebar */
+.side{background:var(--surface);border-right:1px solid var(--line);padding:24px 16px;display:flex;flex-direction:column;gap:24px;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:22px;padding:0 8px}
+.brand svg{width:34px;height:34px}
+.demo{align-self:flex-start;margin:0 8px;background:var(--sol);color:#1f2a24;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:800}
+nav{display:flex;flex-direction:column;gap:4px}
+nav button{display:flex;align-items:center;gap:12px;background:none;border:0;border-radius:var(--r-sm);padding:11px 12px;font-weight:700;text-align:left;color:var(--muted)}
+nav button svg{width:20px;height:20px;flex:none}
+nav button:hover{background:color-mix(in srgb,var(--sapo) 14%,transparent);color:var(--ink)}
+nav button.on{background:var(--sapo);color:#1f2a24;box-shadow:inset 0 -3px 0 var(--sapo-b)}
+.me{margin-top:auto;border:1px solid var(--line);border-bottom-width:4px;border-radius:var(--r-md);padding:14px;display:flex;gap:12px;align-items:center}
+.me .ava{width:44px;height:44px;border-radius:50%;background:color-mix(in srgb,var(--sapo) 30%,var(--surface));display:grid;place-items:center}
+.me small{display:block;color:var(--muted);font-size:12px}
+.coin{display:inline-flex;align-items:center;gap:4px;font-weight:800}
+.coin i{width:14px;height:14px;border-radius:50%;background:#FFD166;border:1.5px solid #E0A93A;display:inline-block}
+/* main */
+main{padding:32px 40px 48px;display:flex;flex-direction:column;gap:24px;min-width:0}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px}
+h1{font-size:32px;font-weight:800;line-height:1.1}
+h2{font-size:18px;font-weight:800}
+.muted{color:var(--muted)}
+.leg{font-size:13px;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--line);border-bottom-width:4px;border-radius:var(--r-md);padding:20px}
+.btn{border:0;border-radius:var(--r-md);padding:12px 22px;font-weight:800;background:var(--sapo);box-shadow:inset 0 -4px 0 var(--sapo-b);color:#1f2a24}
+.btn.foco{background:var(--foco);box-shadow:inset 0 -4px 0 var(--foco-b)}
+.btn.ghost{background:transparent;border:1.5px solid var(--line);box-shadow:inset 0 -3px 0 var(--line);color:var(--ink)}
+.row{display:flex;gap:12px;align-items:center}
+.sec{display:flex;flex-direction:column;gap:12px}
+.sec-h{display:flex;justify-content:space-between;align-items:baseline}
+/* hoje */
+.hero{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;padding:28px;background:linear-gradient(120deg,color-mix(in srgb,var(--sapo) 22%,var(--surface)),var(--surface) 60%)}
+.stats{display:flex;gap:28px;margin-top:16px}
+.stat b{display:block;font-size:26px;font-weight:800;line-height:1}
+.stat span{font-size:12px;color:var(--muted)}
+.next{display:flex;flex-direction:column;gap:10px;align-items:flex-end;text-align:right}
+.habits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.hab{display:flex;gap:12px;align-items:center;padding:14px 16px}
+.chk{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--muted);flex:none;display:grid;place-items:center}
+.hab.done .chk{background:var(--sapo);border-color:var(--sapo-b)}
+.hab.done b{text-decoration:line-through;color:var(--muted)}
+.cols{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:24px}
+.tl{display:flex;flex-direction:column;gap:0;padding:8px 20px}
+.tli{display:grid;grid-template-columns:56px 18px 1fr auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px dashed var(--line)}
+.tli:last-child{border-bottom:0}
+.dot{width:14px;height:14px;border-radius:50%;background:var(--line)}
+.tli.done .dot{background:var(--sapo-b)}.tli.now .dot{background:var(--foco);box-shadow:0 0 0 5px color-mix(in srgb,var(--foco) 25%,transparent)}
+.tli.now{font-weight:800}
+.tag{font-size:12px;border-radius:999px;padding:2px 10px;background:color-mix(in srgb,var(--line) 60%,transparent);color:var(--muted)}
+.tag.foco{background:color-mix(in srgb,var(--foco) 20%,transparent);color:var(--foco-b)}
+.goal .bar{height:10px;border-radius:999px;background:var(--line);overflow:hidden;margin:10px 0 6px}
+.goal .bar i{display:block;height:100%;background:var(--sapo)}
+/* rail */
+.rail{border-left:1px solid var(--line);padding:32px 24px;display:flex;flex-direction:column;gap:20px;position:sticky;top:0;height:100vh;overflow:auto}
+.pond{padding:0;overflow:hidden}
+.pond svg{display:block;width:100%;height:auto}
+.pond .cap{padding:12px 18px 16px}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:end;height:110px;margin-top:12px}
+.week div{display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+.week i{width:100%;border-radius:8px;background:var(--sapo)}
+.week i.rest{background:var(--descanso)}.week i.zero{background:var(--line)}
+.week span{font-size:11px;color:var(--muted)}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.kv b{font-size:20px;font-weight:800;display:block}
+/* semana */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi b{font-size:30px;font-weight:800;display:block;line-height:1.1}
+.periods{display:flex;flex-direction:column;gap:14px;margin-top:10px}
+.per{display:grid;grid-template-columns:70px 1fr 70px;gap:12px;align-items:center}
+.per .bar{height:18px;border-radius:999px;background:var(--line);overflow:hidden}.per .bar i{display:block;height:100%;background:var(--agua)}
+.ai{border-color:color-mix(in srgb,var(--descanso) 45%,var(--line));background:linear-gradient(140deg,color-mix(in srgb,var(--descanso) 12%,var(--surface)),var(--surface) 55%)}
+.ai .pill{display:inline-flex;gap:6px;align-items:center;font-size:12px;font-weight:800;color:var(--descanso);background:color-mix(in srgb,var(--descanso) 14%,transparent);padding:3px 10px;border-radius:999px}
+.ba{display:grid;grid-template-columns:1fr 40px 1fr;gap:8px;align-items:center;margin:16px 0}
+.ba .box{border:1px solid var(--line);border-radius:var(--r-sm);padding:14px;background:var(--surface)}
+.ba .box.after{border:2px solid var(--sapo-b)}
+.ba .arrow{text-align:center;font-size:22px;color:var(--muted)}
+.heat{display:grid;grid-template-columns:40px repeat(7,1fr);gap:6px;font-size:11px;color:var(--muted);align-items:center}
+.heat i{height:26px;border-radius:6px;background:var(--line)}
+.h1{background:color-mix(in srgb,var(--agua) 35%,var(--line))!important}.h2{background:color-mix(in srgb,var(--agua) 65%,var(--line))!important}.h3{background:var(--agua)!important}
+/* foco */
+.focus{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+.timer{display:flex;flex-direction:column;align-items:center;gap:20px;padding:32px}
+.ring{width:280px;height:280px;border-radius:50%;background:conic-gradient(var(--foco) 0 0%,var(--sapo) 0 100%);display:grid;place-items:center}
+.ring>div{width:244px;height:244px;border-radius:50%;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring b{font-size:60px;font-weight:800;line-height:1}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chip{border:1.5px solid var(--line);border-radius:999px;padding:6px 14px;background:none;font-weight:700}
+.chip.on{border-color:var(--sapo-b);background:color-mix(in srgb,var(--sapo) 25%,transparent)}
+.view{display:none}.view.on{display:flex}
+.note{position:fixed;right:16px;bottom:16px;background:var(--ink);color:var(--bg);border-radius:12px;padding:10px 14px;font-size:12px;max-width:300px;opacity:.92}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><svg viewBox="0 0 40 40"><ellipse cx="20" cy="26" rx="15" ry="11" fill="#8fe05a"/><circle cx="12" cy="13" r="7" fill="#8fe05a"/><circle cx="28" cy="13" r="7" fill="#8fe05a"/><circle cx="12" cy="13" r="4" fill="#fff"/><circle cx="28" cy="13" r="4" fill="#fff"/><circle cx="12.5" cy="13.5" r="2" fill="#1f2a24"/><circle cx="28.5" cy="13.5" r="2" fill="#1f2a24"/><path d="M14 25q6 4 12 0" stroke="#1f2a24" stroke-width="2" fill="none" stroke-linecap="round"/></svg>Pulo</div>
+    <span class="demo">Modo demo</span>
+    <nav id="nav">
+      <button class="on" data-v="hoje"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Hoje</button>
+      <button data-v="ilha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21V9M12 9C9 5 5 6 4 8M12 9c3-4 7-3 8-1M12 9c-2-3-1-6 1-6M3 21h18"/></svg>Ilha</button>
+      <button data-v="foco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>Foco</button>
+      <button data-v="semana"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Semana</button>
+      <button data-v="metas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 21V4h11l-2 4 2 4H5"/></svg>Metas</button>
+      <button data-v="perfil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg>Perfil</button>
+    </nav>
+    <div class="me">
+      <div class="ava"><svg width="30" height="30" viewBox="0 0 40 40"><ellipse cx="20" cy="26" rx="15" ry="11" fill="#8fe05a"/><circle cx="12" cy="13" r="7" fill="#8fe05a"/><circle cx="28" cy="13" r="7" fill="#8fe05a"/><circle cx="12.5" cy="13.5" r="2.2" fill="#1f2a24"/><circle cx="28.5" cy="13.5" r="2.2" fill="#1f2a24"/></svg></div>
+      <div><b>Ana</b><small>Fase 4 · 22 dias de cuidado</small><span class="coin"><i></i>140 moscas</span></div>
+    </div>
+  </aside>
+
+  <main>
+    <!-- HOJE -->
+    <section class="view on sec" id="v-hoje" style="gap:24px">
+      <div class="top"><div><p class="leg">Terça, 24 de novembro</p><h1>Bom dia, Ana</h1></div></div>
+      <div class="card hero">
+        <div>
+          <h2>Seu dia em um olhar</h2>
+          <p class="muted">Um passo de cada vez. O sapo está animado.</p>
+          <div class="stats">
+            <div class="stat"><b>2 de 4</b><span>hábitos feitos</span></div>
+            <div class="stat"><b>50 min</b><span>de foco hoje</span></div>
+            <div class="stat"><b>+6</b><span>moscas hoje</span></div>
+          </div>
+        </div>
+        <div class="next">
+          <span class="tag foco">Próximo bloco 14h30</span>
+          <b style="font-size:20px">Estudar inglês · 25 min</b>
+          <button class="btn foco">Começar foco</button>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-h"><h2>Hábitos de hoje</h2><span class="leg">2 de 4</span></div>
+        <div class="habits">
+          <div class="card hab done"><span class="chk">✓</span><div><b>Beber água</b><p class="leg">todo dia</p></div></div>
+          <div class="card hab done"><span class="chk">✓</span><div><b>Alongar</b><p class="leg">manhã</p></div></div>
+          <div class="card hab"><span class="chk"></span><div><b>Ler 10 páginas</b><p class="leg">noite</p></div></div>
+          <div class="card hab"><span class="chk"></span><div><b>Caminhar</b><p class="leg">seg, qua, sex</p></div></div>
+          <div class="card hab" style="border-style:dashed;justify-content:center;color:var(--muted)">+ Novo hábito</div>
+        </div>
+      </div>
+
+      <div class="cols">
+        <div class="sec">
+          <div class="sec-h"><h2>Linha do dia</h2><span class="leg">rotina de terça</span></div>
+          <div class="card tl">
+            <div class="tli done"><span class="leg">08h00</span><span class="dot"></span><span>Revisar tarefas</span><span class="tag">feito</span></div>
+            <div class="tli done"><span class="leg">10h00</span><span class="dot"></span><span>Projeto da faculdade</span><span class="tag">25 min</span></div>
+            <div class="tli now"><span class="leg">14h30</span><span class="dot"></span><span>Estudar inglês</span><span class="tag foco">agora</span></div>
+            <div class="tli"><span class="leg">17h00</span><span class="dot"></span><span>Ler artigo</span><span class="tag">25 min</span></div>
+            <div class="tli"><span class="leg">20h00</span><span class="dot"></span><span>Descanso</span><span class="tag">livre</span></div>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="sec-h"><h2>Meta em andamento</h2><span class="leg">ver todas</span></div>
+          <div class="card goal">
+            <b>Terminar o curso de inglês</b>
+            <div class="bar"><i style="width:60%"></i></div>
+            <p class="leg">3 de 5 marcos · próximo: unidade 4</p>
+          </div>
+          <div class="card" style="display:flex;gap:14px;align-items:center">
+            <span class="coin" style="font-size:22px"><i style="width:22px;height:22px"></i>140</span>
+            <div><b>Praia abre com 40 moscas</b><p class="leg">Você já pode abrir. Ver a ilha</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SEMANA -->
+    <section class="view sec" id="v-semana" style="gap:24px">
+      <div class="top"><div><p class="leg">16 a 22 de novembro</p><h1>Semana</h1></div><div class="row"><button class="btn ghost">‹</button><button class="btn ghost">›</button></div></div>
+      <div class="kpis">
+        <div class="card kpi"><span class="leg">Foco</span><b>226 min</b><span class="leg">+18% que a anterior</span></div>
+        <div class="card kpi"><span class="leg">Sessões</span><b>10</b><span class="leg">8 concluídas</span></div>
+        <div class="card kpi"><span class="leg">Dias de cuidado</span><b>6 de 7</b><span class="leg">semana estável</span></div>
+        <div class="card kpi"><span class="leg">Descanso</span><b>1 dia</b><span class="leg">conta como cuidado</span></div>
+      </div>
+      <div class="card ai">
+        <span class="pill">✦ Sugestão da IA</span>
+        <h2 style="margin-top:10px">Algumas tardes renderam menos que as manhãs</h2>
+        <p class="muted">Um pequeno ajuste pode deixar o foco mais leve. Nada muda sem a sua aprovação.</p>
+        <div class="ba">
+          <div class="box"><span class="leg">Antes</span><b style="display:block;font-size:18px">Seg, 14h30 · 25 min</b></div>
+          <div class="arrow">→</div>
+          <div class="box after"><span class="leg">Depois</span><b style="display:block;font-size:18px">Seg, 8h30 · 25 min</b></div>
+        </div>
+        <div class="row"><button class="btn">Aceitar</button><button class="btn ghost">Editar horário</button><button class="btn ghost" style="border:0;box-shadow:none">Negar</button></div>
+      </div>
+      <div class="cols">
+        <div class="card">
+          <h2>Por período</h2>
+          <div class="periods">
+            <div class="per"><span>Manhã</span><span class="bar"><i style="width:100%"></i></span><span class="leg">125 min</span></div>
+            <div class="per"><span>Tarde</span><span class="bar"><i style="width:81%"></i></span><span class="leg">101 min</span></div>
+            <div class="per"><span>Noite</span><span class="bar"><i style="width:2%"></i></span><span class="leg">0 min</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Mapa da semana</h2>
+          <div class="heat" style="margin-top:12px">
+            <span></span><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+            <span>Manhã</span><i class="h2"></i><i class="h3"></i><i class="h3"></i><i class="h1"></i><i class="h3"></i><i class="h2"></i><i></i>
+            <span>Tarde</span><i></i><i class="h1"></i><i class="h2"></i><i class="h3"></i><i class="h1"></i><i class="h2"></i><i></i>
+            <span>Noite</span><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOCO -->
+    <section class="view sec" id="v-foco" style="gap:24px">
+      <div class="top"><div><p class="leg">Pomodoro de 25 min</p><h1>Foco</h1></div></div>
+      <div class="focus">
+        <div class="card timer">
+          <div class="chips"><button class="chip on">Estudar inglês</button><button class="chip">Ler artigo</button><button class="chip">Foco livre</button></div>
+          <div class="ring"><div><b>25:00</b><span class="leg">Pronto para começar</span></div></div>
+          <button class="btn foco" style="width:100%;max-width:320px">Começar foco</button>
+          <p class="leg">Parar na metade também conta como cuidado.</p>
+        </div>
+        <div class="sec">
+          <div class="card tl">
+            <h2 style="padding-top:12px">Sessões de hoje</h2>
+            <div class="tli done"><span class="leg">10h00</span><span class="dot"></span><span>Projeto da faculdade</span><span class="tag">25 min</span></div>
+            <div class="tli done"><span class="leg">11h10</span><span class="dot"></span><span>Foco livre</span><span class="tag">25 min</span></div>
+            <div class="tli now"><span class="leg">14h30</span><span class="dot"></span><span>Estudar inglês</span><span class="tag foco">próxima</span></div>
+          </div>
+          <div class="card">
+            <h2>Nesta semana</h2>
+            <div class="kv" style="border:0;margin:0;padding-top:8px"><div><b>226 min</b><span class="leg">de foco</span></div><div><b>Manhã</b><span class="leg">seu melhor período</span></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view sec" id="v-outro" style="gap:16px">
+      <h1 id="outro-t">Ilha</h1>
+      <div class="card"><p class="muted" id="outro-p"></p></div>
+    </section>
+  </main>
+
+  <aside class="rail">
+    <div class="card pond">
+      <svg viewBox="0 0 300 220" aria-label="Sapo na lagoa">
+        <ellipse cx="150" cy="160" rx="140" ry="52" fill="#7FB35A"/>
+        <ellipse cx="150" cy="158" rx="118" ry="40" fill="#38B796"/>
+        <ellipse cx="92" cy="160" rx="34" ry="10" fill="#5EC47A"/>
+        <ellipse cx="200" cy="166" rx="40" ry="12" fill="#5EC47A"/>
+        <path d="M245 150v-38M252 150v-30" stroke="#5A8F3A" stroke-width="4" stroke-linecap="round"/>
+        <ellipse cx="150" cy="128" rx="44" ry="38" fill="#8FE05A"/>
+        <ellipse cx="150" cy="134" rx="22" ry="26" fill="#E6FFD0"/>
+        <circle cx="128" cy="78" r="18" fill="#8FE05A"/><circle cx="172" cy="78" r="18" fill="#8FE05A"/>
+        <ellipse cx="150" cy="96" rx="44" ry="26" fill="#8FE05A"/>
+        <circle cx="128" cy="78" r="11" fill="#fff"/><circle cx="172" cy="78" r="11" fill="#fff"/>
+        <circle cx="129" cy="79" r="6" fill="#2a1a12"/><circle cx="173" cy="79" r="6" fill="#2a1a12"/>
+        <path d="M134 104q16 10 32 0" stroke="#2a1a12" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <ellipse cx="118" cy="100" rx="7" ry="4" fill="#F59AA0"/><ellipse cx="182" cy="100" rx="7" ry="4" fill="#F59AA0"/>
+      </svg>
+      <div class="cap"><b>Fase 4 · lagoa completa</b><p class="leg">22 dias de cuidado. O sapo comemora cada passo.</p></div>
+    </div>
+    <div class="card">
+      <div class="sec-h"><h2>Esta semana</h2><span class="leg">6 de 7 dias</span></div>
+      <div class="week">
+        <div><i style="height:60%"></i><span>D</span></div><div><i style="height:90%"></i><span>S</span></div><div><i style="height:75%"></i><span>T</span></div>
+        <div><i style="height:85%"></i><span>Q</span></div><div><i class="rest" style="height:40%"></i><span>Q</span></div><div><i style="height:70%"></i><span>S</span></div><div><i class="zero" style="height:6%"></i><span>S</span></div>
+      </div>
+      <div class="kv"><div><span class="leg">Foco</span><b>226 min</b></div><div><span class="leg">Moscas</span><b>+38</b></div></div>
+    </div>
+    <div class="card" style="background:color-mix(in srgb,var(--sol) 22%,var(--surface))">
+      <b>Sem culpa</b>
+      <p class="leg" style="margin-top:4px">Descansar também conta. O sapo nunca volta de fase.</p>
+    </div>
+  </aside>
+</div>
+<div class="note">Rascunho de estrutura do desktop, com dados de exemplo. Clique em Hoje, Semana e Foco na sidebar.</div>
+<script>
+const outros={ilha:'Ilha: mapa à esquerda e painel da área à direita (já existe). Só entra na estrutura nova.',metas:'Metas: lista à esquerda e detalhe da meta com marcos à direita.',perfil:'Perfil: cartões em duas colunas (horários, tema, conta).'};
+document.querySelectorAll('#nav button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  const v=b.dataset.v, el=document.getElementById('v-'+v);
+  if(el) el.classList.add('on'); else {document.getElementById('v-outro').classList.add('on');document.getElementById('outro-t').textContent=b.textContent.trim();document.getElementById('outro-p').textContent=outros[v];}
+}));
+const h=location.hash.slice(1);if(h)document.querySelector('#nav button[data-v="'+h+'"]')?.click();
+</script>
+</body>
+</html>
