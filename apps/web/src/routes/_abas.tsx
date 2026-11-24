@@ -3,10 +3,11 @@ import { Outlet, createFileRoute, useLocation, useNavigate } from '@tanstack/rea
 import { Redirecionar, useApp } from '@/features/app';
 import { BarraAbas } from '@/ui';
 
-type Aba = { chave: string; rotulo: string; para: '/' | '/foco' | '/semana' | '/metas' | '/perfil' };
+type Aba = { chave: string; rotulo: string; para: '/' | '/ilha' | '/foco' | '/semana' | '/metas' | '/perfil' };
 
 const ABAS: Aba[] = [
   { chave: 'hoje', rotulo: 'Hoje', para: '/' },
+  { chave: 'ilha', rotulo: 'Ilha', para: '/ilha' },
   { chave: 'foco', rotulo: 'Foco', para: '/foco' },
   { chave: 'rotina', rotulo: 'Semana', para: '/semana' },
   { chave: 'metas', rotulo: 'Metas', para: '/metas' },

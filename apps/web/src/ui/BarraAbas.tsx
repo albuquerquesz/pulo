@@ -7,7 +7,7 @@ type IconeProps = { classe: string; tamanho: number };
 export type AbaDaBarra = {
   chave: string;
   rotulo: string;
-  /** Ícone próprio. Sem ele, usa o ícone padrão da chave (hoje, rotina, foco, metas, progresso, perfil). */
+  /** Ícone próprio. Sem ele, usa o ícone padrão da chave (hoje, ilha, rotina, foco, metas, progresso, perfil). */
   icone?: (p: IconeProps) => ReactNode;
 };
 
@@ -44,6 +44,13 @@ const ICONES: Record<string, ReactNode> = {
     <>
       <path d="M6 21 L6 4" {...TRACO} />
       <path d="M6 4.5 L18 4.5 L15 9 L18 13.5 L6 13.5" {...TRACO} />
+    </>
+  ),
+  ilha: (
+    <>
+      <path d="M3 18 C 7 15.5 17 15.5 21 18" {...TRACO} />
+      <path d="M12 16 C 12 12 11 9 9 6.5" {...TRACO} />
+      <path d="M9 6.5 C 7 5 4.5 5.5 3.5 7.5 M9 6.5 C 11 4.5 14 5 15 7 M9 6.5 C 9 4.5 10.5 3 12.5 3" {...TRACO} />
     </>
   ),
   progresso: <path d="M4 19 L4 14 M10 19 L10 9 M16 19 L16 12 M21 19 L21 5" {...TRACO} />,

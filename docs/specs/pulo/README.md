@@ -21,6 +21,7 @@ Prazo: entrega em **30/11/2026 às 23h59**. Estimativa de esforço (minha, não 
 | [09](09-telas-navegacao-e-onboarding.md) | Telas, navegação e onboarding | Casca | M | 02 a 08 | a rever |
 | [10](10-demo-web-e-entrega.md) | Demo, web e entrega: exportação, modo demo, regras do hackathon, plano de 9 dias | Entrega | M | todas | a rever |
 | [11](11-metas.md) | Metas de longo prazo: aba Metas, marcos, limite de ativas | Rotina e foco | M | 01, 02, 09 | feita no web |
+| [12](12-ilha.md) | Ilha do sapo: mapa isométrico com níveis, moscas e enfeites | Mascote | M | 01, 03, 04, 11 | feita no web |
 
 ## Como as specs se ligam
 
