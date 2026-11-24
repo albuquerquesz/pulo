@@ -16,7 +16,7 @@
 *{box-sizing:border-box;margin:0}
 body{background:var(--bg);color:var(--ink);font:600 15px/1.45 Nunito,ui-rounded,system-ui,sans-serif;min-height:100vh}
 button{font:inherit;color:inherit;cursor:pointer}
-.app{display:grid;grid-template-columns:272px minmax(0,1fr) 460px;min-height:100vh}
+.app{display:grid;grid-template-columns:312px minmax(0,1fr) 460px;min-height:100vh}
 /* sidebar */
 .side{background:var(--surface);border-right:1px solid var(--line);padding:24px 16px;display:flex;flex-direction:column;gap:24px;position:sticky;top:0;height:100vh}
 .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:22px;padding:0 8px}
@@ -51,11 +51,11 @@ h2{font-size:18px;font-weight:800}
 .sec{display:flex;flex-direction:column;gap:12px}
 .sec-h{display:flex;justify-content:space-between;align-items:baseline}
 /* hoje */
-.hero{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;padding:28px;background:linear-gradient(120deg,color-mix(in srgb,var(--sapo) 22%,var(--surface)),var(--surface) 60%)}
-.stats{display:flex;gap:28px;margin-top:16px}
+.hero{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;padding:32px 36px;min-height:200px;background:linear-gradient(120deg,color-mix(in srgb,var(--sapo) 22%,var(--surface)),var(--surface) 60%)}
+.stats{display:flex;gap:28px;margin-top:36px}
 .stat{display:flex;flex-direction:column-reverse;gap:6px}
 .stat b{display:block;font-size:26px;font-weight:800;line-height:1}
-.stat span{font-size:12px;color:var(--muted)}
+.stat span{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .next{display:flex;flex-direction:column;gap:10px;align-items:flex-end;text-align:right}
 .habits{display:flex;flex-direction:column;gap:10px}
 .hab{display:flex;gap:12px;align-items:center;padding:14px 16px}
@@ -74,7 +74,7 @@ h2{font-size:18px;font-weight:800}
 .goal .bar{height:10px;border-radius:999px;background:var(--line);overflow:hidden;margin:10px 0 6px}
 .goal .bar i{display:block;height:100%;background:var(--sapo)}
 /* rail */
-.rail{border-left:1px solid var(--line);padding:32px 24px;display:flex;flex-direction:column;gap:20px;position:sticky;top:0;height:100vh;overflow:auto}
+.rail{padding:32px 24px;display:flex;flex-direction:column;gap:20px;position:sticky;top:0;height:100vh;overflow:auto}
 .pond{padding:0;overflow:hidden}
 .pond svg{display:block;width:100%;height:auto}
 .pond .cap{padding:12px 18px 16px}
@@ -110,14 +110,14 @@ h2{font-size:18px;font-weight:800}
 .chip{border:1.5px solid var(--line);border-radius:999px;padding:6px 14px;background:none;font-weight:700}
 .chip.on{border-color:var(--sapo-b);background:color-mix(in srgb,var(--sapo) 25%,transparent)}
 /* ilha */
-.app.sem-trilho{grid-template-columns:272px minmax(0,1fr)}
+.app.sem-trilho{grid-template-columns:312px minmax(0,1fr)}
 .app.sem-trilho .rail{display:none}
-.ilha{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(320px,1fr);gap:28px;align-items:start}
+.ilha{display:grid;grid-template-columns:minmax(0,1fr);gap:28px;align-items:start}
 .mapa{padding:12px;position:sticky;top:24px}
 .mapa svg{display:block;width:100%;height:auto}
 .mapa .tile{cursor:pointer}.mapa .tile:hover .top{filter:brightness(1.06)}
 .mapa .tile.sel .top{stroke:var(--sapo-b);stroke-width:5}
-.mapa .lbl{font:800 15px Nunito,sans-serif;fill:var(--ink)}
+.mapa .lbl{font:800 20px Nunito,sans-serif;fill:var(--ink)}
 .saldo{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-bottom-width:4px;border-radius:999px;padding:8px 16px;background:var(--surface);font-weight:800;font-size:20px}
 .saldo i{width:22px;height:22px;border-radius:50%;background:#FFD166;border:2px solid #E0A93A;display:inline-block}
 .niveis{display:flex;gap:6px;margin-top:6px}
@@ -133,14 +133,298 @@ h2{font-size:18px;font-weight:800}
 .ganhos ul{padding:0}
 .mais{background:var(--sapo);color:#1f2a24;border-radius:999px;padding:1px 10px;font-weight:800;font-size:13px}
 .view{display:none}.view.on{display:flex}
+/* sequência com foguinho */
+.fogo{width:1em;height:1em;flex:none;display:inline-block;vertical-align:-0.12em}
+.stat b.seq{display:flex;align-items:center;gap:6px;color:var(--foco)}
+.streak{position:relative;overflow:hidden;background:linear-gradient(160deg,color-mix(in srgb,var(--foco) 18%,var(--surface)),var(--surface) 70%)}
+.streak .corpo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:28px;align-items:center;margin-top:14px}
+.streak .topo{display:flex;align-items:center;gap:16px}
+.streak .chama{font-size:64px;line-height:1;filter:drop-shadow(0 6px 14px color-mix(in srgb,var(--foco) 45%,transparent));animation:tremula 1.6s ease-in-out infinite;transform-origin:50% 90%}
+@keyframes tremula{0%,100%{transform:scale(1) rotate(-2deg)}50%{transform:scale(1.06,1.1) rotate(2deg)}}
+@media (prefers-reduced-motion:reduce){.streak .chama{animation:none}}
+.streak .num{font-size:44px;font-weight:800;line-height:1}
+.streak .num small{font-size:16px;color:var(--muted);font-weight:700;margin-left:4px}
+.streak .dias{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:18px;text-align:center}
+.streak .dia{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:15px;font-weight:800;color:var(--muted)}
+.streak .dia i{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-size:30px;font-style:normal;background:color-mix(in srgb,var(--line) 60%,transparent)}
+.streak .dia.feito i{background:color-mix(in srgb,var(--foco) 22%,transparent)}
+.streak .dia.descanso i{background:color-mix(in srgb,var(--descanso) 28%,transparent);color:var(--descanso);font-size:24px}
+.streak .dia.hoje i{border:2.5px dashed var(--foco);background:none;opacity:.9}
+.streak .dia.hoje{color:var(--foco);font-weight:800}
+.streak .rodape{display:flex;justify-content:space-between;gap:12px;margin-top:16px;font-size:13px;color:var(--muted)}
+.streak .rodape b{color:var(--ink)}
+.sem-barra{margin-top:4px;padding:18px 22px 20px;border-radius:var(--r-md);background:color-mix(in srgb,var(--bg) 70%,transparent);display:flex;flex-direction:column;gap:14px}
+.sem-barra .letras{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:18px;font-weight:800;color:var(--muted);padding-right:52px}
+.sem-barra .letras .f{color:color-mix(in srgb,var(--sol) 75%,var(--ink))}
+.sem-barra .letras .d{color:var(--descanso)}
+.sem-barra .letras .h{color:var(--foco)}
+.sem-barra .trilho{position:relative;height:28px;margin-right:52px;border-radius:999px;background:color-mix(in srgb,var(--descanso) 35%,var(--line))}
+.sem-barra .cheio{position:absolute;inset:0 auto 0 0;border-radius:999px;background:linear-gradient(90deg,var(--sol),#ffb347);box-shadow:inset 0 5px 0 rgba(255,255,255,.35)}
+.sem-barra .brilho{position:absolute;right:-6px;top:50%;width:30px;height:30px;transform:translate(0,-50%);border-radius:50%;background:radial-gradient(circle,#fff 0 18%,rgba(255,255,255,.55) 35%,transparent 70%);animation:brilha 1.8s ease-in-out infinite}
+@keyframes brilha{0%,100%{opacity:.7;transform:translate(0,-50%) scale(.85)}50%{opacity:1;transform:translate(0,-50%) scale(1.15)}}
+.sem-barra .fim{position:absolute;right:-52px;top:50%;width:60px;height:60px;transform:translateY(-55%);filter:grayscale(1) brightness(.75) drop-shadow(0 2px 0 rgba(0,0,0,.25));opacity:.8}
+@media (prefers-reduced-motion:reduce){.sem-barra .brilho{animation:none}}
+/* perfil */
+.perfil-hero{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:24px;align-items:center;padding:28px;background:linear-gradient(120deg,color-mix(in srgb,var(--sapo) 18%,var(--surface)),var(--surface) 65%)}
+.perfil-hero .ava-g{width:96px;height:96px;border-radius:50%;background:var(--sapo);color:#1f2a24;display:grid;place-items:center;font-size:40px;font-weight:800;box-shadow:inset 0 -6px 0 var(--sapo-b)}
+.perfil-hero h1{font-size:30px}
+.perfil-hero .meta{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:6px}
+.sapo-st{display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
+.sapo-st .mini{width:44px;height:44px;border-radius:50%;background:color-mix(in srgb,var(--sapo) 22%,transparent);display:grid;place-items:center}
+.sapo-st .mini svg{width:34px;height:34px}
+.stats4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.stats4 .card{display:flex;gap:12px;align-items:center;padding:16px 18px}
+.stats4 .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:20px;flex:none}
+.stats4 b{display:block;font-size:24px;font-weight:800;line-height:1.1}
+.conq{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.conq .c{display:flex;gap:14px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:var(--r-md)}
+.conq .med{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;font-size:26px;flex:none;box-shadow:inset 0 -4px 0 rgba(0,0,0,.12)}
+.conq .c.travada{opacity:.55}.conq .c.travada .med{background:var(--line);color:var(--muted);font-weight:800}
+.conq .c small{display:block;color:var(--muted);font-size:12px}
+.conq .prog{height:8px}.conq .prog i{background:var(--sapo)}
+.prefs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:stretch}
+.linha{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px dashed var(--line)}
+.linha:last-child{border-bottom:0;padding-bottom:0}
+.linha small{display:block;color:var(--muted);font-size:12px;font-weight:600}
+.valor{font-weight:800;padding:6px 12px;border-radius:10px;background:color-mix(in srgb,var(--line) 55%,transparent)}
+.chave{width:46px;height:26px;border-radius:999px;background:var(--line);position:relative;flex:none}
+.chave::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.chave.on{background:var(--sapo)}.chave.on::after{left:23px}
+.seg{display:inline-flex;padding:3px;border-radius:12px;background:color-mix(in srgb,var(--line) 55%,transparent)}
+.seg span{padding:5px 12px;border-radius:9px;font-size:13px}.seg span.on{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.15);font-weight:800}
+.perigo{color:var(--foco-b)}
+/* metas no trilho */
+.bau{width:56px;height:56px;flex:none;margin:-16px -4px -16px 0}
+.metas-r{display:flex;flex-direction:column;gap:40px;padding:24px}
+.metas-r .sec-h a{font-size:13px;font-weight:800;color:var(--sapo-b);text-decoration:none;letter-spacing:.02em}
+.meta-i{display:grid;grid-template-columns:48px minmax(0,1fr);gap:14px;align-items:center}
+.meta-i .ic{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;font-size:24px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.1)}
+.meta-i b{display:block;margin-bottom:6px}
+.meta-i .linha-b{display:flex;align-items:center;gap:8px}
+.barra{position:relative;flex:1;height:20px;border-radius:999px;background:color-mix(in srgb,var(--line) 80%,transparent);overflow:hidden}
+.barra i{position:absolute;inset:0 auto 0 0;border-radius:999px;background:var(--sapo);box-shadow:inset 0 4px 0 rgba(255,255,255,.35)}
+.barra span{position:relative;display:block;text-align:center;font-size:12px;font-weight:800;line-height:20px;color:var(--ink);text-shadow:0 1px 0 color-mix(in srgb,var(--surface) 60%,transparent)}
+.premio{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:800;padding:3px 8px;border-radius:999px;background:color-mix(in srgb,var(--sol) 30%,transparent);flex:none}
+.premio i{width:12px;height:12px;border-radius:50%;background:#FFD166;border:1.5px solid #E0A93A}
+.meta-i.ok .barra i{background:var(--sol)}
+.meta-i.ok .premio{background:var(--sapo);color:#1f2a24}
+/* página de metas */
+.app.na-metas .metas-r{display:none}
+.mt-top{display:flex;justify-content:space-between;align-items:center;gap:16px}
+.mt-grid{display:grid;grid-template-columns:380px minmax(0,1fr);gap:24px;align-items:start}
+.mt-lista{display:flex;flex-direction:column;gap:12px}
+.mt-lista h3{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:8px 4px 0}
+.mt-item{display:grid;grid-template-columns:48px minmax(0,1fr);gap:14px;align-items:center;padding:16px 18px;text-align:left;width:100%}
+.mt-item:hover{border-color:color-mix(in srgb,var(--sapo) 50%,var(--line))}
+.mt-item.sel{border-color:var(--sapo);box-shadow:0 0 0 2px color-mix(in srgb,var(--sapo) 35%,transparent)}
+.mt-item .ic,.mt-det .ic{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;font-size:24px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.1)}
+.mt-item b{display:block;margin-bottom:6px}
+.mt-item .linha-b{display:flex;align-items:center;gap:8px}
+.mt-item .bau{width:44px;height:44px;margin:-12px -4px -12px 0}
+.mt-item.ok .barra i{background:var(--sol)}
+.mt-novo{border-style:dashed;color:var(--muted);text-align:center;padding:16px}
+.mt-det{display:flex;flex-direction:column;gap:20px}
+.mt-cab{display:flex;gap:18px;align-items:flex-start;padding:24px}
+.mt-cab .ic{width:64px;height:64px;border-radius:18px;font-size:32px;flex:none}
+.mt-cab h2{font-size:24px;line-height:1.15}
+.mt-cab .por{margin-top:8px;color:var(--muted);font-style:italic}
+.mt-cab .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:800;padding:5px 12px;border-radius:999px;background:color-mix(in srgb,var(--line) 70%,transparent)}
+.chip.bom{background:color-mix(in srgb,var(--sapo) 30%,transparent)}
+.chip.atras{background:color-mix(in srgb,var(--sol) 40%,transparent)}
+.mt-prog{display:flex;flex-direction:column;gap:12px;padding:24px}
+.mt-prog .linha-b{display:flex;align-items:center;gap:12px}
+.mt-prog .barra{height:28px}
+.mt-prog .barra span{line-height:28px;font-size:14px}
+.mt-prog .bau{width:64px;height:64px;margin:-18px -4px -18px 0}
+.ritmo{position:absolute;top:-4px;bottom:-4px;width:3px;border-radius:2px;background:var(--ink);opacity:.55}
+.mt-kv{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:4px}
+.mt-kv div{display:flex;flex-direction:column-reverse;gap:4px}
+.mt-kv span{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.mt-kv b{font-size:22px;font-weight:800}
+.mt-2{display:flex;flex-direction:column;gap:20px}
+.marcos{display:flex;flex-direction:column;padding:8px 20px}
+.marco{display:flex;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.marco:last-child{border-bottom:0}
+.marco .chk{width:24px;height:24px;font-size:13px}
+.marco.feito .chk{background:var(--sapo);border-color:var(--sapo-b);color:#1f2a24}
+.marco.feito span.t{color:var(--muted);text-decoration:line-through}
+.marco .leg{margin-left:auto}
+.marco.prox .chk{border-color:var(--sapo)}
+.marco.prox .leg{color:var(--sapo-b);font-weight:800}
+.marco.add{color:var(--muted)}
+.hab-l{display:flex;flex-direction:column;padding:8px 20px}
+.hab-v{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.hab-v:last-of-type{border-bottom:0}
+.hab-v .pts{display:flex;gap:4px}
+.hab-v .pts i{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.hab-v .pts i.s{background:var(--sapo)}
+.hab-v .seq{display:inline-flex;align-items:center;gap:2px;font-weight:800;font-size:13px}
+.hab-v .seq svg{width:16px;height:16px}
+.atrelar{margin:8px 0 12px;width:100%;border:1.5px dashed var(--line);background:none;border-radius:var(--r-sm);padding:12px;color:var(--muted);font-weight:800}
+.atrelar:hover{border-color:var(--sapo);color:var(--ink)}
+.escolher{display:none;flex-direction:column;gap:6px;margin-bottom:12px;padding:10px;border-radius:var(--r-sm);background:color-mix(in srgb,var(--line) 40%,transparent)}
+.escolher.on{display:flex}
+.escolher .op{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px}
+.escolher .op:hover{background:var(--surface)}
+.escolher .op .leg{margin-left:auto}
+.escolher .op button{border:0;border-radius:10px;padding:5px 12px;font-weight:800;font-size:13px;background:var(--sapo);color:#1f2a24;box-shadow:inset 0 -3px 0 var(--sapo-b)}
+/* página de hábitos */
+.hb-lista{display:flex;flex-direction:column;gap:10px}
+.hb-lista h3{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:10px 4px 2px;display:flex;align-items:center;gap:8px}
+.hb-item{display:grid;grid-template-columns:44px minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:14px 16px;text-align:left;width:100%}
+.hb-item:hover{border-color:color-mix(in srgb,var(--sapo) 50%,var(--line))}
+.hb-item.sel{border-color:var(--sapo);box-shadow:0 0 0 2px color-mix(in srgb,var(--sapo) 35%,transparent)}
+.hb-item .ic,.hb-cab .ic{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-size:22px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.1)}
+.hb-item b{display:block}
+.hb-item .sub{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.hb-item .sub{min-width:0}
+.hb-item .fq{white-space:nowrap;flex:none}
+.hb-item .mchip{font-size:12px;padding:1px 8px;border-radius:999px;background:color-mix(in srgb,var(--line) 70%,transparent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hb-item .seq,.hb-kv .seq{display:inline-flex;align-items:center;gap:3px;font-weight:800}
+.hb-item .seq svg{width:18px;height:18px}
+.hb-item .chk{width:30px;height:30px}
+.hb-item.feito .chk{background:var(--sapo);border-color:var(--sapo-b);color:#1f2a24}
+.hb-cab{display:flex;gap:18px;align-items:flex-start;padding:24px}
+.hb-cab .ic{width:64px;height:64px;border-radius:18px;font-size:32px;flex:none}
+.hb-cab h2{font-size:24px;line-height:1.15}
+.hb-cab>div:nth-child(2){flex:1;min-width:0}
+.hb-cab .chips{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:8px;margin-top:12px}
+.hb-cab .acoes{margin-left:auto;display:flex;gap:8px}
+.hb-cab .acoes .btn{padding:9px 16px}
+.hb-kv{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:22px 24px}
+.hb-kv div{display:flex;flex-direction:column-reverse;gap:4px}
+.hb-kv span{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.hb-kv b{font-size:26px;font-weight:800;line-height:1.1}
+.hb-kv .seq svg{width:26px;height:26px}
+.calor{display:grid;grid-template-columns:28px repeat(16,minmax(0,1fr));gap:5px;align-items:center}
+.calor .dl{font-size:12px;color:var(--muted);font-weight:800}
+.calor i{aspect-ratio:1;border-radius:5px;background:color-mix(in srgb,var(--line) 75%,transparent)}
+.calor i.v1{background:color-mix(in srgb,var(--sapo) 45%,var(--line))}
+.calor i.v2{background:var(--sapo)}
+.calor i.d{background:color-mix(in srgb,var(--descanso) 55%,transparent)}
+.calor i.f{background:none;border:1.5px dashed var(--line)}
+.calor i.h{outline:2px solid var(--foco);outline-offset:1px}
+.calor-leg{display:flex;gap:16px;margin-top:14px;font-size:12px;color:var(--muted)}
+.calor-leg span{display:inline-flex;align-items:center;gap:6px}
+.calor-leg i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.dsem{display:flex;gap:8px}
+.dsem span{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-weight:800;border:1.5px solid var(--line);color:var(--muted)}
+.dsem span.on{background:var(--sapo);border-color:var(--sapo-b);color:#1f2a24;box-shadow:inset 0 -3px 0 var(--sapo-b)}
+.agenda{display:flex;flex-direction:column;padding:6px 20px}
+.agenda .linha{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid var(--line)}
+.agenda .linha:last-child{border-bottom:0}
+.meta-at{display:flex;flex-direction:column;gap:14px;padding:20px}
+.meta-at .meta-i .bau{width:48px;height:48px;margin:-14px -4px -14px 0}
+.meta-at .acoes{display:flex;gap:8px}
+.meta-at .acoes .btn{padding:8px 14px;font-size:13px}
+.metas-op{display:none;flex-direction:column;gap:6px;padding:10px;border-radius:var(--r-sm);background:color-mix(in srgb,var(--line) 40%,transparent)}
+.metas-op.on{display:flex}
+.metas-op label{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;cursor:pointer}
+.metas-op label:hover{background:var(--surface)}
+.metas-op label.on{background:var(--surface);box-shadow:inset 0 0 0 2px var(--sapo)}
+.metas-op .r{width:20px;height:20px;border-radius:50%;border:2px solid var(--muted);flex:none}
+.metas-op label.on .r{border:6px solid var(--sapo)}
+.hb-rodape{display:flex;gap:10px}
+/* foco */
+.leg-up{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.fc-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:24px;align-items:start}
+.fc-palco{display:flex;flex-direction:column;align-items:center;gap:24px;padding:32px;background:radial-gradient(circle at 50% 42%,color-mix(in srgb,var(--foco) 14%,var(--surface)),var(--surface) 62%)}
+.fc-int{width:100%;display:flex;flex-direction:column;gap:10px}
+.fc-campo{font-size:22px;font-weight:800;padding:14px 18px;border-radius:var(--r-sm);border:1.5px solid var(--line);background:color-mix(in srgb,var(--bg) 60%,transparent)}
+.fc-campo .cursor{display:inline-block;width:2px;height:22px;margin-left:3px;vertical-align:-3px;background:var(--foco);animation:pisca 1s steps(1) infinite}
+@keyframes pisca{50%{opacity:0}}
+.fc-vinc{display:flex;flex-wrap:wrap;gap:8px}
+.vchip{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--line);border-radius:999px;padding:6px 14px;background:none;font-weight:800;font-size:13px;color:var(--ink)}
+.vchip.on{border-color:var(--foco);background:color-mix(in srgb,var(--foco) 18%,transparent)}
+.vchip.livre{color:var(--muted)}
+.vchip.mini{padding:1px 9px;font-size:12px;color:var(--muted);margin-left:8px;border-width:1px}
+.fc-anel{position:relative;width:300px;height:300px}
+.fc-anel svg{width:100%;height:100%;transform:rotate(-90deg)}
+.fc-anel .trilha{fill:none;stroke:color-mix(in srgb,var(--line) 85%,transparent);stroke-width:14}
+.fc-anel .prog{fill:none;stroke:var(--foco);stroke-width:14;stroke-linecap:round}
+.fc-centro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.fc-centro b{font-size:68px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.fc-centro span{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--foco)}
+.fc-ciclo{display:flex;align-items:center;gap:8px}
+.fc-ciclo i{width:12px;height:12px;border-radius:50%;background:var(--line)}
+.fc-ciclo i.ok{background:var(--foco)}
+.fc-ciclo i.agora{background:none;border:2px solid var(--foco)}
+.fc-ciclo span{margin-left:6px;font-size:13px;color:var(--muted)}
+.fc-dur{display:flex;flex-wrap:wrap;justify-content:center;gap:20px}
+.fc-dur>div{display:flex;flex-direction:column;align-items:center;gap:6px}
+.fc-ir{width:100%;max-width:360px;font-size:18px;padding:16px 22px}
+.premio-f{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.fc-lado{display:flex;flex-direction:column;gap:20px}
+.fc-hoje{display:flex;flex-direction:column;gap:14px}
+.barra.laranja{height:26px}.barra.laranja i{background:linear-gradient(90deg,var(--sol),var(--foco))}.barra.laranja span{line-height:26px;font-size:13px}
+.fc-sess{display:flex;flex-direction:column;padding:6px 20px}
+.ss{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px dashed var(--line)}
+.ss:last-child{border-bottom:0}
+.ss .hora{font-size:13px;color:var(--muted)}
+.ss .dur{font-size:13px;font-weight:800;color:var(--muted)}
+.ss.prox .dur{color:var(--foco)}
+.ss.prox b{color:var(--foco)}
+.fc-sem{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:end;height:100px}
+.fc-sem div{display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+.fc-sem i{width:100%;border-radius:8px;background:color-mix(in srgb,var(--foco) 75%,var(--surface))}
+.fc-sem i.rest{background:var(--descanso)}.fc-sem i.hoje{background:var(--foco)}
+.fc-sem span{font-size:11px;color:var(--muted)}
+.fc-onde{display:flex;flex-direction:column;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.ond{display:grid;grid-template-columns:150px minmax(0,1fr) 64px;gap:12px;align-items:center;font-size:14px}
+.ond .b{height:10px;border-radius:999px;background:color-mix(in srgb,var(--line) 70%,transparent);overflow:hidden}
+.ond .b i{display:block;height:100%;border-radius:999px;background:var(--foco)}
+.ond b{text-align:right;font-size:14px}
+/* cartão de foco no hoje */
+.fc-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:24px;align-items:center;padding:22px 28px;background:linear-gradient(120deg,color-mix(in srgb,var(--foco) 16%,var(--surface)),var(--surface) 70%)}
+.fc-mini{position:relative;width:96px;height:96px}
+.fc-mini svg{width:100%;height:100%;transform:rotate(-90deg)}
+.fc-mini .trilha{fill:none;stroke:color-mix(in srgb,var(--line) 85%,transparent);stroke-width:10}
+.fc-mini .prog{fill:none;stroke:var(--foco);stroke-width:10;stroke-linecap:round}
+.fc-mini b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800}.fc-mini small{font-size:12px;color:var(--muted)}
+.fc-card .txt{display:flex;flex-direction:column;gap:6px}
+.fc-card .tit{font-size:22px;font-weight:800}
+.fc-card .btn{padding:14px 26px;font-size:16px}
+.hero .h-txt{display:flex;flex-direction:column;gap:6px}
+.hero .h-sub{color:var(--muted);font-size:16px}
+.hero .h-sub b{color:var(--ink)}
+.h-prox{display:flex;align-items:center;gap:18px;margin-top:18px}
+.h-prox .txt{display:flex;flex-direction:column;gap:6px}
+.h-prox .tit{font-size:22px;font-weight:800}
+.h-btn{padding:16px 30px;font-size:17px;align-self:end}
+.st-topo{display:flex;justify-content:space-between;align-items:center;padding:4px 12px 8px}
+.st{display:inline-flex;align-items:center;gap:8px;font-size:19px;font-weight:800;padding:6px 10px;border-radius:12px;cursor:default}
+.st:hover{background:color-mix(in srgb,var(--line) 50%,transparent)}
+.st svg{width:30px;height:30px;flex:none}
+.fogo-st{color:var(--foco)}.fogo-st svg{width:36px;height:36px;margin:-3px}
+.hab-st{color:var(--sapo)}
+.foco-st{color:#ff9b7a}
+.mosca-st{color:var(--sol)}
+.mosca-st i{width:26px;height:26px;border-radius:50%;background:#FFD166;border:3px solid #E0A93A;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12)}
+/* sapo com volume */
+.sapo-3d .pula{animation:sapo-pula 3.2s ease-in-out infinite}
+.sapo-3d .corpo{transform-box:view-box;transform-origin:150px 184px;animation:sapo-respira 3.2s ease-in-out infinite}
+.sapo-3d .olho{transform-box:fill-box;transform-origin:center;animation:sapo-pisca 4.5s infinite}
+@keyframes sapo-respira{0%,100%{transform:scale(1,1)}50%{transform:scale(1.03,.97)}}
+@keyframes sapo-pula{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes sapo-pisca{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(.08)}}
+@media (prefers-reduced-motion:reduce){.sapo-3d *{animation:none!important}}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="g-fogo" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff5a3c"/><stop offset=".6" stop-color="#ff8a3d"/><stop offset="1" stop-color="#ffc94d"/></linearGradient>
+  <symbol id="fogo" viewBox="0 0 24 24"><path d="M12 2c1 3.2-.6 5-2.2 6.8C8.3 10.5 7 12 7 14.6A5 5 0 0 0 12 20a5 5 0 0 0 5-5.2c0-2.3-1-3.6-1.9-4.8-.3 1.3-1 2.2-2 2.6.4-3.8-.4-7.6-1.1-10.6z" fill="url(#g-fogo)"/><path d="M12 13c.4 1.4-.2 2.1-.8 2.8-.5.5-.9 1-.9 1.8A1.8 1.8 0 0 0 12 18.4a1.9 1.9 0 0 0 1.9-2c0-1.5-.8-2.4-1.9-3.4z" fill="#ffe9a8"/></symbol>
+  <symbol id="bau-fechado" viewBox="4 3 32 33"><rect x="5" y="17" width="30" height="18" rx="3" fill="#A0643A"/><path d="M5 19c0-7 5-11 15-11s15 4 15 11z" fill="#C07A45"/><rect x="5" y="17" width="30" height="4" fill="#7A4A2A"/><rect x="10" y="9" width="4" height="26" fill="#8B97A0" opacity=".9"/><rect x="26" y="9" width="4" height="26" fill="#8B97A0" opacity=".9"/><rect x="16" y="16" width="8" height="10" rx="2" fill="#FFD166" stroke="#E0A93A" stroke-width="1.5"/><circle cx="20" cy="20.5" r="1.6" fill="#7A4A2A"/></symbol>
+  <symbol id="bau-aberto" viewBox="4 3 32 33"><path d="M7 15 L10 4 Q20 0 30 4 L33 15z" fill="#C07A45"/><path d="M8 14 L10.5 6 Q20 3 29.5 6 L32 14z" fill="#7A4A2A"/><ellipse cx="20" cy="18" rx="13" ry="5" fill="#FFE08A"/><circle cx="14" cy="17" r="3" fill="#FFD166" stroke="#E0A93A"/><circle cx="20" cy="15.5" r="3" fill="#FFD166" stroke="#E0A93A"/><circle cx="26" cy="17" r="3" fill="#FFD166" stroke="#E0A93A"/><rect x="5" y="18" width="30" height="17" rx="3" fill="#A0643A"/><rect x="10" y="18" width="4" height="17" fill="#8B97A0" opacity=".9"/><rect x="26" y="18" width="4" height="17" fill="#8B97A0" opacity=".9"/><rect x="16" y="20" width="8" height="8" rx="2" fill="#FFD166" stroke="#E0A93A" stroke-width="1.5"/></symbol>
+</defs></svg>
+
 <div class="app">
   <aside class="side">
     <div class="brand"><svg viewBox="0 0 40 40"><ellipse cx="20" cy="26" rx="15" ry="11" fill="#8fe05a"/><circle cx="12" cy="13" r="7" fill="#8fe05a"/><circle cx="28" cy="13" r="7" fill="#8fe05a"/><circle cx="12" cy="13" r="4" fill="#fff"/><circle cx="28" cy="13" r="4" fill="#fff"/><circle cx="12.5" cy="13.5" r="2" fill="#1f2a24"/><circle cx="28.5" cy="13.5" r="2" fill="#1f2a24"/><path d="M14 25q6 4 12 0" stroke="#1f2a24" stroke-width="2" fill="none" stroke-linecap="round"/></svg>Pulo</div>
     <nav id="nav">
       <button class="on" data-v="hoje"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Hoje</button>
+      <button data-v="habitos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="m8 12 3 3 5-6"/></svg>Hábitos</button>
       <button data-v="ilha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21V9M12 9C9 5 5 6 4 8M12 9c3-4 7-3 8-1M12 9c-2-3-1-6 1-6M3 21h18"/></svg>Ilha</button>
       <button data-v="foco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>Foco</button>
       <button data-v="semana"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Semana</button>
@@ -157,19 +441,32 @@ h2{font-size:18px;font-weight:800}
     <!-- HOJE -->
     <section class="view on sec" id="v-hoje" style="gap:24px">
       <div class="card hero">
-        <div>
+        <div class="h-txt">
           <h1>Bom dia, Ana</h1>
-          <p class="muted">Um passo de cada vez. O sapo está animado.</p>
-          <div class="stats">
-            <div class="stat"><b>2 de 4</b><span>hábitos feitos</span></div>
-            <div class="stat"><b>50 min</b><span>de foco hoje</span></div>
-            <div class="stat"><b>+6</b><span>moscas hoje</span></div>
+          <p class="h-sub">Seu próximo passo é às <b>14h30</b></p>
+          <div class="h-prox">
+            <div class="fc-mini"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" class="trilha"/><circle cx="50" cy="50" r="44" class="prog" pathLength="100" stroke-dasharray="100 100"/></svg><b>25<small>min</small></b></div>
+            <div class="txt"><b class="tit">Unidade 4 do curso</b><span class="vchip mini" style="margin:0;align-self:flex-start"><span>🎓</span>Estudar inglês</span></div>
           </div>
         </div>
-        <div class="next">
-          <b style="font-size:20px">Estudar inglês · 25 min</b>
-          <button class="btn foco">Começar foco</button>
+        <button class="btn foco h-btn" data-ir="foco">▶ Começar foco</button>
+      </div>
+        <div class="card streak">
+          <div class="sec-h"><h2>Sequência</h2></div>
+          <div class="corpo"><div class="topo"><svg class="fogo chama"><use href="#fogo"/></svg><div><div class="num">12<small>dias</small></div></div></div>
+          <div class="sem-barra">
+            <div class="letras"><span class="f">D</span><span class="f">S</span><span class="f">T</span><span class="f">Q</span><span class="d">Q</span><span class="f">S</span><span class="h">S</span></div>
+            <div class="trilho"><div class="cheio" style="width:calc(100% * 6.5 / 7)"><i class="brilho"></i></div><svg class="fim"><use href="#fogo"/></svg></div>
+          </div></div>
+
         </div>
+      <div class="card">
+        <div class="sec-h"><h2>Esta semana</h2><span class="leg">6 de 7 dias</span></div>
+        <div class="week">
+          <div><i style="height:60%"></i><span>D</span></div><div><i style="height:90%"></i><span>S</span></div><div><i style="height:75%"></i><span>T</span></div>
+          <div><i style="height:85%"></i><span>Q</span></div><div><i class="rest" style="height:40%"></i><span>Q</span></div><div><i style="height:70%"></i><span>S</span></div><div><i class="zero" style="height:6%"></i><span>S</span></div>
+        </div>
+        <div class="kv"><div><span class="leg">Foco</span><b>226 min</b></div><div><span class="leg">Moscas</span><b>+38</b></div></div>
       </div>
 
       <div class="sec">
@@ -185,17 +482,17 @@ h2{font-size:18px;font-weight:800}
 
       <div class="cols">
         <div class="sec">
-          <div class="sec-h"><h2>Linha do dia</h2><span class="leg">rotina de terça</span></div>
+          <div class="sec-h"><h2>Linha do dia</h2></div>
           <div class="card tl">
             <div class="tli done"><span class="leg">08h00</span><span class="dot"></span><span>Revisar tarefas</span><span class="tag">feito</span></div>
             <div class="tli done"><span class="leg">10h00</span><span class="dot"></span><span>Projeto da faculdade</span><span class="tag">25 min</span></div>
-            <div class="tli now"><span class="leg">14h30</span><span class="dot"></span><span>Estudar inglês</span><span class="tag foco">agora</span></div>
+            <div class="tli now"><span class="leg">14h30</span><span class="dot"></span><span>Estudar inglês</span><button class="tag foco" data-ir="foco" style="border:0;cursor:pointer">▶ focar agora</button></div>
             <div class="tli"><span class="leg">17h00</span><span class="dot"></span><span>Ler artigo</span><span class="tag">25 min</span></div>
             <div class="tli"><span class="leg">20h00</span><span class="dot"></span><span>Descanso</span><span class="tag">livre</span></div>
           </div>
         </div>
         <div class="sec">
-          <div class="sec-h"><h2>Meta em andamento</h2><span class="leg">ver todas</span></div>
+          <div class="sec-h"><h2>Meta em andamento</h2><span class="leg">Ver todas</span></div>
           <div class="card goal">
             <b>Terminar o curso de inglês</b>
             <div class="bar"><i style="width:60%"></i></div>
@@ -252,24 +549,58 @@ h2{font-size:18px;font-weight:800}
 
     <!-- FOCO -->
     <section class="view sec" id="v-foco" style="gap:24px">
-      <div class="top"><div><p class="leg">Pomodoro de 25 min</p><h1>Foco</h1></div></div>
-      <div class="focus">
-        <div class="card timer">
-          <div class="chips"><button class="chip on">Estudar inglês</button><button class="chip">Ler artigo</button><button class="chip">Foco livre</button></div>
-          <div class="ring"><div><b>25:00</b><span class="leg">Pronto para começar</span></div></div>
-          <button class="btn foco" style="width:100%;max-width:320px">Começar foco</button>
-          <p class="leg">Parar na metade também conta como cuidado.</p>
-        </div>
-        <div class="sec">
-          <div class="card tl">
-            <h2 style="padding-top:12px">Sessões de hoje</h2>
-            <div class="tli done"><span class="leg">10h00</span><span class="dot"></span><span>Projeto da faculdade</span><span class="tag">25 min</span></div>
-            <div class="tli done"><span class="leg">11h10</span><span class="dot"></span><span>Foco livre</span><span class="tag">25 min</span></div>
-            <div class="tli now"><span class="leg">14h30</span><span class="dot"></span><span>Estudar inglês</span><span class="tag foco">próxima</span></div>
+      <div class="mt-top"><h1>Foco</h1><div class="seg"><span class="on">Pomodoro</span><span>Livre</span></div></div>
+      <div class="fc-grid">
+        <div class="card fc-palco">
+          <div class="fc-int">
+            <span class="leg-up">No que você vai focar?</span>
+            <div class="fc-campo">Unidade 4 do curso<span class="cursor"></span></div>
+            <div class="fc-vinc">
+              <button class="vchip on"><span>🎓</span>Estudar inglês</button>
+              <button class="vchip"><span>📖</span>Ler 10 páginas</button>
+              <button class="vchip"><span>📚</span>Ler 4 livros</button>
+              <button class="vchip livre">Sem vínculo</button>
+            </div>
           </div>
-          <div class="card">
-            <h2>Nesta semana</h2>
-            <div class="kv" style="border:0;margin:0;padding-top:8px"><div><b>226 min</b><span class="leg">de foco</span></div><div><b>Manhã</b><span class="leg">seu melhor período</span></div></div>
+          <div class="fc-anel">
+            <svg viewBox="0 0 200 200"><circle cx="100" cy="100" r="88" class="trilha"/><circle cx="100" cy="100" r="88" class="prog" pathLength="100" stroke-dasharray="100 100" stroke-dashoffset="0"/></svg>
+            <div class="fc-centro"><b>25:00</b><span>Foco</span></div>
+          </div>
+          <div class="fc-ciclo"><i class="ok"></i><i class="ok"></i><i class="agora"></i><i></i><span>ciclo 3 de 4 · depois pausa longa</span></div>
+          <div class="fc-dur">
+            <div><span class="leg-up">Foco</span><div class="seg"><span>15</span><span class="on">25</span><span>50</span></div></div>
+            <div><span class="leg-up">Pausa</span><div class="seg"><span class="on">5</span><span>10</span></div></div>
+            <div><span class="leg-up">Som</span><div class="seg"><span>Silêncio</span><span class="on">Lagoa</span><span>Chuva</span></div></div>
+          </div>
+          <button class="btn foco fc-ir">Começar foco</button>
+          <span class="premio-f"><span class="coin"><i></i>+3</span> moscas ao terminar</span>
+        </div>
+        <div class="fc-lado">
+          <div class="card fc-hoje">
+            <div class="sec-h"><h2>Hoje</h2><span class="leg">meta do dia 100 min</span></div>
+            <div class="fc-meta-d"><div class="barra laranja"><i style="width:50%"></i><span>50 / 100 min</span></div></div>
+            <div class="mt-kv"><div><b>2</b><span>Sessões</span></div><div><b>+6</b><span>Moscas</span></div><div><b>1</b><span>Pausa feita</span></div></div>
+          </div>
+          <div class="sec"><div class="sec-h"><h2>Sessões de hoje</h2></div>
+            <div class="card fc-sess">
+              <div class="ss"><span class="hora">10h00</span><div><b>Trabalho da faculdade</b><span class="vchip mini">Sem vínculo</span></div><span class="dur">25 min</span></div>
+              <div class="ss"><span class="hora">11h10</span><div><b>Unidade 3 revisão</b><span class="vchip mini"><span>🎓</span>Estudar inglês</span></div><span class="dur">25 min</span></div>
+              <div class="ss prox"><span class="hora">14h30</span><div><b>Unidade 4 do curso</b><span class="vchip mini"><span>🎓</span>Estudar inglês</span></div><span class="dur">agora</span></div>
+            </div>
+          </div>
+          <div class="sec"><div class="sec-h"><h2>Esta semana</h2><span class="leg">226 min</span></div>
+            <div class="card">
+              <div class="fc-sem">
+                <div><i style="height:45%"></i><span>D</span></div><div><i style="height:80%"></i><span>S</span></div><div><i style="height:62%"></i><span>T</span></div><div><i style="height:100%"></i><span>Q</span></div><div><i class="rest" style="height:18%"></i><span>Q</span></div><div><i style="height:55%"></i><span>S</span></div><div><i class="hoje" style="height:38%"></i><span>S</span></div>
+              </div>
+              <div class="fc-onde">
+                <span class="leg-up">Pra onde foi seu foco</span>
+                <div class="ond"><span>🎓 Estudar inglês</span><div class="b"><i style="width:100%"></i></div><b>120 min</b></div>
+                <div class="ond"><span>📖 Ler 10 páginas</span><div class="b"><i style="width:38%;background:var(--descanso)"></i></div><b>46 min</b></div>
+                <div class="ond"><span>Sem vínculo</span><div class="b"><i style="width:50%;background:var(--muted)"></i></div><b>60 min</b></div>
+              </div>
+              <div class="mt-kv" style="margin-top:16px"><div><b>Manhã</b><span>Melhor período</span></div><div><b>9</b><span>Sessões</span></div><div><b>87%</b><span>Terminadas</span></div></div>
+            </div>
           </div>
         </div>
       </div>
@@ -279,18 +610,18 @@ h2{font-size:18px;font-weight:800}
     <!-- ILHA -->
     <section class="view sec" id="v-ilha" style="gap:24px">
       <div class="top">
-        <div><p class="leg">Cada hábito feito vira mosca</p><h1>Ilha</h1>
-          <div class="niveis" aria-label="Nível 2 de 5"><span class="on"></span><span class="on"></span><span></span><span></span><span></span></div>
+        <div><h1>Ilha</h1>
         </div>
         <div class="saldo" aria-label="140 moscas"><i></i>140</div>
       </div>
       <div class="ilha">
         <div class="card mapa">
-          <svg viewBox="60 8 530 560" role="img" aria-label="Mapa da ilha">
-<path d="M170 440 L430 400" stroke="var(--line)" stroke-width="5" stroke-dasharray="2 12" stroke-linecap="round" fill="none"/>
-<path d="M430 400 L240 292" stroke="var(--line)" stroke-width="5" stroke-dasharray="2 12" stroke-linecap="round" fill="none"/>
-<path d="M240 292 L480 232" stroke="var(--line)" stroke-width="5" stroke-dasharray="2 12" stroke-linecap="round" fill="none"/>
-<path d="M480 232 L300 112" stroke="var(--line)" stroke-width="5" stroke-dasharray="2 12" stroke-linecap="round" fill="none"/>
+          <svg viewBox="20 166 1060 304" role="img" aria-label="Mapa da ilha">
+<path d="M130 360 L340 230" stroke="var(--line)" stroke-width="5" stroke-dasharray="2 12" stroke-linecap="round" fill="none"/>
+<path d="M340 230 L550 360" stroke="var(--line)" stroke-width="5" stroke-dasharray="2 12" stroke-linecap="round" fill="none"/>
+<path d="M550 360 L760 230" stroke="var(--line)" stroke-width="5" stroke-dasharray="2 12" stroke-linecap="round" fill="none"/>
+<path d="M760 230 L970 360" stroke="var(--line)" stroke-width="5" stroke-dasharray="2 12" stroke-linecap="round" fill="none"/>
+<g transform="translate(-40,-80)">
 <g class="tile" data-area="lagoa">
 <polygon points="78,440 170,486 170,512 78,466" fill="#5E8F3F"/>
 <polygon points="262,440 170,486 170,512 262,466" fill="#4A7332"/>
@@ -298,6 +629,8 @@ h2{font-size:18px;font-weight:800}
 <ellipse cx="164" cy="444" rx="44" ry="20" fill="#38B796"/><ellipse cx="150" cy="446" rx="10" ry="4" fill="#5EC47A"/><rect x="208" y="426" width="14" height="6" rx="2" fill="#8A5A3C"/><circle cx="126" cy="426" r="5" fill="#FFD166"/><path d="M126 431v12" stroke="#5E4630" stroke-width="2"/>
 </g>
 <text x="170" y="534" text-anchor="middle" class="lbl">Lagoa</text>
+</g>
+<g transform="translate(-90,-170)">
 <g class="tile" data-area="praia">
 <polygon points="338,400 430,446 430,472 338,426" fill="#D9B46E"/>
 <polygon points="522,400 430,446 430,472 522,426" fill="#B8944F"/>
@@ -305,6 +638,8 @@ h2{font-size:18px;font-weight:800}
 <path d="M450 430 Q490 410 510 400" stroke="#7FD1E8" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M400 396v-30" stroke="#8A6A47" stroke-width="3"/><path d="M378 370 Q400 350 422 370z" fill="#FF7A59"/><path d="M440 394l10 -14 10 14z" fill="#E0B870"/>
 </g>
 <text x="430" y="494" text-anchor="middle" class="lbl">Praia</text>
+</g>
+<g transform="translate(310,68)">
 <g class="tile sel" data-area="bosque">
 <polygon points="148,292 240,338 240,364 148,318" fill="#468A41"/>
 <polygon points="332,292 240,338 240,364 332,318" fill="#376D33"/>
@@ -316,6 +651,8 @@ h2{font-size:18px;font-weight:800}
 <g transform="translate(210,222)"><rect width="60" height="26" rx="13" fill="#FFD166" stroke="#E0A93A" stroke-width="2"/><text x="30" y="18" text-anchor="middle" font-size="14" font-weight="800" fill="#1f2a24">90</text></g>
 </g>
 <text x="240" y="386" text-anchor="middle" class="lbl">Bosque</text>
+</g>
+<g transform="translate(280,-2)">
 <g class="tile" data-area="cachoeira">
 <polygon points="388,232 480,278 480,304 388,258" fill="#7F8885"/>
 <polygon points="572,232 480,278 480,304 572,258" fill="#666E6B"/>
@@ -324,6 +661,8 @@ h2{font-size:18px;font-weight:800}
 <g transform="translate(467,208)"><rect x="0" y="12" width="26" height="20" rx="5" fill="#4A4F4D"/><path d="M5 12v-5a8 8 0 0 1 16 0v5" stroke="#4A4F4D" stroke-width="4" fill="none"/></g>
 </g>
 <text x="480" y="326" text-anchor="middle" class="lbl">Cachoeira</text>
+</g>
+<g transform="translate(670,248)">
 <g class="tile" data-area="farol">
 <polygon points="208,112 300,158 300,184 208,138" fill="#7F8885"/>
 <polygon points="392,112 300,158 300,184 392,138" fill="#666E6B"/>
@@ -332,43 +671,87 @@ h2{font-size:18px;font-weight:800}
 <g transform="translate(287,88)"><rect x="0" y="12" width="26" height="20" rx="5" fill="#4A4F4D"/><path d="M5 12v-5a8 8 0 0 1 16 0v5" stroke="#4A4F4D" stroke-width="4" fill="none"/></g>
 </g>
 <text x="300" y="206" text-anchor="middle" class="lbl">Farol</text>
-<g transform="translate(460,360)"><ellipse cx="0" cy="18" rx="16" ry="13" fill="#8FE05A"/><circle cx="-8" cy="2" r="7" fill="#8FE05A"/><circle cx="8" cy="2" r="7" fill="#8FE05A"/><circle cx="-8" cy="2" r="3.2" fill="#fff"/><circle cx="8" cy="2" r="3.2" fill="#fff"/><circle cx="-7.5" cy="2.5" r="1.8" fill="#2a1a12"/><circle cx="8.5" cy="2.5" r="1.8" fill="#2a1a12"/><path d="M-5 12q5 4 10 0" stroke="#2a1a12" stroke-width="1.6" fill="none"/></g>
+</g>
+<g transform="translate(370,190)"><ellipse cx="0" cy="18" rx="16" ry="13" fill="#8FE05A"/><circle cx="-8" cy="2" r="7" fill="#8FE05A"/><circle cx="8" cy="2" r="7" fill="#8FE05A"/><circle cx="-8" cy="2" r="3.2" fill="#fff"/><circle cx="8" cy="2" r="3.2" fill="#fff"/><circle cx="-7.5" cy="2.5" r="1.8" fill="#2a1a12"/><circle cx="8.5" cy="2.5" r="1.8" fill="#2a1a12"/><path d="M-5 12q5 4 10 0" stroke="#2a1a12" stroke-width="1.6" fill="none"/></g>
 
           </svg>
         </div>
-        <div class="sec" style="gap:20px">
-          <div class="card sec" style="gap:14px">
-            <div class="area-h">
-              <div><p class="leg">Próxima área</p><h2 style="font-size:24px">Bosque</h2><p class="muted">Sombra fresca para descansar.</p></div>
-              <span class="tag">Nível 3</span>
-            </div>
-            <div>
-              <div class="sec-h"><span class="leg">Você tem 140 de 90 moscas</span><span class="leg">pronto</span></div>
-              <div class="prog"><i style="width:100%"></i></div>
-            </div>
-            <button class="btn" style="width:100%">Abrir o Bosque por 90 moscas</button>
-            <p class="leg" style="margin-top:4px">Enfeites que chegam com o Bosque</p>
-            <div class="enf"><span class="nm"><span class="ic">🍄</span><span><b>Cogumelos</b><br><span class="coin"><i></i>12</span></span></span><span class="leg">Fechado</span></div>
-            <div class="enf"><span class="nm"><span class="ic">🪢</span><span><b>Balanço</b><br><span class="coin"><i></i>18</span></span></span><span class="leg">Fechado</span></div>
-            <div class="enf"><span class="nm"><span class="ic">🏡</span><span><b>Casa na árvore</b><br><span class="coin"><i></i>35</span></span></span><span class="leg">Fechado</span></div>
-          </div>
-          <div class="card sec" style="gap:10px">
-            <div class="sec-h"><h2>Praia</h2><span class="tag">2 de 3 enfeites</span></div>
-            <div class="enf"><span class="nm"><span class="ic">⛱️</span><span><b>Guarda sol</b><br><span class="coin"><i></i>10</span></span></span><span class="leg">Na ilha</span></div>
-            <div class="enf"><span class="nm"><span class="ic">🏰</span><span><b>Castelo de areia</b><br><span class="coin"><i></i>15</span></span></span><span class="leg">Na ilha</span></div>
-            <div class="enf"><span class="nm"><span class="ic">⛵</span><span><b>Barquinho</b><br><span class="coin"><i></i>25</span></span></span><button class="btn sm">Comprar</button></div>
-          </div>
-          <div class="card ganhos">
-            <div class="sec-h"><h2>Como ganhar moscas</h2><span class="leg">310 no total</span></div>
-            <ul>
-              <li><span>Hábito feito</span><span class="mais">+1</span></li>
-              <li><span>Foco concluído</span><span class="mais">+3</span></li>
-              <li><span>Dia de descanso</span><span class="mais">+2</span></li>
-              <li><span>Marco de meta</span><span class="mais">+3</span></li>
-              <li><span>Meta concluída</span><span class="mais">+10</span></li>
-            </ul>
+      </div>
+    </section>
+    <section class="view sec" id="v-perfil" style="gap:24px">
+      <div class="card perfil-hero">
+        <div class="ava-g">A</div>
+        <div>
+          <h1>Ana</h1>
+          <div class="meta"><span class="leg">ana@exemplo.com</span><span class="leg">Desde setembro de 2026</span></div>
+          <div class="sapo-st" style="margin-top:14px;display:inline-flex"><span class="mini"><svg viewBox="0 0 40 40"><ellipse cx="20" cy="26" rx="13" ry="10" fill="#8FE05A"/><circle cx="13" cy="14" r="6" fill="#8FE05A"/><circle cx="27" cy="14" r="6" fill="#8FE05A"/><circle cx="13" cy="14" r="3" fill="#fff"/><circle cx="27" cy="14" r="3" fill="#fff"/><circle cx="13.6" cy="14.4" r="1.5" fill="#1f2a24"/><circle cx="27.6" cy="14.4" r="1.5" fill="#1f2a24"/><path d="M15 25q5 4 10 0" stroke="#1f2a24" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg></span><span><b>Pulo, o sapo</b><br><span class="leg">Fase 4 · 22 dias de cuidado</span></span><span class="coin" style="margin-left:12px"><i></i>140</span></div>
+        </div>
+        <button class="btn ghost sm">Editar perfil</button>
+      </div>
+
+      <div class="sec">
+        <div class="sec-h"><h2>Estatísticas</h2></div>
+        <div class="stats4">
+          <div class="card"><span class="ic" style="background:color-mix(in srgb,var(--foco) 20%,transparent)"><svg class="fogo"><use href="#fogo"/></svg></span><div><b>12</b><span class="leg">dias seguidos</span></div></div>
+          <div class="card"><span class="ic" style="background:color-mix(in srgb,var(--sol) 35%,transparent)">🏆</span><div><b>21</b><span class="leg">recorde de dias</span></div></div>
+          <div class="card"><span class="ic" style="background:color-mix(in srgb,var(--sapo) 22%,transparent)">✓</span><div><b>186</b><span class="leg">hábitos feitos</span></div></div>
+          <div class="card"><span class="ic" style="background:color-mix(in srgb,var(--agua) 25%,transparent)">⏱️</span><div><b>1.240</b><span class="leg">minutos de foco</span></div></div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-h"><h2>Conquistas</h2></div>
+        <div class="card conq">
+          <div class="c"><span class="med" style="background:color-mix(in srgb,var(--foco) 22%,transparent)"><svg class="fogo"><use href="#fogo"/></svg></span><div style="flex:1;min-width:0"><b>Primeira semana</b><small>7 dias seguidos · conquistada em 02/10</small></div></div>
+          <div class="c"><span class="med" style="background:color-mix(in srgb,var(--agua) 25%,transparent)">⏱️</span><div style="flex:1;min-width:0"><b>Foco profundo</b><small>10 sessões de 25 min · conquistada</small></div></div>
+          <div class="c"><span class="med" style="background:color-mix(in srgb,var(--descanso) 28%,transparent)">☾</span><div style="flex:1;min-width:0"><b>Descanso sabido</b><small>4 descansos marcados sem culpa</small></div></div>
+          <div class="c"><span class="med" style="background:color-mix(in srgb,var(--foco) 22%,transparent)"><svg class="fogo"><use href="#fogo"/></svg></span><div style="flex:1;min-width:0"><b>Mês de fogo</b><small>21 de 30 dias seguidos</small><div class="prog"><i style="width:70%"></i></div></div></div>
+          <div class="c"><span class="med" style="background:color-mix(in srgb,var(--sol) 35%,transparent)">🏝️</span><div style="flex:1;min-width:0"><b>Ilha inteira</b><small>2 de 5 áreas abertas</small><div class="prog"><i style="width:40%"></i></div></div></div>
+          <div class="c travada"><span class="med" style="background:">?</span><div style="flex:1;min-width:0"><b>Segredo</b><small>Continue cuidando do sapo</small></div></div>
+        </div>
+      </div>
+
+      <div class="prefs">
+        <div class="sec" style="">
+          <div class="sec-h"><h2>Rotina</h2></div>
+          <div class="card" style="flex:1;padding-top:8px">
+          <div class="linha"><span>Meu dia começa<small>usado para virar o dia da sequência</small></span><span class="valor">06h00</span></div>
+          <div class="linha"><span>Lembrete da noite<small>se faltar hábito para manter o fogo</small></span><span class="valor">20h00</span></div>
+          <div class="linha"><span>Duração do foco<small>pausa curta de 5 min</small></span><span class="valor">25 min</span></div>
+          <div class="linha"><span>Modo férias<small>pausa a sequência sem perder o fogo</small></span><span class="chave"></span></div>
           </div>
         </div>
+        <div class="sec" style="">
+          <div class="sec-h"><h2>Preferências</h2></div>
+          <div class="card" style="flex:1;padding-top:8px">
+          <div class="linha"><span>Tema</span><span class="seg"><span>Claro</span><span class="on">Escuro</span><span>Sistema</span></span></div>
+          <div class="linha"><span>Sons do sapo</span><span class="chave on"></span></div>
+          <div class="linha"><span>Assistente de IA<small>sugere ajustes na semana</small></span><span class="chave on"></span></div>
+          <div class="linha"><span>Conectar com o Claude<small>servidor MCP do Pulo</small></span><span class="valor">Conectado</span></div>
+          </div>
+        </div>
+        <div class="sec" style="grid-column:1 / -1">
+          <div class="sec-h"><h2>Conta</h2></div>
+          <div class="card" style="flex:1;padding-top:8px">
+          <div class="linha"><span>Baixar meus dados<small>hábitos, focos e ilha em JSON</small></span><button class="btn ghost sm">Baixar</button></div>
+          <div class="linha"><span>Sair da conta</span><button class="btn ghost sm">Sair</button></div>
+          <div class="linha"><span class="perigo">Excluir conta<small>apaga tudo, inclusive o sapo</small></span><button class="btn ghost sm perigo">Excluir</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="view sec" id="v-habitos" style="gap:24px">
+      <div class="mt-top"><h1>Hábitos</h1><button class="btn">+ Novo hábito</button></div>
+      <div class="mt-grid">
+        <div class="hb-lista" id="hb-lista"></div>
+        <div class="mt-det" id="hb-det"></div>
+      </div>
+    </section>
+    <section class="view sec" id="v-metas" style="gap:24px">
+      <div class="mt-top"><h1>Metas</h1><button class="btn">+ Nova meta</button></div>
+      <div class="mt-grid">
+        <div class="mt-lista" id="mt-lista"></div>
+        <div class="mt-det" id="mt-det"></div>
       </div>
     </section>
     <section class="view sec" id="v-outro" style="gap:16px">
@@ -378,44 +761,156 @@ h2{font-size:18px;font-weight:800}
   </main>
 
   <aside class="rail">
+    <div class="st-topo">
+      <span class="st fogo-st" title="dias seguidos"><svg><use href="#fogo"/></svg>12</span>
+      <span class="st hab-st" title="hábitos feitos hoje"><svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="6" fill="var(--sapo)"/><path d="m7 12.5 3.2 3.2L17 9" fill="none" stroke="#1f2a24" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>2/4</span>
+      <span class="st foco-st" title="minutos de foco hoje"><svg viewBox="0 0 24 24"><rect x="9" y="1" width="6" height="3" rx="1.5" fill="var(--foco-b)"/><circle cx="12" cy="14" r="9" fill="var(--foco)"/><circle cx="12" cy="14" r="6.3" fill="#fff4ee"/><path d="M12 14V10" stroke="var(--foco-b)" stroke-width="2.2" stroke-linecap="round"/></svg>50</span>
+      <span class="st mosca-st" title="moscas (saldo)"><i></i>140</span>
+    </div>
     <div class="card pond">
-      <svg viewBox="0 0 300 220" aria-label="Sapo na lagoa">
-        <ellipse cx="150" cy="160" rx="140" ry="52" fill="#7FB35A"/>
-        <ellipse cx="150" cy="158" rx="118" ry="40" fill="#38B796"/>
-        <ellipse cx="92" cy="160" rx="34" ry="10" fill="#5EC47A"/>
-        <ellipse cx="200" cy="166" rx="40" ry="12" fill="#5EC47A"/>
-        <path d="M245 150v-38M252 150v-30" stroke="#5A8F3A" stroke-width="4" stroke-linecap="round"/>
-        <ellipse cx="150" cy="128" rx="44" ry="38" fill="#8FE05A"/>
-        <ellipse cx="150" cy="134" rx="22" ry="26" fill="#E6FFD0"/>
-        <circle cx="128" cy="78" r="18" fill="#8FE05A"/><circle cx="172" cy="78" r="18" fill="#8FE05A"/>
-        <ellipse cx="150" cy="96" rx="44" ry="26" fill="#8FE05A"/>
-        <circle cx="128" cy="78" r="11" fill="#fff"/><circle cx="172" cy="78" r="11" fill="#fff"/>
-        <circle cx="129" cy="79" r="6" fill="#2a1a12"/><circle cx="173" cy="79" r="6" fill="#2a1a12"/>
-        <path d="M134 104q16 10 32 0" stroke="#2a1a12" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <ellipse cx="118" cy="100" rx="7" ry="4" fill="#F59AA0"/><ellipse cx="182" cy="100" rx="7" ry="4" fill="#F59AA0"/>
+      <svg viewBox="0 0 300 220" aria-label="Sapo na lagoa" class="sapo-3d">
+        <defs>
+          <clipPath id="pele"><path d="M150 74C196 74 214 110 212 140C210 170 186 182 150 182C114 182 90 170 88 140C86 110 104 74 150 74Z"/><circle cx="118" cy="80" r="27"/><circle cx="182" cy="80" r="27"/></clipPath>
+          <clipPath id="barriga"><ellipse cx="150" cy="152" rx="42" ry="29"/></clipPath>
+          <clipPath id="boca"><path d="M127 117Q150 141 173 117Q150 126 127 117Z"/></clipPath>
+          <radialGradient id="agua-g" cx=".5" cy=".4" r=".7"><stop offset="0" stop-color="#4FD1B0"/><stop offset="1" stop-color="#2A9E86"/></radialGradient>
+        </defs>
+        <ellipse cx="150" cy="168" rx="142" ry="50" fill="#6FA84C"/>
+        <ellipse cx="150" cy="164" rx="122" ry="40" fill="url(#agua-g)"/>
+        <ellipse cx="76" cy="160" rx="26" ry="7" fill="#ffffff" opacity=".18"/>
+        <path d="M246 156v-44M254 156v-32" stroke="#4E8A33" stroke-width="5" stroke-linecap="round"/>
+        <path d="M150 186m-78 0a78 20 0 1 0 156 0a78 20 0 1 0 -156 0Z" fill="#4FA65A"/>
+        <path d="M150 186L226 178" stroke="#3F8A48" stroke-width="3" stroke-linecap="round"/>
+        <ellipse cx="150" cy="184" rx="64" ry="9" fill="#1f2a24" opacity=".22"/>
+        <g class="pula">
+          <g class="corpo">
+            <!-- pés de trás -->
+            <g fill="#55B32E"><ellipse cx="98" cy="180" rx="22" ry="9"/><ellipse cx="202" cy="180" rx="22" ry="9"/><circle cx="80" cy="182" r="5.5"/><circle cx="90" cy="186" r="5.5"/><circle cx="210" cy="186" r="5.5"/><circle cx="220" cy="182" r="5.5"/></g>
+            <!-- pele com sombra e luz -->
+            <g clip-path="url(#pele)">
+              <rect x="80" y="40" width="140" height="150" fill="#4FA92A"/>
+              <g fill="#7BD94A" transform="translate(-7 -7)"><path d="M150 74C196 74 214 110 212 140C210 170 186 182 150 182C114 182 90 170 88 140C86 110 104 74 150 74Z"/><circle cx="118" cy="80" r="27"/><circle cx="182" cy="80" r="27"/></g>
+              <ellipse cx="112" cy="104" rx="20" ry="11" fill="#A6EC72" opacity=".75" transform="rotate(-25 112 104)"/>
+              <ellipse cx="108" cy="64" rx="10" ry="6" fill="#C4F59B" opacity=".9" transform="rotate(-30 108 64)"/>
+              <ellipse cx="172" cy="64" rx="10" ry="6" fill="#C4F59B" opacity=".9" transform="rotate(-30 172 64)"/>
+            </g>
+            <!-- barriga -->
+            <g clip-path="url(#barriga)"><rect x="100" y="120" width="100" height="70" fill="#C6EBA0"/><ellipse cx="146" cy="148" rx="38" ry="25" fill="#ECFCD9"/></g>
+            <!-- mãos -->
+            <g fill="#62C437"><ellipse cx="118" cy="174" rx="13" ry="8"/><ellipse cx="182" cy="174" rx="13" ry="8"/></g>
+            <g fill="#ECFCD9" opacity=".55"><circle cx="110" cy="174" r="2.5"/><circle cx="118" cy="177" r="2.5"/><circle cx="182" cy="177" r="2.5"/><circle cx="190" cy="174" r="2.5"/></g>
+            <!-- bochechas -->
+            <ellipse cx="106" cy="114" rx="11" ry="6.5" fill="#FF9DB4" opacity=".85"/><ellipse cx="194" cy="114" rx="11" ry="6.5" fill="#FF9DB4" opacity=".85"/>
+            <!-- boca -->
+            <path d="M127 117Q150 141 173 117Q150 126 127 117Z" fill="#2B5A1C"/>
+            <g clip-path="url(#boca)"><ellipse cx="150" cy="133" rx="11" ry="7" fill="#FF7E95"/></g>
+            <!-- olhos -->
+            <g class="olho"><circle cx="117" cy="78" r="19" fill="#ffffff"/><path d="M99 82a18 18 0 0 0 36 0a18 12 0 0 1 -36 0Z" fill="#DDE8E2"/><circle cx="121" cy="82" r="10.5" fill="#1F2A24"/><circle cx="125.5" cy="77" r="4" fill="#fff"/><circle cx="117" cy="87" r="1.8" fill="#fff" opacity=".8"/></g>
+            <g class="olho"><circle cx="183" cy="78" r="19" fill="#ffffff"/><path d="M165 82a18 18 0 0 0 36 0a18 12 0 0 1 -36 0Z" fill="#DDE8E2"/><circle cx="179" cy="82" r="10.5" fill="#1F2A24"/><circle cx="183.5" cy="77" r="4" fill="#fff"/><circle cx="175" cy="87" r="1.8" fill="#fff" opacity=".8"/></g>
+          </g>
+        </g>
       </svg>
       <div class="cap"><b>Fase 4 · lagoa completa</b><p class="leg">22 dias de cuidado. O sapo comemora cada passo.</p></div>
     </div>
-    <div class="card">
-      <div class="sec-h"><h2>Esta semana</h2><span class="leg">6 de 7 dias</span></div>
-      <div class="week">
-        <div><i style="height:60%"></i><span>D</span></div><div><i style="height:90%"></i><span>S</span></div><div><i style="height:75%"></i><span>T</span></div>
-        <div><i style="height:85%"></i><span>Q</span></div><div><i class="rest" style="height:40%"></i><span>Q</span></div><div><i style="height:70%"></i><span>S</span></div><div><i class="zero" style="height:6%"></i><span>S</span></div>
-      </div>
-      <div class="kv"><div><span class="leg">Foco</span><b>226 min</b></div><div><span class="leg">Moscas</span><b>+38</b></div></div>
+    <div class="card metas-r">
+      <div class="sec-h"><h2>Metas</h2><a href="#metas">Ver todas</a></div>
+        <div class="meta-i"><span class="ic" style="background:color-mix(in srgb,var(--agua) 25%,transparent)">🎓</span><div><b>Terminar o curso de inglês</b><div class="linha-b"><div class="barra"><i style="width:60%"></i><span>3 / 5</span></div><svg class="bau" aria-label="Baú fechado"><use href="#bau-fechado"/></svg></div></div></div>
+        <div class="meta-i"><span class="ic" style="background:color-mix(in srgb,var(--descanso) 25%,transparent)">📚</span><div><b>Ler 4 livros no semestre</b><div class="linha-b"><div class="barra"><i style="width:25%"></i><span>1 / 4</span></div><svg class="bau" aria-label="Baú fechado"><use href="#bau-fechado"/></svg></div></div></div>
+        <div class="meta-i ok"><span class="ic" style="background:color-mix(in srgb,var(--foco) 22%,transparent)">🏃</span><div><b>Correr 5 km sem parar</b><div class="linha-b"><div class="barra"><i style="width:100%"></i><span>5 / 5</span></div><svg class="bau aberto" aria-label="Baú aberto"><use href="#bau-aberto"/></svg></div></div></div>
     </div>
   </aside>
 </div>
 <script>
-const outros={metas:['Metas','Metas: lista à esquerda e detalhe da meta com marcos à direita.'],perfil:['Perfil','Perfil: cartões em duas colunas (horários, tema, conta).']};
+const fogo='<svg class="fogo"><use href="#fogo"/></svg>';
+const metas=[
+ {ic:'🎓',cor:'agua',t:'Terminar o curso de inglês',por:'Quero viajar pro Canadá sem travar na conversa.',ate:'até 30 de junho',ritmo:['bom','No ritmo'],esperado:52,
+  marcos:[['Unidade 1','12 set'],['Unidade 2','8 out'],['Unidade 3','5 nov'],['Unidade 4'],['Prova final']],
+  habitos:[['Estudar inglês','seg a sex',[1,1,1,1,0,1,0],8],['Ouvir podcast em inglês','todo dia',[1,1,0,1,1,1,0],4]],foco:'310 min',feitos:46,dias:218},
+ {ic:'📚',cor:'descanso',t:'Ler 4 livros no semestre',por:'Voltar a ler por prazer, não só pra faculdade.',ate:'até 20 de dezembro',ritmo:['atras','Um pouco atrás'],esperado:50,
+  marcos:[['O Pequeno Príncipe','30 set'],['Dom Casmurro'],['Livro 3'],['Livro 4']],
+  habitos:[['Ler 10 páginas','noite',[1,0,1,1,0,1,0],3]],foco:'140 min',feitos:21,dias:26},
+ {ic:'🏃',cor:'foco',ok:true,t:'Correr 5 km sem parar',por:'Ter fôlego pra brincar com meu sobrinho.',ate:'concluída em 18 de novembro',ritmo:['bom','Concluída'],
+  marcos:[['1 km','2 set'],['2 km','20 set'],['3 km','10 out'],['4 km','1 nov'],['5 km','18 nov']],
+  habitos:[['Caminhar','seg, qua, sex',[1,0,1,0,1,0,0],5]],foco:'0 min',feitos:33,dias:0}
+];
+const soltos=[['Beber água','todo dia'],['Alongar','manhã'],['Meditar 5 min','noite']];
+let atual=0;
+function barra(m,cls){const f=m.marcos.filter(x=>x[1]).length,n=m.marcos.length;return `<div class="barra"><i style="width:${Math.round(f/n*100)}%"></i>${!m.ok&&cls?`<b class="ritmo" style="left:${m.esperado}%" title="onde você deveria estar hoje"></b>`:''}<span>${f} / ${n}</span></div><svg class="bau"><use href="#bau-${m.ok?'aberto':'fechado'}"/></svg>`}
+function item(m,i){return `<button class="card mt-item${m.ok?' ok':''}${i===atual?' sel':''}" data-i="${i}"><span class="ic" style="background:color-mix(in srgb,var(--${m.cor}) 25%,transparent)">${m.ic}</span><div><b>${m.t}</b><div class="linha-b">${barra(m)}</div></div></button>`}
+function render(){
+  const l=document.getElementById('mt-lista');
+  l.innerHTML='<h3>Em andamento</h3>'+metas.map((m,i)=>m.ok?'':item(m,i)).join('')+'<h3>Concluídas</h3>'+metas.map((m,i)=>m.ok?item(m,i):'').join('');
+  l.querySelectorAll('.mt-item').forEach(b=>b.addEventListener('click',()=>{atual=+b.dataset.i;render()}));
+  const m=metas[atual],prox=m.marcos.findIndex(x=>!x[1]);
+  document.getElementById('mt-det').innerHTML=`
+  <div class="card mt-cab"><span class="ic" style="background:color-mix(in srgb,var(--${m.cor}) 25%,transparent)">${m.ic}</span><div><h2>${m.t}</h2><p class="por">“${m.por}”</p><div class="chips"><span class="chip">📅 ${m.ate}</span><span class="chip ${m.ritmo[0]}">${m.ritmo[1]}</span><span class="chip"><span class="coin"><i></i>+20</span> no baú</span></div></div></div>
+  <div class="card mt-prog"><div class="linha-b">${barra(m,true)}</div>
+    <div class="mt-kv"><div><b>${m.foco}</b><span>Foco na meta</span></div><div><b>${m.feitos}</b><span>Hábitos feitos</span></div><div><b>${m.dias||'—'}</b><span>Dias restantes</span></div></div></div>
+  <div class="mt-2">
+    <div class="sec"><div class="sec-h"><h2>Marcos</h2><span class="leg">${m.marcos.filter(x=>x[1]).length} de ${m.marcos.length}</span></div>
+      <div class="card marcos">${m.marcos.map((x,i)=>`<div class="marco${x[1]?' feito':''}${i===prox?' prox':''}"><span class="chk">${x[1]?'✓':''}</span><span class="t">${x[0]}</span><span class="leg">${x[1]||(i===prox?'próximo':'')}</span></div>`).join('')}<div class="marco add"><span class="chk" style="border-style:dashed"></span><span>Adicionar marco</span></div></div></div>
+    <div class="sec"><div class="sec-h"><h2>Hábitos atrelados</h2><span class="leg">${m.habitos.length}</span></div>
+      <div class="card hab-l">${m.habitos.map(h=>`<div class="hab-v"><div><b>${h[0]}</b><p class="leg">${h[1]}</p></div><div class="pts">${h[2].map(d=>`<i class="${d?'s':''}"></i>`).join('')}</div><span class="seq">${fogo}${h[3]}</span></div>`).join('')}
+        <button class="atrelar" id="atrelar">+ Atrelar hábito</button>
+        <div class="escolher" id="escolher">${soltos.map(h=>`<div class="op"><b>${h[0]}</b><span class="leg">${h[1]}</span><button>Atrelar</button></div>`).join('')}<div class="op" style="color:var(--muted)">+ Criar hábito pra essa meta</div></div>
+      </div></div>
+  </div>`;
+  document.getElementById('atrelar').addEventListener('click',()=>document.getElementById('escolher').classList.toggle('on'));
+}
+render();
+
+const periodos=[['manha','☀️','Manhã'],['tarde','🌤️','Tarde'],['noite','🌙','Noite']];
+const habs=[
+ {ic:'💧',cor:'agua',t:'Beber água',freq:'todo dia',dias:[1,1,1,1,1,1,1],per:'manha',lemb:'07h30',meta:null,seq:23,rec:30,taxa:92,total:148,hoje:true},
+ {ic:'🧘',cor:'sapo',t:'Alongar',freq:'todo dia',dias:[1,1,1,1,1,1,1],per:'manha',lemb:'07h45',meta:null,seq:12,rec:21,taxa:84,total:96,hoje:true},
+ {ic:'🚶',cor:'foco',t:'Caminhar',freq:'seg, qua, sex',dias:[0,1,0,1,0,1,0],per:'manha',lemb:null,meta:2,seq:5,rec:9,taxa:78,total:33},
+ {ic:'🎓',cor:'agua',t:'Estudar inglês',freq:'seg a sex',dias:[0,1,1,1,1,1,0],per:'tarde',lemb:'14h30',meta:0,seq:8,rec:14,taxa:86,total:46},
+ {ic:'🎧',cor:'descanso',t:'Ouvir podcast em inglês',freq:'todo dia',dias:[1,1,1,1,1,1,1],per:'tarde',lemb:null,meta:0,seq:4,rec:11,taxa:71,total:38},
+ {ic:'📖',cor:'descanso',t:'Ler 10 páginas',freq:'todo dia',dias:[1,1,1,1,1,1,1],per:'noite',lemb:'21h00',meta:1,seq:3,rec:12,taxa:64,total:21},
+ {ic:'🌙',cor:'descanso',t:'Meditar 5 min',freq:'todo dia',dias:[1,1,1,1,1,1,1],per:'noite',lemb:'22h00',meta:null,seq:2,rec:6,taxa:58,total:17}
+];
+let hAtual=3,hTrocar=false;
+function hItem(h,i){const m=h.meta!==null?metas[h.meta]:null;return `<button class="card hb-item${h.hoje?' feito':''}${i===hAtual?' sel':''}" data-i="${i}"><span class="ic" style="background:color-mix(in srgb,var(--${h.cor}) 25%,transparent)">${h.ic}</span><div><b>${h.t}</b><div class="sub"><span class="fq">${h.freq}</span>${m?`<span class="mchip">${m.ic} ${m.t}</span>`:''}</div></div><span class="seq">${fogo}${h.seq}</span><span class="chk">${h.hoje?'✓':''}</span></button>`}
+function calor(h,i){let out='';const L=['D','S','T','Q','Q','S','S'];let seed=i*97+13;const rnd=()=>{seed=(seed*9301+49297)%233280;return seed/233280};
+ const cells=[];for(let c=0;c<16;c++)for(let r=0;r<7;r++){let cl='';if(c===15&&r>6-1){cl='h'}else if(c===15&&r>6){cl='f'}else if(!h.dias[r])cl='';else if(r===4&&rnd()<.25)cl='d';else{const x=rnd();cl=x<h.taxa/100*.55?'v2':x<h.taxa/100?'v1':''}cells.push([r,c,cl])}
+ for(let r=0;r<7;r++){out+=`<span class="dl">${r%2?L[r]:''}</span>`;for(let c=0;c<16;c++){const cl=cells[c*7+r][2];out+=`<i class="${cl}"></i>`}}return out}
+function hRender(){
+  const l=document.getElementById('hb-lista');
+  l.innerHTML=periodos.map(p=>`<h3>${p[1]} ${p[2]}</h3>`+habs.map((h,i)=>h.per===p[0]?hItem(h,i):'').join('')).join('');
+  l.querySelectorAll('.hb-item').forEach(b=>b.addEventListener('click',()=>{hAtual=+b.dataset.i;hTrocar=false;hRender()}));
+  const h=habs[hAtual],m=h.meta!==null?metas[h.meta]:null,per=periodos.find(p=>p[0]===h.per);
+  const ativas=metas.map((x,i)=>[x,i]).filter(([x])=>!x.ok);
+  const op=`<div class="metas-op${hTrocar||!m?' on':''}" id="metas-op">${ativas.map(([x,i])=>`<label class="${h.meta===i?'on':''}" data-m="${i}"><span class="r"></span><span class="ic" style="width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,var(--${x.cor}) 25%,transparent)">${x.ic}</span><b>${x.t}</b></label>`).join('')}<label class="${h.meta===null?'on':''}" data-m="-1"><span class="r"></span><span class="muted">Sem meta</span></label></div>`;
+  const metaBloco=m?`<div class="meta-i${m.ok?' ok':''}"><span class="ic" style="background:color-mix(in srgb,var(--${m.cor}) 25%,transparent)">${m.ic}</span><div><b>${m.t}</b><div class="linha-b">${barra(m)}</div></div></div><div class="acoes"><button class="btn ghost" id="trocar">Trocar meta</button><button class="btn ghost" id="ver-meta">Ver meta</button></div>`:`<p class="muted">Esse hábito ainda não empurra nenhuma meta.</p>`;
+  document.getElementById('hb-det').innerHTML=`
+  <div class="card hb-cab"><span class="ic" style="background:color-mix(in srgb,var(--${h.cor}) 25%,transparent)">${h.ic}</span><div><h2>${h.t}</h2><div class="chips"><span class="chip">🔁 ${h.freq}</span><span class="chip">${per[1]} ${per[2]}</span>${h.lemb?`<span class="chip">⏰ ${h.lemb}</span>`:''}${m?`<span class="chip bom">${m.ic} ${m.t}</span>`:''}</div></div><div class="acoes"><button class="btn ghost">Editar</button></div></div>
+  <div class="card hb-kv"><div><b class="seq">${fogo}${h.seq}</b><span>Sequência</span></div><div><b>${h.rec}</b><span>Recorde</span></div><div><b>${h.taxa}%</b><span>Conclusão</span></div><div><b>${h.total}</b><span>Vezes feito</span></div></div>
+  <div class="sec"><div class="sec-h"><h2>Últimas 16 semanas</h2></div>
+    <div class="card"><div class="calor">${calor(h,hAtual)}</div><div class="calor-leg"><span><i style="background:var(--sapo)"></i>feito</span><span><i style="background:color-mix(in srgb,var(--sapo) 45%,var(--line))"></i>feito em parte</span><span><i style="background:color-mix(in srgb,var(--descanso) 55%,transparent)"></i>descanso</span><span><i style="background:color-mix(in srgb,var(--line) 75%,transparent)"></i>não feito</span></div></div></div>
+  <div class="sec"><div class="sec-h"><h2>Meta</h2></div><div class="card meta-at">${metaBloco}${op}</div></div>
+  <div class="sec"><div class="sec-h"><h2>Agenda</h2></div>
+    <div class="card agenda">
+      <div class="linha"><b>Dias</b><div class="dsem">${['D','S','T','Q','Q','S','S'].map((d,k)=>`<span class="${h.dias[k]?'on':''}">${d}</span>`).join('')}</div></div>
+      <div class="linha"><b>Período</b><div class="seg">${periodos.map(p=>`<span class="${p[0]===h.per?'on':''}">${p[2]}</span>`).join('')}</div></div>
+      <div class="linha"><b>Lembrete</b><span class="row">${h.lemb?`<span class="leg">${h.lemb}</span>`:''}<span class="chave${h.lemb?' on':''}"></span></span></div>
+    </div></div>
+  <div class="hb-rodape"><button class="btn ghost">Pausar hábito</button><button class="btn ghost perigo">Arquivar</button></div>`;
+  const t=document.getElementById('trocar');if(t)t.addEventListener('click',()=>{hTrocar=!hTrocar;hRender()});
+  const v=document.getElementById('ver-meta');if(v)v.addEventListener('click',()=>{atual=h.meta;render();abrir('metas')});
+  document.querySelectorAll('#metas-op label').forEach(lb=>lb.addEventListener('click',()=>{const k=+lb.dataset.m;h.meta=k<0?null:k;hTrocar=false;hRender()}));
+}
+hRender();
+const outros={};
 function abrir(v){
   document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('on',x.dataset.v===v));
   document.querySelector('.perfil').classList.toggle('on',v==='perfil');
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   const el=document.getElementById('v-'+v);
   document.querySelector('.app').classList.toggle('sem-trilho',v==='ilha');
+  document.querySelector('.app').classList.toggle('na-metas',v==='metas');
   if(el) el.classList.add('on'); else {document.getElementById('v-outro').classList.add('on');document.getElementById('outro-t').textContent=outros[v][0];document.getElementById('outro-p').textContent=outros[v][1];}
 }
+document.querySelectorAll('[data-ir]').forEach(b=>b.addEventListener('click',()=>abrir(b.dataset.ir)));
 document.querySelectorAll('#nav button, .perfil .cfg').forEach(b=>b.addEventListener('click',()=>abrir(b.dataset.v)));
 document.querySelectorAll('.mapa .tile').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.mapa .tile').forEach(x=>x.classList.toggle('sel',x===t));}));
 const h=location.hash.slice(1);if(h==='perfil'||document.getElementById('v-'+h)||outros[h])abrir(h);
