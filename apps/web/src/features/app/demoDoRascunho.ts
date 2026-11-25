@@ -22,6 +22,9 @@ function habito(
   const lembrete = reminderMinutes === undefined ? {} : { reminderMinutes, reminderOn: true };
   return { id, title, weekdays, state: 'ativo', icon, color, period, ...lembrete };
 }
+/** "Meu dia começa" no Perfil do rascunho. */
+const COMECO_DO_DIA = 6 * 60;
+const NOME_DO_SAPO = 'Pulo';
 const SABADO: RoutineBlock['weekday'] = 5;
 const DIA_MS = 24 * 60 * MINUTE_MS;
 
@@ -187,6 +190,8 @@ function sessaoConcluida(id: string, blockId: string, startedAt: number): FocusS
 export async function completarDemo(repo: Repository, clock: DemoClock): Promise<void> {
   const agora = clock.now();
   const hoje = dateKeyOf(agora, DEFAULT_TIMEZONE);
+  const user = await repo.getUser();
+  if (user) await repo.saveUser({ ...user, dayStartMinutes: COMECO_DO_DIA, frogName: NOME_DO_SAPO });
   for (const h of HABITOS) await repo.saveHabit(h);
   for (const habitId of FEITOS_HOJE) await repo.saveHabitLog({ habitId, date: hoje, doneAt: agora - 360 * MINUTE_MS });
   // Fecha o domingo que faltava: a sequência fica em 12 dias, como no rascunho.
