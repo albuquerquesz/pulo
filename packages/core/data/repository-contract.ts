@@ -299,12 +299,15 @@ export function defineRepositoryContract(
     it('casa e quarto: compras por item, mover muda só a posição', async () => {
       const { r } = await subject();
       const parte = { item: 'cerca', cost: 40, createdAt: 1 };
-      const tapete = { item: 'tapete', cost: 10, createdAt: 2, x: 0, y: 0, rotation: 0 as const };
+      const tapete = { item: 'tapete', cost: 10, createdAt: 2, x: 0, y: 0, rotation: 0 as const, comodo: 'quarto' as const };
       await r.saveHousePurchase(parte);
       await r.saveRoomDecor(tapete);
       await r.moveRoomDecor('tapete', { x: 1, y: 2, rotation: 180 });
       expect(await r.listHousePurchases()).toEqual([parte]);
       expect(await r.listRoomDecor()).toEqual([{ ...tapete, x: 1, y: 2, rotation: 180 }]);
+      await r.saveHousePurchase({ item: 'banheiro', cost: 100, createdAt: 3 });
+      await r.moveRoomDecor('tapete', { x: 1, y: 2, rotation: 180, comodo: 'banheiro' });
+      expect(await r.listRoomDecor()).toEqual([{ ...tapete, x: 1, y: 2, rotation: 180, comodo: 'banheiro' }]);
       expect(await r.getJoiaCredit()).toBe(0);
     });
 

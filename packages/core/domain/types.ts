@@ -8,6 +8,10 @@
  * - Nenhuma função de domínio chama Date.now(): recebem `Clock` ou `now`.
  */
 
+import type { ComodoId } from '../config/decisions';
+
+export type { ComodoId };
+
 export type DateKey = string;
 export type EntityId = string;
 
@@ -242,11 +246,13 @@ export type IslandPurchase = Purchase;
 /** Giro de um item no chão do quarto, em graus (`ROOM_GRID.rotations`). */
 export type RoomRotation = 0 | 90 | 180 | 270;
 
-/** Lugar de um item no chão do quarto. Mover é grátis. */
+/** Lugar de um item num cômodo (grade do chão). Mover é grátis. */
 export interface RoomSpot {
   x: number;
   y: number;
   rotation: RoomRotation;
+  /** Cômodo onde o item está (spec 31). Ausente: no quarto ao comprar, e o mesmo cômodo ao mover. */
+  comodo?: ComodoId;
 }
 
 /** Decoração comprada, onde está no quarto. */
@@ -421,6 +427,8 @@ export type AchievementId =
   | 'foco-profundo'
   | 'descanso-sabido'
   | 'mes-de-fogo'
+  | 'dois-andares'
+  | 'cinco-comodos'
   | 'casa-inteira'
   | 'gelo-na-hora'
   | 'segredo';

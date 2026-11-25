@@ -30,6 +30,8 @@ export const MENSAGENS_DA_API = {
   area_fechada: 'Essa área ainda está fechada. Abra a área antes de enfeitar.',
   fora_de_ordem: 'As áreas abrem na ordem do mapa. Que tal abrir a próxima primeiro?',
   joias_insuficientes: 'Ainda faltam joias para isso. Cada hábito e cada foco ajudam a juntar mais.',
+  falta_requisito: 'Essa parte precisa de outra antes. Construa o requisito primeiro.',
+  comodo_nao_comprado: 'Esse cômodo ainda não foi construído.',
   gelo_no_maximo: 'Seus gelos já estão no máximo.',
   descanso_so_hoje: 'O descanso vale só para o dia de hoje.',
   limite_de_descanso: 'Os descansos desta semana já foram usados.',

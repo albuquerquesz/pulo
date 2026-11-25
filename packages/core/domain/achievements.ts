@@ -1,5 +1,5 @@
 import { ACHIEVEMENTS, DEFAULT_TIMEZONE } from '../config/decisions';
-import { partesDaCasa } from './casa';
+import { comodosProntos, partesDaCasa } from './casa';
 import { MINUTE_MS } from './clock';
 import { listFreezeDatesOf } from './gelo-store';
 import { focusedMs } from './joias';
@@ -13,6 +13,9 @@ export interface AchievementSummary {
   maiorFocoMinutos: number;
   descansos: number;
   partesConstruidas: number;
+  /** Cômodos prontos (o quarto conta). */
+  comodos: number;
+  temSegundoAndar: boolean;
   /** Gelos já gastos (spec 29). */
   gelosUsados: number;
 }
@@ -28,6 +31,8 @@ const RULES: Record<AchievementId, Rule> = {
   'foco-profundo': (summary) => summary.maiorFocoMinutos,
   'descanso-sabido': (summary) => summary.descansos,
   'mes-de-fogo': streakDays,
+  'dois-andares': (summary) => Number(summary.temSegundoAndar),
+  'cinco-comodos': (summary) => summary.comodos,
   'casa-inteira': (summary) => summary.partesConstruidas,
   'gelo-na-hora': (summary) => summary.gelosUsados,
   // Sem regra escolhida ainda.
@@ -45,11 +50,14 @@ export interface AchievementSources {
 
 export function summarizeForAchievements({ sequencia, sessions, descansos, casa, gelosUsados }: AchievementSources): AchievementSummary {
   const longest = sessions.reduce((max, session) => Math.max(max, focusedMs(session)), 0);
+  const partes = partesDaCasa(casa);
   return {
     sequencia,
     maiorFocoMinutos: Math.floor(longest / MINUTE_MS),
     descansos,
-    partesConstruidas: partesDaCasa(casa).filter((parte) => parte.construida).length,
+    partesConstruidas: partes.filter((parte) => parte.construida).length,
+    comodos: comodosProntos(partes).length,
+    temSegundoAndar: partes.some((parte) => parte.id === 'segundo-andar' && parte.construida),
     gelosUsados,
   };
 }
