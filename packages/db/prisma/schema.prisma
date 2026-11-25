@@ -699,7 +699,7 @@ model IslandPurchase {
   @@map("island_purchase")
 }
 
-/// Posição de uma decoração no quarto. Separada da compra porque muda sem nova compra.
+/// Posição de uma decoração num cômodo. Separada da compra porque muda sem nova compra.
 model RoomPlacement {
   userId   String
   item     String
@@ -708,6 +708,8 @@ model RoomPlacement {
   y        Int            @db.SmallInt
   /// Graus: 0, 90, 180 ou 270 (CHECK na migração).
   rotation Int            @db.SmallInt
+  /// Cômodo da casa onde o item está (spec 31): id de uma parte `comodo` de `HOUSE`.
+  comodo   String         @default("quarto")
 
   @@id([userId, item])
   @@map("room_placement")

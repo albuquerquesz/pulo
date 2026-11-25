@@ -8,6 +8,7 @@ import type {
   HabitLog,
   IslandPurchase,
   RoomDecor,
+  ComodoId,
   RoomRotation,
   RoomSpot,
   MascotState,
@@ -24,6 +25,7 @@ import type {
   Weekday,
   WeeklyProposal,
 } from '@pulo/core/domain/types';
+import { ehComodo } from '@pulo/core/domain/comodos';
 import { z } from 'zod';
 import { dateKeyToDate, dateToDateKey, dateToMs, msToDate } from './dates';
 import type {
@@ -351,11 +353,17 @@ function toRotation(value: number): RoomRotation {
   throw new RangeError(`Giro fora do domínio: ${value}`);
 }
 
-type RoomDecorRow = Omit<IslandPurchaseRow, 'userId' | 'kind'> & { placement: { x: number; y: number; rotation: number } | null };
+type SpotRow = { x: number; y: number; rotation: number; comodo: string };
+type RoomDecorRow = Omit<IslandPurchaseRow, 'userId' | 'kind'> & { placement: SpotRow | null };
+
+function toComodo(value: string): ComodoId {
+  if (!ehComodo(value)) throw new RangeError(`Cômodo desconhecido: ${value}`);
+  return value;
+}
 
 export const roomPlacementMapper = {
-  toSpot(row: { x: number; y: number; rotation: number }): RoomSpot {
-    return { x: row.x, y: row.y, rotation: toRotation(row.rotation) };
+  toSpot(row: SpotRow): RoomSpot {
+    return { x: row.x, y: row.y, rotation: toRotation(row.rotation), comodo: toComodo(row.comodo) };
   },
   /** A compra de uma decoração junto com a posição. Sem posição o dado está quebrado. */
   toDomain(row: RoomDecorRow): RoomDecor {
