@@ -27,10 +27,10 @@ const CAMPO = 'min-h-12 w-full rounded-[16px] border-2 border-line bg-surface px
 
 type Formulario = { tipo: 'nova' } | { tipo: 'editar'; meta: Goal } | null;
 
-export function MetasScreen() {
+export function MetasScreen({ metaAberta }: { metaAberta?: string }) {
   const { repo, clock, user, mostrarAviso, emitirEvento, refresh } = useApp();
   const [formulario, setFormulario] = useState<Formulario>(null);
-  const [aberta, setAberta] = useState<string | null>(null);
+  const [aberta, setAberta] = useState<string | null>(metaAberta ?? null);
   const { estado, recarregar } = useCarregar(async () => {
     if (!user) throw new Error('sem usuário');
     return carregarMetas(repo, clock, user);

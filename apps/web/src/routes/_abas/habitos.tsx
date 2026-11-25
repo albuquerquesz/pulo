@@ -1,7 +1,18 @@
 import { createFileRoute } from '@tanstack/react-router';
 
-import { EmBreve } from '@/features/casca/EmBreve';
+import { HabitosScreen } from '@/features/habitos/HabitosScreen';
+import { lerBuscaDeHabitos } from '@/features/habitos/logic';
 
-export const Route = createFileRoute('/_abas/habitos')({
-  component: () => <EmBreve titulo="Hábitos" texto="A página dos seus hábitos chega em breve." />,
-});
+export const Route = createFileRoute('/_abas/habitos')({ validateSearch: lerBuscaDeHabitos, component: Habitos });
+
+function Habitos() {
+  const { habito } = Route.useSearch();
+  const navegar = Route.useNavigate();
+  return (
+    <HabitosScreen
+      aberto={habito}
+      onAbrir={(id) => void navegar({ search: id ? { habito: id } : {} })}
+      onVerMeta={(meta) => void navegar({ to: '/metas', search: { meta } })}
+    />
+  );
+}

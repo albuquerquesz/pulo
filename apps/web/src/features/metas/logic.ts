@@ -59,3 +59,12 @@ export function marcosDoTexto(texto: string): string[] {
     .map((linha) => linha.trim())
     .filter(Boolean);
 }
+
+export interface BuscaDeMetas {
+  /** A meta que abre junto com a tela (o "Ver meta" do hábito). */
+  meta?: string;
+}
+
+export function lerBuscaDeMetas(busca: Record<string, unknown>): BuscaDeMetas {
+  return typeof busca.meta === 'string' && busca.meta ? { meta: busca.meta } : {};
+}
