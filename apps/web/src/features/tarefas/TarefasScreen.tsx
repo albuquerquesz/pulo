@@ -6,9 +6,8 @@ import { dateKeyOf } from '@pulo/core/domain/day';
 import { newId } from '@pulo/core/domain/ids';
 import { criarTarefa, moverTarefa, verPomodoros } from '@pulo/core/domain/tasks';
 import type { Task, TaskStatus, TaskSubtask } from '@pulo/core/domain/types';
-import { Botao } from '@/ui';
 
-import { useApp, useCarregar } from '../app';
+import { useApp, useCarregar, ErroDeCarga } from '../app';
 import { perguntar } from '../app/confirmar';
 import { contaNaTela } from '../casca/logic';
 import { Atividade } from './Atividade';
@@ -159,12 +158,7 @@ export function TarefasScreen() {
         </div>
       </div>
 
-      {estado.tipo === 'erro' ? (
-        <div role="alert" className="flex flex-col items-start gap-2 text-muted">
-          Não consegui carregar suas tarefas.
-          <Botao titulo="Tentar de novo" variante="fantasma" largura="auto" onPress={() => void recarregar()} />
-        </div>
-      ) : null}
+      {estado.tipo === 'erro' ? <ErroDeCarga falha={estado.falha} guardado="Suas tarefas estão salvas." onTentar={() => void recarregar()} /> : null}
 
       {dados ? (
         <div className="grid grid-cols-1 items-stretch gap-4 pb-2 md:min-h-[calc(100dvh-140px)] md:grid-cols-[repeat(4,minmax(240px,1fr))] md:overflow-x-auto">

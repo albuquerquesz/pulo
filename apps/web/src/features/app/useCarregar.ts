@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { useApp } from './AppProvider';
+import { falhaDe, type Falha } from './falha';
 
-export type EstadoDeCarga<T> = { tipo: 'carregando' } | { tipo: 'erro' } | { tipo: 'ok'; dados: T };
+export type EstadoDeCarga<T> = { tipo: 'carregando' } | { tipo: 'erro'; falha: Falha } | { tipo: 'ok'; dados: T };
 
 /** Carrega ao abrir a tela e sempre que `refresh()` é chamado. Mantém os dados antigos durante a recarga. */
 export function useCarregar<T>(fn: () => Promise<T>): { estado: EstadoDeCarga<T>; recarregar: () => Promise<void> } {
@@ -19,8 +20,8 @@ export function useCarregar<T>(fn: () => Promise<T>): { estado: EstadoDeCarga<T>
     try {
       const dados = await fnRef.current();
       if (vivo.current) setEstado({ tipo: 'ok', dados });
-    } catch {
-      if (vivo.current) setEstado({ tipo: 'erro' });
+    } catch (erro) {
+      if (vivo.current) setEstado({ tipo: 'erro', falha: falhaDe(erro) });
     }
   }, []);
 

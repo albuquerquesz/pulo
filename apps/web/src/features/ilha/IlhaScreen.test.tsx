@@ -164,7 +164,7 @@ describe('Ilha', () => {
     await screen.findByText('5 de 24');
     expect(screen.getByTestId('fumaca')).toBeTruthy();
     await waitFor(() => expect(app()?.aviso?.mensagem).toBe('Conquista nova: 🏘️ Dois andares'));
-    expect(app()?.evento).toBe('feliz');
+    expect(app()?.evento).toBe('comemorando');
   });
 
   test('o demo mostra a casa pela metade', async () => {

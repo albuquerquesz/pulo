@@ -114,7 +114,8 @@ describe('gelo na casca', () => {
   test('o aviso aparece uma vez, some ao tocar e conta como visto', async () => {
     const sessao = await sessaoComGelo({ naoVistos: ['2026-11-20'] });
     const app = await abrir(sessao);
-    await clicar(await screen.findByRole('button', { name: 'O gelo segurou seu foguinho ontem.' }));
+    await screen.findByRole('img', { name: 'Sapo, congelado' });
+    await clicar(screen.getByRole('button', { name: /O gelo segurou seu foguinho ontem\./ }));
     expect((await sessao.gelos.listFreezeUses()).every((uso) => uso.vistoEm !== undefined)).toBe(true);
     await act(async () => app()?.refresh());
     expect(screen.queryByText('O gelo segurou seu foguinho ontem.')).toBeNull();
@@ -128,5 +129,14 @@ describe('gelo na casca', () => {
     await act(async () => void (await vi.advanceTimersByTimeAsync(DURACAO_DO_AVISO_DO_GELO_MS)));
     expect(screen.queryByText('O gelo segurou seu foguinho ontem.')).toBeNull();
     expect((await sessao.gelos.listFreezeUses()).every((uso) => uso.vistoEm !== undefined)).toBe(true);
+  });
+});
+
+describe('reação do sapo', () => {
+  test('numa conquista aparece o sapo comemorando', async () => {
+    const app = await abrir(await criarSessaoDemo());
+    expect(screen.queryByRole('img', { name: 'Sapo, comemorando' })).toBeNull();
+    act(() => app()?.emitirEvento('comemorando'));
+    expect(screen.getByRole('img', { name: 'Sapo, comemorando' })).toBeTruthy();
   });
 });

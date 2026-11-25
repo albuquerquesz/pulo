@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 
+import { Sapo } from '@/mascot/sapo/Sapo';
 import { Foguinho } from '@/ui';
 
 import { Floco } from '../casca/Floco';
 
 import { CARTAO, TITULO } from './estilos';
-import type { BarraDaSemana, DescansoDeHoje, TomDoDia } from './logic';
+import type { BarraDaSemana, DescansoDeHoje, MomentoDaSequencia, TomDoDia } from './logic';
 
 const COR_DA_LETRA: Record<TomDoDia, string> = {
   feito: 'text-[color-mix(in_srgb,var(--pulo-sol)_75%,var(--pulo-ink))]',
@@ -24,7 +25,15 @@ const ICONE_DO_TOM: Record<TomDoDia, ReactNode> = {
   apagado: null,
 };
 
+/** O que o sapo diz em cada momento, sem bronca. */
+export const FALA_DA_SEQUENCIA: Record<MomentoDaSequencia, string> = {
+  'sequencia-perdida': 'A sequência parou, e tudo bem. Hoje é um bom dia para recomeçar.',
+  'fim-do-dia-sem-nada': 'Ainda dá tempo de um cuidado pequeno hoje.',
+  recorde: 'Recorde de dias seguidos. Que orgulho!',
+};
+
 type SequenciaProps = {
+  momento: MomentoDaSequencia | null;
   dias: number;
   barra: BarraDaSemana;
   descanso: DescansoDeHoje;
@@ -34,7 +43,7 @@ type SequenciaProps = {
 };
 
 /** A sequência com o foguinho e a barra da semana, que enche até hoje. */
-export function Sequencia({ dias, barra, descanso, gravando, onDescanso }: SequenciaProps) {
+export function Sequencia({ momento, dias, barra, descanso, gravando, onDescanso }: SequenciaProps) {
   return (
     <section
       aria-label="Sequência"
@@ -83,6 +92,12 @@ export function Sequencia({ dias, barra, descanso, gravando, onDescanso }: Seque
           </div>
         </div>
       </div>
+      {momento ? (
+        <div className="mt-3 flex items-center gap-3">
+          <Sapo fase={4} momento={momento} tamanho={104} className="shrink-0" />
+          <p className="font-bold">{FALA_DA_SEQUENCIA[momento]}</p>
+        </div>
+      ) : null}
       <div className="mt-4">
         <button
           type="button"

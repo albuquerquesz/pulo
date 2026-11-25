@@ -12,6 +12,8 @@ export { Toast } from './Toast';
 export type { ToastProps, VarianteDeToast } from './Toast';
 export { EstadoVazio } from './EstadoVazio';
 export type { EstadoVazioProps } from './EstadoVazio';
+export { TelaDeEstado } from './TelaDeEstado';
+export type { AcaoDeEstado, TelaDeEstadoProps } from './TelaDeEstado';
 export { Joia } from './Joia';
 export type { JoiaProps } from './Joia';
 export { Foguinho } from './Foguinho';

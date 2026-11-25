@@ -29,7 +29,7 @@ export function EntrarOAuth() {
   return (
     <Tela>
       <div className="flex justify-center pt-6">
-        <Sapo fase={1} estado="pensando" tamanho={140} />
+        <Sapo fase={1} momento="conectando-conta" tamanho={140} />
       </div>
       <Texto como="h1" variante="display" className="text-center">
         Conectar ao Pulo

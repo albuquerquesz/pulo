@@ -47,9 +47,12 @@ export function IlhaScreen() {
         setNova(null);
         return;
       }
+      emitirEvento('construindo');
+      // A última parte fecha a casa: é festa, com ou sem conquista nova.
+      if (dados.casa.construidas + 1 === dados.casa.total) emitirEvento('comemorando');
       const [conquista] = conquistasNovas(dados.conquistas, await verConquistas(repo, clock));
       if (conquista) {
-        emitirEvento('feliz');
+        emitirEvento('comemorando');
         mostrarAviso({ mensagem: textoDaConquista(conquista), variante: 'sucesso' });
       }
     } catch (erro) {

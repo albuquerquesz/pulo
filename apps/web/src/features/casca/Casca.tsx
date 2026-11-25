@@ -5,6 +5,7 @@ import { Botao, Modal } from '@/ui';
 
 import { useApp, useCarregar } from '../app';
 import { AvisoDoGelo } from './AvisoDoGelo';
+import { ReacaoDoSapo } from './ReacaoDoSapo';
 import { CartaoDoGelo } from './CartaoDoGelo';
 import { Conta } from './Conta';
 import { abaAtiva, carregarTrilho, contaNaTela, telaDeImersao } from './logic';
@@ -95,6 +96,7 @@ export function Casca({ caminho, children }: CascaProps) {
           )}
         </aside>
       ) : null}
+      <ReacaoDoSapo />
       {dados ? <AvisoDoGelo dias={dados.gelo?.recentes ?? []} hoje={dados.hoje} /> : null}
       <Modal
         aberto={lojaDoGelo}

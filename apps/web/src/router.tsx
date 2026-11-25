@@ -1,5 +1,6 @@
 import { createRouter } from '@tanstack/react-router';
 
+import { ErroInesperado, NaoEncontrado } from './features/app/TelasDoRoteador';
 import { routeTree } from './routeTree.gen';
 
 export function getRouter() {
@@ -8,6 +9,8 @@ export function getRouter() {
     scrollRestoration: true,
     defaultPreload: 'intent',
     defaultPreloadStaleTime: 0,
+    defaultNotFoundComponent: NaoEncontrado,
+    defaultErrorComponent: ErroInesperado,
   });
 }
 

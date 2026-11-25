@@ -1,5 +1,5 @@
 import { Sapo } from "@/mascot";
-import { Botao, EstadoVazio, Texto } from "@/ui";
+import { Botao, TelaDeEstado, Texto } from "@/ui";
 
 import { Tela, useApp } from "../app";
 
@@ -25,27 +25,16 @@ export function WelcomeScreen() {
   if (fase === "sem_conexao") {
     return (
       <Tela>
-        <div className={COLUNA}>
-          <EstadoVazio
-            titulo="Sem sinal por aqui"
-            texto={TEXTO_SEM_SINAL}
-            estadoDoSapo="cansado"
-            className="p-0"
-          />
-          <Botao titulo="Tentar de novo" onPress={() => void tentarDeNovo()} />
-          <div className="flex flex-col gap-2">
-            <Botao
-              titulo="Entrar com outra conta"
-              variante="fantasma"
-              onPress={() => void sair()}
-            />
-            <Botao
-              titulo="Ver o demo"
-              variante="fantasma"
-              onPress={() => void enableDemo()}
-            />
-          </div>
-        </div>
+        <TelaDeEstado
+          momento="sem-sinal"
+          titulo="Sem sinal por aqui"
+          texto={TEXTO_SEM_SINAL}
+          acao={{ titulo: "Tentar de novo", onPress: () => void tentarDeNovo() }}
+          secundarias={[
+            { titulo: "Entrar com outra conta", onPress: () => void sair() },
+            { titulo: "Ver o demo", onPress: () => void enableDemo() },
+          ]}
+        />
       </Tela>
     );
   }
@@ -54,7 +43,7 @@ export function WelcomeScreen() {
     <Tela>
       <div className={COLUNA}>
         <div className="flex justify-center">
-          <Sapo fase={1} estado="feliz" tamanho={160} />
+          <Sapo fase={1} momento="boas-vindas" tamanho={200} />
         </div>
         <Texto como="h1" variante="display" className="text-center">
           Boas vindas ao Pulo

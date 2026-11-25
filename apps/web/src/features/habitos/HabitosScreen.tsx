@@ -5,13 +5,12 @@ import type { Result } from '@pulo/core/domain/result';
 import type { EntityId, Habit } from '@pulo/core/domain/types';
 import { Botao, EstadoVazio } from '@/ui';
 
-import { confirmar, Tela, useApp, useCarregar } from '../app';
+import { confirmar, Tela, useApp, useCarregar, ErroDeCarga } from '../app';
 import { DetalheDoHabito, type AcoesDoHabito } from './DetalheDoHabito';
 import { FormularioDeHabito } from './FormularioDeHabito';
 import { ListaDeHabitos } from './ListaDeHabitos';
 import { agruparPorPeriodo, carregarEstatisticas, carregarHabitos } from './logic';
 
-export const TEXTO_DE_ERRO = 'A lagoa ficou sem sinal. Seus hábitos estão salvos.';
 
 type Formulario = { habito?: Habit } | null;
 
@@ -48,8 +47,8 @@ export function HabitosScreen({ aberto, onAbrir, onVerMeta }: HabitosScreenProps
 
   if (estado.tipo === 'erro') {
     return (
-      <Tela titulo="Hábitos">
-        <EstadoVazio titulo="Sem sinal por aqui" texto={TEXTO_DE_ERRO} acao="Tentar de novo" onAcao={() => void recarregar()} />
+      <Tela>
+        <ErroDeCarga falha={estado.falha} guardado="Seus hábitos estão salvos." onTentar={() => void recarregar()} />
       </Tela>
     );
   }
@@ -104,7 +103,7 @@ export function HabitosScreen({ aberto, onAbrir, onVerMeta }: HabitosScreenProps
         <Botao titulo="+ Novo hábito" largura="auto" onPress={() => setFormulario({})} />
       </div>
       {!habito ? (
-        <EstadoVazio titulo="Nenhum hábito ainda" texto="Comece por um pequeno, que caiba em qualquer dia." />
+        <EstadoVazio momento="lista-vazia" titulo="Nenhum hábito ainda" texto="Comece por um pequeno, que caiba em qualquer dia." />
       ) : (
         <div className="@container/pagina">
           <div className="grid grid-cols-1 items-start gap-6 @min-[36rem]/pagina:grid-cols-[minmax(240px,380px)_minmax(300px,1fr)]">

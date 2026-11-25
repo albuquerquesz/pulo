@@ -3,15 +3,15 @@ import { useEffect, useState } from 'react';
 import { MINUTE_MS } from '@pulo/core/domain/clock';
 import { criarPlanoInicial } from '@pulo/core/domain/routine';
 import { useConsultaDeMidia } from '@/theme';
-import { Botao, EstadoVazio } from '@/ui';
+import { Botao } from '@/ui';
 
-import { Tela, useApp, useCarregar } from '../app';
+import { Tela, useApp, useCarregar, ErroDeCarga } from '../app';
 import { MENSAGENS_DE_ERRO } from '../casca/erros';
 import { contaNaTela } from '../casca/logic';
 import { EstaSemana } from './EstaSemana';
 import { HabitosDeHoje } from './HabitosDeHoje';
 import { LinhaDoDia } from './LinhaDoDia';
-import { alternarDescanso, alternarHabito, alternarTarefa, barraDaSemana, carregarHoje, comDescansoDeHoje } from './logic';
+import { alternarDescanso, alternarHabito, alternarTarefa, barraDaSemana, carregarHoje, comDescansoDeHoje, momentoDaSequencia } from './logic';
 import { Sequencia } from './Sequencia';
 import { SeuMes } from './SeuMes';
 import { TarefasDeHoje } from './TarefasDeHoje';
@@ -20,7 +20,6 @@ import { Topo } from './Topo';
 /** A partir daqui Seu mês fica logo abaixo de Esta semana; no celular, depois dos hábitos. */
 const CONSULTA_DA_COLUNA_LARGA = '(min-width: 48rem)';
 
-export const TEXTO_DE_ERRO = 'A lagoa ficou sem sinal. Seus dados estão salvos aqui.';
 
 export function HojeScreen() {
   const { repo, clock, user, conta, refresh, mostrarAviso } = useApp();
@@ -54,8 +53,8 @@ export function HojeScreen() {
 
   if (estado.tipo === 'erro') {
     return (
-      <Tela titulo="Hoje">
-        <EstadoVazio titulo="Sem sinal por aqui" texto={TEXTO_DE_ERRO} acao="Tentar de novo" onAcao={() => void recarregar()} />
+      <Tela>
+        <ErroDeCarga falha={estado.falha} guardado="Seus dados estão salvos." onTentar={() => void recarregar()} />
       </Tela>
     );
   }
@@ -97,6 +96,7 @@ export function HojeScreen() {
     <Tela>
       <Topo saudacao={d.saudacao} foco={d.foco} />
       <Sequencia
+        momento={momentoDaSequencia({ dias: d.diasSeguidos, recorde: d.recorde, semana, minutos: d.minutosAgora })}
         dias={d.diasSeguidos}
         barra={barraDaSemana(semana)}
         descanso={descanso}

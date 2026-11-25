@@ -18,7 +18,7 @@ import type { Result } from '@pulo/core/domain/result';
 import type { EntityId, Goal } from '@pulo/core/domain/types';
 import { Botao, EstadoVazio } from '@/ui';
 
-import { confirmar, Tela, useApp, useCarregar } from '../app';
+import { confirmar, Tela, useApp, useCarregar, ErroDeCarga } from '../app';
 import { FormularioDeHabito } from '../habitos/FormularioDeHabito';
 import { DetalheDaMeta, type AcoesDaMeta } from './DetalheDaMeta';
 import { FormularioDeMeta } from './FormularioDeMeta';
@@ -27,7 +27,6 @@ import { ListaDeMetas } from './ListaDeMetas';
 import { carregarMetas } from './logic';
 import { planejarVoo, type Voo } from './voo';
 
-export const TEXTO_DE_ERRO = 'A lagoa ficou sem sinal. Suas metas estão salvas.';
 export const TEXTO_DO_LIMITE = `Até ${GOALS.maxActive} metas ativas de cada vez. Conclua ou apague uma para abrir espaço.`;
 
 type Formulario = { tipo: 'meta'; id?: EntityId } | { tipo: 'habito'; metaId: EntityId } | null;
@@ -65,8 +64,8 @@ export function MetasScreen({ metaAberta }: MetasScreenProps) {
 
   if (estado.tipo === 'erro') {
     return (
-      <Tela titulo="Metas">
-        <EstadoVazio titulo="Sem sinal por aqui" texto={TEXTO_DE_ERRO} acao="Tentar de novo" onAcao={() => void recarregar()} />
+      <Tela>
+        <ErroDeCarga falha={estado.falha} guardado="Suas metas estão salvas." onTentar={() => void recarregar()} />
       </Tela>
     );
   }
@@ -107,7 +106,7 @@ export function MetasScreen({ metaAberta }: MetasScreenProps) {
     abrindo.delete(id);
     if (!bau) return;
     setVoo({ ...plano, joias: bau.joias });
-    emitirEvento('feliz');
+    emitirEvento('comemorando');
     mostrarAviso({ mensagem: `Baú aberto! Mais ${bau.joias} joias.`, variante: 'sucesso' });
   };
 
@@ -124,7 +123,7 @@ export function MetasScreen({ metaAberta }: MetasScreenProps) {
       void confirmar('Concluir esta meta?', `"${m.title}" vai para as concluídas e o baú fica esperando.`).then(async (ok) => {
         if (!ok || !(await tentar(() => concluirMeta(repo, m.id, clock.now())))) return;
         setAberta(m.id);
-        emitirEvento('feliz');
+        emitirEvento('comemorando');
         mostrarAviso({ mensagem: 'Meta conquistada! Que salto.', variante: 'sucesso' });
       }),
     reabrir: () =>
@@ -178,7 +177,7 @@ export function MetasScreen({ metaAberta }: MetasScreenProps) {
           texto="Uma meta grande, como terminar um curso, correr uma maratona ou juntar uma reserva."
           acao="Criar minha primeira meta"
           onAcao={nova}
-          estadoDoSapo="pensando"
+          momento="lista-vazia"
           testID="metas-vazio"
         />
       ) : (
