@@ -82,7 +82,7 @@ export type FaseDoApp = 'carregando' | 'login' | 'sem_conexao' | 'pronto';
 
 const AppContext = createContext<AppValue | null>(null);
 
-const PRIORIDADE: FrogEvent[] = ['pouso', 'surpreso', 'feliz'];
+const PRIORIDADE: FrogEvent[] = ['pouso', 'surpreso', 'comemorando', 'construindo', 'feliz'];
 
 export interface AppProviderProps {
   children: ReactNode;

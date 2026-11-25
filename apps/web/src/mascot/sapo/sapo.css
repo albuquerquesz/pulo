@@ -40,26 +40,22 @@
   }
 }
 
-/* piscar: ciclo de 10 s com duas piscadas (intervalos de 4,4 s e 5,6 s); 70 ms fechando, 110 ms abrindo */
+/* piscar: o sorteio é de `vida.ts`, que liga .sapo-piscando */
 .sapo-palpebra {
   transform: scaleY(0);
+  transition: transform 110ms ease-out;
 }
-.sapo-vivo .sapo-palpebra {
-  animation: sapo-piscar 10s linear infinite;
+.sapo-vivo.sapo-piscando .sapo-palpebra {
+  transform: scaleY(1);
+  transition-duration: 70ms;
 }
-@keyframes sapo-piscar {
-  0%,
-  32%,
-  33.8%,
-  76%,
-  77.8%,
-  100% {
-    transform: scaleY(0);
-  }
-  32.7%,
-  76.7% {
-    transform: scaleY(1);
-  }
+
+/* olhar de lado, também de `vida.ts` */
+.sapo-vivo .sapo-pupila {
+  transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.sapo-vivo.sapo-de-lado .sapo-pupila {
+  transform: translateX(7px);
 }
 
 /* extras: pulso de 1,1 s */
@@ -121,5 +117,273 @@
   to {
     opacity: 1;
     transform: scale(1.1);
+  }
+}
+
+/* ---------- poses e extras da spec 32 ---------- */
+
+.sapo-corpo,
+.sapo-peito,
+.sapo-tronco,
+.sapo-braco-esquerdo,
+.sapo-braco-direito,
+.sapo-folha,
+.sapo-sinal,
+.sapo-espiral,
+.sapo-lagrima,
+.sapo-duvida,
+.sapo-papel,
+.sapo-riscos {
+  transform-box: view-box;
+}
+
+/* poses paradas: valem também com movimento reduzido */
+.sapo-corpo-caido .sapo-tronco {
+  transform: translateY(7px);
+}
+.sapo-corpo-peito .sapo-peito {
+  transform: scale(1.12, 1.08);
+}
+
+/* triste: a lágrima escorre e o corpo suspira */
+.sapo-vivo .sapo-lagrima {
+  animation: sapo-lagrima 2400ms ease-in infinite;
+}
+@keyframes sapo-lagrima {
+  0%,
+  35% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  85% {
+    transform: translateY(54px);
+    opacity: 0;
+  }
+  86% {
+    transform: translateY(-4px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* preocupado: as mãos esfregam */
+.sapo-vivo .sapo-corpo-maos-juntas .sapo-braco-esquerdo,
+.sapo-vivo .sapo-corpo-maos-juntas .sapo-braco-direito {
+  animation: sapo-esfregar 700ms ease-in-out infinite alternate;
+}
+@keyframes sapo-esfregar {
+  from {
+    transform: translateY(-2px);
+  }
+  to {
+    transform: translateY(3px);
+  }
+}
+
+/* sem sinal: a folha balança, as ondas piscam e os olhos giram */
+.sapo-vivo .sapo-folha {
+  animation: sapo-balancar 1600ms ease-in-out infinite alternate;
+}
+@keyframes sapo-balancar {
+  from {
+    transform: rotate(-10deg);
+  }
+  to {
+    transform: rotate(14deg);
+  }
+}
+.sapo-sinal {
+  opacity: 0.7;
+}
+.sapo-vivo .sapo-sinal {
+  animation: sapo-sinal 1800ms steps(1, end) infinite;
+}
+@keyframes sapo-sinal {
+  0%,
+  40%,
+  60% {
+    opacity: 0.8;
+  }
+  50%,
+  70%,
+  100% {
+    opacity: 0.15;
+  }
+}
+.sapo-vivo .sapo-espiral {
+  animation: sapo-girar 3200ms linear infinite;
+}
+@keyframes sapo-girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* confuso: coça a cabeça em rajadas e o ponto de interrogação balança */
+.sapo-vivo .sapo-corpo-cocando .sapo-braco-direito {
+  animation: sapo-cocar 2200ms ease-in-out infinite;
+}
+@keyframes sapo-cocar {
+  0%,
+  45%,
+  100% {
+    transform: rotate(0);
+  }
+  10%,
+  30% {
+    transform: rotate(-5deg);
+  }
+  20%,
+  38% {
+    transform: rotate(3deg);
+  }
+}
+.sapo-vivo .sapo-duvida {
+  animation: sapo-duvida 1400ms ease-in-out infinite alternate;
+}
+@keyframes sapo-duvida {
+  from {
+    transform: translateY(2px) rotate(-8deg);
+  }
+  to {
+    transform: translateY(-6px) rotate(8deg);
+  }
+}
+
+/* comemorando: agacha, salta, e o confete cai */
+.sapo-vivo .sapo-corpo-bracos-para-cima {
+  animation: sapo-festa 1300ms ease-in-out infinite;
+}
+@keyframes sapo-festa {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  10% {
+    transform: translateY(0) scale(1.08, 0.9);
+  }
+  28% {
+    transform: translateY(-26px) scale(0.95, 1.07);
+  }
+  46% {
+    transform: translateY(0) scale(1.06, 0.93);
+  }
+}
+.sapo-vivo .sapo-papel {
+  animation: sapo-confete 1400ms ease-in infinite;
+}
+@keyframes sapo-confete {
+  from {
+    transform: translateY(-14px);
+    opacity: 0;
+  }
+  20%,
+  70% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(46px);
+    opacity: 0;
+  }
+}
+
+/* orgulhoso: estufa o peito */
+.sapo-vivo .sapo-corpo-peito .sapo-peito {
+  animation: sapo-estufar 1800ms ease-in-out infinite alternate;
+}
+@keyframes sapo-estufar {
+  from {
+    transform: scale(1.08, 1.04);
+  }
+  to {
+    transform: scale(1.16, 1.12);
+  }
+}
+
+/* acenando: três acenos e uma pausa */
+.sapo-vivo .sapo-corpo-acenando .sapo-braco-direito {
+  animation: sapo-acenar 2000ms ease-in-out infinite;
+}
+@keyframes sapo-acenar {
+  0%,
+  65%,
+  100% {
+    transform: rotate(0);
+  }
+  10%,
+  32%,
+  54% {
+    transform: rotate(-14deg);
+  }
+  21%,
+  43% {
+    transform: rotate(9deg);
+  }
+}
+
+/* congelado: treme */
+.sapo-vivo .sapo-corpo-encolhido {
+  animation: sapo-tremer 180ms linear infinite;
+}
+@keyframes sapo-tremer {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2.5px);
+  }
+  75% {
+    transform: translateX(2.5px);
+  }
+}
+.sapo-vivo .sapo-riscos {
+  animation: sapo-riscos 600ms ease-in-out infinite alternate;
+}
+@keyframes sapo-riscos {
+  from {
+    opacity: 0.25;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* construindo: levanta o martelo e bate */
+.sapo-vivo .sapo-corpo-martelando .sapo-braco-direito {
+  animation: sapo-martelar 900ms cubic-bezier(0.55, 0, 0.45, 1) infinite;
+}
+@keyframes sapo-martelar {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  40% {
+    transform: rotate(-18deg);
+  }
+  58% {
+    transform: rotate(76deg);
+  }
+  70% {
+    transform: rotate(62deg);
+  }
+}
+
+/* o sapo que pula para dentro da tela ao reagir */
+.sapo-chegando {
+  animation: sapo-chegar 480ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes sapo-chegar {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }

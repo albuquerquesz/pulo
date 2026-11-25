@@ -312,6 +312,8 @@ export const ACCOUNT = {
 export const FROG_EVENT_MS = {
   pouso: 1200,
   surpreso: 3000,
+  comemorando: 4000,
+  construindo: 3000,
   feliz: 4000,
 } as const;
 

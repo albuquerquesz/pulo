@@ -64,11 +64,13 @@ describe('estados', () => {
   const todos = Object.keys(ROSTO_DO_ESTADO) as FrogMood[];
 
   test('todo estado tem rosto e rótulo', () => {
-    expect(todos).toHaveLength(8);
+    expect(todos).toHaveLength(17);
     for (const e of todos) {
       expect(ROSTO_DO_ESTADO[e]).toBeDefined();
       expect(ROTULO_DO_ESTADO[e].length).toBeGreaterThan(0);
       expect(rotuloDoSapo(e)).toMatch(/^Sapo, /);
+      const { olhos, sobrancelhas, boca, corpo } = ROSTO_DO_ESTADO[e];
+      expect([olhos, sobrancelhas, boca, corpo].every(Boolean)).toBe(true);
     }
   });
 });

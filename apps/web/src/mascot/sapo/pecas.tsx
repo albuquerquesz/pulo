@@ -1,5 +1,5 @@
-import type { Rosto } from '../machine';
-import { COR, CABECA, CORPO, OLHO } from './geometria';
+import type { Boca as TipoDeBoca, Olhos, Sobrancelhas as TipoDeSobrancelha } from '../machine';
+import { COR, CABECA, CORPO, OLHO, OMBRO, TOKEN, type BracoNaPose, type Ponto } from './geometria';
 
 type Lado = -1 | 1;
 
@@ -8,11 +8,30 @@ interface LadoProps {
 }
 
 interface OlhoProps extends LadoProps {
-  tipo: Rosto['olhos'];
+  tipo: Olhos;
 }
 
 interface BocaProps {
-  tipo: Rosto['boca'];
+  tipo: TipoDeBoca;
+}
+
+interface SobrancelhasProps {
+  tipo: TipoDeSobrancelha;
+}
+
+interface BracoDaPoseProps extends LadoProps {
+  pose: BracoNaPose;
+}
+
+interface CirculoProps {
+  cx: number;
+  cy: number;
+  r: number;
+}
+
+interface MeioFechadoProps extends LadoProps {
+  fora: number;
+  dentro: number;
 }
 
 interface TracoProps {
@@ -132,13 +151,85 @@ export function BulboDoOlho({ lado }: LadoProps) {
   return <ellipse cx={150 + lado * OLHO.dx} cy={OLHO.cy} rx={OLHO.r} ry={OLHO.r} fill={COR.principal} />;
 }
 
+/** Pupila com dois reflexos. O grupo é o que se mexe no olhar de lado. */
+function Pupila({ cx, cy, r }: CirculoProps) {
+  return (
+    <g className="sapo-pupila">
+      <circle cx={cx} cy={cy} r={r} fill={COR.ink} />
+      <circle cx={cx + r * 0.4} cy={cy - r * 0.45} r={r * 0.36} fill={COR.branco} />
+      <circle cx={cx - r * 0.42} cy={cy + r * 0.4} r={r * 0.16} fill={COR.branco} />
+    </g>
+  );
+}
+
+/**
+ * Olho com a pálpebra caindo: o topo é uma linha reta de `fora` até `dentro` (alturas relativas ao centro)
+ * e a base é arredondada.
+ */
+function OlhoMeioFechado({ lado, fora, dentro }: MeioFechadoProps) {
+  const cx = 150 + lado * OLHO.dx;
+  const cy = OLHO.cy + 4;
+  const rx = 20;
+  const [xFora, xDentro] = [cx + lado * rx, cx - lado * rx];
+  const [yFora, yDentro] = [cy + fora, cy + dentro];
+  return (
+    <>
+      <path d={`M${xFora} ${yFora} L${xDentro} ${yDentro} C${xDentro} ${cy + 28} ${xFora} ${cy + 28} ${xFora} ${yFora} Z`} fill={COR.branco} />
+      <Pupila cx={cx - lado * 2} cy={cy + 8} r={10} />
+      <Traco d={`M${xFora + lado * 3} ${yFora} L${xDentro - lado * 2} ${yDentro}`} w={5} />
+    </>
+  );
+}
+
+/** Espiral de duas voltas, espelhada em cada olho. */
+function espiral(cx: number, cy: number, lado: Lado): string {
+  const pontos = Array.from({ length: 49 }, (_, i) => {
+    const angulo = (i / 48) * Math.PI * 4;
+    const raio = 1.5 + (i / 48) * 13;
+    return `${(cx - lado * Math.cos(angulo) * raio).toFixed(1)} ${(cy + Math.sin(angulo) * raio).toFixed(1)}`;
+  });
+  return `M${pontos.join(' L')}`;
+}
+
 /** Desenho do olho para o tipo do rosto. */
 function DesenhoDoOlho({ lado, tipo }: OlhoProps) {
   const cx = 150 + lado * OLHO.dx;
   const cy = OLHO.cy;
   const r = OLHO.r;
-  if (tipo === 'felizes') return <Traco d={q(cx - 14, cy + 6, cx, cy - 10, cx + 14, cy + 6)} />;
+  if (tipo === 'felizes') return <Traco d={q(cx - 15, cy + 6, cx, cy - 14, cx + 15, cy + 6)} w={6} />;
   if (tipo === 'fechados') return <Traco d={q(cx - 14, cy + 2, cx, cy + 13, cx + 14, cy + 2)} w={4.5} />;
+  if (tipo === 'apertados') {
+    return <Traco d={`M${cx + lado * 13} ${cy - 11} L${cx - lado * 9} ${cy + 1} L${cx + lado * 13} ${cy + 13}`} w={6} />;
+  }
+  if (tipo === 'caidos') return <OlhoMeioFechado lado={lado} fora={4} dentro={-12} />;
+  if (tipo === 'orgulhosos') return <OlhoMeioFechado lado={lado} fora={-1} dentro={1} />;
+  if (tipo === 'espiral') {
+    return (
+      <>
+        <circle cx={cx} cy={cy} r={20} fill={COR.branco} />
+        <g className="sapo-espiral" style={{ transformOrigin: `${cx}px ${cy}px` }}>
+          <Traco d={espiral(cx, cy, lado)} w={3.2} />
+        </g>
+      </>
+    );
+  }
+  if (tipo === 'preocupados') {
+    return (
+      <>
+        <ellipse cx={cx} cy={cy + 6} rx={18} ry={18} fill={COR.branco} />
+        <Pupila cx={cx - lado * 3} cy={cy + 8} r={8.5} />
+      </>
+    );
+  }
+  if (tipo === 'desiguais') {
+    const grande = lado === 1;
+    return (
+      <>
+        <circle cx={cx} cy={grande ? cy : cy + 5} r={grande ? 23 : 14} fill={COR.branco} />
+        <Pupila cx={cx} cy={grande ? cy + 2 : cy + 6} r={grande ? 8 : 7} />
+      </>
+    );
+  }
   const grande = tipo === 'arregalados';
   const rx = r * (grande ? 0.86 : 0.72);
   const ry = r * (grande ? 0.9 : 0.78);
@@ -147,8 +238,10 @@ function DesenhoDoOlho({ lado, tipo }: OlhoProps) {
   return (
     <>
       <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill={COR.branco} />
-      <ellipse cx={cx + lx} cy={cy + ly + 3} rx={rx * pup} ry={ry * pup} fill={COR.ink} />
-      <ellipse cx={cx + lx + 4} cy={cy + ly - 2} rx={3.5} ry={3.5} fill={COR.branco} />
+      <g className="sapo-pupila">
+        <ellipse cx={cx + lx} cy={cy + ly + 3} rx={rx * pup} ry={ry * pup} fill={COR.ink} />
+        <ellipse cx={cx + lx + 4} cy={cy + ly - 2} rx={3.5} ry={3.5} fill={COR.branco} />
+      </g>
       {tipo === 'focados' && <Traco d={`M${cx + lado * 16} ${cy - 20} L${cx - lado * 14} ${cy - 12}`} />}
     </>
   );
@@ -188,6 +281,33 @@ function DesenhoDaBoca({ tipo }: BocaProps) {
     );
   }
   if (tipo === 'o') return <ellipse cx={hx} cy={my + 14} rx={9} ry={11} fill={COR.ink} />;
+  if (tipo === 'triste') return <Traco d={q(hx - 20, my + 19, hx, my - 1, hx + 20, my + 19)} w={5.5} />;
+  if (tipo === 'ondulada') return <Traco d={`M${hx - 24} ${my + 12} q8 -11 16 0 t16 0 t16 0`} w={4.5} />;
+  if (tipo === 'lado') return <Traco d={`M${hx - 14} ${my + 14} Q${hx + 8} ${my + 15} ${hx + 24} ${my + 1}`} />;
+  if (tipo === 'orgulhosa') {
+    return (
+      <>
+        <Traco d={q(hx - 30, my + 2, hx + 2, my + 28, hx + 30, my - 2)} w={5.5} />
+        <Traco d={q(hx + 24, my - 5, hx + 33, my - 4, hx + 35, my + 5)} w={4} />
+      </>
+    );
+  }
+  if (tipo === 'tremida') {
+    return (
+      <>
+        <rect x={hx - 25} y={my + 1} width={50} height={22} rx={10} fill={COR.branco} stroke={COR.ink} strokeWidth={4.5} />
+        <Traco d={`M${hx - 24} ${my + 12} l8 -5 l8 10 l8 -10 l8 10 l8 -10 l8 5`} w={3} />
+      </>
+    );
+  }
+  if (tipo === 'lingua') {
+    return (
+      <>
+        <path d={`M${hx + 3} ${my + 11} Q${hx + 5} ${my + 29} ${hx + 16} ${my + 26} Q${hx + 26} ${my + 22} ${hx + 22} ${my + 7} Z`} fill={TOKEN.rosa} stroke={COR.ink} strokeWidth={4} strokeLinejoin="round" />
+        <Traco d={q(hx - 22, my + 4, hx + 2, my + 19, hx + 26, my + 3)} />
+      </>
+    );
+  }
   if (tipo === 'reta') return <Traco d={`M${hx - 12} ${my + 8} L${hx + 12} ${my + 8}`} w={4.5} />;
   return <Traco d={q(hx - 12, my + 3, hx, my + 13, hx + 12, my + 3)} w={4.5} />;
 }
@@ -200,7 +320,174 @@ export function Boca({ tipo }: BocaProps) {
   );
 }
 
+export function Sobrancelhas({ tipo }: SobrancelhasProps) {
+  if (tipo === 'nenhuma') return null;
+  return (
+    <g data-testid={nome('sobrancelhas')}>
+      {([-1, 1] as const).map((lado) => {
+        const cx = 150 + lado * OLHO.dx;
+        const [fora, dentro] = [cx + lado * 19, cx - lado * 15];
+        if (tipo === 'preocupadas') return <Traco key={lado} d={q(fora, 47, cx - lado * 4, 42, dentro, 32)} w={6} />;
+        if (tipo === 'tristes') return <Traco key={lado} d={q(fora, 48, cx + lado * 6, 34, dentro, 34)} w={6} />;
+        if (lado === 1) return <Traco key={lado} d={q(fora, 36, cx, 24, dentro, 34)} w={6} />;
+        return <Traco key={lado} d={`M${fora} 45 L${dentro} 49`} w={6} />;
+      })}
+    </g>
+  );
+}
+
+// ---------- poses ----------
+
+/** Braço dobrado de uma pose: contorno escuro por baixo, para aparecer na frente do corpo, e a mão com dedos. */
+export function BracoDaPose({ lado, pose }: BracoDaPoseProps) {
+  const ombro: Ponto = lado === -1 ? OMBRO.esquerdo : OMBRO.direito;
+  const [mx, my] = pose.mao;
+  const [cx, cy] = pose.cotovelo;
+  const d = q(ombro[0], ombro[1], cx, cy, mx, my);
+  // Os dedos apontam para onde o braço vai.
+  const rumo = Math.atan2(my - cy, mx - cx);
+  return (
+    <>
+      <g data-testid={nome(`braco-${ladoNome(lado)}`)}>
+        <Traco d={d} w={27} cor={COR.escura} />
+        <Traco d={d} w={20} cor={COR.principal} />
+      </g>
+      <g data-testid={nome(`mao-${ladoNome(lado)}`)}>
+        <circle cx={mx} cy={my} r={14} fill={COR.principal} stroke={COR.escura} strokeWidth={3.5} />
+        {[-0.75, 0, 0.75].map((abertura) => (
+          <circle
+            key={abertura}
+            cx={mx + Math.cos(rumo + abertura) * 14}
+            cy={my + Math.sin(rumo + abertura) * 14}
+            r={5.5}
+            fill={COR.clara}
+            stroke={COR.escura}
+            strokeWidth={2}
+          />
+        ))}
+      </g>
+    </>
+  );
+}
+
+/** Antena de folha murcha: o talo sai da mão direita, dobra no alto e a folha pende. */
+export function Antena() {
+  const talo = 'M238 214 L242 176 Q248 92 262 62 Q276 38 284 70';
+  return (
+    <g data-testid={nome('antena')}>
+      <Traco d={talo} w={10} cor={TOKEN.contorno} />
+      <Traco d={talo} w={5} cor={TOKEN.talo} />
+      <g className="sapo-folha" style={{ transformOrigin: '284px 70px' }}>
+        <path d="M284 68 C262 80 262 112 286 134 C308 112 308 84 284 68 Z" fill={TOKEN.folhaMurcha} stroke={TOKEN.contorno} strokeWidth={4} strokeLinejoin="round" />
+        <Traco d="M284 76 Q282 100 286 124" w={3} cor={TOKEN.contorno} />
+      </g>
+      {/* o sinal que não chega */}
+      <g className="sapo-sinal">
+        <Traco d="M236 36 Q248 20 268 18" w={5} cor={TOKEN.metal} />
+        <Traco d="M222 22 Q238 0 266 0" w={5} cor={TOKEN.metal} />
+      </g>
+    </g>
+  );
+}
+
+/** Martelo na mão direita, com a cabeça para o alto. */
+export function Martelo() {
+  return (
+    <g data-testid={nome('martelo')}>
+      <Traco d="M244 182 L270 108" w={17} cor={TOKEN.contorno} />
+      <Traco d="M244 182 L270 108" w={10} cor={TOKEN.madeira} />
+      <g transform="rotate(19 272 102)">
+        <rect x={238} y={84} width={66} height={34} rx={9} fill={TOKEN.metal} stroke={TOKEN.contorno} strokeWidth={4.5} />
+        <path d="M246 92 L292 92" stroke={COR.branco} strokeOpacity={0.6} strokeWidth={4} strokeLinecap="round" />
+      </g>
+    </g>
+  );
+}
+
+/** Tábua com prego, no chão à direita: é nela que o martelo bate. */
+export function Tabua() {
+  return (
+    <g data-testid={nome('tabua')}>
+      <rect x={234} y={248} width={66} height={24} rx={5} fill={TOKEN.madeiraClara} stroke={TOKEN.contorno} strokeWidth={4.5} />
+      <Traco d="M244 261 L266 261 M276 256 L290 256" w={3} cor={TOKEN.madeiraEscura} />
+      <Traco d="M272 247 L272 236 M264 235 L280 235" w={5} cor={TOKEN.contorno} />
+    </g>
+  );
+}
+
 // ---------- extras ----------
+
+/** Lágrima grossa no canto do olho esquerdo. */
+export function Gota() {
+  return (
+    <g data-testid={nome('gota')}>
+      <path d="M92 84 Q112 112 98 122 Q84 130 76 116 Q72 104 92 84 Z" fill={TOKEN.azul} stroke={TOKEN.contorno} strokeWidth={3.5} strokeLinejoin="round" />
+      <path d="M85 108 Q82 116 89 119" stroke={COR.branco} strokeWidth={3.5} strokeLinecap="round" fill="none" />
+    </g>
+  );
+}
+
+export function Interrogacao() {
+  const gancho = 'M38 34 Q38 12 60 12 Q82 12 82 31 Q82 43 68 50 Q60 55 60 66';
+  return (
+    <g data-testid={nome('interrogacao')}>
+      <Traco d={gancho} w={17} cor={TOKEN.contorno} />
+      <Traco d={gancho} w={9} cor={TOKEN.sol} />
+      <circle cx={60} cy={88} r={8} fill={TOKEN.sol} stroke={TOKEN.contorno} strokeWidth={4} />
+    </g>
+  );
+}
+
+const PAPEIS = [
+  [26, 34, -30, TOKEN.foco],
+  [74, 8, 20, TOKEN.sol],
+  [150, -2, -15, TOKEN.azul],
+  [226, 10, 35, TOKEN.rosa],
+  [276, 40, -25, TOKEN.agua],
+  [14, 148, 40, TOKEN.descanso],
+  [286, 150, 15, TOKEN.solQuente],
+  [30, 212, -20, TOKEN.agua],
+  [272, 214, 30, TOKEN.foco],
+] as const;
+
+export function Confete() {
+  return (
+    <g data-testid={nome('confete')}>
+      {PAPEIS.map(([x, y, giro, cor], i) => (
+        <g key={x} className="sapo-papel" style={{ animationDelay: `${(i % 4) * -350}ms` }}>
+          {i % 3 === 2 ? (
+            <circle cx={x} cy={y} r={6} fill={cor} />
+          ) : (
+            <rect x={x - 5} y={y - 9} width={10} height={18} rx={3} fill={cor} transform={`rotate(${giro} ${x} ${y})`} />
+          )}
+        </g>
+      ))}
+    </g>
+  );
+}
+
+export function Cachecol() {
+  const volta = 'M82 145 Q150 188 218 145 L224 166 Q150 214 76 166 Z';
+  return (
+    <g data-testid={nome('cachecol')}>
+      <path d="M184 172 L214 164 L226 222 Q210 232 194 226 Z" fill={TOKEN.aguaBorda} stroke={TOKEN.contorno} strokeWidth={4.5} strokeLinejoin="round" />
+      <Traco d="M193 206 L220 200" w={7} cor={TOKEN.listra} />
+      <Traco d="M198 229 L198 240 M210 229 L212 240 M221 225 L225 235" w={4} cor={TOKEN.aguaBorda} />
+      <path d={volta} fill={TOKEN.agua} stroke={TOKEN.contorno} strokeWidth={4.5} strokeLinejoin="round" />
+      <Traco d="M104 164 L99 181 M138 175 L137 193 M172 173 L175 191" w={7} cor={TOKEN.listra} />
+    </g>
+  );
+}
+
+/** Riscos de tremedeira dos dois lados. */
+export function Tremor() {
+  return (
+    <g data-testid={nome('tremor')}>
+      <Traco d="M44 104 q-12 10 0 20 q12 10 0 20 M24 118 q-9 8 0 16" w={5} cor={TOKEN.agua} />
+      <Traco d="M256 104 q12 10 0 20 q-12 10 0 20 M276 118 q9 8 0 16" w={5} cor={TOKEN.agua} />
+    </g>
+  );
+}
 
 export function Suor() {
   const hx = 150;

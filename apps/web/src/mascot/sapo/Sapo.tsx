@@ -3,15 +3,21 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperti
 import type { FrogMood, Phase } from '@pulo/core/domain/types';
 import { resolverMovimento, useTheme, type MovimentoResolvido } from '@/theme';
 
-import { ROSTO_DO_ESTADO, rotuloDoSapo, type Rosto } from '../machine';
+import { ROSTO_DO_ESTADO, rotuloDoSapo, type Extra, type Olhos } from '../machine';
+import { HUMOR_DO_MOMENTO, type Momento } from '../momentos';
 import { CURVA, esperar, ir, molaAte, paraQuadros, tocar, trilha, type Formato, type Quadros } from './anim';
-import { ESCALA_JOVEM, PIVOTS, VIEWBOX } from './geometria';
+import { BRACOS_DA_POSE, ESCALA_JOVEM, OMBRO, PIVOTS, VIEWBOX } from './geometria';
 import * as P from './pecas';
 import './sapo.css';
+import { useVidaParada } from './vida';
 
 export interface SapoProps {
   fase: Phase;
   estado?: FrogMood;
+  /** O que está acontecendo no app: as telas pedem o momento e o mapa escolhe o humor. Vence `estado`. */
+  momento?: Momento;
+  /** Semente do sorteio das piscadas (fixa nos testes). */
+  semente?: number;
   /** Lado do quadrado, em px (o viewBox é 300 por 300). Padrão 220. */
   tamanho?: number;
   /** Sobrepõe o tema. Padrão: reduzir movimento do sistema ou do Perfil. */
@@ -29,7 +35,7 @@ type Pivo = readonly [number, number];
 /** transform-origin em unidades do viewBox. */
 const origem = ([x, y]: Pivo): CSSProperties => ({ transformOrigin: `${x}px ${y}px` });
 
-const ABERTOS: readonly Rosto['olhos'][] = ['abertos', 'olhando', 'arregalados', 'focados'];
+const ABERTOS: readonly Olhos[] = ['abertos', 'olhando', 'arregalados', 'focados', 'preocupados', 'desiguais'];
 
 type Canal = 'pulo' | 'squash' | 'opacidade' | 'impacto';
 type Canais = Record<Canal, Animation | null>;
@@ -54,13 +60,15 @@ interface CamadaProps {
   saltoKey: number;
   saindo?: boolean;
   semSombra?: boolean;
+  semente?: number;
 }
 
-function Camada({ fase, estado, movimento, tamanho, saltoKey, saindo = false, semSombra }: CamadaProps) {
+function Camada({ fase, estado, movimento, tamanho, saltoKey, saindo = false, semSombra, semente }: CamadaProps) {
   const rosto = ROSTO_DO_ESTADO[estado];
   const abertos = ABERTOS.includes(rosto.olhos);
   const loops = movimento.loops && !saindo;
   const { saltos, fadeDeEstado: fadeMs, spring: mola, landingSquash: sq } = movimento;
+  const vida = useVidaParada({ piscar: loops && abertos, olhar: loops && estado === 'parado', semente });
 
   // pulo e opacidade na camada de fora; squash na de dentro (pivô em 50% 90%)
   const puloRef = useRef<HTMLDivElement>(null);
@@ -120,31 +128,49 @@ function Camada({ fase, estado, movimento, tamanho, saltoKey, saindo = false, se
   const escala = fase < 4 ? ESCALA_JOVEM : 1;
   const grupoEscala = `translate(${px} ${py}) scale(${escala}) translate(${-px} ${-py})`;
 
+  const tem = (extra: Extra) => rosto.extras.includes(extra);
+  const pose = rosto.corpo === 'sentado' ? null : BRACOS_DA_POSE[rosto.corpo];
   const extras = (
     <>
-      {rosto.extras.includes('suor') && (
+      {tem('suor') && (
         <g className="sapo-gotejar">
           <P.Suor />
         </g>
       )}
-      {rosto.extras.includes('balao') && (
+      {tem('balao') && (
         <g className="sapo-balao">
           <P.Balao />
         </g>
       )}
-      {rosto.extras.includes('zzz') && (
+      {tem('zzz') && (
         <g className="sapo-zzz">
           <P.Zzz />
         </g>
       )}
-      {rosto.extras.includes('brilhos') && (
+      {tem('brilhos') && (
         <g className="sapo-brilha" style={origem(PIVOTS.brilhos)}>
           <P.Brilhos />
         </g>
       )}
-      {rosto.extras.includes('impacto') && (
+      {tem('impacto') && (
         <g ref={impactoRef}>
           <P.Impacto />
+        </g>
+      )}
+      {tem('gota') && (
+        <g className="sapo-lagrima">
+          <P.Gota />
+        </g>
+      )}
+      {tem('interrogacao') && (
+        <g className="sapo-duvida" style={origem([60, 90])}>
+          <P.Interrogacao />
+        </g>
+      )}
+      {tem('confete') && <P.Confete />}
+      {tem('tremor') && (
+        <g className="sapo-riscos">
+          <P.Tremor />
         </g>
       )}
     </>
@@ -157,26 +183,34 @@ function Camada({ fase, estado, movimento, tamanho, saltoKey, saindo = false, se
           width={tamanho}
           height={tamanho}
           viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}
-          className={loops ? 'sapo-svg sapo-vivo' : 'sapo-svg'}
+          className={['sapo-svg', loops && 'sapo-vivo', vida.piscando && 'sapo-piscando', vida.olhandoDeLado && 'sapo-de-lado'].filter(Boolean).join(' ')}
           aria-hidden="true"
           focusable="false"
         >
           {!semSombra && <P.SombraNoChao />}
           <g transform={grupoEscala}>
-            <>
-                <g className="sapo-respira" style={origem(PIVOTS.sapo)}>
-                  <P.Corpo />
+            <g className={`sapo-corpo sapo-corpo-${rosto.corpo}`} style={origem(PIVOTS.sapo)}>
+              <g className="sapo-respira" style={origem(PIVOTS.sapo)}>
+                <P.Corpo />
+                <g className="sapo-peito" style={origem(PIVOTS.barriga)}>
                   <P.Barriga />
                 </g>
-                <P.Coxa lado={-1} />
-                <P.Coxa lado={1} />
-                <P.Pe lado={-1} />
-                <P.Pe lado={1} />
-                <g className="sapo-respira" style={origem(PIVOTS.sapo)}>
-                  <P.Braco lado={-1} />
-                  <P.Braco lado={1} />
-                  <P.Mao lado={-1} />
-                  <P.Mao lado={1} />
+              </g>
+              <P.Coxa lado={-1} />
+              <P.Coxa lado={1} />
+              <P.Pe lado={-1} />
+              <P.Pe lado={1} />
+              {rosto.corpo === 'martelando' && <P.Tabua />}
+              <g className="sapo-respira" style={origem(PIVOTS.sapo)}>
+                <g className="sapo-tronco">
+                  {!pose && (
+                    <>
+                      <P.Braco lado={-1} />
+                      <P.Braco lado={1} />
+                      <P.Mao lado={-1} />
+                      <P.Mao lado={1} />
+                    </>
+                  )}
                   <P.Cabeca />
                   <P.Bochecha lado={-1} />
                   <P.Bochecha lado={1} />
@@ -194,10 +228,25 @@ function Camada({ fase, estado, movimento, tamanho, saltoKey, saindo = false, se
                       </g>
                     </>
                   )}
+                  <P.Sobrancelhas tipo={rosto.sobrancelhas} />
                   <P.Boca tipo={rosto.boca} />
+                  {tem('cachecol') && <P.Cachecol />}
                 </g>
-                {extras}
-              </>
+                {pose && (
+                  <>
+                    <g className="sapo-braco-esquerdo" style={origem(OMBRO.esquerdo)}>
+                      <P.BracoDaPose lado={-1} pose={pose.esquerdo} />
+                    </g>
+                    <g className="sapo-braco-direito" style={origem(OMBRO.direito)}>
+                      {rosto.corpo === 'antena' && <P.Antena />}
+                      {rosto.corpo === 'martelando' && <P.Martelo />}
+                      <P.BracoDaPose lado={1} pose={pose.direito} />
+                    </g>
+                  </>
+                )}
+              </g>
+              {extras}
+            </g>
           </g>
         </svg>
       </div>
@@ -228,10 +277,11 @@ function useEstadoAnterior(estado: FrogMood, fase: Phase, ativo: boolean, ms: nu
 }
 
 /**
- * O sapo. Estados: parado, feliz, cansado, pensando, surpreso, focado, dormindo, pouso.
+ * O sapo. Cada estado (`FrogMood`) combina rosto, corpo e extras (`ROSTO_DO_ESTADO`).
  * Fases 1 a 3 desenham o sapo jovem; a fase 4, o adulto.
  */
-export function Sapo({ fase, estado = 'parado', tamanho = 220, reducedMotion, salto = 0, semSombra, className, style }: SapoProps) {
+export function Sapo({ fase, estado: pedido = 'parado', momento, semente, tamanho = 220, reducedMotion, salto = 0, semSombra, className, style }: SapoProps) {
+  const estado = momento ? HUMOR_DO_MOMENTO[momento] : pedido;
   const tema = useTheme();
   const movimento = useMemo(
     () => (reducedMotion === undefined ? tema.movimento : resolverMovimento(reducedMotion)),
@@ -260,7 +310,7 @@ export function Sapo({ fase, estado = 'parado', tamanho = 220, reducedMotion, sa
           semSombra={semSombra}
         />
       )}
-      <Camada fase={fase} estado={estado} movimento={movimento} tamanho={tamanho} saltoKey={salto} semSombra={semSombra} />
+      <Camada fase={fase} estado={estado} movimento={movimento} tamanho={tamanho} saltoKey={salto} semSombra={semSombra} semente={semente} />
     </div>
   );
 }

@@ -576,10 +576,19 @@ export type FrogMood =
   | 'surpreso'
   | 'focado'
   | 'dormindo'
-  | 'pouso';
+  | 'pouso'
+  | 'triste'
+  | 'preocupado'
+  | 'sem-sinal'
+  | 'confuso'
+  | 'comemorando'
+  | 'orgulhoso'
+  | 'acenando'
+  | 'congelado'
+  | 'construindo';
 
 /** Eventos transitórios, do mais prioritário ao menos. */
-export type FrogEvent = 'pouso' | 'surpreso' | 'feliz';
+export type FrogEvent = 'pouso' | 'surpreso' | 'comemorando' | 'construindo' | 'feliz';
 
 /**
  * Entradas da máquina de estados do sapo (função pura em src/mascot/machine.ts).
