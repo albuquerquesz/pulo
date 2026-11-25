@@ -53,6 +53,8 @@ const aba = async (nome: 'Cômodos' | 'Estrutura' | 'Exterior') => {
 };
 const contador = (nome: 'Cômodos' | 'Estrutura' | 'Exterior') => screen.getByRole('tab', { name: new RegExp(nome) }).textContent;
 
+/** A parte pronta vira um selo (imagem), não um botão. */
+const pronta = (nome: RegExp) => within(screen.getByRole('list', { name: 'Partes da casa' })).getByRole('img', { name: nome });
 const parte = (nome: RegExp) => within(screen.getByRole('list', { name: 'Partes da casa' })).getByRole('button', { name: nome });
 const desligado = (el: HTMLElement) => el.hasAttribute('disabled');
 const noTopo = () => screen.getByText('joias', { exact: false, selector: 'span.sr-only' }).closest('b')?.textContent;
@@ -66,7 +68,7 @@ describe('Ilha', () => {
     expect(noTopo()).toBe(`${await saldo()} joias`);
     expect(screen.getByText('1 de 24')).toBeTruthy();
     await aba('Cômodos');
-    expect(desligado(parte(/Quarto, pronta/))).toBe(true);
+    expect(pronta(/Quarto, pronta/)).toBeTruthy();
     expect(naCena('quarto')?.classList.contains('feita')).toBe(true);
     expect(naCena('cerca')?.classList.contains('feita')).toBe(false);
     expect(screen.queryByTestId('fumaca')).toBeNull();
@@ -93,13 +95,13 @@ describe('Ilha', () => {
     expect(await saldo()).toBe(100 - HOUSE.partCost.cerca);
     expect(noTopo()).toBe(`${100 - HOUSE.partCost.cerca} joias`);
     expect(naCena('cerca')?.getAttribute('class')).toBe('parte-da-casa feita nova');
-    expect(desligado(parte(/Cerca, pronta/))).toBe(true);
+    expect(pronta(/Cerca, pronta/)).toBeTruthy();
     expect((await repo.listHousePurchases()).map((c) => c.item)).toEqual(['cerca']);
   });
 
   test('a próxima parte que cabe no saldo ganha destaque', async () => {
     await abrir({ saldo: 30 });
-    expect(parte(/Caixa de correio, 25 joias, próximo alvo/)).toBeTruthy();
+    expect(parte(/Caixa de correio, 30 joias, próximo alvo/)).toBeTruthy();
   });
 
   test('parte sem saldo fica apagada e não grava', async () => {
@@ -144,7 +146,7 @@ describe('Ilha', () => {
   });
 
   test('a chaminé comprada solta fumaça e o segundo andar comemora a conquista', async () => {
-    const { app } = await abrir({ saldo: 1000 });
+    const { app } = await abrir({ saldo: 1500 });
     await aba('Cômodos');
     for (const nome of [/Sala de estar/, /Cozinha/]) {
       await waitFor(() => expect(desligado(parte(nome))).toBe(false));
@@ -168,7 +170,14 @@ describe('Ilha', () => {
   test('o demo mostra a casa pela metade', async () => {
     await abrir({ comCasa: true });
     expect(screen.getByText('12 de 24')).toBeTruthy();
-    expect(screen.getByTestId('sapo-na-janela')).toBeTruthy();
+    expect(screen.queryByTestId('sapo-na-janela')).toBeNull();
+  });
+
+  test('o cais da próxima ilha fica trancado e diz quanto falta', async () => {
+    const { app } = await abrir({ comCasa: true });
+    expect(screen.getByTestId('cadeado')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Caminho para a próxima ilha, trancado' }));
+    expect(app()?.aviso?.mensagem).toBe('A próxima ilha abre com a casa inteira. Faltam 12 partes.');
   });
 
   test('o botão de canto e o + levam para a Casa', async () => {

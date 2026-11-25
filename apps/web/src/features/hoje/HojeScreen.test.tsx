@@ -82,10 +82,8 @@ describe('Tela Hoje', () => {
 
   test('Descansar hoje grava, muda o dia na barra e desfaz', async () => {
     const { repo } = await abrir({ dias: 1 });
-    expect(regiao('Sequência').getByText('Restam 2 descansos nesta semana')).toBeTruthy();
     await clicar(screen.getByRole('button', { name: 'Descansar hoje' }));
     expect(await regiao('Sequência').findByText('domingo, descanso')).toBeTruthy();
-    expect(regiao('Sequência').getByText('Resta 1 descanso nesta semana')).toBeTruthy();
     expect((await repo.listRestDays()).map((r) => r.date)).toContain('2026-11-22');
     await clicar(screen.getByRole('button', { name: 'Desmarcar descanso de hoje' }));
     expect(await regiao('Sequência').findByText('domingo, hoje')).toBeTruthy();

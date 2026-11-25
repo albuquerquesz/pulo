@@ -8,8 +8,7 @@ import { CasaDaIlha } from '@/mascot/ilha/CasaDaIlha';
 import { BarraValor, BotaoCanto, Joia, Nuvens, useCamera, type LimitesDaCamera } from '@/ui';
 
 import { useApp, useCarregar } from '../app';
-import { useComodoAtual } from '../casa/comodoAtual';
-import { carregarIlha, conquistasNovas, ilhaNaTela, textoDaConquista } from './logic';
+import { carregarIlha, conquistasNovas, ilhaNaTela, textoDaConquista, textoDoPortal } from './logic';
 import { Partes } from './Partes';
 
 /** A câmera da ilha: abre mostrando a mansão toda. */
@@ -31,7 +30,6 @@ export function IlhaScreen() {
   const ocupado = useRef(false);
 
   const dados = estado.tipo === 'ok' ? estado.dados : null;
-  const sapoEm = useComodoAtual(dados?.casa.comodos ?? []);
   const ilha = dados ? ilhaNaTela(dados.casa, comprando) : null;
   const irParaCasa = () => void navegar({ to: '/casa' });
 
@@ -76,7 +74,7 @@ export function IlhaScreen() {
           {...gestos}
           construidas={ilha?.construidas ?? []}
           nova={nova}
-          sapoEm={sapoEm}
+          onPortal={ilha ? () => mostrarAviso({ mensagem: textoDoPortal(ilha.construidas.length, ilha.total), variante: 'atencao' }) : undefined}
           viewBox={viewBox}
           className={`relative z-1 block size-full touch-none select-none ${arrastando ? 'cursor-grabbing' : 'cursor-grab'}`}
         />

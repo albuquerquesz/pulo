@@ -1,3 +1,4 @@
+import { HOUSE } from '@pulo/core/config/decisions';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
 import { type TestUser, TEST_NOW, createHarness, queriesOf } from '../testing';
 
@@ -83,10 +84,10 @@ describe('/api/gelo', () => {
     const again = await me.call('POST', '/api/gelo');
     expect(again.status).toBe(409);
     expect((await again.json()).error).toBe('gelo_no_maximo');
-    // O gasto aparece no saldo da casa: 200 - 50 = 150, menos que a cozinha mais a arvore.
+    // O gasto aparece no saldo da casa: 200 - 50 = 150; depois da varanda (120) sobram 30, menos que a cerca.
     const buy = (item: string, cost: number) => me.call('PUT', `/api/house/${item}`, { item, cost, createdAt: TEST_NOW });
-    expect((await buy('cozinha', 120)).status).toBe(200);
-    expect((await json(buy('cerca', 40))).error).toBe('joias_insuficientes');
+    expect((await buy('varanda', HOUSE.partCost.varanda)).status).toBe(200);
+    expect((await json(buy('cerca', HOUSE.partCost.cerca))).error).toBe('joias_insuficientes');
     expect((await json(me.call('GET', `/api/sync${RANGE}`))).gelosComprados).toHaveLength(1);
   });
 

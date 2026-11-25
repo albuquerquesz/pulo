@@ -4,6 +4,7 @@ import {
   COMODOS,
   DECORACOES,
   PARTES,
+  casaCompleta,
   comprarDecoracao,
   comprarParte,
   estadoDaCasa,
@@ -45,18 +46,18 @@ describe('casa', () => {
     const casa = estadoDaCasa(nada, [], []);
     expect([casa.construidas, casa.total, casa.completa]).toEqual([1, 24, false]);
     expect(casa.comodos).toEqual(['quarto']);
-    expect(casa.proxima).toEqual({ id: 'caixa-correio', nome: 'Caixa de correio', custo: 25, faltam: 25, horasDeFoco: 3 });
+    expect(casa.proxima).toEqual({ id: 'caixa-correio', nome: 'Caixa de correio', custo: 30, faltam: 30, horasDeFoco: 3 });
     expect(casa.decoracoes.every((d) => d.posicao === null)).toBe(true);
   });
 
   it('compra fora de qualquer ordem e recusa saldo negativo, repetida e inexistente', async () => {
     const repo = createMemoryRepository({ habitLogs: habitos(HOUSE.partCost.varanda) });
-    expect(await comprarParte(repo, clock, 'cozinha')).toMatchObject({ ok: false, error: { code: 'joias_insuficientes', message: 'Faltam 40 joias.' } });
+    expect(await comprarParte(repo, clock, 'cozinha')).toMatchObject({ ok: false, error: { code: 'joias_insuficientes', message: 'Faltam 80 joias.' } });
     expect(await comprarParte(repo, clock, 'varanda')).toMatchObject({ ok: true, value: { saldo: 0, construidas: 2 } });
     expect(await comprarParte(repo, clock, 'varanda')).toMatchObject({ ok: false, error: { code: 'ja_comprado' } });
     expect(await comprarParte(repo, clock, 'quarto')).toMatchObject({ ok: false, error: { code: 'ja_comprado' } });
     expect(await comprarParte(repo, clock, 'praia')).toMatchObject({ ok: false, error: { code: 'item_inexistente' } });
-    expect(await repo.listHousePurchases()).toEqual([{ item: 'varanda', cost: 80, createdAt: 5 }]);
+    expect(await repo.listHousePurchases()).toEqual([{ item: 'varanda', cost: 120, createdAt: 5 }]);
   });
 
   it('desfazer hábito depois da compra deixa o saldo em zero e não tira a compra', async () => {
@@ -78,7 +79,7 @@ describe('casa', () => {
   });
 
   it('decorar um cômodo pede que ele esteja construído, e mover leva o item de um para outro', async () => {
-    const repo = createMemoryRepository({ habitLogs: habitos(200) });
+    const repo = createMemoryRepository({ habitLogs: habitos(220) });
     const naCozinha = { ...canto, comodo: 'cozinha' } as const;
     expect(await comprarDecoracao(repo, clock, 'tapete', naCozinha)).toMatchObject({ ok: false, error: { code: 'comodo_nao_comprado' } });
     await comprarDecoracao(repo, clock, 'tapete', canto);
@@ -96,13 +97,23 @@ describe('casa', () => {
   });
 });
 
+describe('acesso à próxima ilha', () => {
+  it('só abre com todas as partes prontas', () => {
+    const todas = PARTES.map((p) => p.id);
+    expect(casaCompleta(todas)).toBe(true);
+    expect(casaCompleta(todas.filter((id) => id !== 'piscina'))).toBe(false);
+    // O quarto vem de graça e conta mesmo sem compra.
+    expect(casaCompleta(todas.filter((id) => id !== 'quarto'))).toBe(true);
+  });
+});
+
 describe('catálogo da mansão', () => {
   const idsDe = (camada: string) => PARTES.filter((p) => p.camada === camada).length;
 
   it('bate com a tabela da spec: partes por camada e total em joias', () => {
     expect([idsDe('comodo'), idsDe('estrutura'), idsDe('exterior')]).toEqual([8, 4, 12]);
-    expect(PARTES.reduce((total, p) => total + p.custo, 0)).toBe(4385);
-    expect(HOUSE.partCost).toMatchObject({ quarto: 0, cozinha: 120, varanda: 80, jardim: 60, arvore: 90, cerca: 40 });
+    expect(PARTES.reduce((total, p) => total + p.custo, 0)).toBe(9855);
+    expect(HOUSE.partCost).toMatchObject({ quarto: 0, cozinha: 200, varanda: 120, jardim: 80, arvore: 120, cerca: 50 });
     expect(COMODOS).toHaveLength(8);
   });
 
@@ -123,8 +134,8 @@ describe('catálogo da mansão', () => {
   it('podeComprar dá cada resultado', () => {
     expect(podeComprar('quarto', [], 0)).toEqual({ situacao: 'ja_tem' });
     expect(podeComprar('cerca', ['cerca'], 100)).toEqual({ situacao: 'ja_tem' });
-    expect(podeComprar('cerca', [], 40)).toEqual({ situacao: 'ok' });
-    expect(podeComprar('cerca', [], 39)).toEqual({ situacao: 'joias_insuficientes', faltam: 1 });
+    expect(podeComprar('cerca', [], 50)).toEqual({ situacao: 'ok' });
+    expect(podeComprar('cerca', [], 49)).toEqual({ situacao: 'joias_insuficientes', faltam: 1 });
     expect(podeComprar('torre', [], 9999)).toEqual({ situacao: 'falta_requisito', requer: 'segundo-andar' });
   });
 

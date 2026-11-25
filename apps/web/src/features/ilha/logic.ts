@@ -61,3 +61,10 @@ export async function carregarIlha(repo: Repository, clock: Clock) {
   const [casa, conquistas] = await Promise.all([verCasa(repo), verConquistas(repo, clock)]);
   return { casa, conquistas };
 }
+
+/** O aviso do cais: o que falta para abrir a próxima ilha, ou que ela chega em breve. */
+export function textoDoPortal(construidas: number, total: number): string {
+  const faltam = total - construidas;
+  if (faltam <= 0) return 'A próxima ilha chega em breve!';
+  return `A próxima ilha abre com a casa inteira. Falta${faltam === 1 ? '' : 'm'} ${faltam} parte${faltam === 1 ? '' : 's'}.`;
+}

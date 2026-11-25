@@ -120,7 +120,7 @@ describe('escritas que destravam', () => {
   it('a última parte da casa destrava casa inteira', async () => {
     const me = await h.newUser();
     await database.db.joiaCredit.create({ data: { userId: me.id, amount: 1000 } });
-    await database.db.joiaCredit.update({ where: { userId: me.id }, data: { amount: 5000 } });
+    await database.db.joiaCredit.update({ where: { userId: me.id }, data: { amount: 12000 } });
     const unlocked: Record<string, string[]> = {};
     // A ordem do catálogo não respeita os requisitos: compra o que já está liberado, em voltas.
     const faltam = HOUSE.parts.filter((p) => p.custo > 0);

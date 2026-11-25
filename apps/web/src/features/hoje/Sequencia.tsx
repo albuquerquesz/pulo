@@ -3,9 +3,8 @@ import type { ReactNode } from 'react';
 import { Foguinho } from '@/ui';
 
 import { Floco } from '../casca/Floco';
-import { textoDeDescansos } from '../casca/gelo';
 
-import { CARTAO, LEGENDA, TITULO } from './estilos';
+import { CARTAO, TITULO } from './estilos';
 import type { BarraDaSemana, DescansoDeHoje, TomDoDia } from './logic';
 
 const COR_DA_LETRA: Record<TomDoDia, string> = {
@@ -84,7 +83,7 @@ export function Sequencia({ dias, barra, descanso, gravando, onDescanso }: Seque
           </div>
         </div>
       </div>
-      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div className="mt-4">
         <button
           type="button"
           disabled={gravando}
@@ -98,7 +97,6 @@ export function Sequencia({ dias, barra, descanso, gravando, onDescanso }: Seque
           <span aria-hidden="true">☾ </span>
           {descanso.marcado ? 'Desmarcar descanso de hoje' : 'Descansar hoje'}
         </button>
-        <span className={LEGENDA}>{textoDeDescansos(descanso.restantesNaSemana, descanso.maxPorSemana)}</span>
       </div>
     </section>
   );

@@ -38,8 +38,6 @@ function risco(vao: Vao, de: readonly [number, number], ate: readonly [number, n
   return `M${a.x} ${a.y}L${b.x} ${b.y}`;
 }
 
-export const centroDoVao = (vao: Vao) => projetar(ponto(vao, (vao.ao[0] + vao.ao[1]) / 2, (vao.z[0] + vao.z[1]) / 2));
-
 /** Janela com moldura, cruzeta e parapeito. No tema escuro o vidro acende (`.janela-vidro`). */
 export function Janela(vao: Vao) {
   const { ao, z } = vao;

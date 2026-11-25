@@ -5,7 +5,7 @@ import type { ComodoId, ParteId } from '@pulo/core/domain/casa';
 import { cor, mistura } from '../cores';
 import { caixa, cilindro, circuloNoChao, cone, projetar, telhado, type CoresDoTelhado, type Volume } from './geometria';
 import { CONTORNO, MADEIRA, PAREDE, PEDRA, TELHADO, TELHADO_AZUL, TELHADO_ROSA, VIDRO } from './paleta';
-import { Bloco, centroDoVao, Faces, Janela, Porta, type Vao } from './pecas';
+import { Bloco, Faces, Janela, Porta, type Vao } from './pecas';
 
 /*
  * A mansão: os cômodos e a estrutura. Cada parte recebe o que já está pronto, para um andar de cima
@@ -231,20 +231,3 @@ export const ARTE_DA_CONSTRUCAO = {
   observatorio: () => <Observatorio />,
   chamine: (prontas) => <Chamine prontas={prontas} />,
 } as const satisfies Partial<Record<ParteId, Arte>>;
-
-/** A cara do sapo atrás do vidro. */
-export function SapoNaJanela({ comodo }: { comodo: ComodoId }) {
-  const { x, y } = comodo === 'observatorio' ? centroDaEscotilha() : centroDoVao(JANELA_DO_COMODO[comodo]);
-  return (
-    <g data-testid="sapo-na-janela" transform={`translate(${x},${y})`}>
-      <path d="M-15 12C-17-6-9-10 0-10S17-6 15 12Z" fill={cor('sapo')} stroke={CONTORNO} strokeWidth="2.5" strokeLinejoin="round" />
-      {[-7, 7].map((olho) => (
-        <g key={olho}>
-          <circle cx={olho} cy="-9" r="6" fill={cor('sapo')} stroke={CONTORNO} strokeWidth="2.5" />
-          <circle cx={olho} cy="-9" r="2.4" fill={CONTORNO} />
-        </g>
-      ))}
-      <path d="M-5 3q5 5 10 0" fill="none" stroke={CONTORNO} strokeWidth="2" strokeLinecap="round" />
-    </g>
-  );
-}

@@ -329,6 +329,21 @@ body {
   }
 }
 
+/* O cais para a próxima ilha: a ilha de lá fica apagada e tracejada até a casa ficar inteira. */
+.portal-da-ilha {
+  cursor: pointer;
+  outline: none;
+}
+.portal-da-ilha.trancado .proxima-ilha {
+  opacity: 0.3;
+}
+.portal-da-ilha.trancado .proxima-ilha polygon {
+  stroke-dasharray: 8 7;
+}
+.portal-da-ilha:focus-visible polygon {
+  stroke: var(--pulo-joia);
+}
+
 /* Detalhes vivos da mansão (spec 31): só nas partes prontas. */
 .parte-da-casa.feita .fumaca circle {
   animation: fumaca 3.6s ease-out infinite;

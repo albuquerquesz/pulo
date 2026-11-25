@@ -22,7 +22,23 @@ function rotuloDa({ nome, custo, situacao, motivo }: ParteAVenda, alvo: boolean)
   return `${nome}, ${custo} joias${alvo ? ', próximo alvo' : ''}`;
 }
 
-function Cartao({ parte, alvo, onComprar }: { parte: ParteAVenda; alvo: boolean; onComprar: (id: ParteId) => void }) {
+type CartaoProps = { parte: ParteAVenda; alvo: boolean; onComprar: (id: ParteId) => void };
+
+/** A parte já construída vira um selo pequeno: emoji e visto. O nome fica no rótulo e na dica. */
+function Selo({ parte }: Pick<CartaoProps, 'parte'>) {
+  return (
+    <span
+      role="img"
+      aria-label={rotuloDa(parte, false)}
+      title={parte.nome}
+      className="flex size-11 items-center justify-center rounded-full border-4 border-contorno bg-pronta-fundo text-xl shadow-[inset_0_-4px_0_var(--pulo-pronta-borda)]"
+    >
+      {parte.emoji}
+    </span>
+  );
+}
+
+function Cartao({ parte, alvo, onComprar }: CartaoProps) {
   const { id, nome, emoji, custo, situacao, motivo } = parte;
   return (
     <button
@@ -30,7 +46,7 @@ function Cartao({ parte, alvo, onComprar }: { parte: ParteAVenda; alvo: boolean;
       disabled={situacao !== 'disponivel'}
       onClick={() => onComprar(id)}
       aria-label={rotuloDa(parte, alvo)}
-      className={`flex h-full min-h-[60px] items-center gap-2.5 rounded-[18px] border-4 border-contorno py-1.5 pr-4 pl-3 text-left text-sm font-black whitespace-nowrap text-contorno ${alvo ? ALVO : APARENCIA[situacao]}`}
+      className={`flex h-full min-h-[56px] items-center gap-2.5 rounded-[18px] border-4 border-contorno py-1.5 pr-4 pl-3 text-left text-sm font-black whitespace-nowrap text-contorno ${alvo ? ALVO : APARENCIA[situacao]}`}
     >
       <span aria-hidden="true" className="text-2xl">
         {situacao === 'trancada' ? '🔒' : emoji}
@@ -40,21 +56,24 @@ function Cartao({ parte, alvo, onComprar }: { parte: ParteAVenda; alvo: boolean;
         {motivo ? <span className="text-xs font-extrabold">{motivo}</span> : null}
         {alvo ? <span className="text-xs font-extrabold text-pronta-texto">Dá para construir!</span> : null}
       </span>
-      {situacao === 'feita' ? (
-        <span className="text-pronta-texto">✓</span>
-      ) : (
-        <span className="inline-flex items-center gap-1 text-joia-escura">
-          <Joia largura={14} altura={16} />
-          {custo}
-        </span>
-      )}
+      <span className="inline-flex items-center gap-1 text-joia-escura">
+        <Joia largura={14} altura={16} />
+        {custo}
+      </span>
     </button>
   );
 }
 
+/** Ordem na grade: o próximo alvo, as que dá para comprar, as caras, as trancadas e, no fim, as prontas. */
+const PESO: Record<SituacaoDaParte, number> = { disponivel: 0, cara: 1, trancada: 2, feita: 3 };
+
+function emOrdem(partes: readonly ParteAVenda[], alvo: ParteId | null): ParteAVenda[] {
+  return [...partes].sort((a, b) => Number(b.id === alvo) - Number(a.id === alvo) || PESO[a.situacao] - PESO[b.situacao] || a.custo - b.custo);
+}
+
 type PartesProps = { ilha: IlhaNaTela; onComprar: (id: ParteId) => void };
 
-/** As partes à venda no pé da ilha, por camada, numa faixa que rola de lado. Só a que o saldo paga responde ao toque. */
+/** As partes à venda no pé da ilha, por camada, numa grade que quebra em linhas. Só a que o saldo paga responde ao toque. */
 export function Partes({ ilha, onComprar }: PartesProps) {
   // Abre na camada do próximo alvo.
   const [escolhida, setEscolhida] = useState<CamadaDaCasa | null>(null);
@@ -79,15 +98,14 @@ export function Partes({ ilha, onComprar }: PartesProps) {
           </button>
         ))}
       </div>
-      {/* A chave volta a rolagem ao começo quando a camada muda. */}
-      <ul key={camada} aria-label="Partes da casa" className="flex gap-2 overflow-x-auto overscroll-x-contain p-1">
-        {ilha.partes
-          .filter((p) => p.camada === camada)
-          .map((p) => (
-            <li key={p.id} className="shrink-0">
-              <Cartao parte={p} alvo={p.id === ilha.alvo} onComprar={onComprar} />
-            </li>
-          ))}
+      {/* Quebra em linhas em vez de rolar de lado; no celular, a grade rola dentro dela mesma. */}
+      <ul aria-label="Partes da casa" className="flex max-h-[34dvh] flex-wrap items-center gap-2 overflow-y-auto overscroll-contain p-1 md:max-h-none md:overflow-visible">
+        {emOrdem(
+          ilha.partes.filter((p) => p.camada === camada),
+          ilha.alvo,
+        ).map((p) => (
+          <li key={p.id}>{p.situacao === 'feita' ? <Selo parte={p} /> : <Cartao parte={p} alvo={p.id === ilha.alvo} onComprar={onComprar} />}</li>
+        ))}
       </ul>
     </div>
   );

@@ -1,13 +1,14 @@
 import type { SVGProps } from 'react';
 
-import { comodoDe, type ComodoId, type ParteId } from '@pulo/core/domain/casa';
+import { casaCompleta, type ParteId } from '@pulo/core/domain/casa';
 
 import { cor } from '../cores';
-import { ARTE_DA_CONSTRUCAO, SapoNaJanela, type Arte } from './construcao';
+import { ARTE_DA_CONSTRUCAO, type Arte } from './construcao';
 import { ARTE_DO_EXTERIOR } from './exterior';
 import { caixa, projetar } from './geometria';
 import { CONTORNO, GRAMA, MADEIRA, PEDRA } from './paleta';
 import { Faces } from './pecas';
+import { PortalDaProximaIlha } from './portal';
 
 /*
  * Ilha com a mansão do sapo, no traço do rascunho (public/rascunhos/desktop.html, `.casa-svg`).
@@ -50,15 +51,13 @@ type CasaDaIlhaProps = Omit<SVGProps<SVGSVGElement>, 'children'> & {
   construidas: readonly ParteId[];
   /** A parte recém comprada, que cai do alto. */
   nova?: ParteId | null;
-  /** O cômodo em que o sapo está: ele aparece na janela. */
-  sapoEm?: ComodoId;
   rotulo?: string;
+  /** Toque no cais da próxima ilha. Sem ele (miniatura), o cais é só desenho. */
+  onPortal?: () => void;
 };
 
-export function CasaDaIlha({ construidas, nova, sapoEm, viewBox = VIEWBOX_DA_ILHA, rotulo = 'Sua ilha', ...svg }: CasaDaIlhaProps) {
+export function CasaDaIlha({ construidas, nova, onPortal, viewBox = VIEWBOX_DA_ILHA, rotulo = 'Sua ilha', ...svg }: CasaDaIlhaProps) {
   const prontas = new Set(construidas);
-  // O sapo só aparece num cômodo pronto; sem isso, fica no quarto.
-  const sapo = sapoEm && prontas.has(sapoEm) ? sapoEm : comodoDe({});
   return (
     <svg {...svg} viewBox={viewBox} preserveAspectRatio="xMidYMid meet" role="img" aria-label={rotulo}>
       {TERRENO}
@@ -67,7 +66,7 @@ export function CasaDaIlha({ construidas, nova, sapoEm, viewBox = VIEWBOX_DA_ILH
           {ARTE[id](prontas)}
         </g>
       ))}
-      {prontas.has(sapo) ? <SapoNaJanela comodo={sapo} /> : null}
+      <PortalDaProximaIlha aberto={casaCompleta(construidas)} onToque={onPortal} />
     </svg>
   );
 }

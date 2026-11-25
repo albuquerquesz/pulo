@@ -19,31 +19,31 @@ O catálogo proposto, para o `decisions.ts` (proposta minha, o Victor decide os 
 | Id | Nome | Camada | Preço | Requer |
 | --- | --- | --- | --- | --- |
 | `quarto` | Quarto | cômodo | 0 | (pronto) |
-| `cozinha` | Cozinha | cômodo | 120 | |
-| `sala` | Sala de estar | cômodo | 150 | |
-| `banheiro` | Banheiro | cômodo | 100 | |
-| `escritorio` | Escritório | cômodo | 220 | `segundo-andar` |
-| `biblioteca` | Biblioteca | cômodo | 320 | `segundo-andar` |
-| `estudio` | Estúdio de música | cômodo | 380 | `segundo-andar` |
-| `observatorio` | Observatório | cômodo | 600 | `torre` |
-| `segundo-andar` | Segundo andar | estrutura | 300 | `sala` |
-| `sotao` | Sótão | estrutura | 250 | `segundo-andar` |
-| `torre` | Torre | estrutura | 450 | `segundo-andar` |
-| `chamine` | Chaminé | estrutura | 60 | `cozinha` |
-| `varanda` | Varanda | exterior | 80 | |
-| `jardim` | Jardim | exterior | 60 | |
-| `arvore` | Árvore | exterior | 90 | |
-| `cerca` | Cerca | exterior | 40 | |
-| `horta` | Horta | exterior | 70 | `jardim` |
-| `caixa-correio` | Caixa de correio | exterior | 25 | |
-| `poste` | Poste de luz | exterior | 35 | |
-| `balanco` | Balanço | exterior | 55 | `arvore` |
-| `lago` | Lago com deque | exterior | 180 | |
-| `ponte` | Ponte | exterior | 140 | `lago` |
-| `estufa` | Estufa | exterior | 260 | `horta` |
-| `piscina` | Piscina | exterior | 400 | `varanda` |
+| `cozinha` | Cozinha | cômodo | 200 | |
+| `sala` | Sala de estar | cômodo | 300 | |
+| `banheiro` | Banheiro | cômodo | 180 | |
+| `escritorio` | Escritório | cômodo | 500 | `segundo-andar` |
+| `biblioteca` | Biblioteca | cômodo | 700 | `segundo-andar` |
+| `estudio` | Estúdio de música | cômodo | 850 | `segundo-andar` |
+| `observatorio` | Observatório | cômodo | 1500 | `torre` |
+| `segundo-andar` | Segundo andar | estrutura | 800 | `sala` |
+| `sotao` | Sótão | estrutura | 450 | `segundo-andar` |
+| `torre` | Torre | estrutura | 1200 | `segundo-andar` |
+| `chamine` | Chaminé | estrutura | 90 | `cozinha` |
+| `varanda` | Varanda | exterior | 120 | |
+| `jardim` | Jardim | exterior | 80 | |
+| `arvore` | Árvore | exterior | 120 | |
+| `cerca` | Cerca | exterior | 50 | |
+| `horta` | Horta | exterior | 110 | `jardim` |
+| `caixa-correio` | Caixa de correio | exterior | 30 | |
+| `poste` | Poste de luz | exterior | 45 | |
+| `balanco` | Balanço | exterior | 80 | `arvore` |
+| `lago` | Lago com deque | exterior | 400 | |
+| `ponte` | Ponte | exterior | 300 | `lago` |
+| `estufa` | Estufa | exterior | 650 | `horta` |
+| `piscina` | Piscina | exterior | 1100 | `varanda` |
 
-A casa toda custa cerca de 4.400 joias, uns 11 meses de uso bom (umas 13 joias por dia). Os preços das 6 partes de hoje não mudam, então ninguém perde o que já comprou.
+A casa toda custa 9.855 joias (preços subidos pelo Victor em 25/11/2026: "tudo tá muito barato"), de 13 a 25 meses de uso, conforme a pessoa rende de 13 a 25 joias por dia. Os preços das 6 partes antigas também subiram; quem já comprou fica com elas.
 
 ## User Stories
 
@@ -128,6 +128,12 @@ A casa toda custa cerca de 4.400 joias, uns 11 meses de uso bom (umas 13 joias p
   - o seletor de cômodo troca a decoração mostrada.
 
   Prior art: `IlhaScreen.test.tsx` e `CasaScreen.test.tsx`.
+
+### Acesso à próxima ilha
+
+- Um cais sai da beira da grama, com um arco de pedra e madeira e, ao longe, a próxima ilha apagada e tracejada.
+- Fica trancado (corrente e cadeado) até a casa inteira estar pronta (`casaCompleta` no core). Tocar mostra quantas partes faltam; com a casa inteira, avisa que a próxima ilha chega em breve.
+- A próxima ilha em si é outra spec.
 
 ## Out of Scope
 

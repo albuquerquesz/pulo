@@ -75,6 +75,12 @@ export function progressoPorCamada(compradas: readonly string[]): Record<CamadaD
   return { comodo: daCamada('comodo'), estrutura: daCamada('estrutura'), exterior: daCamada('exterior') };
 }
 
+/** A casa está inteira: todas as partes prontas. Só então o acesso para a próxima ilha abre. */
+export function casaCompleta(compradas: readonly string[]): boolean {
+  const tem = new Set(compradas);
+  return PARTES.every((p) => estaPronta(p, tem));
+}
+
 export const DECORACOES: readonly { id: DecoracaoId; nome: string }[] = [
   { id: 'tapete', nome: 'Tapete' },
   { id: 'vaso', nome: 'Vaso de planta' },

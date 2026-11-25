@@ -90,7 +90,7 @@ describe('/api/house e /api/room', () => {
 
   it('parte sem o requisito é 409 falta_requisito, com o id que falta', async () => {
     const me = await h.newUser();
-    await joias(me, 2000);
+    await joias(me, 3000);
     const res = await me.call('PUT', '/api/house/torre', parte('torre'));
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ error: 'falta_requisito', requer: 'segundo-andar', message: 'Precisa do Segundo andar.' });
@@ -102,7 +102,7 @@ describe('/api/house e /api/room', () => {
 
   it('quem comprou as partes antigas continua com todas e pode comprar as que dependem delas', async () => {
     const me = await h.newUser();
-    await joias(me, 500);
+    await joias(me, 1000);
     const antigas = ['cozinha', 'varanda', 'jardim', 'arvore', 'cerca'] as const;
     await database.db.islandPurchase.createMany({
       data: antigas.map((item) => ({ userId: me.id, item, kind: 'casa' as const, cost: HOUSE.partCost[item], createdAt: new Date(TEST_NOW - 10) })),
@@ -170,7 +170,7 @@ describe('/api/house e /api/room', () => {
       islandPurchases: [{ item: 'praia', cost: 40, createdAt: TEST_NOW - 5 }],
       housePurchases: [parte('cerca')],
       roomDecor: [],
-      joiaCredit: 40,
+      joiaCredit: HOUSE.partCost.cerca,
     });
   });
 
