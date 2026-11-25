@@ -12,11 +12,11 @@ const comFase = (fase: FaseDoApp) => {
 };
 
 describe('WelcomeScreen', () => {
-  test('sem sinal: o sapo, o texto e as saídas', () => {
+  test('sem sinal: o sapo, o texto e só tentar de novo', () => {
     comFase('sem_conexao');
     expect(screen.getByRole('img', { name: 'Sapo, sem sinal' })).toBeTruthy();
     expect(screen.getByText(TEXTO_SEM_SINAL)).toBeTruthy();
-    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Tentar de novo', 'Entrar com outra conta', 'Ver o demo']);
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Tentar de novo']);
   });
 
   test('boas vindas: o sapo acena', () => {

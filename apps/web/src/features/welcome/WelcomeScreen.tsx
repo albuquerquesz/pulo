@@ -19,7 +19,6 @@ export function WelcomeScreen() {
     loginDisponivel,
     enableDemo,
     tentarDeNovo,
-    sair,
   } = useApp();
 
   if (fase === "sem_conexao") {
@@ -30,10 +29,6 @@ export function WelcomeScreen() {
           titulo="Sem sinal por aqui"
           texto={TEXTO_SEM_SINAL}
           acao={{ titulo: "Tentar de novo", onPress: () => void tentarDeNovo() }}
-          secundarias={[
-            { titulo: "Entrar com outra conta", onPress: () => void sair() },
-            { titulo: "Ver o demo", onPress: () => void enableDemo() },
-          ]}
         />
       </Tela>
     );
