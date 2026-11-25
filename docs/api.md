@@ -70,12 +70,13 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | Método e caminho | Corpo | Resposta 200 | Queries |
 | --- | --- | --- | --- |
 | `GET /api/blocks` | | `{ blocks: RoutineBlock[] }` | 3 |
-| `PUT /api/blocks` (lote) | `{ blocks: RoutineBlock[] }`, 1 a 100 | `{ blocks }` | 3 com 1 ou com 100 |
-| `PUT /api/blocks/:id` | `RoutineBlock` | `{ block }` | 3 |
+| `PUT /api/blocks` (lote) | `{ blocks: RoutineBlock[] }` (`icon` pode ser `null`), 1 a 100 | `{ blocks }` | 3 com 1 ou com 100 |
+| `PUT /api/blocks/:id` | `RoutineBlock` (`icon` pode ser `null`) | `{ block }` | 3 |
 | `DELETE /api/blocks/:id` | | `{ deleted }` | 3 |
 | `GET /api/habits` | | `{ habits: Habit[] }` | 3 |
 | `PUT /api/habits` (lote) | `{ habits: Habit[] }`, 1 a 50 | `{ habits }` | 4 com 1 ou com 50 (5 quando algum traz meta) |
-| `PUT /api/habits/:id` | `Habit` (`goalId` pode ser `null`) | `{ habit }` | 4 (5 quando traz meta) |
+| `PUT /api/habits/:id` | `Habit` (opcionais aceitam `null`; veja Hábitos) | `{ habit }` | 4 (5 quando traz meta) |
+| `GET /api/habits/:id/stats` | | `{ stats: HabitStats }` (404 `referencia_inexistente`) | 5 |
 | `DELETE /api/habits/:id` | | `{ deleted }` (os registros do hábito saem junto) | 3 |
 | `GET /api/habit-logs?from&to` | | `{ habitLogs: HabitLog[] }` | 3 |
 | `PUT /api/habit-logs/:habitId/:date` | `HabitLog` | `{ habitLog, newAchievements }` | 9 (10 ao destravar) |
@@ -178,12 +179,12 @@ responder 401 na hora. Idempotente (`{ deleted: 0 }`).
 
 `PUT /api/blocks` e `PUT /api/habits` existem para o onboarding (o plano de exemplo tem 15 blocos e 2 hábitos: eram 17 chamadas, agora são 2).
 Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBlocks` = 100 e `batchMaxHabits` = 50), resposta com a mesma lista.
-- Cada item segue as regras da rota de um item (`routineBlockSchema` e `habitSchema`, id de outra pessoa, limite por dia).
+- Cada item segue as regras da rota de um item (`routineBlockInputSchema` e `habitInputSchema`, id de outra pessoa, limite por dia).
   Ids repetidos no mesmo lote dão 400 `corpo_invalido`.
 - Atômico: nada é salvo se algum item falhar. O erro lista os itens: `issues` com `path` `blocks.3.durationMinutes`, `habits.1.title`,
   `habits.0.weekdays` (409 `limite_por_dia`) ou `blocks.2.id` (409 `conflito_de_id`).
 - Queries constantes: um `INSERT ... SELECT ... FROM unnest(arrays) ON CONFLICT (id) DO UPDATE ... WHERE userId = EXCLUDED.userId`
-  no lugar de um `upsert` por item. No de hábitos há antes uma leitura dos outros hábitos ativos (o limite por dia conta o lote junto com eles),
+  no lugar de um `upsert` por item. No de hábitos há antes uma leitura dos hábitos da pessoa (o limite por dia conta o lote junto com os outros ativos, e os campos omitidos vêm do gravado),
   numa transação serializável. Se alguma linha foi pulada por ser de outra pessoa, a transação desfaz e uma query lista quem foi (só no caminho de erro).
 - O `RemoteRepository` expõe `saveBlocks` e `saveHabits` (`BatchWrites` do core); `criarPlanoInicial` os usa quando existem.
 
@@ -191,8 +192,24 @@ Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBl
 
 - **Blocos**: duração de 5 a 120 minutos (`BLOCK_MIN_MINUTES`, `BLOCK_MAX_MINUTES`), início e fim dentro do dia, `weekday` de 0 a 6.
   O servidor não checa sobreposição entre blocos (isso continua no app).
-- **Hábitos**: no máximo `MAX_HABITS_PER_DAY` hábitos ativos por dia da semana, checado na escrita, numa transação serializável.
-  Dias repetidos são removidos e ordenados. Hábito inativo não conta.
+- **Hábitos**: no máximo `MAX_HABITS_PER_DAY` hábitos `ativo` por dia da semana, checado na escrita (inclusive ao reativar),
+  numa transação serializável. Dias repetidos são removidos e ordenados. Pausado e arquivado não contam.
+  - Campos (spec 17): `state` (`ativo`, `pausado`, `arquivado`), `icon` (emoji curto, até `HABITS.iconMaxChars`), `color`
+    (um de `ACCENT_COLORS`), `period` (`manha`, `tarde`, `noite`), `reminderMinutes` (0 a 1439) e `reminderOn` (só vem quando
+    ligado; sem horário o servidor desliga). Só a preferência: nenhum lembrete é enviado.
+  - Na escrita, opcional omitido mantém o gravado e `null` limpa (`reminderOn` desliga com `false`).
+  - Compatibilidade: a resposta (também no sync e na exportação) ainda traz `active`, igual a `state === 'ativo'`. Na escrita,
+    `state` vence; sem ele, `active: true` ativa e `active: false` arquiva um ativo e mantém um pausado ou arquivado; sem os
+    dois fica o estado gravado (hábito novo nasce `ativo`).
+  - Pausado sai do Hoje; arquivado também some das listas (inclusive a de hábitos da meta). O histórico dos dois continua
+    na sequência, nas conquistas, nas joias, nas estatísticas e nos números da meta.
+  - **Estatísticas** (`statsDoHabito` em `@pulo/core/domain/habit-stats`): `{ sequencia, recorde, taxa, total, calendario }`.
+    `calendario` tem `HABITS.statsWeeks` semanas de 7 dias com `feito`, `descanso` (descanso marcado ou férias), `vazio`,
+    `fora` (fora dos `weekdays` ou antes de o hábito começar) e `futuro`; `parcial` está reservado. O hábito começa no mais antigo
+    entre a criação e o primeiro registro. Descanso e dia fora não quebram a sequência nem entram na taxa; dia feito conta sempre
+    para sequência e total, e só os da frequência para a taxa; hoje vazio ainda não conta. `taxa` vai de 0 a 1 (`null` sem dia
+    que conte). Entram no máximo `HABITS.statsMaxDays` dias. O período em que ficou pausado não é guardado e conta como os outros.
+- **Ícone do bloco**: `RoutineBlock.icon` (emoji curto, até `HABITS.iconMaxChars`); omitido mantém, `null` tira.
 - **Hábitos feitos**: uma marca por hábito e dia; repetir mantém a primeira (`doneAt` original). O hábito precisa ser da pessoa.
 - **Sessões de foco**: `plannedMinutes` de `FOCUS.minMinutes` a `FOCUS.maxMinutes`; `em_andamento` não tem `endedAt`, encerrada tem
   e `endedAt >= startedAt`; uma só `em_andamento` por pessoa (409 `sessao_em_andamento`, mesmo pausada). Pausar e retomar são
@@ -387,6 +404,7 @@ propostas, metas (e baús), tarefas (com subtarefas, comentários e histórico; 
 | `getJoiaCredit` | `joiaCredit` do `GET /api/sync` (ou de `GET /api/house`) |
 | `getMascotState` (`saveMascotState` não existe: o servidor calcula) | `GET /api/mascot` |
 | `verSequencia` do core (`getStreak` só no `RemoteRepository`) | `GET /api/sync` e `GET /api/streak` |
+| `verEstatisticasDoHabito` do core (`getHabitStats` só no `RemoteRepository`) | `GET /api/habits/:id/stats` |
 | `getUser` | `GET /api/me` e `metadata` do `GET /api/sync` |
 | `getPreferences`, `savePreferences` (só no `RemoteRepository`) | `metadata` do sync, `PATCH /api/me/metadata` |
 | `verEstatisticas` do core (`getStats` só no `RemoteRepository`) | `GET /api/sync` e `GET /api/stats` |
@@ -421,4 +439,6 @@ propostas, metas (e baús), tarefas (com subtarefas, comentários e histórico; 
 - **Tarefas:** `saveTask` mostra o cartão na hora e preenche `number` com a resposta. Tarefa, subtarefas e comentários seguem em
   ordem; comentários e histórico não ficam em cache. Apagar uma meta solta o vínculo no cache.
 - **Lote:** `saveBlocks(blocks)` e `saveHabits(habits)` (cache otimista, um `PUT` cada, tudo ou nada com rollback do cache). `saveBlock` e `saveHabit` continuam.
+- **Hábitos:** o cache guarda `state` (sem o `active` antigo). Um campo opcional que sai do hábito ou do bloco vai como `null`.
+  `getHabitStats(id)` não tem cache.
 - **Cookie:** sempre `credentials: 'include'`. O cookie da sessão é HttpOnly e do navegador: o cliente não o lê, não o guarda e não manda cabeçalho `Cookie`.

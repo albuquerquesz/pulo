@@ -45,14 +45,22 @@ erDiagram
     smallint durationMinutes "5 a 120"
     block_kind kind
     text title
+    text icon
   }
   habit {
     text id PK
     text userId FK
     text title
     smallint_array weekdays
-    boolean active
+    boolean active "legado"
+    habit_state state
     text goalId FK "SET NULL"
+    text icon
+    accent_color color
+    habit_period period
+    smallint reminderMinutes "0 a 1439"
+    boolean reminderOn
+    timestamptz createdAt
   }
   habit_log {
     text habitId PK
@@ -215,6 +223,11 @@ Convenções de tipo: `DateKey` do domínio ('AAAA-MM-DD', o dia lógico) é `da
 os enums do Prisma têm os mesmos valores das uniões de `packages/core/domain/types.ts`.
 Os ids das tabelas do domínio têm `@@unique([id, userId])` para dar upsert seguro por dono:
 `where: { id_userId: { id, userId } }`.
+- migração `habitos_v2` (só acrescenta; nenhum dado é apagado): `habit` ganha `state` (`active = false` vira `arquivado`), `icon`,
+  `color`, `period`, `reminderMinutes` (CHECK 0 a 1439), `reminderOn` e `createdAt` (nulo nos que já existiam); `routine_block`
+  ganha `icon`; o índice `(userId, active)` vira `(userId, state)`. A coluna `active` continua, só para a API anterior (janela do
+  deploy e volta de versão): o gatilho `habit_sync_active` a mantém igual a `state = 'ativo'`. O código novo não a lê nem grava;
+  uma migração futura apaga a coluna e o gatilho.
 
 ## Rodar
 
