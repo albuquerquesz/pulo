@@ -5,6 +5,7 @@ import { DEFAULT_TIMEZONE, JOIAS, MAX_HABITS_PER_DAY } from '@pulo/core/config/d
 import { dateKeyOf } from '@pulo/core/domain/day';
 import { verConquistas } from '@pulo/core/domain/achievements';
 import { verSequencia } from '@pulo/core/domain/streak';
+import { verEstatisticasDoHabito } from '@pulo/core/domain/habit-stats';
 import { comprarNaIlha } from '@pulo/core/domain/ilha';
 import { criarPlanoInicial } from '@pulo/core/domain/routine';
 import { defineRepositoryContract } from '@pulo/core/data/repository-contract';
@@ -60,7 +61,7 @@ const uuid = () => crypto.randomUUID();
 const bloco = (extra: Partial<RoutineBlock> = {}): RoutineBlock => ({
   id: uuid(), weekday: 1, startMinutes: 540, durationMinutes: 30, kind: 'foco', ...extra,
 });
-const habito = (extra: Partial<Habit> = {}): Habit => ({ id: uuid(), title: 'Ler', weekdays: [0], active: true, ...extra });
+const habito = (extra: Partial<Habit> = {}): Habit => ({ id: uuid(), title: 'Ler', weekdays: [0], state: 'ativo', ...extra });
 
 // ---------- O contrato compartilhado do Repository ----------
 
@@ -442,7 +443,7 @@ describe('RemoteRepository: perfil e conta', () => {
     await expect(repo.savePreferences({ focusMinutes: 5 })).rejects.toBeInstanceOf(RemoteError);
     expect(await repo.getPreferences()).toMatchObject({ focusMinutes: 45 });
 
-    await repo.saveHabit({ id: 'habito-perfil', title: 'Ler', weekdays: [0], active: true });
+    await repo.saveHabit({ id: 'habito-perfil', title: 'Ler', weekdays: [0], state: 'ativo' });
     await repo.saveHabitLog({ habitId: 'habito-perfil', date: '2026-11-16', doneAt: TEST_NOW });
     expect(await repo.getStats()).toMatchObject({ habitosFeitos: 1 });
     expect(calls).toContain('GET /api/stats');
@@ -521,7 +522,7 @@ describe('RemoteRepository: baú e hábito atrelado', () => {
     const me = await h.newUser();
     const repo = await open(me);
     const goal = { id: 'meta-bau', title: 'x', state: 'concluida' as const, milestones: [], createdAt: 1, completedAt: 2 };
-    const habit = { id: 'habito-bau', title: 'ler', weekdays: [0 as const], active: true, goalId: goal.id };
+    const habit = { id: 'habito-bau', title: 'ler', weekdays: [0 as const], state: 'ativo' as const, goalId: goal.id };
     // Sem esperar: o hábito e o baú aguardam a meta chegar.
     await Promise.all([repo.saveGoal(goal), repo.saveHabit(habit), repo.saveGoalChest({ goalId: goal.id, abertoEm: 1, joias: 999 })]);
     const chest = { goalId: goal.id, abertoEm: TEST_NOW, joias: JOIAS.por.goalCompleted };
@@ -537,5 +538,27 @@ describe('RemoteRepository: baú e hábito atrelado', () => {
     const { goalId: _goalId, ...solto } = habit;
     await repo.saveHabits([solto]);
     expect(await (await open(me)).listHabits()).toEqual([solto]);
+  });
+});
+
+describe('hábitos v2 (spec 17)', () => {
+  it('grava e tira os campos novos do hábito e o ícone do bloco; as estatísticas vêm do servidor', async () => {
+    const me = await h.newUser();
+    const repo = await open(me);
+    const completo = habito({ icon: '📚', color: 'sol', period: 'noite', reminderMinutes: 1260, reminderOn: true, state: 'pausado' });
+    const icone = bloco({ icon: '🐸' });
+    await Promise.all([repo.saveHabit(completo), repo.saveBlock(icone)]);
+    await repo.saveHabitLog({ habitId: completo.id, date: '2026-11-16', doneAt: TEST_NOW });
+    const lido = await open(me);
+    expect(await lido.listHabits()).toEqual([completo]);
+    expect(await lido.listBlocks()).toEqual([icone]);
+    expect(await verEstatisticasDoHabito(repo, completo.id, clock)).toMatchObject({ total: 1, recorde: 1 });
+
+    const limpo = habito({ id: completo.id, reminderMinutes: 1260 });
+    const { icon: _icon, ...semIcone } = icone;
+    await Promise.all([lido.saveHabit(limpo), lido.saveBlocks([semIcone])]);
+    const fim = await open(me);
+    expect(await fim.listHabits()).toEqual([limpo]);
+    expect(await fim.listBlocks()).toEqual([semIcone]);
   });
 });

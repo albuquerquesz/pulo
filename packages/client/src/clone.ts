@@ -3,7 +3,11 @@ import type { Achievement, FocusSession, Goal, GoalChest, Habit, HabitLog, Islan
 // Cópias explícitas e tipadas (sem JSON.parse nem structuredClone, que perdem o tipo ou faltam no Hermes).
 
 export const cloneBlock = (b: RoutineBlock): RoutineBlock => ({ ...b });
-export const cloneHabit = (h: Habit): Habit => ({ ...h, weekdays: [...h.weekdays] });
+/** Tira o `active` que a API ainda manda para o web antigo: quem vale é o `state`. */
+export const cloneHabit = (h: Habit & { active?: boolean }): Habit => {
+  const { active: _legado, ...habit } = h;
+  return { ...habit, weekdays: [...h.weekdays] };
+};
 export const cloneHabitLog = (l: HabitLog): HabitLog => ({ ...l });
 export const cloneSession = (s: FocusSession): FocusSession => ({ ...s });
 export const cloneRestDay = (r: RestDay): RestDay => ({ ...r });
