@@ -231,6 +231,9 @@ Os ids das tabelas do domínio têm `@@unique([id, userId])` para dar upsert seg
 - migração `foco_vinculo` (só acrescenta): `focus_session` ganha `intention`, `habitId`, `goalId` e `taskId` (nulos nas sessões
   que já existiam), no máximo um dos três vínculos (CHECK). Apagar o alvo solta o vínculo e a sessão fica. Que o alvo é da pessoa
   quem confere é a API. A API anterior não conhece as colunas e as preserva.
+- migração `gelo` (só acrescenta): `freeze_use` guarda um dia protegido por pessoa e data; as compras de gelo entram em
+  `island_purchase` com `kind = 'gelo'` (item `gelo-N`); `mascot_state` ganha `geloResolvidoAte`, preenchido com ontem nas
+  linhas que já existiam, para ninguém gastar gelo por dias antigos. A API anterior não conhece a coluna e a preserva.
 
 ## Rodar
 

@@ -24,6 +24,7 @@ import type {
 import { dateKeyToDate, dateToDateKey } from './dates';
 import {
   focusSessionMapper,
+  freezeUseMapper,
   goalMapper,
   habitLogMapper,
   habitMapper,
@@ -126,6 +127,12 @@ describe('mapeadores', () => {
     expect(restDayMapper.toDomain(row)).toStrictEqual(restDay);
   });
 
+  it('FreezeUse: sem visto fica sem o campo', () => {
+    const date = new Date('2026-11-21T00:00:00.000Z');
+    expect(freezeUseMapper.toDomain({ date, vistoEm: null })).toStrictEqual({ date: '2026-11-21' });
+    expect(freezeUseMapper.toDomain({ date, vistoEm: new Date(55) })).toStrictEqual({ date: '2026-11-21', vistoEm: 55 });
+  });
+
   it('WeeklyProposal valida o Json das mudanças', () => {
     const slotFrom = { weekday: 1, startMinutes: 900, durationMinutes: 25 };
     const slotTo = { weekday: 1, startMinutes: 540, durationMinutes: 25 };
@@ -202,7 +209,7 @@ describe('mapeadores', () => {
 
   it('MascotState', () => {
     const state: MascotState = { phase: 3, careDays: 9, updatedAt: 55 };
-    const row: MascotStateRow = { userId: USER, phase: 3, careDays: 9, updatedAt: new Date(55) };
+    const row: Omit<MascotStateRow, 'geloResolvidoAte'> = { userId: USER, phase: 3, careDays: 9, updatedAt: new Date(55) };
     expect(mascotStateMapper.fromDomain(USER, state)).toStrictEqual(row);
     expect(mascotStateMapper.toDomain(row)).toStrictEqual(state);
   });
