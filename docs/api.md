@@ -469,6 +469,7 @@ propostas, metas (e baús), tarefas (com subtarefas, comentários e histórico),
 | `listConnections`, `disconnect` (só no `RemoteRepository`) | `GET`, `DELETE /api/mcp/connections` |
 | `verConquistas` do core (`getAchievements` só no `RemoteRepository`) | `GET /api/sync` e `GET /api/achievements` |
 | `verGelo`, `comprarGelo`, `marcarGeloVisto` do core (`getFreezes`, `buyFreeze`, `markFreezesSeen` no `RemoteRepository`) | `GET /api/sync`, `/api/gelo` |
+| `getFreezeDates` (só no `RemoteRepository`): todos os dias protegidos | `GET /api/gelo` |
 | `verMetricas` do core (`getMetrics` só no `RemoteRepository`) | `GET /api/profile/metrics` |
 | `verDescanso`, `marcarDescanso` do core | calculados no app; a escrita é `PUT /api/rest-days/:date` |
 | `clearAll` | `DELETE /api/data` |

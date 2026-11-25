@@ -213,6 +213,7 @@ describe('RemoteRepository: gelo, descanso e métricas', () => {
       return h.app.fetch(request);
     });
     expect((await repo.getFreezes()).recentes).toEqual(['2026-11-16']);
+    expect(await repo.getFreezeDates()).toEqual(['2026-11-16']);
     caiu = true;
     await expect(repo.markFreezesSeen()).rejects.toMatchObject({ kind: 'rede' });
     expect((await repo.getFreezes()).recentes).toEqual(['2026-11-16']);

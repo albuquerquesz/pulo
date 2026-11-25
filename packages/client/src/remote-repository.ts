@@ -177,6 +177,11 @@ export interface RemoteRepository
   buyFreeze(): Promise<void>;
   /** `PUT /api/gelo/visto`: some o aviso na hora e volta se o servidor recusar. */
   markFreezesSeen(): Promise<void>;
+  /**
+   * `GET /api/gelo`: todos os dias já protegidos, do mais antigo ao mais novo (o sync só traz os não vistos).
+   * Sem cache. Espera as escritas pendentes.
+   */
+  getFreezeDates(): Promise<DateKey[]>;
   /** `GET /api/profile/metrics`: calculadas pelo servidor, sem cache. Espera as escritas pendentes. */
   getMetrics(): Promise<ProfileMetrics>;
   /** `GET /api/data/export`: todos os dados da conta, prontos para virar um arquivo. Espera as escritas pendentes. */
@@ -951,6 +956,14 @@ class ApiRepository implements RemoteRepository {
     }
     if (!this.freezes) throw new RemoteError({ kind: 'resposta_invalida', mensagem: MENSAGENS_DA_API.erro_interno });
     return cloneFreezeSummary(this.freezes);
+  }
+
+  async getFreezeDates(): Promise<DateKey[]> {
+    await Promise.all(this.locks.values());
+    const raw = await readJson(await this.client.api.gelo.$get());
+    const status = freezeStatusResponseSchema.parse(raw);
+    this.applyFreezes(status);
+    return status.usados;
   }
 
   async buyFreeze(): Promise<void> {
