@@ -1,5 +1,6 @@
 import { isRemoteError, mensagemDeErro, RemoteError } from '@pulo/client';
 import { type BatchRepository, supportsBatch } from '@pulo/core/data/batch';
+import { providesPomodoros, type PomodoroSource } from '@pulo/core/domain/tasks';
 import type { Repository } from '@pulo/core/domain/types';
 
 /** Repositório "fechado": enquanto não há dados (login ou carregando), qualquer uso falha em vez de gravar no lugar errado. */
@@ -119,10 +120,14 @@ export function comAvisosDeErro(repo: Repository, avisos: AvisosDeErro): Reposit
     saveMascotState: guardar((m) => repo.saveMascotState(m)),
     clearAll: guardar(() => repo.clearAll()),
   };
+  // O remoto conta os pomodoros com todo o histórico: sem repassar, a tela contaria só as sessões do sync.
+  const contado: Repository | (Repository & PomodoroSource) = providesPomodoros(repo)
+    ? { ...base, getPomodoros: () => repo.getPomodoros() }
+    : base;
   // Repositório com escritas em lote (o remoto): o lote também avisa em caso de erro.
-  if (!supportsBatch(repo)) return base;
+  if (!supportsBatch(repo)) return contado;
   const emLote: BatchRepository = {
-    ...base,
+    ...contado,
     saveBlocks: guardar((blocos) => repo.saveBlocks(blocos)),
     saveHabits: guardar((habitos) => repo.saveHabits(habitos)),
   };

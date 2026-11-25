@@ -1,0 +1,158 @@
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+
+import type { Repository } from '@pulo/core/domain/types';
+
+import { AppProvider, useApp } from '../app';
+import { criarSessaoDemo } from '../app/demo';
+import { TarefasScreen } from './TarefasScreen';
+
+const navegar = vi.fn();
+vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navegar }));
+
+const TITULO = 'Resumo do capítulo 3 de Bioquímica';
+
+async function abrir() {
+  const { repo, clock } = await criarSessaoDemo();
+  function Sonda() {
+    return useApp().fase === 'pronto' ? <TarefasScreen /> : null;
+  }
+  render(
+    <AppProvider repoInicial={repo} relogioInicial={clock}>
+      <Sonda />
+    </AppProvider>,
+  );
+  await screen.findByRole('article', { name: TITULO });
+  return repo;
+}
+
+const coluna = (nome: string) => within(screen.getByRole('region', { name: nome }));
+const cartao = (nome: string) => screen.getByRole('article', { name: nome });
+const tarefa = async (repo: Repository, id: string) => (await repo.listTasks()).find((t) => t.id === id);
+
+async function abrirGaveta(nome = TITULO) {
+  await act(async () => {
+    fireEvent.click(within(cartao(nome)).getByText(nome));
+  });
+  return within(screen.getByRole('dialog', { name: 'Detalhe da tarefa' }));
+}
+
+const teclar = async (campo: HTMLElement, key: string) => {
+  await act(async () => {
+    fireEvent.keyDown(campo, { key });
+  });
+};
+
+beforeEach(() => navegar.mockClear());
+afterEach(() => vi.restoreAllMocks());
+
+describe('Tarefas', () => {
+  test('quadro com contagens, filtro por prazo e subtarefas no cartão', async () => {
+    const repo = await abrir();
+    expect(coluna('A fazer').getAllByRole('article')).toHaveLength(3);
+    expect(within(cartao(TITULO)).getByText('1/3 🍅')).toBeTruthy();
+    expect(within(cartao('Marcar dentista')).queryByText('Subtarefas')).toBeNull();
+    await act(async () => {
+      fireEvent.click(within(cartao(TITULO)).getByRole('checkbox', { name: 'Mapa mental' }));
+    });
+    expect((await repo.listSubtasks()).find((s) => s.title === 'Mapa mental')?.done).toBe(true);
+    expect(await within(cartao(TITULO)).findByText('3/5')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Hoje' }));
+    expect(coluna('A fazer').getAllByRole('article')).toHaveLength(2);
+    expect(coluna('Ideias').queryAllByRole('article')).toHaveLength(0);
+  });
+
+  test('arrastar muda o status no repositório, e Feito risca o cartão', async () => {
+    const repo = await abrir();
+    await act(async () => {
+      fireEvent.dragStart(cartao('Marcar dentista'));
+    });
+    await act(async () => {
+      fireEvent.dragOver(screen.getByRole('region', { name: 'Feito' }));
+      fireEvent.drop(screen.getByRole('region', { name: 'Feito' }));
+    });
+    expect(await tarefa(repo, 'demo-tarefa-4')).toMatchObject({ status: 'feito', completedAt: expect.any(Number) });
+    await waitFor(() => expect(coluna('Feito').getAllByRole('article')).toHaveLength(3));
+    expect(within(cartao('Marcar dentista')).getByText('Marcar dentista').className).toContain('line-through');
+  });
+
+  test('Adicionar cria no pé da coluna', async () => {
+    const repo = await abrir();
+    vi.spyOn(window, 'prompt').mockReturnValue('Comprar caderno');
+    await act(async () => {
+      fireEvent.click(coluna('Ideias').getByRole('button', { name: '+ Adicionar' }));
+    });
+    await waitFor(() => expect(coluna('Ideias').getAllByRole('article').at(-1)?.getAttribute('aria-label')).toBe('Comprar caderno'));
+    expect((await repo.listTasks()).find((t) => t.title === 'Comprar caderno')?.status).toBe('ideias');
+  });
+
+  test('a gaveta carrega a atividade, comenta com Enter e fecha com Esc', async () => {
+    const repo = await abrir();
+    const gaveta = await abrirGaveta();
+    expect(await gaveta.findByText(/moveu para Fazendo · ontem/)).toBeTruthy();
+    expect(gaveta.getByText(/criou a tarefa · há 3 dias/)).toBeTruthy();
+    const campo = gaveta.getByRole('textbox', { name: 'Comentário' });
+    fireEvent.change(campo, { target: { value: 'Falta o fichamento' } });
+    await teclar(campo, 'Enter');
+    expect(await gaveta.findByText('Falta o fichamento')).toBeTruthy();
+    expect((await repo.listTaskActivity('demo-tarefa-1')).comments).toHaveLength(1);
+    await teclar(window.document.body, 'Escape');
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  test('subtarefa com Enter, e Esc no campo não fecha a gaveta', async () => {
+    const repo = await abrir();
+    const gaveta = await abrirGaveta('Marcar dentista');
+    fireEvent.click(gaveta.getByRole('button', { name: '+ Adicionar subtarefas' }));
+    const campo = gaveta.getByRole('textbox', { name: 'Nova subtarefa' });
+    fireEvent.change(campo, { target: { value: 'Ligar na clínica' } });
+    await teclar(campo, 'Enter');
+    expect((await repo.listSubtasks()).filter((s) => s.taskId === 'demo-tarefa-4').map((s) => s.title)).toEqual(['Ligar na clínica']);
+    expect(await gaveta.findByRole('button', { name: 'Remover Ligar na clínica' })).toBeTruthy();
+    await teclar(campo, 'Escape');
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
+  test('propriedades e título gravam; fechar guarda o que estava sendo digitado', async () => {
+    const repo = await abrir();
+    const gaveta = await abrirGaveta('Marcar dentista');
+    const escolher = async (nome: string, valor: string) => {
+      await act(async () => {
+        fireEvent.change(gaveta.getByRole('combobox', { name: nome }), { target: { value: valor } });
+      });
+    };
+    await escolher('Prioridade', 'alta');
+    await escolher('Pomodoros', '2');
+    await escolher('Etiquetas', 'Saúde');
+    await escolher('Meta', 'demo-meta-livros');
+    await escolher('Prazo', '');
+    const titulo = gaveta.getByRole('textbox', { name: 'Título da tarefa' });
+    titulo.focus();
+    titulo.textContent = 'Marcar dentista na terça';
+    fireEvent.input(titulo);
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('fundo-da-gaveta'));
+    });
+    const salva = await tarefa(repo, 'demo-tarefa-4');
+    expect(salva).toMatchObject({
+      title: 'Marcar dentista na terça',
+      priority: 'alta',
+      pomodorosEstimated: 2,
+      tags: ['Pessoal', 'Saúde'],
+      goalId: 'demo-meta-livros',
+    });
+    expect(salva).not.toHaveProperty('dueDate');
+  });
+
+  test('focar leva para a Casa com a tarefa, e excluir apaga', async () => {
+    const repo = await abrir();
+    let gaveta = await abrirGaveta();
+    fireEvent.click(gaveta.getByRole('button', { name: 'Focar nessa tarefa' }));
+    expect(navegar).toHaveBeenCalledWith({ to: '/casa', search: { tarefa: 'demo-tarefa-1' } });
+    gaveta = await abrirGaveta();
+    await act(async () => {
+      fireEvent.click(gaveta.getByRole('button', { name: 'Excluir' }));
+    });
+    expect(await tarefa(repo, 'demo-tarefa-1')).toBeUndefined();
+    await waitFor(() => expect(screen.queryByRole('article', { name: TITULO })).toBeNull());
+  });
+});
