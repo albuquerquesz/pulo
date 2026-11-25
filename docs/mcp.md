@@ -21,14 +21,14 @@ O endereço também aparece em Perfil, "Conectar uma IA".
 | `ver_rotina` | todos os blocos e hábitos (arquivados à parte), com ids | Semana |
 | `ver_semana` | resumo da semana e propostas | Semana |
 | `ver_metas` | metas com marcos, progresso e prazo | Metas |
-| `ver_tarefas` | quadro de tarefas por coluna, com filtro hoje ou semana | Tarefas |
+| `ver_tarefas` | quadro de tarefas por coluna, com filtro hoje ou semana e os pomodoros feitos | Tarefas |
 | `ver_ilha` | saldo de joias (e de onde vieram), partes da casa e decorações do quarto | Ilha |
 | `ver_perfil` | nome do sapo, dia, tema, fuso e preferências | Perfil |
 | `concluir_onboarding` | cria o sapo e o plano de exemplo | Onboarding |
 | `atualizar_perfil` | nome do sapo, início e fim do dia, tema, reduzir movimento | Perfil |
 | `criar_habito`, `editar_habito`, `remover_habito`, `marcar_habito` | hábitos (ícone, cor, período, lembrete e estado: ativo, pausado ou arquivado; `ativo: false` pausa) e marcações | Hoje e Semana |
 | `criar_bloco`, `editar_bloco`, `remover_bloco`, `criar_plano_de_exemplo` | rotina semanal (blocos com ícone) | Semana e Hoje |
-| `comecar_foco`, `controlar_foco` | começar, pausar, retomar, interromper, concluir | Foco |
+| `comecar_foco`, `controlar_foco` | começar (com intenção e um hábito, meta ou tarefa), pausar, retomar, interromper, concluir | Foco |
 | `dia_de_descanso`, `concluir_bloco_de_descanso` | descanso | Hoje |
 | `gerar_proposta_da_semana`, `decidir_proposta` | proposta da semana | Semana |
 | `criar_meta`, `editar_meta`, `mexer_em_marco`, `concluir_ou_reabrir_meta`, `apagar_meta` | metas | Metas |

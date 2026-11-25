@@ -35,7 +35,7 @@ import {
   registrarDescanso,
   removerBloco,
 } from '@pulo/core/domain/routine';
-import { TASK_COLUMNS, columnTasks, criarTarefa, matchesDueFilter, moverTarefa, positionAt, subtaskProgress, taskCode } from '@pulo/core/domain/tasks';
+import { TASK_COLUMNS, columnTasks, criarTarefa, matchesDueFilter, moverTarefa, positionAt, subtaskProgress, taskCode, verPomodoros } from '@pulo/core/domain/tasks';
 import type { Clock, DateKey, Goal, Habit, Repository, RoutineBlock, Task, TaskSubtask, User, Weekday } from '@pulo/core/domain/types';
 import { type ProposalDecisionBody, generateProposalResponseSchema, habitStateSchema, periodSchema } from '@pulo/core/api/schemas';
 import { z } from 'zod';
@@ -124,7 +124,7 @@ const meta = (g: Goal, hoje: DateKey) => ({
   marcos: g.milestones.map((m) => ({ id: m.id, titulo: m.title, feito: m.doneAt !== undefined })),
 });
 
-const tarefa = (t: Task, subtarefas: readonly TaskSubtask[]) => {
+const tarefa = (t: Task, subtarefas: readonly TaskSubtask[], feitos?: number) => {
   const progresso = subtaskProgress(subtarefas, t.id);
   return {
     id: t.id,
@@ -137,6 +137,7 @@ const tarefa = (t: Task, subtarefas: readonly TaskSubtask[]) => {
     ...(t.tags.length > 0 ? { etiquetas: t.tags } : {}),
     ...(t.goalId ? { metaId: t.goalId } : {}),
     pomodorosEstimados: t.pomodorosEstimated,
+    ...(feitos === undefined ? {} : { pomodorosFeitos: feitos }),
     ...(progresso.total > 0 ? { subtarefas: { feitas: progresso.done, total: progresso.total } } : {}),
   };
 };
@@ -239,7 +240,16 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
           habitos: habitsForDate(habits, hoje).map((h) => ({ id: h.id, titulo: h.title, feito: feitos.has(h.id) })),
           blocos: blocksForWeekday(blocks, weekdayOf(hoje)).map(bloco),
           focoEmAndamento: ativa
-            ? { id: ativa.id, minutosPlanejados: ativa.plannedMinutes, pausado: ativa.pausedSince !== undefined, inicio: new Date(ativa.startedAt).toISOString() }
+            ? {
+                id: ativa.id,
+                minutosPlanejados: ativa.plannedMinutes,
+                pausado: ativa.pausedSince !== undefined,
+                inicio: new Date(ativa.startedAt).toISOString(),
+                ...(ativa.intention ? { intencao: ativa.intention } : {}),
+                ...(ativa.habitId ? { habitoId: ativa.habitId } : {}),
+                ...(ativa.goalId ? { metaId: ativa.goalId } : {}),
+                ...(ativa.taskId ? { tarefaId: ativa.taskId } : {}),
+              }
             : null,
           diaDeDescanso: restDays.some((r) => r.date === hoje),
           sapo: { nome: user.frogName, fase: mascot?.phase ?? 1, diasDeCuidado: mascot?.careDays ?? 0 },
@@ -567,14 +577,25 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
       inputSchema: {
         minutos: z.number().int().min(FOCUS.minMinutes).max(FOCUS.maxMinutes).optional(),
         blocoId: idSchema.optional().describe('Bloco de foco da rotina, se for o foco de um bloco'),
+        intencao: z.string().max(FOCUS.intentionMaxChars).optional().describe('No que a pessoa vai focar, em poucas palavras'),
+        habitoId: idSchema.optional().describe('Hábito que recebe o foco. Escolha no máximo um entre habitoId, metaId e tarefaId'),
+        metaId: idSchema.optional().describe('Meta que recebe o foco (veja ver_metas)'),
+        tarefaId: idSchema.optional().describe('Tarefa que soma um pomodoro quando o foco for concluído (veja ver_tarefas)'),
       },
       annotations: ESCRITA,
     },
-    ({ minutos, blocoId }) =>
+    ({ minutos, blocoId, intencao, habitoId, metaId, tarefaId }) =>
       protegido(async () => {
         const user = await pessoa(repo);
         const plannedMinutes = minutos ?? (await lerJson(await api.api.me.$get())).metadata.focusMinutes;
-        const r = await iniciarFoco(repo, clock, user.timezone, { plannedMinutes, ...(blocoId ? { blockId: blocoId } : {}) });
+        const r = await iniciarFoco(repo, clock, user.timezone, {
+          plannedMinutes,
+          ...(blocoId ? { blockId: blocoId } : {}),
+          intention: intencao,
+          habitId: habitoId,
+          goalId: metaId,
+          taskId: tarefaId,
+        });
         return deCaso(r, () => r.ok && { sessao: r.value.session.id, minutos: r.value.session.plannedMinutes });
       }),
   );
@@ -792,9 +813,9 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
       protegido(async () => {
         const user = await pessoa(repo);
         const hoje = hojeDe(user, clock);
-        const [todas, subtarefas] = await Promise.all([repo.listTasks(), repo.listSubtasks()]);
+        const [todas, subtarefas, pomodoros] = await Promise.all([repo.listTasks(), repo.listSubtasks(), verPomodoros(repo)]);
         const visiveis = filtro ? todas.filter((t) => matchesDueFilter(t, filtro, hoje)) : todas;
-        return resposta(Object.fromEntries(TASK_COLUMNS.map((coluna) => [coluna, columnTasks(visiveis, coluna).map((t) => tarefa(t, subtarefas))])));
+        return resposta(Object.fromEntries(TASK_COLUMNS.map((coluna) => [coluna, columnTasks(visiveis, coluna).map((t) => tarefa(t, subtarefas, pomodoros[t.id] ?? 0))])));
       }),
   );
 

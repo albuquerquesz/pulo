@@ -37,7 +37,7 @@ Nunca há stack trace; erro inesperado vira 500 `erro_interno` e o detalhe fica 
 | 400 | `parametro_invalido` | id ou data inválidos no caminho |
 | 400 | `id_divergente`, `data_divergente` | caminho diferente do corpo |
 | 400 | `horario_no_futuro` | instante do app no futuro |
-| 404 | `referencia_inexistente` | hábito (do registro), bloco (da sessão) ou meta (da tarefa e do hábito) que não existe ou é de outra pessoa |
+| 404 | `referencia_inexistente` | hábito (do registro), bloco ou vínculo (da sessão) ou meta (da tarefa e do hábito) que não existe ou é de outra pessoa |
 | 404 | `rota_inexistente` | rota não existe |
 | 409 | `conflito_de_id` | id já usado por outra pessoa (nunca sobrescreve). No lote, `issues` lista `blocks.N.id` ou `habits.N.id` e nada é salvo |
 | 409 | `limite_por_dia` | passaria de `MAX_HABITS_PER_DAY` hábitos ativos no mesmo dia da semana. No lote, `issues` lista `habits.N.weekdays` e nada é salvo |
@@ -82,7 +82,7 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `PUT /api/habit-logs/:habitId/:date` | `HabitLog` | `{ habitLog, newAchievements }` | 9 (10 ao destravar) |
 | `DELETE /api/habit-logs/:habitId/:date` | | `{ deleted }` | 3 |
 | `GET /api/sessions?from&to` | | `{ sessions: FocusSession[] }` | 3 |
-| `PUT /api/sessions/:id` | `FocusSession` | `{ session, mascot: MascotState \| null, newAchievements }` | 4 em andamento, 13 ao encerrar (14 ao destravar) |
+| `PUT /api/sessions/:id` | `FocusSession` (`intention` e vínculo aceitam `null`) | `{ session, mascot: MascotState \| null, newAchievements }` | 4 em andamento, 13 ao encerrar (14 ao destravar); 1 a mais ao gravar um vínculo novo |
 | `GET /api/rest-days?from&to` | | `{ restDays: RestDay[] }` | 3 |
 | `PUT /api/rest-days/:date` | (sem corpo) | `{ restDay, mascot: MascotState, newAchievements }` | 12 (13 ao destravar) |
 | `DELETE /api/rest-days/:date` | | `{ deleted, mascot: MascotState }` | 7 |
@@ -94,7 +94,7 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `PUT /api/goals/:id` | `Goal` (marcos dentro) | `{ goal }` | 4 |
 | `DELETE /api/goals/:id` | | `{ deleted }` (o baú sai junto; hábitos e tarefas ficam sem a meta) | 3 |
 | `POST /api/goals/:id/chest` | (sem corpo) | `{ chest: GoalChest }` | 4 |
-| `GET /api/tasks` | | `{ tasks: Task[], subtasks: TaskSubtask[] }` | 4 |
+| `GET /api/tasks` | | `{ tasks: Task[], subtasks: TaskSubtask[], pomodoros }` | 5 |
 | `PUT /api/tasks/:id` | `Task` | `{ task }` | 7 criando, 6 mudando coluna, prioridade ou prazo (5 sem mudança neles; 1 a mais ao trocar a meta) |
 | `DELETE /api/tasks/:id` | | `{ deleted }` (subtarefas, comentários e histórico saem junto) | 4 |
 | `PUT /api/tasks/:id/subtasks/:subId` | `TaskSubtask` | `{ subtask }` | 6 |
@@ -215,6 +215,15 @@ Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBl
   e `endedAt >= startedAt`; uma só `em_andamento` por pessoa (409 `sessao_em_andamento`, mesmo pausada). Pausar e retomar são
   `PUT` da mesma sessão (`pausedSince`, `pausedMs`). Encerrada (`concluida` ou `interrompida`) é imutável: mudar dá 409
   `sessao_encerrada`; repetir exatamente o mesmo corpo é aceito (retry seguro). O `blockId` precisa ser bloco da pessoa.
+- **Intenção e vínculo** (spec 19): `intention` (até `FOCUS.intentionMaxChars` letras, aparada, não vazia) e no máximo um entre
+  `habitId`, `goalId` e `taskId` (dois juntos: 400 `corpo_invalido`).
+  - No `PUT`, campo omitido mantém o gravado (clientes antigos não os apagam), `null` limpa e mandar um alvo troca o anterior.
+    Mudam só enquanto a sessão está em andamento (ou na própria gravação que a encerra); encerrada, mudar dá 409 `sessao_encerrada`.
+  - Alvo de outra pessoa: 404 `referencia_inexistente`. Alvo que não existe: 404 numa sessão nova; numa sessão que já existe
+    (apagado em outro aparelho) o pedido é aceito e fica o vínculo gravado, para o foco não se perder.
+  - Apagar o hábito, a meta ou a tarefa deixa a sessão sem vínculo. Hábito pausado ou arquivado e tarefa feita podem ser alvo.
+- **Próximo foco e meta do dia** não são rotas: `proximoFoco` (bloco de foco de hoje que está aberto, no horário ou ainda por vir)
+  e `focoDoDia` (minutos de hoje, contando o foco aberto, contra `dailyFocusGoalMinutes`) em `@pulo/core/domain/foco`.
 - **Sapo**: ao encerrar uma sessão e ao criar ou apagar um descanso, o servidor recalcula com `computeMascotState` do core
   (a fase e os dias de cuidado nunca regridem) e grava em `mascot_state`. A resposta traz o estado novo (`mascot`; `null` só
   quando a sessão segue em andamento).
@@ -252,7 +261,8 @@ Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBl
 - **Hábito atrelado**: `Habit.goalId` (no máximo uma meta). No `PUT /api/habits/:id` e no lote: omitido mantém a meta gravada,
   `null` solta, um id atrela ou troca (meta de outra pessoa: 404 `referencia_inexistente`). Não há limite próprio.
 - **Ritmo e números** não são rotas: `ritmo`, `numerosDaMeta` e `estadoDoBau` em `@pulo/core/domain/goals`. O foco por meta soma
-  as sessões com `goalId` ou `habitId`, vínculo que a spec 19 ainda vai gravar; até lá é zero.
+  as sessões encerradas com `goalId` ou com o `habitId` de um hábito atrelado, entre as sessões recebidas (no app, a janela do sync).
+  Sessão ligada a uma tarefa da meta não entra.
 
 ### Tarefas: `/api/tasks`
 
@@ -272,12 +282,18 @@ caracteres (também o das subtarefas), descrição até 10 mil, comentário até
   (`{ deleted: 0 }`). Id de subtarefa ou comentário já usado: 409 `conflito_de_id`.
 - Comentário não muda: repetir o mesmo `POST` é 200 sem gravar; outro corpo com o mesmo id é 409.
 - O sync traz tarefas e subtarefas; comentários e eventos só pelo `activity` (`taskTimeline` do core junta os dois).
-- Pomodoros feitos não são gravados: serão as sessões concluídas com `taskId` (spec 19, `pomodorosDone` no core).
+- Pomodoros feitos não são gravados: são as sessões concluídas com `taskId`. `pomodoros` (`{ [taskId]: quantidade }`, só quem
+  tem algum) vem no `GET /api/tasks` e no sync, contado em todo o histórico.
 
 ### `GET /api/week-summary?date=AAAA-MM-DD`
 
 `date` é qualquer dia da semana. Três leituras por intervalo (sessões, descansos, hábitos feitos) numa transação e
 `buildWeekSummary` do core, com o fuso de `metadata.timezone` (ou o padrão). Resposta `{ summary: WeekSummary }`.
+
+Do foco (spec 19), contando as sessões encerradas da semana: `focoPorAlvo` (`{ alvo: { tipo: 'habito' | 'meta' | 'tarefa', id } | null,
+minutos }[]`, do maior para o menor; `null` junta as sem vínculo; sem pausas e até o planejado; menos de um minuto não aparece),
+`sessoesTerminadas`, `sessoesLargadas` (interrompidas) e `melhorPeriodo` (`manha`, `tarde`, `noite` ou `null` sem minutos; empate:
+mais concluídas e depois o mais cedo). Nada disso vai para a IA.
 
 ### `POST /api/proposals/generate`
 
@@ -367,7 +383,7 @@ catálogo inteiro, na mesma ordem. A secreta não conquistada vem sem `nome` e `
   "user": { "id": "", "name": "", "email": "", "image": null },
   "metadata": { "version": 1, "theme": "sistema", "reduceMotion": false, "timezone": "America/Sao_Paulo", "onboarding": { "completed": false, "completedAt": null }, "profile": null },
   "blocks": [], "habits": [], "habitLogs": [], "sessions": [], "restDays": [],
-  "proposals": [], "goals": [], "goalChests": [], "tasks": [], "subtasks": [], "islandPurchases": [], "housePurchases": [], "roomDecor": [], "joiaCredit": 0, "mascot": null,
+  "proposals": [], "goals": [], "goalChests": [], "tasks": [], "subtasks": [], "pomodoros": {}, "islandPurchases": [], "housePurchases": [], "roomDecor": [], "joiaCredit": 0, "mascot": null,
   "streak": { "atual": 0, "recorde": 0, "semana": [{ "date": "2026-11-15", "estado": "vazio" }] }, "stats": { "habitosFeitos": 0, "minutosDeFoco": 0, "desde": 1795000000000 },
   "achievements": [{ "id": "primeira-semana", "nome": "Primeira semana", "emoji": "🔥", "conquistada": false, "progresso": 0, "meta": 7 }],
   "serverTime": 1795000000000
@@ -390,6 +406,7 @@ propostas, metas (e baús), tarefas (com subtarefas, comentários e histórico; 
 | `listHabits`, `saveHabit`, `deleteHabit` | `GET /api/habits`, `PUT`, `DELETE /api/habits/:id` |
 | `listHabitLogs(range)`, `saveHabitLog`, `deleteHabitLog` | `GET /api/habit-logs`, `PUT`, `DELETE /api/habit-logs/:habitId/:date` |
 | `listSessions`, `saveSession` | `GET /api/sessions`, `PUT /api/sessions/:id` |
+| `verPomodoros` do core (`getPomodoros` só no `RemoteRepository`) | `GET /api/sync` |
 | `listRestDays`, `saveRestDay`, `deleteRestDay` | `GET /api/rest-days`, `PUT`, `DELETE /api/rest-days/:date` |
 | `listProposals`, `saveProposal` | `GET /api/proposals`, `PUT /api/proposals/:id` |
 | `generateProposal`, `decideProposal` (só no `RemoteRepository`) | `POST /api/proposals/generate`, `POST /api/proposals/:id/decision` |
@@ -436,6 +453,9 @@ propostas, metas (e baús), tarefas (com subtarefas, comentários e histórico; 
 - **Conquistas:** `getAchievements()` (ou `verConquistas(repo, clock)`) devolve as do sync; depois de uma escrita que pode mudá-las
   (hábito, registro, sessão, descanso, casa, perfil, `clearAll`) ou na virada do dia, chama `GET /api/achievements`.
   `onNewAchievements(listener)` avisa as destravadas por uma escrita (para o sapo comemorar) e devolve como cancelar.
+- **Foco:** `saveSession` espera a escrita do alvo, manda `null` no que saiu de uma sessão aberta e guarda a sessão como o
+  servidor devolveu. Apagar hábito, meta ou tarefa solta o vínculo no cache. `getPomodoros()` (ou `verPomodoros(repo)` do core)
+  devolve os do sync, somados aos focos concluídos depois, sem rede.
 - **Tarefas:** `saveTask` mostra o cartão na hora e preenche `number` com a resposta. Tarefa, subtarefas e comentários seguem em
   ordem; comentários e histórico não ficam em cache. Apagar uma meta solta o vínculo no cache.
 - **Lote:** `saveBlocks(blocks)` e `saveHabits(habits)` (cache otimista, um `PUT` cada, tudo ou nada com rollback do cache). `saveBlock` e `saveHabit` continuam.

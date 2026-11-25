@@ -69,7 +69,7 @@ describe('/api/tasks', () => {
     const body = await sync(me);
     expect(body.tasks).toEqual([saved]);
     expect(body.subtasks).toEqual([{ ...sub, done: true }]);
-    expect(await (await me.call('GET', '/api/tasks')).json()).toEqual({ tasks: [saved], subtasks: [{ ...sub, done: true }] });
+    expect(await (await me.call('GET', '/api/tasks')).json()).toEqual({ tasks: [saved], subtasks: [{ ...sub, done: true }], pomodoros: {} });
     expect((await activity(me, id)).events).toHaveLength(1);
 
     const semOpcionais = task(id, { description: undefined, dueDate: undefined, tags: [] });
@@ -250,7 +250,7 @@ describe('/api/tasks', () => {
       expect(await queriesOf(database, small, method, path(one), body(one)), `${method} ${path('id')}`).toBe(total);
       expect(await queriesOf(database, big, method, path(many), body(many)), `${method} ${path('id')}`).toBe(total);
     };
-    await compare('GET', () => '/api/tasks', () => undefined, 4);
+    await compare('GET', () => '/api/tasks', () => undefined, 5);
     await compare('GET', (id) => `/api/tasks/${id}/activity`, () => undefined, 5);
     // Mudando de coluna: trava, leitura, update e o evento.
     await compare('PUT', (id) => `/api/tasks/${id}`, (id) => task(id, { status: 'fazendo' }), 6);

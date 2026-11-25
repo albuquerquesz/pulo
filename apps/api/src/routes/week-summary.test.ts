@@ -77,6 +77,31 @@ describe('/api/week-summary', () => {
     expect((await summaryOf(a, '2026-11-18')).totalSessions).toBe(1);
   });
 
+  it('foco por alvo, terminadas, largadas e melhor período', async () => {
+    const me = await h.newUser();
+    const habit = await database.db.habit.create({ data: { userId: me.id, title: 'h', weekdays: [0] }, select: { id: true } });
+    const session = (hour: number, minutes: number, extra: { habitId?: string; state?: 'interrompida' } = {}) => ({
+      userId: me.id,
+      startedAt: new Date(at('2026-11-17T00:00:00Z').getTime() + hour * 60 * MIN),
+      endedAt: new Date(at('2026-11-17T00:00:00Z').getTime() + (hour * 60 + minutes) * MIN),
+      plannedMinutes: 50,
+      state: 'concluida' as const,
+      ...extra,
+    });
+    await database.db.focusSession.createMany({
+      data: [session(12, 30, { habitId: habit.id }), session(18, 20), session(19, 15, { state: 'interrompida' })],
+    });
+    expect(await summaryOf(me, '2026-11-19')).toMatchObject({
+      sessoesTerminadas: 2,
+      sessoesLargadas: 1,
+      melhorPeriodo: 'tarde',
+      focoPorAlvo: [
+        { alvo: null, minutos: 35 },
+        { alvo: { tipo: 'habito', id: habit.id }, minutos: 30 },
+      ],
+    });
+  });
+
   it('queries: número fixo com poucos e com muitos dados', async () => {
     const small = await h.newUser();
     const big = await h.newUser();
