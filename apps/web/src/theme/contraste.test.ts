@@ -4,6 +4,7 @@ import {
   TEMAS_PARA_CONTRASTE,
   inkSobreAcao,
   minimoDoPar,
+  paresDoRascunho,
   paresPermitidos,
   passaContraste,
   razaoDeContraste,
@@ -41,6 +42,10 @@ describe('pares de texto permitidos', () => {
       });
     });
   }
+
+  test.each(paresDoRascunho().map((p) => [p.nome, p] as const))('rascunho: %s', (_n, par) => {
+    expect(passaContraste(par)).toBe(true);
+  });
 
   test('texto grande exige 3', () => {
     expect(minimoDoPar({ nome: 'x', texto: '#000', fundo: '#fff', grande: true })).toBe(CONTRASTE_MINIMO_GRANDE);

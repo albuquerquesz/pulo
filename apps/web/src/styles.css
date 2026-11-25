@@ -27,6 +27,23 @@
   --pulo-on-descanso: #ffffff;
   /* Texto sobre cores de ação: sempre o ink do tema claro. */
   --pulo-ink-sobre-acao: #1f2a24;
+  /* Cores do rascunho (drawingColors). */
+  --pulo-contorno: #3b2a2f;
+  --pulo-joia-clara: #ebddff;
+  --pulo-joia: #b583ff;
+  --pulo-joia-escura: #7b3fe4;
+  --pulo-creme: #fff3da;
+  --pulo-madeira: #c98b5e;
+  --pulo-madeira-clara: #e7b07e;
+  --pulo-folha: #fbf4ee;
+  --pulo-sombra-branca: #e4dccb;
+  --pulo-lima: #c7e36b;
+  --pulo-lima-clara: #e6f6a8;
+  --pulo-ceu: #cbf1f6;
+  --pulo-cancelar: #f08a7a;
+  --pulo-cancelar-borda: #d0644f;
+  --pulo-numero-foco: #ff9b7a;
+  --pulo-numero-joia: #c29bff;
   color-scheme: light;
 }
 
@@ -69,6 +86,22 @@
   --color-atencao: var(--pulo-atencao);
   --color-on-descanso: var(--pulo-on-descanso);
   --color-ink-sobre-acao: var(--pulo-ink-sobre-acao);
+  --color-contorno: var(--pulo-contorno);
+  --color-joia-clara: var(--pulo-joia-clara);
+  --color-joia: var(--pulo-joia);
+  --color-joia-escura: var(--pulo-joia-escura);
+  --color-creme: var(--pulo-creme);
+  --color-madeira: var(--pulo-madeira);
+  --color-madeira-clara: var(--pulo-madeira-clara);
+  --color-folha: var(--pulo-folha);
+  --color-sombra-branca: var(--pulo-sombra-branca);
+  --color-lima: var(--pulo-lima);
+  --color-lima-clara: var(--pulo-lima-clara);
+  --color-ceu: var(--pulo-ceu);
+  --color-cancelar: var(--pulo-cancelar);
+  --color-cancelar-borda: var(--pulo-cancelar-borda);
+  --color-numero-foco: var(--pulo-numero-foco);
+  --color-numero-joia: var(--pulo-numero-joia);
 
   --font-sans: 'Nunito', ui-rounded, system-ui, sans-serif;
 
@@ -110,7 +143,115 @@ body {
   color: var(--pulo-ink);
   font-family: var(--font-sans);
   font-weight: 600;
+  font-size: 15px;
+  line-height: 1.45;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Peças do rascunho (spec 21). */
+@utility gema {
+  background: linear-gradient(135deg, var(--pulo-joia-clara) 0 22%, var(--pulo-joia) 23% 55%, var(--pulo-joia-escura) 56%);
+  clip-path: polygon(50% 0, 100% 28%, 100% 72%, 50% 100%, 0 72%, 0 28%);
+}
+@utility contorno-branco {
+  filter: drop-shadow(1.5px 0 0 #fff) drop-shadow(-1.5px 0 0 #fff) drop-shadow(0 1.5px 0 #fff) drop-shadow(0 -1.5px 0 #fff);
+}
+@utility contorno-grosso {
+  filter: drop-shadow(2.5px 0 0 var(--pulo-contorno)) drop-shadow(-2.5px 0 0 var(--pulo-contorno))
+    drop-shadow(0 2.5px 0 var(--pulo-contorno)) drop-shadow(0 -2.5px 0 var(--pulo-contorno));
+}
+
+/* A chama grande da sequência tremula (use `animate-tremula` com `origin-[50%_90%]`). */
+@theme inline {
+  --animate-tremula: tremula 1.6s ease-in-out infinite;
+  @keyframes tremula {
+    0%,
+    100% {
+      transform: scale(1) rotate(-2deg);
+    }
+    50% {
+      transform: scale(1.06, 1.1) rotate(2deg);
+    }
+  }
+}
+
+/* Nuvens: quatro faixas que não se cruzam. */
+.nv {
+  position: absolute;
+  left: -760px;
+  width: var(--w, 420px);
+  height: auto;
+  opacity: var(--o, 1);
+  animation: voa var(--t, 90s) linear infinite;
+  animation-delay: var(--d, 0s);
+  overflow: visible;
+}
+.n1 {
+  top: 0%;
+  --w: min(520px, 44vh);
+  --t: 120s;
+  --d: -15s;
+}
+.n2 {
+  top: 28%;
+  --w: min(360px, 31vh);
+  --t: 95s;
+  --d: -60s;
+  --o: 0.9;
+}
+.n4 {
+  top: 48%;
+  --w: min(380px, 31vh);
+  --t: 110s;
+  --d: -30s;
+  --o: 0.95;
+}
+.n3 {
+  top: 70%;
+  --w: min(560px, 47vh);
+  --t: 150s;
+  --d: -95s;
+  --o: 0.85;
+}
+.n5 {
+  display: none;
+}
+@keyframes voa {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(100vw + 800px));
+  }
+}
+
+/* Paradas, espalhadas pelo céu, quando a pessoa reduz o movimento (sistema ou Perfil). */
+:root[data-reduzir-movimento='true'] .nv {
+  animation: none !important;
+  left: auto;
+}
+:root[data-reduzir-movimento='true'] .n1 {
+  left: 8%;
+}
+:root[data-reduzir-movimento='true'] .n2 {
+  left: 70%;
+}
+:root[data-reduzir-movimento='true'] .n3 {
+  left: 20%;
+}
+:root[data-reduzir-movimento='true'] .n4 {
+  left: 78%;
+}
+
+/* Parte da casa ainda não construída: apagada e tracejada. */
+.parte-da-casa {
+  transition: opacity 0.4s;
+}
+.parte-da-casa:not(.feita) {
+  opacity: 0.28;
+}
+.parte-da-casa:not(.feita) :is(polygon, circle, path) {
+  stroke-dasharray: 8 7;
 }
 
 /* Reduzir movimento do sistema ou do Perfil: sem transições nem animações. */

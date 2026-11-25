@@ -1,4 +1,4 @@
-import { darkColors, lightColors, type ColorTokens } from './tokens';
+import { darkColors, drawingColors, lightColors, type ColorTokens } from './tokens';
 
 /** Texto sobre cores de ação (sapo, agua, foco, sol, atencao) é sempre o `ink` do tema claro, nos dois temas. */
 export const inkSobreAcao = lightColors.ink;
@@ -55,6 +55,15 @@ export function paresPermitidos(cores: ColorTokens): ParTexto[] {
     { nome: 'muted sobre surface', texto: cores.muted, fundo: cores.surface },
     ...acao.map((c) => ({ nome: `ink de ação sobre ${c}`, texto: inkSobreAcao, fundo: cores[c] })),
     { nome: 'onDescanso sobre descanso', texto: cores.onDescanso, fundo: cores.descanso },
+  ];
+}
+
+/** Texto das peças do rascunho (placa, botões de contorno grosso, barra de valor): sempre o contorno sobre um fundo claro. */
+export function paresDoRascunho(): ParTexto[] {
+  const fundos = ['creme', 'folha', 'lima', 'limaClara', 'ceu', 'madeiraClara', 'cancelar'] as const;
+  return [
+    { nome: 'contorno sobre branco', texto: drawingColors.contorno, fundo: lightColors.surface },
+    ...fundos.map((f) => ({ nome: `contorno sobre ${f}`, texto: drawingColors.contorno, fundo: drawingColors[f] })),
   ];
 }
 
