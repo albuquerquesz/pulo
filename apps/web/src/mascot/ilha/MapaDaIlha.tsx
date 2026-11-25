@@ -294,7 +294,7 @@ export function MapaDaIlha({ areas, selecionada, onSelecionar, faseDoSapo, taman
               role="button"
               tabIndex={0}
               aria-pressed={sel}
-              aria-label={`${area.nome}, ${aberta ? 'aberta' : area.estado === 'proxima' ? `abre com ${area.custo} moscas` : 'fechada'}`}
+              aria-label={`${area.nome}, ${aberta ? 'aberta' : area.estado === 'proxima' ? `abre com ${area.custo} joias` : 'fechada'}`}
               onClick={() => onSelecionar(area.id)}
               onKeyDown={tecla(area.id)}
               className="cursor-pointer outline-none"
