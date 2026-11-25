@@ -101,7 +101,7 @@ describe('DELETE /api/data', () => {
     await populate(big, 50);
     const one = await queriesOf(database, small, 'DELETE', '/api/data');
     expect(await queriesOf(database, big, 'DELETE', '/api/data')).toBe(one);
-    // 2 de sessão + 11 deletes numa transação.
-    expect(one).toBe(14);
+    // 2 de sessão + 10 deletes numa transação.
+    expect(one).toBe(13);
   });
 });

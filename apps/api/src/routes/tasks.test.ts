@@ -55,11 +55,11 @@ describe('/api/tasks', () => {
     for (const [method, path] of calls) expect((await h.app.request(path, { method })).status, path).toBe(401);
   });
 
-  it('o que entra sai igual no sync; repetir não duplica nem gera outro número', async () => {
+  it('o que entra sai igual no sync; repetir não duplica', async () => {
     const me = await h.newUser();
     const { id, saved } = await create(me);
-    expect(saved).toEqual({ ...task(id), number: 1 });
-    // O número do corpo é ignorado e o createdAt da primeira gravação fica.
+    expect(saved).toEqual(task(id));
+    // Campo desconhecido (como o `number` de um cliente antigo) é ignorado e o createdAt da primeira gravação fica.
     const again = await me.call('PUT', `/api/tasks/${id}`, task(id, { number: 99, createdAt: 77 }));
     expect((await again.json()).task).toEqual(saved);
     const sub = subtask(uuid(), id);
@@ -76,17 +76,6 @@ describe('/api/tasks', () => {
     const cleared = (await (await me.call('PUT', `/api/tasks/${id}`, semOpcionais)).json()).task;
     expect(cleared).not.toHaveProperty('description');
     expect(cleared).not.toHaveProperty('dueDate');
-  });
-
-  it('números em sequência por pessoa, sem reuso e sem corrida', async () => {
-    const me = await h.newUser();
-    const other = await h.newUser();
-    const results = await Promise.all(Array.from({ length: 8 }, () => create(me)));
-    expect(results.map((r) => r.saved.number).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-    expect((await create(other)).saved.number).toBe(1);
-    const last = results.find((r) => r.saved.number === 8);
-    await me.call('DELETE', `/api/tasks/${last?.id}`);
-    expect((await create(me)).saved.number).toBe(9);
   });
 
   it('mover grava um evento só, mesmo repetindo ao mesmo tempo; o histórico junta os comentários', async () => {
@@ -133,7 +122,7 @@ describe('/api/tasks', () => {
     const mine = uuid();
     await me.call('PUT', `/api/goals/${mine}`, { id: mine, title: 'm', state: 'ativa', milestones: [], createdAt: 1 });
     await me.call('PUT', `/api/tasks/${id}`, task(id, { goalId: mine }));
-    expect((await sync(me)).tasks[0]).toMatchObject({ goalId: mine, number: 1 });
+    expect((await sync(me)).tasks[0]).toMatchObject({ goalId: mine });
     await me.call('DELETE', `/api/goals/${mine}`);
     expect((await sync(me)).tasks[0]).not.toHaveProperty('goalId');
   });
@@ -205,7 +194,7 @@ describe('/api/tasks', () => {
     expect((await sync(b)).tasks.map((t: { id: string }) => t.id)).toEqual([mine]);
   });
 
-  it('apagar leva subtarefas, comentários e eventos; apagar os dados leva tudo e zera a numeração', async () => {
+  it('apagar leva subtarefas, comentários e eventos; apagar os dados leva tudo', async () => {
     const me = await h.newUser();
     const { id } = await create(me);
     await me.call('PUT', `/api/tasks/${id}/subtasks/${id}`, subtask(id, id));
@@ -224,7 +213,6 @@ describe('/api/tasks', () => {
     await create(me);
     expect((await (await me.call('DELETE', '/api/data')).json()).deleted).toMatchObject({ tasks: 1 });
     expect(await count()).toEqual([0, 0, 0, 0]);
-    expect((await create(me)).saved.number).toBe(1);
   });
 
   it('queries: número fixo com 1 e com 50 tarefas', async () => {
@@ -234,7 +222,7 @@ describe('/api/tasks', () => {
       const { id } = await create(user);
       await database.db.task.createMany({
         data: Array.from({ length: total - 1 }, (_, i) => ({
-          userId: user.id, number: i + 100, title: 't', status: 'afazer' as const, position: i, priority: 'normal' as const, tags: [], pomodorosEstimated: 0, createdAt: new Date(i),
+          userId: user.id, title: 't', status: 'afazer' as const, position: i, priority: 'normal' as const, tags: [], pomodorosEstimated: 0, createdAt: new Date(i),
         })),
       });
       const rows = Array.from({ length: total - 1 }, (_, i) => i);
@@ -256,9 +244,9 @@ describe('/api/tasks', () => {
     await compare('PUT', (id) => `/api/tasks/${id}`, (id) => task(id, { status: 'fazendo' }), 6);
 
     const created = [uuid(), uuid()];
-    // Criando: trava, leitura, contador, insert e o evento.
-    expect(await queriesOf(database, small, 'PUT', `/api/tasks/${created[0]}`, task(created[0]))).toBe(7);
-    expect(await queriesOf(database, big, 'PUT', `/api/tasks/${created[1]}`, task(created[1]))).toBe(7);
+    // Criando: trava, leitura, insert e o evento.
+    expect(await queriesOf(database, small, 'PUT', `/api/tasks/${created[0]}`, task(created[0]))).toBe(6);
+    expect(await queriesOf(database, big, 'PUT', `/api/tasks/${created[1]}`, task(created[1]))).toBe(6);
 
     // O limite de subtarefas deixa a tarefa grande com uma vaga.
     const subIds = new Map<string, string>([[one, uuid()], [many, uuid()]]);

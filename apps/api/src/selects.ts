@@ -85,7 +85,6 @@ export const roomDecorSelect = { ...islandPurchaseSelect, placement: { select: r
 
 export const taskSelect = {
   id: true,
-  number: true,
   title: true,
   description: true,
   status: true,

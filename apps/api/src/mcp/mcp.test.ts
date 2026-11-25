@@ -154,9 +154,10 @@ describe('servidor MCP', () => {
 
     // Tarefas: cria, move para feito e lista por coluna, só na conta da pessoa do token.
     const nova = await ferramenta(token, 'criar_tarefa', { titulo: 'Estudar', prioridade: 'alta', etiquetas: ['Faculdade'] });
-    expect(nova.dados).toMatchObject({ codigo: 'PULO-1', coluna: 'afazer', prioridade: 'alta' });
+    expect(nova.dados).toMatchObject({ id: expect.any(String), coluna: 'afazer', prioridade: 'alta' });
+    expect(nova.dados).not.toHaveProperty('codigo');
     const movida = await ferramenta(token, 'mover_tarefa', { id: nova.dados.id, coluna: 'feito' });
-    expect(movida.dados).toMatchObject({ codigo: 'PULO-1', coluna: 'feito' });
+    expect(movida.dados).toMatchObject({ id: nova.dados.id, coluna: 'feito' });
     expect((await ferramenta(token, 'ver_tarefas')).dados).toMatchObject({ afazer: [], feito: [{ id: nova.dados.id }] });
     expect((await (await outra.call('GET', '/api/tasks')).json()).tasks).toEqual([]);
     expect(await ferramenta(token, 'mover_tarefa', { id: 'nao-existe', coluna: 'feito' })).toMatchObject({ erro: true });

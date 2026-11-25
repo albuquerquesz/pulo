@@ -31,9 +31,9 @@ async function seed(user: TestUser, extra = 0) {
   });
   await database.db.mascotState.create({ data: { userId, phase: 2, careDays: 4, updatedAt: new Date(TEST_NOW) } });
   await database.db.islandPurchase.create({ data: { userId, item: 'banco', cost: 8, createdAt: new Date(TEST_NOW) } });
-  const tasks = Array.from({ length: 1 + extra }, (_, i) => ({ id: `${userId}-t${i}`.slice(-60), number: i + 1 }));
+  const tasks = Array.from({ length: 1 + extra }, (_, i) => ({ id: `${userId}-t${i}`.slice(-60), position: i + 1 }));
   await database.db.task.createMany({
-    data: tasks.map((t) => ({ ...t, userId, title: 't', status: 'afazer' as const, position: t.number, priority: 'normal' as const, tags: [], pomodorosEstimated: 0, createdAt: new Date(TEST_NOW) })),
+    data: tasks.map((t) => ({ ...t, userId, title: 't', status: 'afazer' as const, priority: 'normal' as const, tags: [], pomodorosEstimated: 0, createdAt: new Date(TEST_NOW) })),
   });
   await database.db.taskSubtask.createMany({ data: tasks.map((t) => ({ userId, taskId: t.id, title: 's', done: false, position: 1 })) });
   await database.db.focusSession.createMany({
