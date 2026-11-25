@@ -15,7 +15,7 @@ import {
 } from '@pulo/db';
 import { Hono } from 'hono';
 import { type AppEnv, type RouteDeps, queryParams, requireSession } from '../http';
-import { dateFilter, sessionRangeWhere, streakFromRows, streakReads } from '../queries';
+import { dateFilter, sessionRangeWhere, statsFromRows, streakFromRows, streakReads } from '../queries';
 import {
   blockSelect,
   goalSelect,
@@ -34,7 +34,7 @@ import {
 /** Tudo o que o app precisa para abrir: `/api/sync`. Dezessete leituras fixas numa transação, qualquer volume de dados. */
 export function syncRoutes({ auth, db, now }: RouteDeps) {
   return new Hono<AppEnv>().use(requireSession(auth)).get('/', queryParams(syncQuerySchema), async (c) => {
-    const { id: userId, name, email, image, metadata } = c.var.user;
+    const { id: userId, name, email, image, createdAt, metadata } = c.var.user;
     const range = c.req.valid('query');
     const date = dateFilter(range);
 
@@ -89,6 +89,8 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
       joiaCredit: joiaCredit?.amount ?? 0,
       mascot: mascot === null ? null : mascotStateMapper.toDomain(mascot),
       streak: streakFromRows(metadata, serverTime, { habitDays, sessions: allSessions, restDays: allRestDays }),
+      // Sem query a mais: usa as mesmas leituras de todo o histórico da sequência.
+      stats: statsFromRows(createdAt, habitDays.reduce((total, day) => total + day._count.habitId, 0), allSessions),
       serverTime,
     });
   });

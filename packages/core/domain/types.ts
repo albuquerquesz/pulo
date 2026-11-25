@@ -80,6 +80,44 @@ export interface RestDay {
   date: DateKey;
 }
 
+export type AmbientSound = 'silencio' | 'lagoa' | 'chuva';
+
+/** Intervalo de dias de férias, extremos incluídos. */
+export interface VacationPeriod {
+  de: DateKey;
+  ate: DateKey;
+}
+
+export interface Vacation {
+  ligado: boolean;
+  /** Primeiro dia das férias atuais; `null` com o modo desligado. */
+  desde: DateKey | null;
+  /** Férias já encerradas: continuam valendo como descanso na sequência. */
+  periodos: VacationPeriod[];
+}
+
+/** Preferências da conta (spec 15). */
+export interface Preferences {
+  focusMinutes: number;
+  breakMinutes: number;
+  /** `null` = sem meta diária. */
+  dailyFocusGoalMinutes: number | null;
+  /** `minutos` desde 00:00, no fuso da pessoa. Só a preferência: a entrega do lembrete não existe ainda. */
+  eveningReminder: { ligado: boolean; minutos: number };
+  vacation: Vacation;
+  sounds: boolean;
+  aiEnabled: boolean;
+  ambientSound: AmbientSound;
+}
+
+/** Números de todo o tempo, mostrados no Perfil. */
+export interface ProfileStats {
+  habitosFeitos: number;
+  minutosDeFoco: number;
+  /** Instante (ms) em que a conta foi criada. */
+  desde: number;
+}
+
 export type ProposalState = 'pendente' | 'aceita' | 'editada' | 'negada' | 'expirada';
 export type ProposalOrigin = 'ia' | 'regra';
 export type ProposalChangeKind = 'mover_foco' | 'encurtar_foco';

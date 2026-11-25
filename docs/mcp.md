@@ -23,7 +23,7 @@ O endereço também aparece em Perfil, "Conectar uma IA".
 | `ver_metas` | metas com marcos, progresso e prazo | Metas |
 | `ver_tarefas` | quadro de tarefas por coluna, com filtro hoje ou semana | Tarefas |
 | `ver_ilha` | saldo de joias (e de onde vieram), partes da casa e decorações do quarto | Ilha |
-| `ver_perfil` | nome do sapo, dia, tema, fuso | Perfil |
+| `ver_perfil` | nome do sapo, dia, tema, fuso e preferências | Perfil |
 | `concluir_onboarding` | cria o sapo e o plano de exemplo | Onboarding |
 | `atualizar_perfil` | nome do sapo, início e fim do dia, tema, reduzir movimento | Perfil |
 | `criar_habito`, `editar_habito`, `remover_habito`, `marcar_habito` | hábitos e marcações | Hoje e Semana |
@@ -45,6 +45,9 @@ O endereço também aparece em Perfil, "Conectar uma IA".
 - **Quem é a pessoa:** o `/mcp` aceita só access tokens JWT do nosso servidor OAuth com `aud` igual ao recurso `/mcp`,
   `typ` `at+jwt` e `azp` (`verifyBearerToken`, chaves do próprio Better Auth). O `sub` vira a pessoa das chamadas internas
   (`usuarioInterno` em `requireSession`, que só existe no segundo argumento de `app.fetch` e nenhuma requisição de fora preenche).
+- **Desconectar:** além da assinatura, o `/mcp` exige que o consentimento daquela pessoa para o cliente (`azp`) ainda exista.
+  Desconectar no Perfil (`DELETE /api/mcp/connections/:clientId`) ou excluir a conta corta o acesso na hora.
+- **Preferências:** `comecar_foco` sem `minutos` usa a duração escolhida no perfil. Exportar, desconectar e excluir a conta não são ferramentas.
 - **Servidor de autorização:** Better Auth com os plugins `jwt` e `@better-auth/oauth-provider` (`apps/api/src/auth.ts`).
   Registro dinâmico de clientes aberto (é o que os clientes MCP usam), PKCE obrigatório, clientes nativos inferidos pelo callback
   (`http://localhost` ou esquema próprio), web só com https. Tabelas `jwks` e `oauth_*` (migração `oauth_mcp`).

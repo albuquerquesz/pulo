@@ -6,14 +6,18 @@ import {
   type ProposalDecisionResponse,
   generateProposalResponseSchema,
   proposalDecisionResponseSchema,
+  type McpConnection,
+  mcpConnectionsResponseSchema,
+  statsResponseSchema,
   streakResponseSchema,
   taskCommentSchema,
   taskEventSchema,
 } from '@pulo/core/api/schemas';
-import { DEFAULT_TIMEZONE } from '@pulo/core/config/decisions';
+import { ACCOUNT, DEFAULT_TIMEZONE } from '@pulo/core/config/decisions';
 import type { BatchWrites } from '@pulo/core/data/batch';
 import { systemClock } from '@pulo/core/domain/clock';
 import { dateKeyOf, inRange } from '@pulo/core/domain/day';
+import type { StatsSource } from '@pulo/core/domain/stats';
 import type { StreakSource } from '@pulo/core/domain/streak';
 import type {
   Clock,
@@ -29,6 +33,8 @@ import type {
   RoomDecor,
   RoomSpot,
   MascotState,
+  Preferences,
+  ProfileStats,
   Repository,
   RestDay,
   RoutineBlock,
@@ -40,7 +46,16 @@ import type {
   User,
   WeeklyProposal,
 } from '@pulo/core/domain/types';
-import { type UserMetadata, applyUserMetadataPatch, metadataPatchFromUser, userFromMetadata } from '@pulo/core/domain/user-metadata';
+import {
+  DEFAULT_USER_METADATA,
+  type PreferencesPatch,
+  type UserMetadata,
+  type UserMetadataPatch,
+  applyUserMetadataPatch,
+  metadataPatchFromUser,
+  preferencesFromMetadata,
+  userFromMetadata,
+} from '@pulo/core/domain/user-metadata';
 import { z } from 'zod';
 import { type ApiClient, type ApiOptions, createApiClient, readJson } from './api';
 import {
@@ -84,7 +99,7 @@ export interface Account {
  * Escritas atualizam o cache na hora e vão ao servidor com o `PUT` ou `DELETE` da rota; se falharem, o cache volta
  * ao que era e o erro (`RemoteError`, com texto em português) sobe para a tela.
  */
-export interface RemoteRepository extends Repository, BatchWrites, StreakSource {
+export interface RemoteRepository extends Repository, BatchWrites, StreakSource, StatsSource {
   readonly account: Account;
   /**
    * `POST /api/proposals/generate`: o servidor lê os dados, aplica as regras, consulta a IA (se houver) e guarda a proposta.
@@ -102,6 +117,23 @@ export interface RemoteRepository extends Repository, BatchWrites, StreakSource 
    * (ou da virada do dia), espera as escritas pendentes e chama `GET /api/streak`. Se a rede falhar, devolve a última.
    */
   getStreak(): Promise<Streak>;
+  /** As preferências da conta (vêm no sync). */
+  getPreferences(): Promise<Preferences>;
+  /** Muda só as preferências enviadas (`PATCH /api/me/metadata`), com cache otimista. */
+  savePreferences(patch: PreferencesPatch): Promise<void>;
+  /**
+   * Os números de todo o tempo (`stats` do sync). Depois de uma escrita que pode mudá-los, chama `GET /api/stats`.
+   * Se a rede falhar, devolve os últimos.
+   */
+  getStats(): Promise<ProfileStats>;
+  /** `GET /api/data/export`: todos os dados da conta, prontos para virar um arquivo. Espera as escritas pendentes. */
+  exportData(): Promise<Record<string, unknown>>;
+  /** Os aplicativos (Claude e outros) com acesso à conta. */
+  listConnections(): Promise<McpConnection[]>;
+  /** Revoga o acesso de um aplicativo. */
+  disconnect(clientId: string): Promise<void>;
+  /** `DELETE /api/account`: exclui a conta de vez e limpa o cache. A tela pede a confirmação antes de chamar. */
+  deleteAccount(): Promise<void>;
   /** Lê tudo de novo do servidor e troca o cache (ex.: ao voltar de um tempo sem internet). */
   reload(): Promise<void>;
 }
@@ -134,6 +166,8 @@ class ApiRepository implements RemoteRepository {
   private streakDay: DateKey | null = null;
   /** Conta as escritas que podem mudar a sequência, para não dar por nova uma leitura que cruzou com elas. */
   private streakVersion = 0;
+  private stats: ProfileStats | null = null;
+  private statsStale = false;
 
   private readonly blocks = new Collection<RoutineBlock>((b) => b.id, cloneBlock);
   private readonly habits = new Collection<Habit>((h) => h.id, cloneHabit);
@@ -172,6 +206,8 @@ class ApiRepository implements RemoteRepository {
     this.mascot = data.mascot;
     this.streak = data.streak;
     this.streakDay = this.today();
+    this.stats = data.stats;
+    this.statsStale = false;
     this.blocks.replaceAll(data.blocks);
     this.habits.replaceAll(data.habits);
     this.habitLogs.replaceAll(data.habitLogs);
@@ -279,8 +315,19 @@ class ApiRepository implements RemoteRepository {
   }
 
   async saveUser(user: User): Promise<void> {
+    await this.patchMetadata(metadataPatchFromUser(user));
+  }
+
+  async getPreferences(): Promise<Preferences> {
+    return preferencesFromMetadata(this.metadata ?? DEFAULT_USER_METADATA);
+  }
+
+  async savePreferences(patch: PreferencesPatch): Promise<void> {
+    await this.patchMetadata(patch);
+  }
+
+  private async patchMetadata(patch: UserMetadataPatch): Promise<void> {
     const before = this.metadata;
-    const patch = metadataPatchFromUser(user);
     // Otimista, com a mesma função que o servidor usa (o `completedAt` real vem na resposta).
     if (before) this.metadata = applyUserMetadataPatch(before, patch, this.clock.now());
     try {
@@ -660,6 +707,7 @@ class ApiRepository implements RemoteRepository {
   private expireStreak(): void {
     this.streakVersion += 1;
     this.streakDay = null;
+    this.statsStale = true;
   }
 
   async getStreak(): Promise<Streak> {
@@ -677,6 +725,58 @@ class ApiRepository implements RemoteRepository {
     return cloneStreak(this.streak);
   }
 
+  // ---------- Perfil e conta ----------
+
+  async getStats(): Promise<ProfileStats> {
+    await Promise.all(this.locks.values());
+    if (this.stats && !this.statsStale) return { ...this.stats };
+    const version = this.streakVersion;
+    try {
+      const raw = await readJson(await this.client.api.stats.$get());
+      this.stats = statsResponseSchema.parse(raw).stats;
+      if (version === this.streakVersion) this.statsStale = false;
+    } catch (error) {
+      if (!this.stats) throw error;
+    }
+    return { ...this.stats };
+  }
+
+  async exportData(): Promise<Record<string, unknown>> {
+    await Promise.all(this.locks.values());
+    return readJson(await this.client.api.data.export.$get());
+  }
+
+  async listConnections(): Promise<McpConnection[]> {
+    const raw = await readJson(await this.client.api.mcp.connections.$get());
+    return mcpConnectionsResponseSchema.parse(raw).connections;
+  }
+
+  async disconnect(clientId: string): Promise<void> {
+    await this.withRetry(async () => {
+      await readJson(await this.client.api.mcp.connections[':clientId'].$delete({ param: { clientId } }));
+    });
+  }
+
+  async deleteAccount(): Promise<void> {
+    await this.serial('all', async () => {
+      await readJson(await this.client.api.account.$delete({ json: { confirm: ACCOUNT.deleteConfirmation } }));
+      this.clearCache();
+      this.accountValue = { id: '', name: '', email: '', image: null };
+      this.metadata = null;
+      this.streak = null;
+      this.stats = null;
+    });
+  }
+
+  private clearCache(): void {
+    const collections = [this.blocks, this.habits, this.habitLogs, this.sessions, this.restDays, this.proposals, this.goals, this.tasks, this.subtasks, this.islandPurchases, this.housePurchases, this.roomDecor];
+    for (const collection of collections) {
+      collection.clear();
+    }
+    this.mascot = null;
+    this.joiaCredit = 0;
+  }
+
   // ---------- Apagar tudo ----------
 
   /** `DELETE /api/data` e depois zera o perfil (a pessoa volta ao onboarding). Sem otimismo: só limpa o cache com o servidor confirmando. */
@@ -684,12 +784,7 @@ class ApiRepository implements RemoteRepository {
     await this.serial('all', () =>
       this.withRetry(async () => {
         await readJson(await this.client.api.data.$delete());
-        const collections = [this.blocks, this.habits, this.habitLogs, this.sessions, this.restDays, this.proposals, this.goals, this.tasks, this.subtasks, this.islandPurchases, this.housePurchases, this.roomDecor];
-        for (const collection of collections) {
-          collection.clear();
-        }
-        this.mascot = null;
-        this.joiaCredit = 0;
+        this.clearCache();
         const { metadata } = await readJson(
           await this.client.api.me.metadata.$patch({ json: { profile: null, onboardingCompleted: false } }),
         );

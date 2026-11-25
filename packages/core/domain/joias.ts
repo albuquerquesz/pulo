@@ -22,11 +22,15 @@ export interface JoiasGanhas {
   total: number;
 }
 
+/** Tempo focado de uma sessão terminada, em ms: sem as pausas e até o planejado. Em andamento vale zero. */
+export function focusedMs(session: FocusSession): number {
+  if (session.state === 'em_andamento') return 0;
+  return Math.max(0, Math.min(effectiveMs(session), session.plannedMinutes * 60_000));
+}
+
 /** Joias de uma sessão: uma a cada `focusMinutesPerJoia` minutos focados (sem pausas, até o planejado). */
 export function joiasDoFoco(session: FocusSession): number {
-  if (session.state === 'em_andamento') return 0;
-  const ms = Math.min(effectiveMs(session), session.plannedMinutes * 60_000);
-  return Math.floor(ms / (JOIAS.focusMinutesPerJoia * 60_000));
+  return Math.floor(focusedMs(session) / (JOIAS.focusMinutesPerJoia * 60_000));
 }
 
 /** Joias ganhas desde sempre. Calculado, nunca gravado: desmarcar um hábito devolve a joia. */

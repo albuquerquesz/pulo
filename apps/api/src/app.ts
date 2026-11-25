@@ -8,7 +8,9 @@ import { type RouteDeps, handleError, handleNotFound } from './http';
 import { meRoutes } from './me';
 import { resolveMcpConfig } from './mcp-config';
 import { lerPessoa, mcpRoutes } from './mcp/rotas';
+import { accountRoutes } from './routes/account';
 import { blockRoutes } from './routes/blocks';
+import { connectionRoutes } from './routes/connections';
 import { dataRoutes } from './routes/data';
 import { goalRoutes } from './routes/goals';
 import { habitLogRoutes } from './routes/habit-logs';
@@ -19,6 +21,7 @@ import { mascotRoutes } from './routes/mascot';
 import { proposalRoutes } from './routes/proposals';
 import { restDayRoutes } from './routes/rest-days';
 import { sessionRoutes } from './routes/sessions';
+import { statsRoutes } from './routes/stats';
 import { streakRoutes } from './routes/streak';
 import { syncRoutes } from './routes/sync';
 import { taskRoutes } from './routes/tasks';
@@ -93,6 +96,9 @@ export function createApp(env: ApiEnv, db: Db, now = Date.now, options: AppOptio
     .route('/api/streak', streakRoutes(deps))
     .route('/api/sync', syncRoutes(deps))
     .route('/api/data', dataRoutes(deps))
+    .route('/api/stats', statsRoutes(deps))
+    .route('/api/account', accountRoutes(deps))
+    .route('/api/mcp/connections', connectionRoutes(deps))
     .route('/', mcp)
     .post('/weekly-ai', async (c) => {
       const body = await c.req.json().catch(() => null);

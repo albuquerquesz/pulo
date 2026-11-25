@@ -30,6 +30,8 @@ export interface SessionUser {
   name: string;
   email: string;
   image: string | null;
+  /** Quando a conta foi criada (ms). */
+  createdAt: number;
   metadata: UserMetadata;
 }
 
@@ -67,8 +69,8 @@ export function requireSession(auth: Auth) {
 async function userDaSessao(auth: Auth, headers: Headers): Promise<SessionUser | null> {
   const session = await auth.api.getSession({ headers });
   if (!session) return null;
-  const { id, name, email, image, metadata } = session.user;
-  return { id, name, email, image: image ?? null, metadata: readUserMetadata(metadata) };
+  const { id, name, email, image, createdAt, metadata } = session.user;
+  return { id, name, email, image: image ?? null, createdAt: createdAt.getTime(), metadata: readUserMetadata(metadata) };
 }
 
 // ---------- Validação com zod ----------

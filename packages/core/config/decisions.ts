@@ -152,6 +152,33 @@ export const FOCUS = {
   maxBreakMinutes: 15,
 } as const;
 
+/** Sons de fundo do foco (spec 15). */
+export const AMBIENT_SOUNDS = ['silencio', 'lagoa', 'chuva'] as const;
+
+/**
+ * Preferências da conta (spec 15): o que vale enquanto a pessoa não escolhe, e os limites. A duração do foco e da pausa
+ * seguem os limites de `FOCUS`; a meta diária nasce vazia (sem meta). Proposta.
+ */
+export const PREFERENCES = {
+  eveningReminderMinutes: 21 * 60,
+  minDailyFocusGoalMinutes: 5,
+  maxDailyFocusGoalMinutes: 480,
+  sounds: true,
+  aiEnabled: true,
+  ambientSound: 'silencio',
+  /** Períodos de férias guardados; passando disso, o mais antigo sai. */
+  maxVacationPeriods: 200,
+} as const;
+
+/**
+ * Conta (spec 15). `deleteConfirmation` é a palavra que o corpo de `DELETE /api/account` precisa trazer. Proposta.
+ */
+export const ACCOUNT = {
+  deleteConfirmation: 'EXCLUIR',
+  nameMaxChars: 80,
+  imageUrlMaxChars: 2048,
+} as const;
+
 /** Duração dos eventos transitórios do sapo, em ms. */
 export const FROG_EVENT_MS = {
   pouso: 1200,

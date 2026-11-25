@@ -1,6 +1,9 @@
+import { accountUpdateSchema } from '@pulo/core/api/schemas';
+import { ACCOUNT } from '@pulo/core/config/decisions';
 import type { Db } from '@pulo/db';
 import { oauthProvider } from '@better-auth/oauth-provider';
 import { betterAuth } from 'better-auth';
+import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { jwt } from 'better-auth/plugins';
 import { MCP_SCOPES, type McpEnv, resolveMcpConfig } from './mcp-config';
@@ -35,6 +38,20 @@ export function createAuth(env: AuthEnv, web: WebConfig, db: Db) {
         // Só a rota /api/me/metadata escreve aqui, com validação.
         metadata: { type: 'json', required: false, input: false },
       },
+    },
+    // Nome e foto mudam pelo `/update-user` do Better Auth, com os limites do app.
+    hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== '/update-user') return;
+        const parsed = accountUpdateSchema.safeParse(ctx.body);
+        if (!parsed.success) {
+          throw new APIError('BAD_REQUEST', {
+            code: 'corpo_invalido',
+            message: `Use um nome de até ${ACCOUNT.nameMaxChars} letras e uma foto com endereço https.`,
+          });
+        }
+        return { context: { body: parsed.data } };
+      }),
     },
     // O `/token` do plugin jwt emitiria JWT de sessão; só o OAuth emite tokens (ver docs/mcp.md).
     disabledPaths: ['/token'],

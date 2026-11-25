@@ -1,8 +1,9 @@
 import type { DateRangeQuery } from '@pulo/core/api/schemas';
 import { addDays, startOfLogicalDay, weekEndOf } from '@pulo/core/domain/day';
+import { computeStats } from '@pulo/core/domain/stats';
 import { computeStreak } from '@pulo/core/domain/streak';
 import type { UserMetadata } from '@pulo/core/domain/user-metadata';
-import type { MascotState, Streak, WeekSummary } from '@pulo/core/domain/types';
+import type { MascotState, ProfileStats, Streak, WeekSummary } from '@pulo/core/domain/types';
 import { computeMascotState } from '@pulo/core/domain/phase';
 import { buildWeekSummary } from '@pulo/core/domain/week-summary';
 import { type Db, type Prisma, dateKeyToDate, focusSessionMapper, habitLogMapper, mascotStateMapper, restDayMapper } from '@pulo/db';
@@ -98,7 +99,7 @@ export function summaryFromRows(weekStart: string, timeZone: string, rows: WeekS
  */
 export function streakReads(db: Db, userId: string) {
   return [
-    db.habitLog.groupBy({ by: ['date'], where: { userId }, orderBy: { date: 'asc' } }),
+    db.habitLog.groupBy({ by: ['date'], where: { userId }, orderBy: { date: 'asc' }, _count: { habitId: true } }),
     db.focusSession.findMany({ where: { userId, state: { not: 'em_andamento' } }, select: sessionSelect }),
     db.restDay.findMany({ where: { userId }, select: restDaySelect }),
   ] as const;
@@ -115,8 +116,14 @@ export function streakFromRows(metadata: UserMetadata, now: number, rows: Streak
     habitLogs: rows.habitDays.map(restDayMapper.toDomain),
     sessions: rows.sessions.map(focusSessionMapper.toDomain),
     restDays: rows.restDays.map(restDayMapper.toDomain),
+    vacation: metadata.vacation,
     timeZone: metadata.timezone,
     dayStartMinutes: metadata.profile?.dayStartMinutes,
     now,
   });
+}
+
+/** Estatísticas de todo o tempo. Os hábitos feitos chegam contados pelo banco; o foco sai das sessões terminadas. */
+export function statsFromRows(desde: number, habitosFeitos: number, sessions: StreakRows['sessions']): ProfileStats {
+  return computeStats({ desde, habitosFeitos, sessions: sessions.map(focusSessionMapper.toDomain) });
 }

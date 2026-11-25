@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import {
+  ACCOUNT,
   BLOCK_MAX_MINUTES,
   BLOCK_MIN_MINUTES,
   FOCUS,
@@ -25,6 +26,7 @@ import type {
   RoomSpot,
   MascotState,
   Phase,
+  ProfileStats,
   ProposalChange,
   RestDay,
   RoutineBlock,
@@ -270,6 +272,43 @@ export const streakSchema = z.object({
 
 /** Resposta de `GET /api/streak`. */
 export const streakResponseSchema = z.object({ streak: streakSchema });
+
+export const profileStatsSchema = z.object({
+  habitosFeitos: z.number().int().min(0),
+  minutosDeFoco: z.number().int().min(0),
+  desde: msSchema,
+}) satisfies z.ZodType<ProfileStats, unknown>;
+
+/** Resposta de `GET /api/stats`. */
+export const statsResponseSchema = z.object({ stats: profileStatsSchema });
+
+// ---------- Conta (spec 15) ----------
+
+/** Corpo de `POST /api/auth/update-user`: só nome e foto (`image: null` tira a foto). */
+export const accountUpdateSchema = z.strictObject({
+  name: z.string().trim().min(1).max(ACCOUNT.nameMaxChars).optional(),
+  image: z.url({ protocol: /^https$/ }).max(ACCOUNT.imageUrlMaxChars).nullable().optional(),
+});
+
+/** Um aplicativo (Claude ou outro cliente MCP) com acesso à conta. */
+export const mcpConnectionSchema = z.object({
+  clientId: z.string(),
+  /** Nome que o aplicativo deu no registro; `null` se não deu. */
+  name: z.string().nullable(),
+  scopes: z.array(z.string()),
+  /** Quando a pessoa liberou o acesso pela primeira vez e pela última (ms). */
+  connectedAt: msSchema,
+  updatedAt: msSchema,
+});
+export type McpConnection = z.infer<typeof mcpConnectionSchema>;
+
+/** Resposta de `GET /api/mcp/connections` (a mais recente primeiro). */
+export const mcpConnectionsResponseSchema = z.object({ connections: z.array(mcpConnectionSchema) });
+
+export const clientIdParamSchema = z.object({ clientId: z.string().min(1).max(200) });
+
+/** Corpo de `DELETE /api/account`: a palavra de confirmação (sem ela, 400 `corpo_invalido`). */
+export const deleteAccountBodySchema = z.object({ confirm: z.literal(ACCOUNT.deleteConfirmation) });
 
 export const goalMilestoneSchema = z.object({
   id: idSchema,

@@ -28,6 +28,16 @@ describe('computeStreak', () => {
     expect(result.semana.slice(0, 4).map((d) => d.estado)).toEqual(['vazio', 'feito', 'feito', 'feito']);
   });
 
+  it('férias contam como descanso: as atuais até hoje e as já encerradas', () => {
+    const habitLogs = days(13, 18);
+    const periodos = [{ de: '2026-11-14', ate: '2026-11-15' }];
+    expect(streak({ habitLogs, vacation: { ligado: true, desde: '2026-11-16', periodos } })).toMatchObject({ atual: 2, recorde: 2 });
+    const extra: Partial<StreakInput> = { habitLogs: days(16), vacation: { ligado: true, desde: '2026-11-17', periodos: [] } };
+    expect(streak(extra).atual).toBe(1);
+    expect(states(extra).slice(1)).toEqual(['feito', 'descanso', 'descanso', 'futuro', 'futuro', 'futuro']);
+    expect(streak({ habitLogs: days(16), vacation: { ligado: false, desde: null, periodos: [] } }).atual).toBe(0);
+  });
+
   it('sessão interrompida cedo não conta', () => {
     expect(streak({ sessions: [endedSession(sp(2026, 11, 18, 9), 30, 'interrompida', 5)] }).atual).toBe(0);
   });

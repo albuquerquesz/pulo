@@ -398,6 +398,36 @@ describe('RemoteRepository: erros e rollback', () => {
   });
 });
 
+describe('RemoteRepository: perfil e conta', () => {
+  it('grava preferências, relê estatísticas, exporta e exclui a conta', async () => {
+    const me = await h.newUser();
+    const { fetch, calls } = recordingFetch();
+    const repo = await open(me, fetch);
+    expect(await repo.getStats()).toMatchObject({ habitosFeitos: 0, minutosDeFoco: 0 });
+    expect(calls).not.toContain('GET /api/stats');
+
+    await repo.savePreferences({ focusMinutes: 45, vacation: { ligado: true } });
+    expect(await repo.getPreferences()).toMatchObject({ focusMinutes: 45, vacation: { ligado: true } });
+    const again = await open(me);
+    expect(await again.getPreferences()).toEqual(await repo.getPreferences());
+    await expect(repo.savePreferences({ focusMinutes: 5 })).rejects.toBeInstanceOf(RemoteError);
+    expect(await repo.getPreferences()).toMatchObject({ focusMinutes: 45 });
+
+    await repo.saveHabit({ id: 'habito-perfil', title: 'Ler', weekdays: [0], active: true });
+    await repo.saveHabitLog({ habitId: 'habito-perfil', date: '2026-11-16', doneAt: TEST_NOW });
+    expect(await repo.getStats()).toMatchObject({ habitosFeitos: 1 });
+    expect(calls).toContain('GET /api/stats');
+
+    expect(await repo.listConnections()).toEqual([]);
+    await repo.disconnect('nenhum');
+    expect(await repo.exportData()).toMatchObject({ habits: [{ id: 'habito-perfil' }] });
+
+    await repo.deleteAccount();
+    expect(await repo.listHabits()).toEqual([]);
+    expect(await database.db.user.count({ where: { id: me.id } })).toBe(0);
+  });
+});
+
 describe('RemoteRepository: tarefas', () => {
   const tarefa = (extra: Partial<Task> = {}): Task => ({
     id: uuid(), title: 'Estudar', status: 'afazer', position: 1, priority: 'normal', tags: [], pomodorosEstimated: 1, createdAt: TEST_NOW - 1, ...extra,
