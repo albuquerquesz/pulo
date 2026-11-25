@@ -31,7 +31,7 @@ afterEach(() => {
 function MarcarHabito({ repo, clock }: { repo: Repository; clock: Clock }) {
   const { refresh } = useApp();
   const marcar = async () => {
-    await repo.saveHabitLog({ habitId: 'demo-habito-ler', date: '2026-11-22', doneAt: clock.now() });
+    await repo.saveHabitLog({ habitId: 'demo-habito-ler', date: '2026-11-21', doneAt: clock.now() });
     refresh();
   };
   return <button onClick={() => void marcar()}>marcar</button>;

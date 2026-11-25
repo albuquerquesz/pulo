@@ -44,6 +44,7 @@
   --pulo-cancelar-borda: #d0644f;
   --pulo-numero-foco: #ff9b7a;
   --pulo-numero-joia: #c29bff;
+  --pulo-sol-quente: #ffb347;
   color-scheme: light;
 }
 
@@ -102,6 +103,7 @@
   --color-cancelar-borda: var(--pulo-cancelar-borda);
   --color-numero-foco: var(--pulo-numero-foco);
   --color-numero-joia: var(--pulo-numero-joia);
+  --color-sol-quente: var(--pulo-sol-quente);
 
   --font-sans: 'Nunito', ui-rounded, system-ui, sans-serif;
 
@@ -171,6 +173,22 @@ body {
     }
     50% {
       transform: scale(1.06, 1.1) rotate(2deg);
+    }
+  }
+}
+
+/* O brilho na ponta da barra da sequência pulsa. */
+@theme inline {
+  --animate-brilha: brilha 1.8s ease-in-out infinite;
+  @keyframes brilha {
+    0%,
+    100% {
+      opacity: 0.7;
+      transform: scale(0.85);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.15);
     }
   }
 }

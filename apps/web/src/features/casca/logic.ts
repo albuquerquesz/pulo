@@ -8,6 +8,16 @@ import { focusedMs, textoDeFalta } from '@pulo/core/domain/joias';
 import { verSequencia } from '@pulo/core/domain/streak';
 import type { AccentColor, Clock, DateKey, FocusSession, Goal, GoalChest, Habit, HabitLog, Repository, User } from '@pulo/core/domain/types';
 
+export interface ContaNaTela {
+  nome: string;
+  email: string;
+}
+
+/** Quem a casca e o Hoje mostram: a conta logada, a pessoa do demo ou, sem conta, o nome do sapo. */
+export function contaNaTela(pessoa: ContaNaTela | null, doDemo: ContaNaTela | null, user: User | null): ContaNaTela {
+  return pessoa ?? doDemo ?? { nome: user?.frogName ?? 'Você', email: '' };
+}
+
 export type ChaveDaAba = 'hoje' | 'ilha' | 'tarefas' | 'habitos' | 'metas';
 
 /** O menu, na ordem do rascunho. */
