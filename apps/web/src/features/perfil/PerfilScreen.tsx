@@ -18,6 +18,7 @@ import { EditarPerfil } from './EditarPerfil';
 import { Estatisticas } from './Estatisticas';
 import { ExcluirConta } from './ExcluirConta';
 import { carregarPerfil, desdeQuando, medalha, nomeDoArquivo } from './logic';
+import { Metricas } from './Metricas';
 import { PainelDemo } from './PainelDemo';
 import { Preferencias } from './Preferencias';
 import { Rotina } from './Rotina';
@@ -31,7 +32,7 @@ function estadoDoClaude(conexoes: Conexoes): string | null {
   return conexoes.lista.length > 0 ? 'Conectado' : 'Conectar';
 }
 
-/** O Perfil: cabeçalho, estatísticas, conquistas, rotina, preferências e conta. */
+/** O Perfil: cabeçalho, estatísticas, conquistas, métricas, rotina, preferências e conta. */
 export function PerfilScreen() {
   const app = useApp();
   const { repo, clock, user, demo, demoClock, refresh, atualizarPerfil } = app;
@@ -85,6 +86,7 @@ export function PerfilScreen() {
           />
           <Estatisticas sequencia={dados.sequencia} estatisticas={dados.estatisticas} />
           <Conquistas medalhas={dados.conquistas.map((c) => medalha(c, fuso))} />
+          <Metricas />
         </>
       ) : null}
       {estado.tipo === 'carregando' ? (

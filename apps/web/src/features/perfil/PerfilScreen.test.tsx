@@ -38,6 +38,7 @@ describe('PerfilScreen', () => {
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
       'Estatísticas',
       'Conquistas',
+      'Métricas',
       'Rotina',
       'Preferências',
       'Conta',
@@ -47,6 +48,16 @@ describe('PerfilScreen', () => {
     expect(screen.getByRole('group', { name: 'Seu sapo' }).textContent).toContain('Fase');
     expect(screen.getByText('Continue cuidando do sapo')).toBeTruthy();
     expect(screen.getByRole('progressbar', { name: 'Mês de fogo' }).getAttribute('aria-valuenow')).toBe('21');
+  });
+
+  test('quem chega por #metricas cai na seção Métricas', async () => {
+    window.location.hash = '#metricas';
+    await abrir();
+    await screen.findByRole('heading', { name: 'Ritmo' });
+    expect(document.activeElement?.id).toBe('metricas');
+    expect(screen.getByRole('heading', { name: 'Descanso e gelo' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Concluído' })).toBeTruthy();
+    window.location.hash = '';
   });
 
   test('mudar preferência grava na conta', async () => {
