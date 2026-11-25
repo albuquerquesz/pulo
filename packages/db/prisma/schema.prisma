@@ -56,7 +56,6 @@ model User {
   weeklyProposals WeeklyProposal[]
   goals           Goal[]
   tasks           Task[]
-  taskCounter     TaskCounter?
   islandPurchases IslandPurchase[]
   joiaCredit      JoiaCredit?
   goalChests      GoalChest[]
@@ -593,12 +592,11 @@ model Achievement {
   @@map("achievement")
 }
 
-/// Cartão do quadro de tarefas (spec 20). O número (`PULO-n`) é dado pelo servidor.
+/// Cartão do quadro de tarefas (spec 20).
 model Task {
   id                 String       @id @default(uuid())
   userId             String
   user               User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  number             Int
   title              String
   description        String?
   status             TaskStatus
@@ -620,7 +618,6 @@ model Task {
   focusSessions FocusSession[]
 
   @@unique([id, userId])
-  @@unique([userId, number])
   @@index([goalId])
   @@map("task")
 }
@@ -666,15 +663,6 @@ model TaskEvent {
 
   @@index([userId, taskId])
   @@map("task_event")
-}
-
-/// Último número de tarefa dado a cada pessoa. Só cresce: um código apagado não volta.
-model TaskCounter {
-  userId String @id
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  last   Int
-
-  @@map("task_counter")
 }
 
 /// Compra com joias (parte da casa, decoração ou área e enfeite da ilha antiga), uma por item e pessoa.

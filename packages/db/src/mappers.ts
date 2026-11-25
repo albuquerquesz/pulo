@@ -371,7 +371,6 @@ export const taskMapper = {
   toDomain(row: Omit<TaskRow, 'userId'>): Task {
     return {
       id: row.id,
-      number: row.number,
       title: row.title,
       ...(row.description === null ? {} : { description: row.description }),
       status: row.status,
@@ -385,12 +384,10 @@ export const taskMapper = {
       ...(row.completedAt === null ? {} : { completedAt: dateToMs(row.completedAt) }),
     };
   },
-  /** O número é do servidor (primeira gravação), por isso vem à parte. */
-  fromDomain(userId: string, task: Task, number: number): Prisma.TaskUncheckedCreateInput {
+  fromDomain(userId: string, task: Task): Prisma.TaskUncheckedCreateInput {
     return {
       id: task.id,
       userId,
-      number,
       title: task.title,
       description: task.description ?? null,
       status: task.status,
