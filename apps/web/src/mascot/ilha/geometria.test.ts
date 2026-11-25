@@ -1,4 +1,4 @@
-import { caixa, projetar, telhado } from './geometria';
+import { caixa, cilindro, circuloNoChao, cone, projetar, telhado } from './geometria';
 
 describe('gerador isométrico', () => {
   test('a origem fica no centro da ilha e a altura sobe', () => {
@@ -25,5 +25,17 @@ describe('gerador isométrico', () => {
       '619.5,291.4 500.0,360.4 559.8,261.5',
       '430.3,186.8 569.7,267.3 500.0,371.9 360.6,291.4',
     ]);
+  });
+});
+
+describe('peças redondas', () => {
+  test('o círculo no chão vira uma elipse achatada', () => {
+    expect(circuloNoChao([0, 0, 0], 1)).toEqual({ cx: 500, cy: 480, rx: 56.3, ry: 32.5 });
+  });
+
+  test('o cilindro e o cone saem das elipses da base e do topo', () => {
+    const peca = { centro: [0, 0], raio: 1, z: [0, 2] } as const;
+    expect(cilindro(peca)).toBe('M443.7 388.0L443.7 480.0A56.3 32.5 0 0 0 556.3 480.0L556.3 388.0A56.3 32.5 0 0 1 443.7 388.0Z');
+    expect(cone(peca)).toBe('M500.0 388.0L556.3 480.0A56.3 32.5 0 0 1 443.7 480.0Z');
   });
 });

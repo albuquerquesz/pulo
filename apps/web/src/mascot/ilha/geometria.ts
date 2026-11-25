@@ -112,3 +112,52 @@ export function telhado({ u, v, z }: Volume, cores: CoresDoTelhado): Face[] {
     ]),
   ];
 }
+
+/** Um círculo deitado no chão: vira uma elipse na projeção. */
+export interface Elipse {
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+}
+
+/** O círculo de `raio` (em unidades do mundo) com centro em `centro`. */
+export function circuloNoChao(centro: Ponto3d, raio: number): Elipse {
+  const { x, y } = projetar(centro);
+  const diagonal = raio * Math.SQRT2 * UNIDADE;
+  const arredondar = (n: number) => Math.round(n * 10) / 10;
+  return { cx: x, cy: y, rx: arredondar(diagonal * COSSENO_30), ry: arredondar(diagonal / 2) };
+}
+
+export interface Redondo {
+  centro: readonly [u: number, v: number];
+  raio: number;
+  /** Da base ao topo. */
+  z: Intervalo;
+}
+
+/** O contorno visível de um cilindro em pé: os dois lados, o arco da base e o arco da frente no topo. */
+export function cilindro({ centro: [u, v], raio, z }: Redondo): string {
+  const base = circuloNoChao([u, v, z[0]], raio);
+  const topo = circuloNoChao([u, v, z[1]], raio);
+  const esquerda = base.cx - base.rx;
+  const direita = base.cx + base.rx;
+  return [
+    `M${esquerda.toFixed(1)} ${topo.cy.toFixed(1)}`,
+    `L${esquerda.toFixed(1)} ${base.cy.toFixed(1)}`,
+    `A${base.rx} ${base.ry} 0 0 0 ${direita.toFixed(1)} ${base.cy.toFixed(1)}`,
+    `L${direita.toFixed(1)} ${topo.cy.toFixed(1)}`,
+    `A${topo.rx} ${topo.ry} 0 0 1 ${esquerda.toFixed(1)} ${topo.cy.toFixed(1)}Z`,
+  ].join('');
+}
+
+/** O contorno de um cone: a ponta em `z[1]` e a base redonda em `z[0]`. */
+export function cone({ centro: [u, v], raio, z }: Redondo): string {
+  const base = circuloNoChao([u, v, z[0]], raio);
+  const ponta = projetar([u, v, z[1]]);
+  return [
+    `M${ponta.x.toFixed(1)} ${ponta.y.toFixed(1)}`,
+    `L${(base.cx + base.rx).toFixed(1)} ${base.cy.toFixed(1)}`,
+    `A${base.rx} ${base.ry} 0 0 1 ${(base.cx - base.rx).toFixed(1)} ${base.cy.toFixed(1)}Z`,
+  ].join('');
+}

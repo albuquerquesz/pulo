@@ -315,7 +315,7 @@ body {
 .parte-da-casa:not(.feita) {
   opacity: 0.28;
 }
-.parte-da-casa:not(.feita) :is(polygon, circle, path) {
+.parte-da-casa:not(.feita) :is(polygon, circle, path, ellipse, rect) {
   stroke-dasharray: 8 7;
 }
 /* A parte recém comprada cai do alto. */
@@ -327,6 +327,90 @@ body {
     opacity: 0.2;
     transform: translateY(-30px);
   }
+}
+
+/* Detalhes vivos da mansão (spec 31): só nas partes prontas. */
+.parte-da-casa.feita .fumaca circle {
+  animation: fumaca 3.6s ease-out infinite;
+}
+@keyframes fumaca {
+  from {
+    opacity: 0;
+    transform: translate(-6px, 18px);
+  }
+  30% {
+    opacity: 0.95;
+  }
+  to {
+    opacity: 0;
+    transform: translate(14px, -34px);
+  }
+}
+.parte-da-casa.feita .onda {
+  animation: onda 3s ease-in-out infinite;
+}
+@keyframes onda {
+  50% {
+    transform: translateX(9px);
+    opacity: 0.55;
+  }
+}
+.parte-da-casa.feita .balanca {
+  animation: balanca 3.2s ease-in-out infinite;
+}
+@keyframes balanca {
+  0%,
+  100% {
+    transform: rotate(13deg);
+  }
+  50% {
+    transform: rotate(-13deg);
+  }
+}
+@keyframes luz {
+  50% {
+    opacity: 0.82;
+  }
+}
+
+/* Noite na lagoa: o céu da ilha escurece, as janelas e o poste acendem. */
+:root[data-esquema='escuro'] .cena-ilha {
+  background: color-mix(in srgb, var(--pulo-descanso-borda) 55%, var(--pulo-contorno));
+}
+:root[data-esquema='escuro'] .cena-ilha .nv {
+  opacity: 0.18;
+}
+:root[data-esquema='escuro'] .parte-da-casa.feita .janela-vidro {
+  fill: var(--pulo-sol);
+  animation: luz 4s ease-in-out infinite;
+}
+:root[data-esquema='escuro'] .parte-da-casa.feita .halo {
+  opacity: 0.35;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-esquema]) .cena-ilha {
+    background: color-mix(in srgb, var(--pulo-descanso-borda) 55%, var(--pulo-contorno));
+  }
+  :root:not([data-esquema]) .cena-ilha .nv {
+    opacity: 0.18;
+  }
+  :root:not([data-esquema]) .parte-da-casa.feita .janela-vidro {
+    fill: var(--pulo-sol);
+    animation: luz 4s ease-in-out infinite;
+  }
+  :root:not([data-esquema]) .parte-da-casa.feita .halo {
+    opacity: 0.35;
+  }
+}
+
+/* Menos movimento: a mansão fica parada. */
+@media (prefers-reduced-motion: reduce) {
+  .parte-da-casa :is(.fumaca circle, .onda, .balanca, .janela-vidro) {
+    animation: none !important;
+  }
+}
+:root[data-reduzir-movimento='true'] .parte-da-casa :is(.fumaca circle, .onda, .balanca, .janela-vidro) {
+  animation: none !important;
 }
 
 /* Quarto da Casa (spec 23): sapo, lugares da decoração e o +1 do foco. */
