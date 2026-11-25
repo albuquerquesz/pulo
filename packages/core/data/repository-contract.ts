@@ -71,7 +71,8 @@ export function defineRepositoryContract(
       expect(await r.listSessions()).toEqual([]);
       expect(await r.listTasks()).toEqual([]);
       expect(await r.listSubtasks()).toEqual([]);
-      expect(await r.getMascotState()).toBeNull();
+      // No remoto o servidor deriva o sapo do histórico que a conta já tenha.
+      if (!options.mascotIsServerDerived) expect(await r.getMascotState()).toBeNull();
     });
 
     it('usuário e blocos: salvar, atualizar por id e apagar', async () => {

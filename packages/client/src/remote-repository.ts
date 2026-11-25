@@ -2,6 +2,9 @@ import type { LinkKey } from '@pulo/core/domain/foco/targets';
 import {
   type ApiErrorCode,
   achievementsResponseSchema,
+  type FreezeStatusResponse,
+  freezeStatusResponseSchema,
+  metricsResponseSchema,
   type GenerateProposalBody,
   type GenerateProposalResponse,
   type ProposalDecisionBody,
@@ -21,7 +24,10 @@ import type { BatchWrites } from '@pulo/core/data/batch';
 import type { AchievementSource } from '@pulo/core/domain/achievements';
 import { systemClock } from '@pulo/core/domain/clock';
 import { dateKeyOf, inRange } from '@pulo/core/domain/day';
+import type { FreezeSource } from '@pulo/core/domain/gelo';
 import type { HabitStatsSource } from '@pulo/core/domain/habit-stats';
+import type { FreezePurchaseList } from '@pulo/core/domain/joias';
+import type { MetricsSource } from '@pulo/core/domain/metricas';
 import type { StatsSource } from '@pulo/core/domain/stats';
 import type { StreakSource } from '@pulo/core/domain/streak';
 import type {
@@ -31,6 +37,7 @@ import type {
   DateRange,
   EntityId,
   FocusSession,
+  FreezeSummary,
   Goal,
   GoalChest,
   Habit,
@@ -42,6 +49,7 @@ import type {
   RoomSpot,
   MascotState,
   Preferences,
+  ProfileMetrics,
   ProfileStats,
   Repository,
   RestDay,
@@ -69,6 +77,7 @@ import { type ApiClient, type ApiOptions, createApiClient, readJson } from './ap
 import {
   cloneAchievement,
   cloneBlock,
+  cloneFreezeSummary,
   cloneGoal,
   cloneGoalChest,
   cloneHabit,
@@ -109,7 +118,16 @@ export interface Account {
  * Escritas atualizam o cache na hora e vão ao servidor com o `PUT` ou `DELETE` da rota; se falharem, o cache volta
  * ao que era e o erro (`RemoteError`, com texto em português) sobe para a tela.
  */
-export interface RemoteRepository extends Repository, BatchWrites, StreakSource, StatsSource, AchievementSource, HabitStatsSource {
+export interface RemoteRepository
+  extends Repository,
+    BatchWrites,
+    StreakSource,
+    StatsSource,
+    AchievementSource,
+    HabitStatsSource,
+    FreezeSource,
+    FreezePurchaseList,
+    MetricsSource {
   readonly account: Account;
   /**
    * `POST /api/proposals/generate`: o servidor lê os dados, aplica as regras, consulta a IA (se houver) e guarda a proposta.
@@ -150,6 +168,17 @@ export interface RemoteRepository extends Repository, BatchWrites, StreakSource,
    * Sem rede; espera as escritas pendentes.
    */
   getPomodoros(): Promise<Record<EntityId, number>>;
+  /**
+   * Os gelos guardados e os gastos ainda não vistos (vêm no sync). Depois de uma escrita que mexe na sequência
+   * (ou da virada do dia), chama `GET /api/gelo`. Se a rede falhar, devolve os últimos.
+   */
+  getFreezes(): Promise<FreezeSummary>;
+  /** `POST /api/gelo`: o servidor confere o saldo e o máximo. Sem otimismo; a recusa sobe como `RemoteError`. */
+  buyFreeze(): Promise<void>;
+  /** `PUT /api/gelo/visto`: some o aviso na hora e volta se o servidor recusar. */
+  markFreezesSeen(): Promise<void>;
+  /** `GET /api/profile/metrics`: calculadas pelo servidor, sem cache. Espera as escritas pendentes. */
+  getMetrics(): Promise<ProfileMetrics>;
   /** `GET /api/data/export`: todos os dados da conta, prontos para virar um arquivo. Espera as escritas pendentes. */
   exportData(): Promise<Record<string, unknown>>;
   /** Os aplicativos (Claude e outros) com acesso à conta. */
@@ -193,6 +222,9 @@ class ApiRepository implements RemoteRepository {
   private streakDay: DateKey | null = null;
   /** Conta as escritas que podem mudar a sequência, para não dar por nova uma leitura que cruzou com elas. */
   private streakVersion = 0;
+  private freezes: FreezeSummary | null = null;
+  /** Como `streakDay`, para o gelo (que envelhece com as mesmas escritas). */
+  private freezesDay: DateKey | null = null;
   private stats: ProfileStats | null = null;
   private statsStale = false;
   private achievements: Achievement[] | null = null;
@@ -213,6 +245,7 @@ class ApiRepository implements RemoteRepository {
 
   private readonly housePurchases = new Collection<Purchase>((p) => p.item, cloneIslandPurchase);
   private readonly roomDecor = new Collection<RoomDecor>((d) => d.item, cloneRoomDecor);
+  private readonly freezePurchases = new Collection<Purchase>((p) => p.item, cloneIslandPurchase);
 
   private readonly tasks = new Collection<Task>((t) => t.id, cloneTask);
   private readonly subtasks = new Collection<TaskSubtask>((s) => s.id, cloneSubtask);
@@ -259,6 +292,9 @@ class ApiRepository implements RemoteRepository {
     this.housePurchases.replaceAll(data.housePurchases);
     this.roomDecor.replaceAll(data.roomDecor);
     this.joiaCredit = data.joiaCredit;
+    this.freezes = data.gelo;
+    this.freezesDay = this.today();
+    this.freezePurchases.replaceAll(data.gelosComprados);
   }
 
   // ---------- Escrita com cache otimista ----------
@@ -876,6 +912,7 @@ class ApiRepository implements RemoteRepository {
   private expireStreak(): void {
     this.streakVersion += 1;
     this.streakDay = null;
+    this.freezesDay = null;
     this.statsStale = true;
   }
 
@@ -892,6 +929,57 @@ class ApiRepository implements RemoteRepository {
       if (!this.streak) throw error;
     }
     return cloneStreak(this.streak);
+  }
+
+  // ---------- Gelo ----------
+
+  async listFreezePurchases(): Promise<Purchase[]> {
+    return this.freezePurchases.values().sort((a, b) => a.createdAt - b.createdAt);
+  }
+
+  async getFreezes(): Promise<FreezeSummary> {
+    await Promise.all(this.locks.values());
+    const day = this.today();
+    if (this.freezes && this.freezesDay === day) return cloneFreezeSummary(this.freezes);
+    const version = this.streakVersion;
+    try {
+      const raw = await readJson(await this.client.api.gelo.$get());
+      this.applyFreezes(freezeStatusResponseSchema.parse(raw));
+      if (version === this.streakVersion) this.freezesDay = day;
+    } catch (error) {
+      if (!this.freezes) throw error;
+    }
+    if (!this.freezes) throw new RemoteError({ kind: 'resposta_invalida', mensagem: MENSAGENS_DA_API.erro_interno });
+    return cloneFreezeSummary(this.freezes);
+  }
+
+  async buyFreeze(): Promise<void> {
+    // O saldo depende de tudo o que rende joias: espera as escritas pendentes.
+    await Promise.all(this.locks.values());
+    const status = await this.callAndParse('gelo', async () => await this.client.api.gelo.$post(), freezeStatusResponseSchema);
+    this.applyFreezes(status);
+    this.freezesDay = this.today();
+  }
+
+  async markFreezesSeen(): Promise<void> {
+    const before = this.freezes;
+    const mine = before ? { ...before, recentes: [] } : null;
+    this.freezes = mine;
+    try {
+      await this.serial('gelo', () =>
+        this.withRetry(async () => {
+          await readJson(await this.client.api.gelo.visto.$put());
+        }),
+      );
+    } catch (error) {
+      if (this.freezes === mine) this.freezes = before;
+      throw error;
+    }
+  }
+
+  private applyFreezes({ guardados, max, recentes, compras }: FreezeStatusResponse): void {
+    this.freezes = { guardados, max, recentes };
+    this.freezePurchases.replaceAll(compras);
   }
 
   // ---------- Conquistas ----------
@@ -943,6 +1031,12 @@ class ApiRepository implements RemoteRepository {
     return habitStatsResponseSchema.parse(raw).stats;
   }
 
+  async getMetrics(): Promise<ProfileMetrics> {
+    await Promise.all(this.locks.values());
+    const raw = await readJson(await this.client.api.profile.metrics.$get());
+    return metricsResponseSchema.parse(raw).metrics;
+  }
+
   async exportData(): Promise<Record<string, unknown>> {
     await Promise.all(this.locks.values());
     return readJson(await this.client.api.data.export.$get());
@@ -968,11 +1062,12 @@ class ApiRepository implements RemoteRepository {
       this.streak = null;
       this.stats = null;
       this.achievements = null;
+      this.freezes = null;
     });
   }
 
   private clearCache(): void {
-    const collections = [this.blocks, this.habits, this.habitLogs, this.sessions, this.restDays, this.proposals, this.goals, this.goalChests, this.tasks, this.subtasks, this.islandPurchases, this.housePurchases, this.roomDecor];
+    const collections = [this.blocks, this.habits, this.habitLogs, this.sessions, this.restDays, this.proposals, this.goals, this.goalChests, this.tasks, this.subtasks, this.islandPurchases, this.housePurchases, this.roomDecor, this.freezePurchases];
     for (const collection of collections) {
       collection.clear();
     }
