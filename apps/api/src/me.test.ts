@@ -1,4 +1,4 @@
-import { DEFAULT_USER_METADATA } from '@pulo/core/domain/user-metadata';
+import { DEFAULT_PREFERENCES, DEFAULT_USER_METADATA } from '@pulo/core/domain/user-metadata';
 import { createApp } from './app';
 import { createAuth } from './auth';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
@@ -103,7 +103,7 @@ describe('perfil do app nos metadados', () => {
     const me = await (await app.request('/api/me', { headers: { cookie } })).json();
     expect(me.metadata).toEqual({
       version: 1, theme: 'escuro', reduceMotion: false, timezone: 'America/Recife',
-      onboarding: { completed: true, completedAt: 5 }, profile: null,
+      onboarding: { completed: true, completedAt: 5 }, profile: null, ...DEFAULT_PREFERENCES,
     });
   });
 });

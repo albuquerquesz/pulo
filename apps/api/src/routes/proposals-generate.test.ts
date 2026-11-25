@@ -113,6 +113,15 @@ describe('POST /api/proposals/generate', () => {
     });
   });
 
+  it('IA desligada nas preferências: só a regra, o provedor não é chamado', async () => {
+    const provider = new FakeProvider();
+    const local = createHarness(database, { provider });
+    const me = await userWithWeek(local, 0, { aiEnabled: false });
+    const res = await generate(me, { date: WEEK });
+    expect(res.body).toMatchObject({ outcome: 'proposta', proposal: { origin: 'regra' } });
+    expect(provider.prompts).toHaveLength(0);
+  });
+
   it('quarentena: bloco de uma proposta negada nas últimas semanas não volta (sem candidata, nada criado)', async () => {
     const me = await userWithWeek();
     const change = {

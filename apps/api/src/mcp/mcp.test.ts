@@ -92,6 +92,33 @@ async function ferramenta(token: string, name: string, args: Record<string, unkn
 }
 
 describe('servidor MCP', () => {
+  it('desconectar no Perfil corta o acesso na hora, mesmo com o token ainda no prazo', async () => {
+    const me = await h.newUser();
+    const token = await tokenDe(me);
+    expect((await rpc(token, 'tools/list')).status).toBe(200);
+    const { connections } = await (await me.call('GET', '/api/mcp/connections')).json();
+    expect(connections).toMatchObject([{ name: 'Cliente de teste' }]);
+    expect(connections[0].connectedAt).toBeGreaterThan(0);
+    expect(await (await me.call('DELETE', `/api/mcp/connections/${connections[0].clientId}`)).json()).toEqual({ deleted: 1 });
+    expect((await rpc(token, 'tools/list')).status).toBe(401);
+  });
+
+  it('excluir a conta corta o token do MCP', async () => {
+    const me = await h.newUser();
+    const token = await tokenDe(me);
+    expect((await me.call('DELETE', '/api/account', { confirm: 'EXCLUIR' })).status).toBe(200);
+    expect((await rpc(token, 'tools/list')).status).toBe(401);
+  });
+
+  it('o perfil mostra as preferências e o foco começa na duração escolhida', async () => {
+    const me = await h.newUser();
+    const token = await tokenDe(me);
+    await ferramenta(token, 'concluir_onboarding', {});
+    await me.call('PATCH', '/api/me/metadata', { focusMinutes: 40 });
+    expect((await ferramenta(token, 'ver_perfil')).dados).toMatchObject({ preferencias: { focusMinutes: 40 } });
+    expect((await ferramenta(token, 'comecar_foco')).dados).toMatchObject({ minutos: 40 });
+  });
+
   it('descoberta: o recurso aponta para o servidor de autorização, que anuncia registro e PKCE', async () => {
     const recurso = await (await h.app.request('/.well-known/oauth-protected-resource/mcp')).json();
     expect(recurso).toMatchObject({ resource: RESOURCE, authorization_servers: [`${API}/api/auth`] });
