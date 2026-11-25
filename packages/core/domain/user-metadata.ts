@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
-import { DEFAULT_TIMEZONE } from '../config/decisions';
-import type { EntityId, User } from './types';
+import { AMBIENT_SOUNDS, DEFAULT_TIMEZONE, FOCUS, PREFERENCES } from '../config/decisions';
+import { addDays, dateKeyOf, isDateKey } from './day';
+import type { EntityId, Preferences, User, Vacation } from './types';
 
 /** Limite técnico do nome do sapo (o campo do onboarding também usa 24). */
 export const FROG_NAME_MAX_CHARS = 24;
@@ -10,7 +11,7 @@ export const FROG_NAME_MAX_CHARS = 24;
  * Metadados do usuário guardados na conta (coluna JSON `metadata` da API).
  * Preferências, progresso do onboarding e o perfil do app (nome do sapo e horário do dia).
  * Rotina, hábitos e sessões ficam nas tabelas próprias, não aqui.
- * A versão continua 1: o `profile` é opcional na leitura (contas antigas não o têm e leem `null`).
+ * A versão continua 1: o `profile` e as preferências são opcionais na leitura (contas antigas leem `null` e os padrões).
  */
 export const USER_METADATA_VERSION = 1;
 
@@ -38,6 +39,38 @@ export const userProfileSchema = z
 
 export type UserProfile = z.infer<typeof userProfileSchema>;
 
+const focusMinutesSchema = z.number().int().min(FOCUS.minMinutes).max(FOCUS.maxMinutes);
+const breakMinutesSchema = z.number().int().min(FOCUS.minBreakMinutes).max(FOCUS.maxBreakMinutes);
+const dailyFocusGoalSchema = z
+  .number()
+  .int()
+  .min(PREFERENCES.minDailyFocusGoalMinutes)
+  .max(PREFERENCES.maxDailyFocusGoalMinutes)
+  .nullable();
+const eveningReminderSchema = z.strictObject({
+  ligado: z.boolean(),
+  minutos: z.number().int().min(0).max(MINUTES_PER_DAY - 1),
+});
+const dateKeySchema = z.string().refine(isDateKey);
+const vacationSchema = z.object({
+  ligado: z.boolean(),
+  desde: dateKeySchema.nullable(),
+  periodos: z.array(z.object({ de: dateKeySchema, ate: dateKeySchema })),
+});
+const ambientSoundSchema = z.enum(AMBIENT_SOUNDS);
+
+export const DEFAULT_PREFERENCES: Preferences = {
+  focusMinutes: FOCUS.defaultMinutes,
+  breakMinutes: FOCUS.defaultBreakMinutes,
+  dailyFocusGoalMinutes: null,
+  eveningReminder: { ligado: false, minutos: PREFERENCES.eveningReminderMinutes },
+  vacation: { ligado: false, desde: null, periodos: [] },
+  sounds: PREFERENCES.sounds,
+  aiEnabled: PREFERENCES.aiEnabled,
+  ambientSound: PREFERENCES.ambientSound,
+};
+
+// Na leitura, preferência ausente ou fora dos limites de agora vira o padrão (`catch`), sem derrubar o resto da conta.
 export const userMetadataSchema = z.object({
   version: z.literal(USER_METADATA_VERSION),
   theme: themeSchema,
@@ -49,6 +82,14 @@ export const userMetadataSchema = z.object({
     completedAt: z.number().int().nonnegative().nullable(),
   }),
   profile: userProfileSchema.nullable().default(null),
+  focusMinutes: focusMinutesSchema.default(DEFAULT_PREFERENCES.focusMinutes).catch(DEFAULT_PREFERENCES.focusMinutes),
+  breakMinutes: breakMinutesSchema.default(DEFAULT_PREFERENCES.breakMinutes).catch(DEFAULT_PREFERENCES.breakMinutes),
+  dailyFocusGoalMinutes: dailyFocusGoalSchema.default(DEFAULT_PREFERENCES.dailyFocusGoalMinutes).catch(DEFAULT_PREFERENCES.dailyFocusGoalMinutes),
+  eveningReminder: eveningReminderSchema.default(DEFAULT_PREFERENCES.eveningReminder).catch(DEFAULT_PREFERENCES.eveningReminder),
+  vacation: vacationSchema.default(DEFAULT_PREFERENCES.vacation).catch(DEFAULT_PREFERENCES.vacation),
+  sounds: z.boolean().default(DEFAULT_PREFERENCES.sounds).catch(DEFAULT_PREFERENCES.sounds),
+  aiEnabled: z.boolean().default(DEFAULT_PREFERENCES.aiEnabled).catch(DEFAULT_PREFERENCES.aiEnabled),
+  ambientSound: ambientSoundSchema.default(DEFAULT_PREFERENCES.ambientSound).catch(DEFAULT_PREFERENCES.ambientSound),
 });
 
 export type UserMetadata = z.infer<typeof userMetadataSchema>;
@@ -61,9 +102,21 @@ export const userMetadataPatchSchema = z.strictObject({
   onboardingCompleted: z.boolean().optional(),
   /** Troca o perfil inteiro; `null` apaga (usado ao apagar todos os dados). */
   profile: userProfileSchema.nullable().optional(),
+  focusMinutes: focusMinutesSchema.optional(),
+  breakMinutes: breakMinutesSchema.optional(),
+  dailyFocusGoalMinutes: dailyFocusGoalSchema.optional(),
+  eveningReminder: eveningReminderSchema.optional(),
+  /** Só liga ou desliga: as datas são marcadas pelo servidor. */
+  vacation: z.strictObject({ ligado: z.boolean() }).optional(),
+  sounds: z.boolean().optional(),
+  aiEnabled: z.boolean().optional(),
+  ambientSound: ambientSoundSchema.optional(),
 });
 
 export type UserMetadataPatch = z.infer<typeof userMetadataPatchSchema>;
+
+/** A parte do patch que muda preferências (spec 15). */
+export type PreferencesPatch = Omit<UserMetadataPatch, 'theme' | 'reduceMotion' | 'timezone' | 'onboardingCompleted' | 'profile'>;
 
 export const DEFAULT_USER_METADATA: UserMetadata = {
   version: USER_METADATA_VERSION,
@@ -72,6 +125,7 @@ export const DEFAULT_USER_METADATA: UserMetadata = {
   timezone: DEFAULT_TIMEZONE,
   onboarding: { completed: false, completedAt: null },
   profile: null,
+  ...DEFAULT_PREFERENCES,
 };
 
 function isValidTimezone(timeZone: string) {
@@ -98,17 +152,61 @@ function jsonOuNulo(texto: string): unknown {
   }
 }
 
-/** Aplica um patch já validado. `now` marca a conclusão do onboarding. */
+/** Aplica um patch já validado. `now` marca a conclusão do onboarding e os dias das férias. */
 export function applyUserMetadataPatch(current: UserMetadata, patch: UserMetadataPatch, now: number): UserMetadata {
-  const { onboardingCompleted, theme, reduceMotion, timezone, profile } = patch;
+  const { onboardingCompleted, theme, reduceMotion, timezone, profile, vacation, dailyFocusGoalMinutes, ...preferences } = patch;
+  const zone = timezone ?? current.timezone;
+  const dayStartMinutes = (profile === undefined ? current.profile : profile)?.dayStartMinutes;
   return {
     ...current,
+    focusMinutes: preferences.focusMinutes ?? current.focusMinutes,
+    breakMinutes: preferences.breakMinutes ?? current.breakMinutes,
+    // Ausente não mexe; `null` tira a meta.
+    dailyFocusGoalMinutes: dailyFocusGoalMinutes === undefined ? current.dailyFocusGoalMinutes : dailyFocusGoalMinutes,
+    eveningReminder: preferences.eveningReminder ?? current.eveningReminder,
+    sounds: preferences.sounds ?? current.sounds,
+    aiEnabled: preferences.aiEnabled ?? current.aiEnabled,
+    ambientSound: preferences.ambientSound ?? current.ambientSound,
+    vacation: vacation === undefined ? current.vacation : toggleVacation(current.vacation, vacation.ligado, dateKeyOf(now, zone, dayStartMinutes)),
     theme: theme ?? current.theme,
     reduceMotion: reduceMotion ?? current.reduceMotion,
-    timezone: timezone ?? current.timezone,
+    timezone: zone,
     // Ausente não mexe; `null` apaga.
     profile: profile === undefined ? current.profile : profile,
     onboarding: nextOnboarding(current.onboarding, onboardingCompleted, now),
+  };
+}
+
+/**
+ * Liga ou desliga o modo férias em `today`. Ao desligar, os dias de férias (até hoje) viram um período guardado,
+ * para a sequência não quebrar depois. Repetir o mesmo estado não muda nada.
+ */
+function toggleVacation(current: Vacation, ligado: boolean, today: string): Vacation {
+  if (ligado === current.ligado) return current;
+  const { periodos } = current;
+  if (!ligado) {
+    const de = current.desde ?? today;
+    const ate = de > today ? de : today;
+    return { ligado, desde: null, periodos: [...periodos, { de, ate }].slice(-PREFERENCES.maxVacationPeriods) };
+  }
+  // Religar no mesmo dia (ou logo no seguinte) continua o último período em vez de criar outro.
+  const last = periodos.at(-1);
+  if (last && last.ate >= addDays(today, -1)) return { ligado, desde: last.de, periodos: periodos.slice(0, -1) };
+  return { ligado, desde: today, periodos };
+}
+
+/** As preferências da conta, sem o resto dos metadados. */
+export function preferencesFromMetadata(metadata: UserMetadata): Preferences {
+  const { focusMinutes, breakMinutes, dailyFocusGoalMinutes, eveningReminder, vacation, sounds, aiEnabled, ambientSound } = metadata;
+  return {
+    focusMinutes,
+    breakMinutes,
+    dailyFocusGoalMinutes,
+    eveningReminder: { ...eveningReminder },
+    vacation: { ...vacation, periodos: vacation.periodos.map((p) => ({ ...p })) },
+    sounds,
+    aiEnabled,
+    ambientSound,
   };
 }
 

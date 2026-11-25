@@ -1,13 +1,15 @@
 import { DAY_ROLLOVER_HOUR, DEFAULT_TIMEZONE, STREAK } from '../config/decisions';
 import { sessionCountsAsCare } from './care-days';
 import { addDays, dateKeyOf, diffDays, weekDates, weekdayOf } from './day';
-import type { Clock, DateKey, FocusSession, HabitLog, Repository, RestDay, Streak, StreakDayState } from './types';
+import type { Clock, DateKey, FocusSession, HabitLog, Repository, RestDay, Streak, StreakDayState, Vacation } from './types';
 
 export interface StreakInput {
   /** Só a data importa: um registro por dia basta. */
   habitLogs: readonly Pick<HabitLog, 'date'>[];
   sessions: readonly FocusSession[];
   restDays: readonly RestDay[];
+  /** Modo férias (spec 15): os dias de férias contam como descanso. */
+  vacation?: Vacation;
   timeZone: string;
   /** Hora em que o dia vira para a pessoa, em minutos desde 00:00. Sem perfil, `DAY_ROLLOVER_HOUR`. */
   dayStartMinutes?: number;
@@ -25,6 +27,17 @@ function streakToday(now: number, timeZone: string, rolloverMinutes: number, dat
   return dated.reduce((today, date) => (date > today && date <= app ? date : today), own);
 }
 
+/** Os dias de férias até hoje: períodos encerrados e o atual. */
+function vacationDates(vacation: Vacation | undefined, today: DateKey): DateKey[] {
+  if (!vacation) return [];
+  const current = vacation.ligado && vacation.desde ? [{ de: vacation.desde, ate: today }] : [];
+  const dates: DateKey[] = [];
+  for (const { de, ate } of [...vacation.periodos, ...current]) {
+    for (let date = de; date <= ate && date <= today; date = addDays(date, 1)) dates.push(date);
+  }
+  return dates;
+}
+
 /**
  * Sequência atual, recorde e a semana corrente. Um dia conta quando tem um hábito feito ou uma sessão de foco que conta
  * como cuidado. Descanso mantém a chama sem somar. Hoje vazio só quebra quando o dia termina.
@@ -34,6 +47,8 @@ export function computeStreak(input: StreakInput): Streak {
   const habitDates = input.habitLogs.map((log) => log.date);
   const rest = new Set(input.restDays.map((r) => r.date));
   const today = streakToday(now, timeZone, dayStartMinutes, [...habitDates, ...rest]);
+
+  for (const date of vacationDates(input.vacation, today)) rest.add(date);
 
   const done = new Set(habitDates);
   for (const session of input.sessions) {
