@@ -9,7 +9,7 @@ import { verEstatisticasDoHabito } from '@pulo/core/domain/habit-stats';
 import { comprarNaIlha } from '@pulo/core/domain/ilha';
 import { criarPlanoInicial } from '@pulo/core/domain/routine';
 import { defineRepositoryContract } from '@pulo/core/data/repository-contract';
-import type { Habit, RoutineBlock, Task, User } from '@pulo/core/domain/types';
+import type { Habit, RoutineBlock, Task, FocusSession, User } from '@pulo/core/domain/types';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
 import { type FetchLike, MENSAGENS_DA_API, RemoteError, createRemoteRepository } from './index';
 
@@ -560,5 +560,63 @@ describe('hábitos v2 (spec 17)', () => {
     const fim = await open(me);
     expect(await fim.listHabits()).toEqual([limpo]);
     expect(await fim.listBlocks()).toEqual([semIcone]);
+  });
+});
+
+describe('RemoteRepository: foco com intenção e vínculo (spec 19)', () => {
+  const meta = () => ({ id: uuid(), title: 'm', state: 'ativa' as const, milestones: [], createdAt: 1 });
+  const foco = (extra: Partial<FocusSession> = {}): FocusSession => ({
+    id: uuid(), startedAt: TEST_NOW - 25 * 60_000, plannedMinutes: 25, state: 'em_andamento', pausedMs: 0, ...extra,
+  });
+
+  it('espera o alvo, limpa o que saiu, conta pomodoros e solta o foco ao apagar o alvo', async () => {
+    const me = await h.newUser();
+    const repo = await open(me);
+    const goal = meta();
+    const task: Task = { id: uuid(), title: 't', status: 'afazer', position: 1, priority: 'normal', tags: [], pomodorosEstimated: 1, createdAt: TEST_NOW - 1 };
+    const open1 = foco({ goalId: goal.id, intention: 'ler' });
+    await Promise.all([repo.saveGoal(goal), repo.saveTask(task), repo.saveSession(open1)]);
+
+    // Troca o alvo e tira a intenção.
+    const { goalId: _goal, intention: _intention, ...bare } = open1;
+    await repo.saveSession({ ...bare, taskId: task.id });
+    expect(await (await open(me)).listSessions()).toEqual([{ ...bare, taskId: task.id }]);
+
+    const done: FocusSession = { ...bare, taskId: task.id, state: 'concluida', endedAt: TEST_NOW };
+    await repo.saveSession(done);
+    await repo.saveSession(done);
+    expect(await repo.getPomodoros()).toEqual({ [task.id]: 1 });
+    expect(await (await open(me)).getPomodoros()).toEqual({ [task.id]: 1 });
+
+    await repo.deleteTask(task.id);
+    const { taskId: _task, ...unlinked } = done;
+    expect(await repo.listSessions()).toEqual([unlinked]);
+    expect(await repo.getPomodoros()).toEqual({});
+    expect(await (await open(me)).listSessions()).toEqual([unlinked]);
+  });
+
+  it('alvo apagado em outro aparelho: o foco encerra e o cache fica como o servidor', async () => {
+    const me = await h.newUser();
+    const repo = await open(me);
+    const goal = meta();
+    await repo.saveGoal(goal);
+    const running = foco({ goalId: goal.id });
+    await repo.saveSession(running);
+    await (await open(me)).deleteGoal(goal.id);
+    await repo.saveSession({ ...running, state: 'concluida', endedAt: TEST_NOW });
+    expect((await repo.listSessions())[0]).not.toHaveProperty('goalId');
+  });
+
+  it('apagar alvo recusado devolve o vínculo no cache', async () => {
+    const me = await h.newUser();
+    let falhar = false;
+    const repo = await open(me, (request) => (falhar ? Response.json({ error: 'erro_interno' }, { status: 500 }) : h.app.fetch(request)));
+    const goal = meta();
+    await repo.saveGoal(goal);
+    const running = foco({ goalId: goal.id });
+    await repo.saveSession(running);
+    falhar = true;
+    await expect(repo.deleteGoal(goal.id)).rejects.toMatchObject({ code: 'erro_interno' });
+    expect(await repo.listSessions()).toEqual([running]);
   });
 });
