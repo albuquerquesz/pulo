@@ -16,6 +16,8 @@ erDiagram
   user ||--o{ rest_day : tem
   user ||--o{ weekly_proposal : tem
   user ||--o{ goal : tem
+  goal |o--o{ habit : "atrelada a"
+  goal ||--o| goal_chest : "baú aberto"
   user ||--o{ task : tem
   user ||--o| task_counter : tem
   task ||--o{ task_subtask : "tem"
@@ -49,6 +51,7 @@ erDiagram
     text title
     smallint_array weekdays
     boolean active
+    text goalId FK "SET NULL"
   }
   habit_log {
     text habitId PK
@@ -93,6 +96,14 @@ erDiagram
     jsonb milestones "GoalMilestone[]"
     timestamptz createdAt
     timestamptz completedAt
+    text icon
+    accent_color color
+  }
+  goal_chest {
+    text userId PK
+    text goalId PK
+    timestamptz abertoEm
+    int joias "0 ou mais"
   }
   task {
     text id PK
@@ -178,7 +189,7 @@ Regras que o banco garante (migração `restricoes`, em SQL):
 - `goal` concluída se, e somente se, tem `completedAt`; `milestones` é sempre um array JSON (migração `metas`).
   O limite de metas ativas (`GOALS.maxActive`) é da API, numa transação serializável.
 - uma `island_purchase` por pessoa e item (chave primária `userId, item`) e `cost` nunca negativo (migração `ilha`).
-  A compra é imutável e o saldo de joias não é gravado: sai dos hábitos feitos, sessões, descansos, metas e do `joia_credit`.
+  A compra é imutável e o saldo de joias não é gravado: sai dos hábitos feitos, sessões, descansos, marcos, baús de meta abertos e do `joia_credit`.
   O preço e o saldo são conferidos pela API (core), numa transação serializável.
 - migração `joias_casa`: `kind` separa a casa, o quarto e a ilha antiga (`antiga`, o padrão, que não gasta joias na casa nem no quarto);
   `room_placement` guarda a posição de cada decoração (sai junto com a compra); `joia_credit` recebe, uma vez, a diferença de quem
@@ -187,6 +198,9 @@ Regras que o banco garante (migração `restricoes`, em SQL):
 - migração `tarefas` (só tipos e tabelas novas): `task` feita se, e somente se, tem `completedAt`; `(userId, number)` único;
   subtarefa, comentário e evento só apontam para tarefa da mesma pessoa (chave composta `taskId, userId`) e saem junto com ela.
   `task_counter` só cresce, então o número de uma tarefa apagada não volta. Que a meta da tarefa é da pessoa quem confere é a API.
+- migração `metas_v2`: `goal` ganha `icon` e `color` (nulos nas que já existiam), `habit` ganha `goalId` (apagar a meta solta o
+  hábito; que a meta é da pessoa quem confere é a API) e `goal_chest` guarda um resgate por meta (sai junto com ela). A migração
+  cria, uma vez, o resgate já aberto das metas que estavam concluídas, com as 10 joias que elas já valiam.
 
 Convenções de tipo: `DateKey` do domínio ('AAAA-MM-DD', o dia lógico) é `date`; instantes (ms) são `timestamptz`;
 os enums do Prisma têm os mesmos valores das uniões de `packages/core/domain/types.ts`.

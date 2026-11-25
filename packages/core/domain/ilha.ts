@@ -149,17 +149,18 @@ export function validarCompra(item: string, estado: EstadoDaIlha): Result<number
 }
 
 async function lerIlha(repo: Repository): Promise<EstadoDaIlha> {
-  const [habitLogs, sessions, restDays, goals, credito, compras, casa, quarto] = await Promise.all([
+  const [habitLogs, sessions, restDays, goals, baus, credito, compras, casa, quarto] = await Promise.all([
     repo.listHabitLogs(),
     repo.listSessions(),
     repo.listRestDays(),
     repo.listGoals(),
+    repo.listGoalChests(),
     repo.getJoiaCredit(),
     repo.listIslandPurchases(),
     repo.listHousePurchases(),
     repo.listRoomDecor(),
   ]);
-  return estadoDaIlha({ habitLogs, sessions, restDays, goals, credito }, compras, [...casa, ...quarto]);
+  return estadoDaIlha({ habitLogs, sessions, restDays, goals, baus, credito }, compras, [...casa, ...quarto]);
 }
 
 /** Estado atual da ilha, lido do repositório. */

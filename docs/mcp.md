@@ -39,6 +39,8 @@ O endereço também aparece em Perfil, "Conectar uma IA".
 
 ## Como funciona
 
+- **Baú e metas (spec 16):** `concluir_ou_reabrir_meta` não rende joias sozinho: o prêmio entra quando a pessoa abre o baú no app
+  (não há ferramenta para isso). Editar uma meta ou um hábito pelo MCP mantém ícone, cor e a meta atrelada.
 - **Mesmas regras das telas:** cada ferramenta roda o caso de uso do core (`criarHabito`, `iniciarFoco`, `criarMeta`...) sobre um
   `Repository` que chama as rotas da própria API por dentro (`apps/api/src/mcp/repositorio.ts`, `app.fetch` sem rede).
   Validação, limites (5 hábitos por dia, 3 metas ativas), transações e o cálculo do sapo são os mesmos do app.

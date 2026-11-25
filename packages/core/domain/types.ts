@@ -53,6 +53,8 @@ export interface Habit {
   title: string;
   weekdays: Weekday[];
   active: boolean;
+  /** Meta que o hábito empurra (spec 16); no máximo uma. */
+  goalId?: EntityId;
 }
 
 export interface HabitLog {
@@ -152,6 +154,9 @@ export interface WeeklyProposal {
 
 export type GoalState = 'ativa' | 'concluida';
 
+/** Cor de destaque escolhida pela pessoa: um nome do design system (`ACCENT_COLORS`), nunca um hex. */
+export type AccentColor = 'sapo' | 'agua' | 'foco' | 'descanso' | 'sol' | 'atencao';
+
 /** Passo de uma meta. `doneAt` existe quando o marco foi riscado. */
 export interface GoalMilestone {
   id: EntityId;
@@ -173,6 +178,17 @@ export interface Goal {
   milestones: GoalMilestone[];
   createdAt: number;
   completedAt?: number;
+  /** Emoji curto (spec 16). Ausente: a tela usa `GOALS.defaultIcon`. */
+  icon?: string;
+  /** Ausente: a tela usa `GOALS.defaultColor`. */
+  color?: AccentColor;
+}
+
+/** Resgate do baú de uma meta concluída (spec 16): um por meta, e só então as joias contam no saldo. */
+export interface GoalChest {
+  goalId: EntityId;
+  abertoEm: number;
+  joias: number;
 }
 
 /**
@@ -353,7 +369,12 @@ export interface Repository {
 
   listGoals(): Promise<Goal[]>;
   saveGoal(goal: Goal): Promise<void>;
+  /** Apaga a meta e o baú dela; hábitos e tarefas ficam, sem a meta. */
   deleteGoal(id: EntityId): Promise<void>;
+  /** Baús já abertos. */
+  listGoalChests(): Promise<GoalChest[]>;
+  /** Abre o baú de uma meta concluída. No remoto, quem decide as joias e a hora é o servidor. */
+  saveGoalChest(chest: GoalChest): Promise<void>;
 
   listIslandPurchases(): Promise<IslandPurchase[]>;
   saveIslandPurchase(purchase: IslandPurchase): Promise<void>;

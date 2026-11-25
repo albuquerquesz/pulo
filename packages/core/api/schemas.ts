@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import {
+import { ACCENT_COLORS,
   ACCOUNT,
   BLOCK_MAX_MINUTES,
   BLOCK_MIN_MINUTES,
@@ -120,7 +120,11 @@ export const habitSchema = z.object({
   title: titleSchema,
   weekdays: z.array(weekdaySchema).min(1).max(7),
   active: z.boolean(),
+  goalId: idSchema.optional(),
 }) satisfies z.ZodType<Habit, unknown>;
+
+/** Corpo de escrita de um hábito. `goalId`: ausente mantém a meta gravada (clientes antigos), `null` solta. */
+export const habitInputSchema = habitSchema.extend({ goalId: idSchema.nullable().optional() });
 
 /** Ids repetidos no mesmo lote: o servidor não consegue gravar duas versões do mesmo item de uma vez. */
 function uniqueIds(field: 'blocks' | 'habits') {
@@ -326,6 +330,8 @@ export const goalSchema = z
     milestones: z.array(goalMilestoneSchema).max(GOALS.maxMilestones),
     createdAt: msSchema,
     completedAt: msSchema.optional(),
+    icon: z.string().trim().min(1).max(GOALS.iconMaxChars).regex(/^\S+$/).optional(),
+    color: z.enum(ACCENT_COLORS).optional(),
   })
   .superRefine((goal, ctx) => {
     const issue = (path: string, message: string) => ctx.addIssue({ code: 'custom', path: [path], message });
@@ -410,9 +416,9 @@ export const roomSpotSchema = z.object(spotShape) satisfies z.ZodType<RoomSpot, 
 /** Corpo de `PUT /api/room/:item`: a compra com a posição inicial. */
 export const roomDecorSchema = islandPurchaseSchema.extend(spotShape) satisfies z.ZodType<RoomDecor, unknown>;
 
-/** Corpo de `PUT /api/habits`: vários hábitos de uma vez (tudo ou nada). Cada item segue `habitSchema`. */
+/** Corpo de `PUT /api/habits`: vários hábitos de uma vez (tudo ou nada). Cada item segue `habitInputSchema`. */
 export const habitsBatchSchema = z
-  .object({ habits: z.array(habitSchema).min(1).max(API_LIMITS.batchMaxHabits) })
+  .object({ habits: z.array(habitInputSchema).min(1).max(API_LIMITS.batchMaxHabits) })
   .superRefine(uniqueIds('habits'));
 
 // ---------- Consultas ----------
@@ -466,6 +472,9 @@ export const API_ERROR_CODES = [
   'conflito_de_id',
   'limite_por_dia',
   'limite_de_metas',
+  'meta_inexistente',
+  'meta_nao_concluida',
+  'bau_ja_aberto',
   'limite_de_subtarefas',
   'item_inexistente',
   'preco_divergente',

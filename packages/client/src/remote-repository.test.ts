@@ -1,7 +1,7 @@
 // Roda a API de verdade (Hono + Better Auth + Prisma) no mesmo processo, sobre o Postgres de teste.
 // O `fetch` do cliente é o `app.fetch`: nenhuma rede, nenhum mock da API.
 import { createHarness, TEST_NOW, TEST_ORIGIN, type TestUser } from '@pulo/api/src/testing';
-import { DEFAULT_TIMEZONE, MAX_HABITS_PER_DAY } from '@pulo/core/config/decisions';
+import { DEFAULT_TIMEZONE, JOIAS, MAX_HABITS_PER_DAY } from '@pulo/core/config/decisions';
 import { dateKeyOf } from '@pulo/core/domain/day';
 import { verSequencia } from '@pulo/core/domain/streak';
 import { comprarNaIlha } from '@pulo/core/domain/ilha';
@@ -486,3 +486,27 @@ describe('RemoteRepository: tarefas', () => {
   });
 });
 
+
+describe('RemoteRepository: baú e hábito atrelado', () => {
+  it('o baú vem do servidor, outro aparelho vê e o recusado sai do cache', async () => {
+    const me = await h.newUser();
+    const repo = await open(me);
+    const goal = { id: 'meta-bau', title: 'x', state: 'concluida' as const, milestones: [], createdAt: 1, completedAt: 2 };
+    const habit = { id: 'habito-bau', title: 'ler', weekdays: [0 as const], active: true, goalId: goal.id };
+    // Sem esperar: o hábito e o baú aguardam a meta chegar.
+    await Promise.all([repo.saveGoal(goal), repo.saveHabit(habit), repo.saveGoalChest({ goalId: goal.id, abertoEm: 1, joias: 999 })]);
+    const chest = { goalId: goal.id, abertoEm: TEST_NOW, joias: JOIAS.por.goalCompleted };
+    expect(await repo.listGoalChests()).toEqual([chest]);
+    const outro = await open(me);
+    expect(await outro.listGoalChests()).toEqual([chest]);
+    expect(await outro.listHabits()).toEqual([habit]);
+
+    await expect(repo.saveGoalChest({ goalId: goal.id, abertoEm: 1, joias: 999 })).rejects.toMatchObject({ code: 'bau_ja_aberto' });
+    expect(await repo.listGoalChests()).toEqual([chest]);
+
+    // Soltar chega ao servidor (um corpo sem `goalId` manteria a meta).
+    const { goalId: _goalId, ...solto } = habit;
+    await repo.saveHabits([solto]);
+    expect(await (await open(me)).listHabits()).toEqual([solto]);
+  });
+});

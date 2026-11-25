@@ -13,7 +13,7 @@ export const blockSelect = {
   title: true,
 } as const satisfies Prisma.RoutineBlockSelect;
 
-export const habitSelect = { id: true, title: true, weekdays: true, active: true } as const satisfies Prisma.HabitSelect;
+export const habitSelect = { id: true, title: true, weekdays: true, active: true, goalId: true } as const satisfies Prisma.HabitSelect;
 
 export const habitLogSelect = { habitId: true, date: true, doneAt: true } as const satisfies Prisma.HabitLogSelect;
 
@@ -53,7 +53,11 @@ export const goalSelect = {
   milestones: true,
   createdAt: true,
   completedAt: true,
+  icon: true,
+  color: true,
 } as const satisfies Prisma.GoalSelect;
+
+export const goalChestSelect = { goalId: true, abertoEm: true, joias: true } as const satisfies Prisma.GoalChestSelect;
 
 export const islandPurchaseSelect = { item: true, cost: true, createdAt: true } as const satisfies Prisma.IslandPurchaseSelect;
 

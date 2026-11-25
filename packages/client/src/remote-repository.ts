@@ -26,6 +26,7 @@ import type {
   EntityId,
   FocusSession,
   Goal,
+  GoalChest,
   Habit,
   HabitLog,
   IslandPurchase,
@@ -61,6 +62,7 @@ import { type ApiClient, type ApiOptions, createApiClient, readJson } from './ap
 import {
   cloneBlock,
   cloneGoal,
+  cloneGoalChest,
   cloneHabit,
   cloneHabitLog,
   cloneIslandPurchase,
@@ -176,6 +178,7 @@ class ApiRepository implements RemoteRepository {
   private readonly restDays = new Collection<RestDay>((r) => r.date, cloneRestDay);
   private readonly proposals = new Collection<WeeklyProposal>((p) => p.id, cloneProposal);
   private readonly goals = new Collection<Goal>((g) => g.id, cloneGoal);
+  private readonly goalChests = new Collection<GoalChest>((b) => b.goalId, cloneGoalChest);
   private readonly islandPurchases = new Collection<IslandPurchase>((p) => p.item, cloneIslandPurchase);
 
   private readonly housePurchases = new Collection<Purchase>((p) => p.item, cloneIslandPurchase);
@@ -215,6 +218,7 @@ class ApiRepository implements RemoteRepository {
     this.restDays.replaceAll(data.restDays);
     this.proposals.replaceAll(data.proposals);
     this.goals.replaceAll(data.goals);
+    this.goalChests.replaceAll(data.goalChests);
     this.tasks.replaceAll(data.tasks);
     this.subtasks.replaceAll(data.subtasks);
     this.islandPurchases.replaceAll(data.islandPurchases);
@@ -374,16 +378,34 @@ class ApiRepository implements RemoteRepository {
     return this.habits.values();
   }
 
+  /**
+   * O corpo que o servidor espera: soltar a meta é `goalId: null` (omitido, o servidor mantém a gravada).
+   * Calcule antes da escrita otimista, enquanto o cache ainda tem a versão anterior.
+   */
+  private habitBody(habit: Habit) {
+    const released = habit.goalId === undefined && this.habits.peek(habit.id)?.goalId !== undefined;
+    return released ? { ...habit, goalId: null } : habit;
+  }
+
+  /** A meta nova do hábito precisa ter chegado ao servidor. */
+  private async afterGoals(habits: readonly Habit[]): Promise<void> {
+    await Promise.all(habits.map((habit) => (habit.goalId === undefined ? undefined : this.locks.get(`goal:${habit.goalId}`))));
+  }
+
   saveHabit(habit: Habit): Promise<void> {
+    const body = this.habitBody(habit);
     return this.write(this.habits, `habit:${habit.id}`, habit.id, habit, async () => {
-      await readJson(await this.client.api.habits[':id'].$put({ param: { id: habit.id }, json: habit }));
+      await this.afterGoals([habit]);
+      await readJson(await this.client.api.habits[':id'].$put({ param: { id: habit.id }, json: body }));
     });
   }
 
   saveHabits(habits: readonly Habit[]): Promise<void> {
     if (habits.length === 0) return Promise.resolve();
+    const body = habits.map((habit) => this.habitBody(habit));
     return this.writeMany(this.habits, 'habits:batch', habits, (h) => h.id, async () => {
-      await readJson(await this.client.api.habits.$put({ json: { habits: [...habits] } }));
+      await this.afterGoals(habits);
+      await readJson(await this.client.api.habits.$put({ json: { habits: body } }));
     });
   }
 
@@ -532,7 +554,11 @@ class ApiRepository implements RemoteRepository {
   }
 
   deleteGoal(id: EntityId): Promise<void> {
-    // O servidor solta o vínculo das tarefas; o cache faz o mesmo e devolve se der erro.
+    // O servidor solta o vínculo das tarefas e dos hábitos e apaga o baú; o cache faz o mesmo e devolve se der erro.
+    const chest = this.goalChests.peek(id);
+    this.goalChests.remove(id);
+    const habits = this.habits.raw().filter((habit) => habit.goalId === id);
+    const released = habits.map(({ goalId: _goalId, ...habit }) => this.habits.put(habit));
     const linked = this.tasks.raw().filter((task) => task.goalId === id);
     const unlinked = linked.map(({ goalId: _goalId, ...task }) => this.tasks.put(task));
     return this.write(
@@ -544,11 +570,28 @@ class ApiRepository implements RemoteRepository {
         await readJson(await this.client.api.goals[':id'].$delete({ param: { id } }));
       },
       () => {
+        if (chest !== undefined) this.goalChests.restore(id, chest);
+        habits.forEach((habit, i) => {
+          if (this.habits.peek(habit.id) === released[i]) this.habits.restore(habit.id, habit);
+        });
         linked.forEach((task, i) => {
           if (this.tasks.peek(task.id) === unlinked[i]) this.tasks.restore(task.id, task);
         });
       },
     );
+  }
+
+  async listGoalChests(): Promise<GoalChest[]> {
+    return this.goalChests.values().sort((a, b) => a.abertoEm - b.abertoEm);
+  }
+
+  /** Usa a mesma fila da meta, para a conclusão chegar antes. As joias e a hora ficam as do servidor. */
+  saveGoalChest(chest: GoalChest): Promise<void> {
+    const { goalId } = chest;
+    return this.write(this.goalChests, `goal:${goalId}`, goalId, chest, async () => {
+      const saved = await readJson(await this.client.api.goals[':id'].chest.$post({ param: { id: goalId } }));
+      this.goalChests.put(saved.chest);
+    });
   }
 
   // ---------- Tarefas ----------
@@ -769,7 +812,7 @@ class ApiRepository implements RemoteRepository {
   }
 
   private clearCache(): void {
-    const collections = [this.blocks, this.habits, this.habitLogs, this.sessions, this.restDays, this.proposals, this.goals, this.tasks, this.subtasks, this.islandPurchases, this.housePurchases, this.roomDecor];
+    const collections = [this.blocks, this.habits, this.habitLogs, this.sessions, this.restDays, this.proposals, this.goals, this.goalChests, this.tasks, this.subtasks, this.islandPurchases, this.housePurchases, this.roomDecor];
     for (const collection of collections) {
       collection.clear();
     }

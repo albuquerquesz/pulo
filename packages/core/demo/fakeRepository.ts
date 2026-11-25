@@ -1,6 +1,7 @@
 import type {
   FocusSession,
   Goal,
+  GoalChest,
   IslandPurchase,
   Purchase,
   RoomDecor,
@@ -28,6 +29,7 @@ export function createFakeRepository(): Repository {
   const rest = new Map<string, RestDay>();
   const proposals = new Map<string, WeeklyProposal>();
   const goals = new Map<string, Goal>();
+  const baus = new Map<string, GoalChest>();
   const compras = new Map<string, IslandPurchase>();
   const casa = new Map<string, Purchase>();
   const quarto = new Map<string, RoomDecor>();
@@ -59,7 +61,17 @@ export function createFakeRepository(): Repository {
     saveProposal: async (p) => void proposals.set(p.id, p),
     listGoals: async () => [...goals.values()],
     saveGoal: async (g) => void goals.set(g.id, g),
-    deleteGoal: async (id) => void goals.delete(id),
+    deleteGoal: async (id) => {
+      goals.delete(id);
+      baus.delete(id);
+      for (const h of habits.values()) {
+        if (h.goalId !== id) continue;
+        const { goalId: _goalId, ...solto } = h;
+        habits.set(h.id, solto);
+      }
+    },
+    listGoalChests: async () => [...baus.values()],
+    saveGoalChest: async (b) => void (baus.has(b.goalId) || baus.set(b.goalId, b)),
     listIslandPurchases: async () => [...compras.values()],
     saveIslandPurchase: async (c) => void compras.set(c.item, c),
     listHousePurchases: async () => [...casa.values()],
@@ -91,6 +103,7 @@ export function createFakeRepository(): Repository {
       rest.clear();
       proposals.clear();
       goals.clear();
+      baus.clear();
       compras.clear();
       casa.clear();
       quarto.clear();

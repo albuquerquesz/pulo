@@ -1,6 +1,6 @@
 import { JOIAS } from '../config/decisions';
 import { effectiveMs } from './care-days';
-import type { FocusSession, Goal, HabitLog, Purchase, RestDay } from './types';
+import type { FocusSession, GoalChest, Goal, HabitLog, Purchase, RestDay } from './types';
 
 /** O que gera joias. Tudo vem dos registros que o app já guarda, mais o crédito histórico. */
 export interface FontesDeJoias {
@@ -8,6 +8,8 @@ export interface FontesDeJoias {
   sessions: readonly FocusSession[];
   restDays: readonly RestDay[];
   goals: readonly Goal[];
+  /** Baús de meta abertos: só eles pagam o prêmio da meta (spec 16). */
+  baus: readonly GoalChest[];
   /** Joias dadas na troca de regra, para ninguém perder saldo. */
   credito: number;
 }
@@ -40,7 +42,7 @@ export function joiasGanhas(fontes: FontesDeJoias): JoiasGanhas {
   const focos = fontes.sessions.reduce((n, s) => n + joiasDoFoco(s), 0);
   const descansos = fontes.restDays.length * por.restDay;
   const marcos = fontes.goals.reduce((n, g) => n + g.milestones.filter((m) => m.doneAt !== undefined).length, 0) * por.milestoneDone;
-  const metas = fontes.goals.filter((g) => g.state === 'concluida').length * por.goalCompleted;
+  const metas = fontes.baus.reduce((n, b) => n + b.joias, 0);
   const anteriores = fontes.credito;
   return { habitos, focos, descansos, marcos, metas, anteriores, total: habitos + focos + descansos + marcos + metas + anteriores };
 }

@@ -75,9 +75,13 @@ describe('mapeadores', () => {
 
   it('Habit', () => {
     const habit: Habit = { id: 'h1', title: 'Alongar', weekdays: [0, 2, 4], active: true };
-    const row: HabitRow = { id: 'h1', userId: USER, title: 'Alongar', weekdays: [0, 2, 4], active: true };
-    expect(habitMapper.fromDomain(USER, habit)).toStrictEqual(row);
+    const row: HabitRow = { id: 'h1', userId: USER, title: 'Alongar', weekdays: [0, 2, 4], active: true, goalId: null };
+    const { goalId, ...semMeta } = row;
+    expect(goalId).toBeNull();
+    expect(habitMapper.fromDomain(USER, habit)).toStrictEqual(semMeta);
     expect(habitMapper.toDomain(row)).toStrictEqual(habit);
+    expect(habitMapper.toDomain({ ...row, goalId: 'g1' })).toStrictEqual({ ...habit, goalId: 'g1' });
+    expect(habitMapper.fromDomain(USER, { ...habit, goalId: null })).toStrictEqual(row);
   });
 
   it('HabitLog', () => {
@@ -151,6 +155,8 @@ describe('mapeadores', () => {
       milestones: [{ id: 'm1', title: '5 km', doneAt: 3 }, { id: 'm2', title: '10 km' }],
       createdAt: 1,
       completedAt: 9,
+      icon: '🏃',
+      color: 'foco',
     };
     const row: GoalRow = {
       id: 'g1',
@@ -162,12 +168,14 @@ describe('mapeadores', () => {
       milestones: [{ id: 'm1', title: '5 km', doneAt: 3 }, { id: 'm2', title: '10 km' }],
       createdAt: new Date(1),
       completedAt: new Date(9),
+      icon: '🏃',
+      color: 'foco',
     };
     expect(goalMapper.fromDomain(USER, goal)).toStrictEqual(row);
     expect(goalMapper.toDomain(row)).toStrictEqual(goal);
 
     const simples: Goal = { id: 'g2', title: 'x', state: 'ativa', milestones: [], createdAt: 1 };
-    const simplesRow: GoalRow = { ...row, id: 'g2', title: 'x', why: null, targetDate: null, state: 'ativa', milestones: [], completedAt: null };
+    const simplesRow: GoalRow = { ...row, id: 'g2', title: 'x', why: null, targetDate: null, state: 'ativa', milestones: [], completedAt: null, icon: null, color: null };
     expect(goalMapper.toDomain(simplesRow)).toStrictEqual(simples);
     expect(() => goalMapper.toDomain({ ...row, milestones: [{ title: 'sem id' }] })).toThrow();
   });

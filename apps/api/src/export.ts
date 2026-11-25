@@ -1,6 +1,7 @@
 import {
   type Db,
   focusSessionMapper,
+  goalChestMapper,
   goalMapper,
   habitLogMapper,
   habitMapper,
@@ -19,6 +20,7 @@ import type { SessionUser } from './http';
 import { listConnections } from './connections';
 import {
   blockSelect,
+  goalChestSelect,
   goalSelect,
   habitLogSelect,
   habitSelect,
@@ -45,7 +47,7 @@ export const EXPORT_VERSION = 1;
 export async function exportData(db: Db, person: SessionUser, exportedAt: number) {
   const { id: userId, name, email, image, createdAt, metadata } = person;
   const where = { userId };
-  const [blocks, habits, habitLogs, sessions, restDays, proposals, goals, tasks, subtasks, comments, events, taskCounter, purchases, roomDecor, joiaCredit, mascot] =
+  const [blocks, habits, habitLogs, sessions, restDays, proposals, goals, goalChests, tasks, subtasks, comments, events, taskCounter, purchases, roomDecor, joiaCredit, mascot] =
     await db.$transaction([
       db.routineBlock.findMany({ where, select: blockSelect, orderBy: [{ weekday: 'asc' }, { startMinutes: 'asc' }] }),
       db.habit.findMany({ where, select: habitSelect, orderBy: { id: 'asc' } }),
@@ -54,6 +56,7 @@ export async function exportData(db: Db, person: SessionUser, exportedAt: number
       db.restDay.findMany({ where, select: restDaySelect, orderBy: { date: 'asc' } }),
       db.weeklyProposal.findMany({ where, select: proposalSelect, orderBy: { weekStart: 'asc' } }),
       db.goal.findMany({ where, select: goalSelect, orderBy: { createdAt: 'asc' } }),
+      db.goalChest.findMany({ where, select: goalChestSelect, orderBy: { abertoEm: 'asc' } }),
       db.task.findMany({ where, select: taskSelect, orderBy: { number: 'asc' } }),
       db.taskSubtask.findMany({ where, select: taskSubtaskSelect, orderBy: [{ taskId: 'asc' }, { position: 'asc' }] }),
       db.taskComment.findMany({ where, select: taskCommentSelect, orderBy: { createdAt: 'asc' } }),
@@ -86,6 +89,7 @@ export async function exportData(db: Db, person: SessionUser, exportedAt: number
     restDays: restDays.map(restDayMapper.toDomain),
     proposals: proposals.map(weeklyProposalMapper.toDomain),
     goals: goals.map(goalMapper.toDomain),
+    goalChests: goalChests.map(goalChestMapper.toDomain),
     tasks: tasks.map(taskMapper.toDomain),
     subtasks: subtasks.map(taskSubtaskMapper.toDomain),
     taskComments: comments.map(taskCommentMapper.toDomain),

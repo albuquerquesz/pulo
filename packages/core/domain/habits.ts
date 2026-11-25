@@ -4,7 +4,7 @@ import { fail, ok, type Result } from './result';
 import { weekdayOf } from './day';
 import type { DateKey, EntityId, Habit, HabitLog, Repository, Weekday } from './types';
 
-export type HabitErrorCode = 'titulo_vazio' | 'dias_invalidos' | 'limite_por_dia' | 'habito_inexistente' | 'data_invalida';
+export type HabitErrorCode = 'titulo_vazio' | 'dias_invalidos' | 'limite_por_dia' | 'habito_inexistente' | 'data_invalida' | 'meta_inexistente';
 
 export interface HabitInput {
   title: string;
@@ -66,7 +66,20 @@ export async function editarHabito(
   const others = active ? habits.filter((h) => h.id !== id) : [];
   const checked = checkRules(input, others);
   if (!checked.ok) return checked;
-  const habit: Habit = { id, ...checked.value, active };
+  // A meta atrelada fica: quem muda o vínculo é `atrelarHabito`.
+  const habit: Habit = { ...current, ...checked.value, active };
+  await repo.saveHabit(habit);
+  return ok(habit);
+}
+
+/** Atrela o hábito a uma meta (troca a anterior) ou solta, com `goalId` nulo. */
+export async function atrelarHabito(repo: Repository, id: EntityId, goalId: EntityId | null): Promise<Result<Habit, HabitErrorCode>> {
+  const [habits, goals] = await Promise.all([repo.listHabits(), repo.listGoals()]);
+  const current = habits.find((h) => h.id === id);
+  if (!current) return fail('habito_inexistente', 'Hábito não encontrado.');
+  if (goalId !== null && !goals.some((g) => g.id === goalId)) return fail('meta_inexistente', 'Essa meta não existe mais.');
+  const { goalId: _anterior, ...rest } = current;
+  const habit: Habit = goalId === null ? rest : { ...rest, goalId };
   await repo.saveHabit(habit);
   return ok(habit);
 }

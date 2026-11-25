@@ -3,6 +3,7 @@ import type {
   DateRange,
   FocusSession,
   Goal,
+  GoalChest,
   IslandPurchase,
   Purchase,
   RoomDecor,
@@ -35,6 +36,7 @@ export interface Database {
   restDays: RestDay[];
   proposals: WeeklyProposal[];
   goals: Goal[];
+  goalChests: GoalChest[];
   islandPurchases: IslandPurchase[];
   housePurchases: Purchase[];
   roomDecor: RoomDecor[];
@@ -59,6 +61,7 @@ export function emptyDatabase(): Database {
     restDays: [],
     proposals: [],
     goals: [],
+    goalChests: [],
     islandPurchases: [],
     housePurchases: [],
     roomDecor: [],
@@ -159,12 +162,26 @@ export function createRepository(store: DatabaseStore, clock: Clock = systemCloc
     deleteGoal: (id) =>
       write((db) => {
         db.goals = db.goals.filter((g) => g.id !== id);
+        db.goalChests = db.goalChests.filter((b) => b.goalId !== id);
+        db.habits = db.habits.map((habit) => {
+          if (habit.goalId !== id) return habit;
+          const { goalId: _goalId, ...rest } = habit;
+          return rest;
+        });
         // A tarefa fica, sem a meta.
         db.tasks = db.tasks.map((task) => {
           if (task.goalId !== id) return task;
           const { goalId: _goalId, ...rest } = task;
           return rest;
         });
+      }),
+
+    listGoalChests: () => read((db) => db.goalChests),
+    saveGoalChest: (chest) =>
+      write((db) => {
+        // Uma vez só: o primeiro resgate fica.
+        if (db.goalChests.some((b) => b.goalId === chest.goalId)) return;
+        db.goalChests.push(clone(chest));
       }),
 
     listTasks: () => read((db) => db.tasks),

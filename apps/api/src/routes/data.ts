@@ -5,7 +5,7 @@ import { type AppEnv, type RouteDeps, requireSession } from '../http';
 
 /**
  * `DELETE /api/data`: o `clearAll` do servidor, único jeito de zerar o progresso. Apaga tudo do domínio da pessoa
- * (rotina, hábitos e registros, sessões, descansos, propostas, metas, tarefas (com subtarefas, comentários e histórico), compras com joias, crédito de joias e o sapo). A conta, o login e os
+ * (rotina, hábitos e registros, sessões, descansos, propostas, metas (com os baús), tarefas (com subtarefas, comentários e histórico), compras com joias, crédito de joias e o sapo). A conta, o login e os
  * metadados (tema, fuso, onboarding) ficam. As posições do quarto saem com as compras (cascade). Onze deletes numa transação.
  */
 export function dataRoutes({ auth, db, now }: RouteDeps) {
