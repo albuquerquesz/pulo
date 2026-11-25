@@ -170,11 +170,12 @@ async function criarTarefas(repo: Repository, clock: DemoClock): Promise<void> {
   }
 }
 
-function marcos(meta: string, total: number, feitos: number, quando: number): GoalMilestone[] {
-  return Array.from({ length: total }, (_, i) => ({
+/** Os marcos feitos ficam espaçados de dez em dez dias, o último em `ultimo`. */
+function marcos(meta: string, titulos: string[], feitos: number, ultimo: number): GoalMilestone[] {
+  return titulos.map((title, i) => ({
     id: `${meta}-${i + 1}`,
-    title: `Passo ${i + 1}`,
-    ...(i < feitos ? { doneAt: quando } : {}),
+    title,
+    ...(i < feitos ? { doneAt: ultimo - (feitos - 1 - i) * 10 * DIA_MS } : {}),
   }));
 }
 
@@ -210,38 +211,41 @@ export async function completarDemo(repo: Repository, clock: DemoClock): Promise
 
   await criarTarefas(repo, clock);
 
-  const createdAt = agora - 30 * DIA_MS;
   const feitoEm = agora - 3 * DIA_MS;
+  // A idade e o prazo de cada meta dão o ritmo do rascunho: uma em dia e uma um pouco atrás.
   const metas: Goal[] = [
     {
       id: 'demo-meta-ingles',
       title: 'Terminar o curso de inglês',
+      why: 'Quero viajar pro Canadá sem travar na conversa.',
       icon: '🎓',
       color: 'agua',
       state: 'ativa',
-      createdAt,
+      createdAt: agora - 43 * DIA_MS,
       targetDate: addDays(hoje, 40),
-      milestones: marcos('demo-meta-ingles', 5, 3, feitoEm),
+      milestones: marcos('demo-meta-ingles', ['Unidade 1', 'Unidade 2', 'Unidade 3', 'Unidade 4', 'Prova final'], 3, feitoEm),
     },
     {
       id: 'demo-meta-livros',
       title: 'Ler 4 livros no semestre',
+      why: 'Voltar a ler por prazer, não só pra faculdade.',
       icon: '📚',
       color: 'descanso',
       state: 'ativa',
-      createdAt,
+      createdAt: agora - 90 * DIA_MS,
       targetDate: addDays(hoje, 90),
-      milestones: marcos('demo-meta-livros', 4, 1, feitoEm),
+      milestones: marcos('demo-meta-livros', ['O Pequeno Príncipe', 'Dom Casmurro', 'Livro 3', 'Livro 4'], 1, feitoEm),
     },
     {
       id: 'demo-meta-corrida',
       title: 'Correr 5 km sem parar',
+      why: 'Ter fôlego pra brincar com meu sobrinho.',
       icon: '🏃',
       color: 'foco',
       state: 'concluida',
-      createdAt,
+      createdAt: agora - 90 * DIA_MS,
       completedAt: feitoEm,
-      milestones: marcos('demo-meta-corrida', 5, 5, feitoEm),
+      milestones: marcos('demo-meta-corrida', ['1 km', '2 km', '3 km', '4 km', '5 km'], 5, feitoEm),
     },
   ];
   for (const meta of metas) await repo.saveGoal(meta);
