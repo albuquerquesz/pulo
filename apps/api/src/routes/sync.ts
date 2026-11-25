@@ -63,7 +63,7 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
       db.weeklyProposal.findMany({ where: { userId }, select: proposalSelect, orderBy: { weekStart: 'desc' } }),
       db.goal.findMany({ where: { userId }, select: goalSelect, orderBy: { createdAt: 'asc' } }),
       db.goalChest.findMany({ where: { userId }, select: goalChestSelect, orderBy: { abertoEm: 'asc' } }),
-      db.task.findMany({ where: { userId }, select: taskSelect, orderBy: { number: 'asc' } }),
+      db.task.findMany({ where: { userId }, select: taskSelect, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] }),
       db.taskSubtask.findMany({ where: { userId }, select: taskSubtaskSelect, orderBy: [{ position: 'asc' }, { id: 'asc' }] }),
       db.islandPurchase.findMany({ where: { userId, kind: 'antiga' }, select: islandPurchaseSelect, orderBy: { createdAt: 'asc' } }),
       db.islandPurchase.findMany({ where: { userId, kind: 'casa' }, select: islandPurchaseSelect, orderBy: { createdAt: 'asc' } }),

@@ -463,7 +463,7 @@ describe('RemoteRepository: tarefas', () => {
     id: uuid(), title: 'Estudar', status: 'afazer', position: 1, priority: 'normal', tags: [], pomodorosEstimated: 1, createdAt: TEST_NOW - 1, ...extra,
   });
 
-  it('o código chega com a resposta, a subtarefa espera a tarefa e outro aparelho vê tudo', async () => {
+  it('a subtarefa espera a tarefa e outro aparelho vê tudo', async () => {
     const me = await h.newUser();
     const repo = await open(me);
     const nova = tarefa();
@@ -471,7 +471,7 @@ describe('RemoteRepository: tarefas', () => {
     const meta = { id: uuid(), title: 'm', state: 'ativa' as const, milestones: [], createdAt: 1 };
     // Tudo disparado junto, como a tela faria.
     await Promise.all([repo.saveGoal(meta), repo.saveTask({ ...nova, goalId: meta.id }), repo.saveSubtask(sub)]);
-    expect(await repo.listTasks()).toEqual([{ ...nova, goalId: meta.id, number: 1 }]);
+    expect(await repo.listTasks()).toEqual([{ ...nova, goalId: meta.id }]);
     await repo.addTaskComment({ id: uuid(), taskId: nova.id, body: 'anotado', createdAt: TEST_NOW - 1 });
     expect((await repo.listTaskActivity(nova.id)).comments).toHaveLength(1);
 

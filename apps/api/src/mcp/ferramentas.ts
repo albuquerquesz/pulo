@@ -35,7 +35,7 @@ import {
   registrarDescanso,
   removerBloco,
 } from '@pulo/core/domain/routine';
-import { TASK_COLUMNS, columnTasks, criarTarefa, matchesDueFilter, moverTarefa, positionAt, subtaskProgress, taskCode, verPomodoros } from '@pulo/core/domain/tasks';
+import { TASK_COLUMNS, columnTasks, criarTarefa, matchesDueFilter, moverTarefa, positionAt, subtaskProgress, verPomodoros } from '@pulo/core/domain/tasks';
 import type { Clock, DateKey, Goal, Habit, Repository, RoutineBlock, Task, TaskSubtask, User, Weekday } from '@pulo/core/domain/types';
 import { type ProposalDecisionBody, generateProposalResponseSchema, habitStateSchema, periodSchema } from '@pulo/core/api/schemas';
 import { z } from 'zod';
@@ -128,7 +128,6 @@ const tarefa = (t: Task, subtarefas: readonly TaskSubtask[], feitos?: number) =>
   const progresso = subtaskProgress(subtarefas, t.id);
   return {
     id: t.id,
-    codigo: taskCode(t),
     titulo: t.title,
     coluna: t.status,
     prioridade: t.priority,
@@ -805,7 +804,7 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     'ver_tarefas',
     {
       title: 'Ver as tarefas',
-      description: 'O quadro de tarefas por coluna (ideias, afazer, fazendo, feito), na ordem de cima para baixo, com código, prioridade, prazo e subtarefas.',
+      description: 'O quadro de tarefas por coluna (ideias, afazer, fazendo, feito), na ordem de cima para baixo, com id, prioridade, prazo e subtarefas.',
       inputSchema: { filtro: z.enum(['hoje', 'semana']).optional().describe('Só as com prazo para hoje ou para esta semana (vencidas entram)') },
       annotations: LEITURA,
     },

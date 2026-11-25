@@ -35,7 +35,7 @@ async function targets(userId: string) {
     select: { id: true },
   });
   const task = await database.db.task.create({
-    data: { userId, number: 1, title: 't', status: 'afazer', position: 1, priority: 'normal', tags: [], pomodorosEstimated: 2, createdAt: new Date(TEST_NOW) },
+    data: { userId, title: 't', status: 'afazer', position: 1, priority: 'normal', tags: [], pomodorosEstimated: 2, createdAt: new Date(TEST_NOW) },
     select: { id: true },
   });
   return { habitId: habit.id, goalId: goal.id, taskId: task.id };

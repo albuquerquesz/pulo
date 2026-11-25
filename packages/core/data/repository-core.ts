@@ -46,8 +46,6 @@ export interface Database {
   subtasks: TaskSubtask[];
   taskComments: TaskComment[];
   taskEvents: TaskEvent[];
-  /** Último número de tarefa dado (nunca volta, mesmo apagando). */
-  taskCounter: number;
   mascot: MascotState | null;
 }
 
@@ -71,7 +69,6 @@ export function emptyDatabase(): Database {
     subtasks: [],
     taskComments: [],
     taskEvents: [],
-    taskCounter: 0,
     mascot: null,
   };
 }
@@ -200,9 +197,8 @@ export function createRepository(store: DatabaseStore, clock: Clock = systemCloc
     saveTask: (task) =>
       write((db) => {
         const previous = db.tasks.find((t) => t.id === task.id);
-        const number = previous?.number ?? (db.taskCounter += 1);
         const createdAt = previous?.createdAt ?? task.createdAt;
-        upsert(db.tasks, { ...clone(task), number, createdAt }, (t) => t.id === task.id);
+        upsert(db.tasks, { ...clone(task), createdAt }, (t) => t.id === task.id);
         const at = clock.now();
         for (const change of taskChanges(previous, task)) {
           db.taskEvents.push({ id: newId(at, 'evento'), taskId: task.id, ...change, createdAt: at });

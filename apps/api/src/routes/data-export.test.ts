@@ -27,7 +27,6 @@ const WHERE_IN_FILE: Record<string, string | null> = {
   task_subtask: 'subtasks',
   task_comment: 'taskComments',
   task_event: 'taskEvents',
-  task_counter: 'lastTaskNumber',
   island_purchase: 'housePurchases',
   room_placement: 'roomDecor',
   joia_credit: 'joiaCredit',
@@ -71,7 +70,6 @@ describe('GET /api/data/export', () => {
       exportVersion: 1,
       user: { id: me.id },
       metadata: { focusMinutes: 25 },
-      lastTaskNumber: 1,
       joiaCredit: 7,
       islandPurchases: [{ item: 'banco' }],
       housePurchases: [{ item: 'cerca' }],
@@ -92,7 +90,7 @@ describe('GET /api/data/export', () => {
     await seedEverything(database, big.id, 'cinquenta', 50);
     const one = await queriesOf(database, small, 'GET', '/api/data/export');
     expect(await queriesOf(database, big, 'GET', '/api/data/export')).toBe(one);
-    // 2 de sessão, 18 leituras numa transação e as conexões.
-    expect(one).toBe(21);
+    // 2 de sessão, 17 leituras numa transação e as conexões.
+    expect(one).toBe(20);
   });
 });

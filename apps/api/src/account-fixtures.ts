@@ -26,12 +26,11 @@ export async function seedEverything({ db }: TestDatabase, userId: string, mark:
   await db.goal.createMany({ data: list.map((i) => ({ id: id('meta', i), userId, title: id('meta-titulo', i), state: 'ativa' as const, milestones: [], createdAt: at })) });
   await db.goalChest.createMany({ data: list.map((i) => ({ userId, goalId: id('meta', i), abertoEm: at, joias: 10 })) });
   await db.task.createMany({
-    data: list.map((i) => ({ id: id('tarefa', i), userId, number: i + 1, title: id('tarefa-titulo', i), status: 'afazer' as const, position: i, priority: 'normal' as const, tags: [], goalId: id('meta', i), pomodorosEstimated: 0, createdAt: at })),
+    data: list.map((i) => ({ id: id('tarefa', i), userId, title: id('tarefa-titulo', i), status: 'afazer' as const, position: i, priority: 'normal' as const, tags: [], goalId: id('meta', i), pomodorosEstimated: 0, createdAt: at })),
   });
   await db.taskSubtask.createMany({ data: list.map((i) => ({ id: id('sub', i), userId, taskId: id('tarefa', i), title: id('passo', i), done: false, position: 1 })) });
   await db.taskComment.createMany({ data: list.map((i) => ({ id: id('comentario', i), userId, taskId: id('tarefa', i), body: id('texto', i), createdAt: at })) });
   await db.taskEvent.createMany({ data: list.map((i) => ({ id: id('evento', i), userId, taskId: id('tarefa', i), kind: 'criada' as const, createdAt: at })) });
-  await db.taskCounter.create({ data: { userId, last: rows } });
   await db.islandPurchase.createMany({
     data: [
       { userId, item: 'banco', kind: 'antiga', cost: 8, createdAt: at },

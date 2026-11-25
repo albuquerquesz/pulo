@@ -436,8 +436,6 @@ export const taskPrioritySchema = z.enum(['normal', 'alta']);
 export const taskSchema = z
   .object({
     id: idSchema,
-    /** Só o servidor atribui; o que vier no corpo é ignorado. */
-    number: z.number().int().min(1).optional(),
     title: taskTitleSchema,
     description: z.string().min(1).max(TASKS.descriptionMaxChars).optional(),
     status: taskStatusSchema,

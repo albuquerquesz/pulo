@@ -1,7 +1,7 @@
 import { TASKS } from '@pulo/core/config/decisions';
 import { idParamSchema, subtaskParamSchema, taskCommentSchema, taskSchema, taskSubtaskSchema } from '@pulo/core/api/schemas';
 import { taskChanges } from '@pulo/core/domain/tasks';
-import { type Prisma, taskCommentMapper, taskEventMapper, taskMapper, taskSubtaskMapper } from '@pulo/db';
+import { taskCommentMapper, taskEventMapper, taskMapper, taskSubtaskMapper } from '@pulo/db';
 import { Hono } from 'hono';
 import { pomodoroRead, pomodorosFromRows } from '../queries';
 import { ApiError, type AppEnv, type Client, type RouteDeps, assertNotInFuture, jsonBody, pathParams, requireMatch, requireSession, sameValue } from '../http';
@@ -28,7 +28,7 @@ export function taskRoutes({ auth, db, now }: RouteDeps) {
     .get('/', async (c) => {
       const where = { userId: c.var.user.id };
       const [tasks, subtasks, done] = await db.$transaction([
-        db.task.findMany({ where, select: taskSelect, orderBy: { number: 'asc' } }),
+        db.task.findMany({ where, select: taskSelect, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] }),
         db.taskSubtask.findMany({ where, select: taskSubtaskSelect, orderBy: [{ position: 'asc' }, { id: 'asc' }] }),
         pomodoroRead(db, c.var.user.id),
       ]);
@@ -57,20 +57,9 @@ export function taskRoutes({ auth, db, now }: RouteDeps) {
           if (owned === 0) throw new ApiError(404, 'referencia_inexistente', 'A meta não existe.');
         }
 
-        let data: Prisma.TaskUncheckedCreateInput;
-        if (previous?.number === undefined) {
-          const { last } = await tx.taskCounter.upsert({
-            where: { userId },
-            create: { userId, last: 1 },
-            update: { last: { increment: 1 } },
-            select: { last: true },
-          });
-          data = taskMapper.fromDomain(userId, task, last);
-        } else {
-          // O número e o instante da criação são os da primeira gravação.
-          data = taskMapper.fromDomain(userId, { ...task, createdAt: previous.createdAt }, previous.number);
-        }
-        const { id: _id, userId: _owner, number: _number, ...update } = data;
+        // O instante da criação é o da primeira gravação.
+        const data = taskMapper.fromDomain(userId, previous ? { ...task, createdAt: previous.createdAt } : task);
+        const { id: _id, userId: _owner, ...update } = data;
         const stored = previous
           ? await tx.task.update({ where: { id_userId: { id: task.id, userId } }, data: update, select: taskSelect })
           : await tx.task.create({ data, select: taskSelect });
@@ -87,7 +76,7 @@ export function taskRoutes({ auth, db, now }: RouteDeps) {
     })
     .delete('/:id', pathParams(idParamSchema), async (c) => {
       const userId = c.var.user.id;
-      // Subtarefas, comentários e eventos saem junto (cascade). O contador fica: o número não volta.
+      // Subtarefas, comentários e eventos saem junto (cascade).
       const [, { count }] = await db.$transaction([
         travarTarefas(db, userId),
         db.task.deleteMany({ where: { id: c.req.valid('param').id, userId } }),

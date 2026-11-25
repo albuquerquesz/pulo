@@ -49,7 +49,7 @@ export const EXPORT_VERSION = 1;
 export async function exportData(db: Db, person: SessionUser, exportedAt: number) {
   const { id: userId, name, email, image, createdAt, metadata } = person;
   const where = { userId };
-  const [blocks, habits, habitLogs, sessions, restDays, proposals, goals, goalChests, tasks, subtasks, comments, events, taskCounter, purchases, roomDecor, joiaCredit, mascot, achievements] =
+  const [blocks, habits, habitLogs, sessions, restDays, proposals, goals, goalChests, tasks, subtasks, comments, events, purchases, roomDecor, joiaCredit, mascot, achievements] =
     await db.$transaction([
       db.routineBlock.findMany({ where, select: blockSelect, orderBy: [{ weekday: 'asc' }, { startMinutes: 'asc' }] }),
       db.habit.findMany({ where, select: { ...habitSelect, createdAt: true }, orderBy: { id: 'asc' } }),
@@ -59,11 +59,10 @@ export async function exportData(db: Db, person: SessionUser, exportedAt: number
       db.weeklyProposal.findMany({ where, select: proposalSelect, orderBy: { weekStart: 'asc' } }),
       db.goal.findMany({ where, select: goalSelect, orderBy: { createdAt: 'asc' } }),
       db.goalChest.findMany({ where, select: goalChestSelect, orderBy: { abertoEm: 'asc' } }),
-      db.task.findMany({ where, select: taskSelect, orderBy: { number: 'asc' } }),
+      db.task.findMany({ where, select: taskSelect, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] }),
       db.taskSubtask.findMany({ where, select: taskSubtaskSelect, orderBy: [{ taskId: 'asc' }, { position: 'asc' }] }),
       db.taskComment.findMany({ where, select: taskCommentSelect, orderBy: { createdAt: 'asc' } }),
       db.taskEvent.findMany({ where, select: taskEventSelect, orderBy: { seq: 'asc' } }),
-      db.taskCounter.findUnique({ where, select: { last: true } }),
       db.islandPurchase.findMany({ where, select: { ...islandPurchaseSelect, kind: true }, orderBy: { createdAt: 'asc' } }),
       db.islandPurchase.findMany({
         where: { userId, kind: 'decoracao' },
@@ -97,7 +96,6 @@ export async function exportData(db: Db, person: SessionUser, exportedAt: number
     subtasks: subtasks.map(taskSubtaskMapper.toDomain),
     taskComments: comments.map(taskCommentMapper.toDomain),
     taskEvents: events.map(taskEventMapper.toDomain),
-    lastTaskNumber: taskCounter?.last ?? 0,
     housePurchases: purchasesOf('casa'),
     roomDecor: roomDecor.map(roomPlacementMapper.toDomain),
     islandPurchases: purchasesOf('antiga'),
