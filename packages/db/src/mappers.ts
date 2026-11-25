@@ -2,6 +2,7 @@ import type {
   BlockSlot,
   FocusSession,
   Goal,
+  GoalChest,
   GoalMilestone,
   Habit,
   HabitLog,
@@ -27,6 +28,7 @@ import type {
   Prisma,
   FocusSession as FocusSessionRow,
   Goal as GoalRow,
+  GoalChest as GoalChestRow,
   Habit as HabitRow,
   HabitLog as HabitLogRow,
   IslandPurchase as IslandPurchaseRow,
@@ -111,10 +113,24 @@ export const routineBlockMapper = {
 
 export const habitMapper = {
   toDomain(row: Omit<HabitRow, 'userId'>): Habit {
-    return { id: row.id, title: row.title, weekdays: row.weekdays.map(toWeekday), active: row.active };
+    return {
+      id: row.id,
+      title: row.title,
+      weekdays: row.weekdays.map(toWeekday),
+      active: row.active,
+      ...(row.goalId === null ? {} : { goalId: row.goalId }),
+    };
   },
-  fromDomain(userId: string, habit: Habit): Prisma.HabitUncheckedCreateInput {
-    return { id: habit.id, userId, title: habit.title, weekdays: habit.weekdays, active: habit.active };
+  fromDomain(userId: string, habit: Omit<Habit, 'goalId'> & { goalId?: string | null }): Prisma.HabitUncheckedCreateInput {
+    // `goalId` ausente: a coluna não é tocada na atualização; `null` solta a meta.
+    return {
+      id: habit.id,
+      userId,
+      title: habit.title,
+      weekdays: habit.weekdays,
+      active: habit.active,
+      ...(habit.goalId === undefined ? {} : { goalId: habit.goalId }),
+    };
   },
 };
 
@@ -237,6 +253,8 @@ export const goalMapper = {
       ...(row.why === null ? {} : { why: row.why }),
       ...(row.targetDate === null ? {} : { targetDate: dateToDateKey(row.targetDate) }),
       ...(row.completedAt === null ? {} : { completedAt: dateToMs(row.completedAt) }),
+      ...(row.icon === null ? {} : { icon: row.icon }),
+      ...(row.color === null ? {} : { color: row.color }),
     };
   },
   fromDomain(userId: string, goal: Goal): Prisma.GoalUncheckedCreateInput {
@@ -250,7 +268,19 @@ export const goalMapper = {
       milestones: goal.milestones.map(milestoneToJson),
       createdAt: msToDate(goal.createdAt),
       completedAt: goal.completedAt === undefined ? null : msToDate(goal.completedAt),
+      // Ausentes não apagam o que está gravado: clientes antigos não mandam ícone nem cor.
+      ...(goal.icon === undefined ? {} : { icon: goal.icon }),
+      ...(goal.color === undefined ? {} : { color: goal.color }),
     };
+  },
+};
+
+export const goalChestMapper = {
+  toDomain(row: Omit<GoalChestRow, 'userId'>): GoalChest {
+    return { goalId: row.goalId, abertoEm: dateToMs(row.abertoEm), joias: row.joias };
+  },
+  fromDomain(userId: string, chest: GoalChest): Prisma.GoalChestUncheckedCreateInput {
+    return { userId, goalId: chest.goalId, abertoEm: msToDate(chest.abertoEm), joias: chest.joias };
   },
 };
 

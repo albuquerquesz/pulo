@@ -59,6 +59,7 @@ model User {
   taskCounter     TaskCounter?
   islandPurchases IslandPurchase[]
   joiaCredit      JoiaCredit?
+  goalChests      GoalChest[]
   mascotState     MascotState?
 
   oauthClients       OauthClient[]
@@ -372,6 +373,18 @@ enum GoalState {
   @@map("goal_state")
 }
 
+/// Nomes de cor do design system (`ACCENT_COLORS` no core).
+enum AccentColor {
+  sapo
+  agua
+  foco
+  descanso
+  sol
+  atencao
+
+  @@map("accent_color")
+}
+
 enum ProposalOrigin {
   ia
   regra
@@ -408,11 +421,15 @@ model Habit {
   /// Dias da semana (0 a 6) em que o hábito vale.
   weekdays Int[]   @db.SmallInt
   active   Boolean @default(true)
+  /// Meta que o hábito empurra; se ela for apagada, o hábito fica sem. A rota confere o dono.
+  goalId   String?
+  goal     Goal?   @relation(fields: [goalId], references: [id], onDelete: SetNull)
 
   logs HabitLog[]
 
   @@unique([id, userId])
   @@index([userId, active])
+  @@index([goalId])
   @@map("habit")
 }
 
@@ -496,12 +513,29 @@ model Goal {
   milestones  Json      @db.JsonB
   createdAt   DateTime  @db.Timestamptz(3)
   completedAt DateTime? @db.Timestamptz(3)
+  icon        String?
+  color       AccentColor?
 
-  tasks Task[]
+  tasks  Task[]
+  habits Habit[]
+  chest  GoalChest[]
 
   @@unique([id, userId])
   @@index([userId, state])
   @@map("goal")
+}
+
+/// Resgate do baú de uma meta concluída (spec 16): um por meta. Sai junto se a meta for apagada.
+model GoalChest {
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goalId   String
+  goal     Goal     @relation(fields: [goalId, userId], references: [id, userId], onDelete: Cascade)
+  abertoEm DateTime @db.Timestamptz(3)
+  joias    Int
+
+  @@id([userId, goalId])
+  @@map("goal_chest")
 }
 
 /// Cartão do quadro de tarefas (spec 20). O número (`PULO-n`) é dado pelo servidor.
