@@ -118,7 +118,7 @@ describe('servidor MCP', () => {
 
     const lista = await (await rpc(token, 'tools/list')).json();
     const nomes = lista.result.tools.map((t: { name: string }) => t.name);
-    expect(nomes).toEqual(expect.arrayContaining(['ver_hoje', 'criar_habito', 'marcar_habito', 'comecar_foco', 'criar_meta', 'decidir_proposta', 'ver_ilha', 'comprar_na_ilha']));
+    expect(nomes).toEqual(expect.arrayContaining(['ver_hoje', 'ver_sequencia', 'criar_habito', 'marcar_habito', 'comecar_foco', 'criar_meta', 'decidir_proposta', 'ver_ilha', 'comprar_na_ilha']));
 
     // Conta nova: precisa criar o sapo primeiro, como no onboarding.
     expect((await ferramenta(token, 'ver_hoje')).erro).toBe(true);
@@ -138,6 +138,7 @@ describe('servidor MCP', () => {
     const hoje = await ferramenta(token, 'ver_hoje');
     expect(hoje.dados.habitos).toEqual(expect.arrayContaining([{ id: habito.dados.id, titulo: 'Ler 10 páginas', feito: true }]));
     expect(hoje.dados.sapo.nome).toBe('Juca');
+    expect((await ferramenta(token, 'ver_sequencia')).dados).toMatchObject({ atual: 1, recorde: 1 });
 
     const meta = await ferramenta(token, 'criar_meta', { titulo: 'Correr uma maratona', prazo: '2027-09-20', marcos: ['5 km', '10 km'] });
     expect(meta.dados.progresso).toEqual({ done: 0, total: 2, ratio: 0 });

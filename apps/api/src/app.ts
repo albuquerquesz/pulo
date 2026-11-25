@@ -18,6 +18,7 @@ import { mascotRoutes } from './routes/mascot';
 import { proposalRoutes } from './routes/proposals';
 import { restDayRoutes } from './routes/rest-days';
 import { sessionRoutes } from './routes/sessions';
+import { streakRoutes } from './routes/streak';
 import { syncRoutes } from './routes/sync';
 import { weekSummaryRoutes } from './routes/week-summary';
 import { resolveWebConfig } from './web-config';
@@ -84,6 +85,7 @@ export function createApp(env: ApiEnv, db: Db, now = Date.now, options: AppOptio
     .route('/api/island', islandRoutes(deps))
     .route('/api/mascot', mascotRoutes(deps))
     .route('/api/week-summary', weekSummaryRoutes(deps))
+    .route('/api/streak', streakRoutes(deps))
     .route('/api/sync', syncRoutes(deps))
     .route('/api/data', dataRoutes(deps))
     .route('/', mcp)

@@ -210,6 +210,21 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
   );
 
   server.registerTool(
+    'ver_sequencia',
+    {
+      title: 'Ver a sequência',
+      description: 'Dias seguidos com hábito feito ou foco (descanso não quebra nem soma), o recorde e a semana, de domingo a sábado.',
+      annotations: LEITURA,
+    },
+    () =>
+      protegido(async () => {
+        await pessoa(repo);
+        const { streak } = await lerJson(await api.api.streak.$get());
+        return resposta(streak);
+      }),
+  );
+
+  server.registerTool(
     'ver_metas',
     { title: 'Ver as metas', description: 'Metas de longo prazo: ativas e concluídas, com marcos, progresso e prazo.', annotations: LEITURA },
     () =>
