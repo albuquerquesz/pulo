@@ -39,7 +39,7 @@ describe('/api/sessions', () => {
     const id = uuid();
     const start = await put(me, running(id));
     expect(start.status).toBe(200);
-    expect(await start.json()).toEqual({ session: running(id), mascot: null });
+    expect(await start.json()).toEqual({ session: running(id), mascot: null, newAchievements: [] });
 
     // Repetir é idempotente; pausar e retomar atualizam a mesma sessão.
     await put(me, running(id));
@@ -52,6 +52,7 @@ describe('/api/sessions', () => {
     expect(await end.json()).toEqual({
       session: finished(id, { pausedMs: 2 * MIN }),
       mascot: { phase: 1, careDays: 1, updatedAt: TEST_NOW },
+      newAchievements: [],
     });
     expect((await (await me.call('GET', '/api/mascot')).json()).mascot).toMatchObject({ careDays: 1 });
     expect(await listOf(me)).toEqual([finished(id, { pausedMs: 2 * MIN })]);
@@ -234,9 +235,11 @@ describe('/api/sessions', () => {
     // 2 de sessão + leitura (1) + upsert (1).
     expect(start).toBe(4);
 
+    // Grava o que o histórico já destrava, para a contagem abaixo não incluir o INSERT de uma conquista.
+    await put(big, finished(uuid(), { startedAt: TEST_NOW - 2 * 24 * 60 * MIN, endedAt: TEST_NOW - 2 * 24 * 60 * MIN + 25 * MIN }));
     const finish = await queriesOf(database, small, 'PUT', `/api/sessions/${startId.small}`, finished(startId.small));
     expect(await queriesOf(database, big, 'PUT', `/api/sessions/${startId.big}`, finished(startId.big))).toBe(finish);
-    // 2 de sessão + leitura + upsert + (sessões, descansos, sapo, upsert do sapo).
-    expect(finish).toBe(8);
+    // 2 de sessão + leitura + upsert + (sessões, descansos, sapo, upsert do sapo) + 5 leituras das conquistas.
+    expect(finish).toBe(13);
   });
 });

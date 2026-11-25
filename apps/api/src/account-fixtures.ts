@@ -41,6 +41,7 @@ export async function seedEverything({ db }: TestDatabase, userId: string, mark:
   });
   await db.roomPlacement.create({ data: { userId, item: 'tapete', x: 1, y: 2, rotation: 90 } });
   await db.joiaCredit.create({ data: { userId, amount: 7 } });
+  await db.achievement.create({ data: { userId, achievement: 'primeira-semana', conquistadaEm: at } });
   await db.mascotState.create({ data: { userId, phase: 2, careDays: 4, updatedAt: at } });
 
   // Login e OAuth: os segredos que nunca podem sair na exportação.

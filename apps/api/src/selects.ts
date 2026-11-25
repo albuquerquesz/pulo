@@ -57,6 +57,8 @@ export const goalSelect = {
   color: true,
 } as const satisfies Prisma.GoalSelect;
 
+export const achievementSelect = { achievement: true, conquistadaEm: true } as const satisfies Prisma.AchievementSelect;
+
 export const goalChestSelect = { goalId: true, abertoEm: true, joias: true } as const satisfies Prisma.GoalChestSelect;
 
 export const islandPurchaseSelect = { item: true, cost: true, createdAt: true } as const satisfies Prisma.IslandPurchaseSelect;

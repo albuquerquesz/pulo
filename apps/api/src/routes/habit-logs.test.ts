@@ -33,9 +33,9 @@ describe('/api/habit-logs', () => {
   it('marca, mantém a primeira marca ao repetir, filtra por intervalo e desmarca', async () => {
     const me = await h.newUser();
     const habitId = await newHabit(me);
-    expect(await (await put(me, log(habitId, '2026-11-16'))).json()).toEqual({ habitLog: log(habitId, '2026-11-16') });
+    expect(await (await put(me, log(habitId, '2026-11-16'))).json()).toEqual({ habitLog: log(habitId, '2026-11-16'), newAchievements: [] });
     // Repetir não troca o doneAt.
-    expect(await (await put(me, log(habitId, '2026-11-16', DONE_AT + 5000))).json()).toEqual({ habitLog: log(habitId, '2026-11-16') });
+    expect(await (await put(me, log(habitId, '2026-11-16', DONE_AT + 5000))).json()).toEqual({ habitLog: log(habitId, '2026-11-16'), newAchievements: [] });
     await put(me, log(habitId, '2026-11-18'));
     await put(me, log(habitId, '2026-11-25'));
 
@@ -103,12 +103,15 @@ describe('/api/habit-logs', () => {
       })).filter((row, i, rows) => rows.findIndex((r) => r.date.getTime() === row.date.getTime()) === i),
     });
 
+    // Grava o que o histórico já destrava, para a contagem abaixo não incluir o INSERT de uma conquista.
+    await put(big, log(bigHabit, '2026-11-01'));
+
     const get = await queriesOf(database, small, 'GET', '/api/habit-logs?from=2026-11-01&to=2026-11-30');
     expect(await queriesOf(database, big, 'GET', '/api/habit-logs?from=2026-11-01&to=2026-11-30')).toBe(get);
     expect(get).toBe(3);
     const putCount = await queriesOf(database, small, 'PUT', `/api/habit-logs/${smallHabit}/2026-11-17`, log(smallHabit, '2026-11-17'));
     expect(await queriesOf(database, big, 'PUT', `/api/habit-logs/${bigHabit}/2026-12-01`, log(bigHabit, '2026-12-01'))).toBe(putCount);
-    expect(putCount).toBe(4);
+    expect(putCount).toBe(9);
     const del = await queriesOf(database, small, 'DELETE', `/api/habit-logs/${smallHabit}/2026-11-17`);
     expect(await queriesOf(database, big, 'DELETE', `/api/habit-logs/${bigHabit}/2026-12-01`)).toBe(del);
     expect(del).toBe(3);

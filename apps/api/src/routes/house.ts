@@ -12,6 +12,7 @@ import type { Result } from '@pulo/core/domain/result';
 import type { Purchase } from '@pulo/core/domain/types';
 import { type Db, Prisma, islandPurchaseMapper, roomPlacementMapper } from '@pulo/db';
 import { Hono } from 'hono';
+import { unlockAchievements } from '../achievements';
 import { ApiError, type AppEnv, type Client, type RouteDeps, assertNotInFuture, jsonBody, pathParams, requireMatch, requireSession, sameValue } from '../http';
 import { lerFontesDeJoias } from '../joias';
 import { islandPurchaseSelect, roomDecorSelect } from '../selects';
@@ -80,7 +81,8 @@ export function houseRoutes({ auth, db, now }: RouteDeps) {
       await comprar(db, userId, purchase, validarCompraDaParte, (tx) =>
         tx.islandPurchase.create({ data: { ...islandPurchaseMapper.fromDomain(userId, purchase), kind: 'casa' }, select: { item: true } }),
       );
-      return c.json({ purchase });
+      const newAchievements = await unlockAchievements(db, c.var.user, now());
+      return c.json({ purchase, newAchievements });
     });
 }
 
