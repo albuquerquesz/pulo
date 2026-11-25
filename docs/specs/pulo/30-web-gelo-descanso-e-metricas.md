@@ -1,6 +1,6 @@
 # Spec 30: Web com gelo, descanso e métricas no Perfil
 
-Status: a fazer. Origem: conversa com o Victor de 25/11/2026. Frontend em `apps/web`. Depende das specs 22 (Hoje), 28 (Perfil) e 29 (backend).
+Status: feito. Origem: conversa com o Victor de 25/11/2026. Frontend em `apps/web`. Depende das specs 22 (Hoje), 28 (Perfil) e 29 (backend).
 
 ## Problem Statement
 
