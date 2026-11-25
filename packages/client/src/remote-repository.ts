@@ -11,6 +11,7 @@ import {
   mcpConnectionsResponseSchema,
   statsResponseSchema,
   streakResponseSchema,
+  habitStatsResponseSchema,
   taskCommentSchema,
   taskEventSchema,
 } from '@pulo/core/api/schemas';
@@ -19,6 +20,7 @@ import type { BatchWrites } from '@pulo/core/data/batch';
 import type { AchievementSource } from '@pulo/core/domain/achievements';
 import { systemClock } from '@pulo/core/domain/clock';
 import { dateKeyOf, inRange } from '@pulo/core/domain/day';
+import type { HabitStatsSource } from '@pulo/core/domain/habit-stats';
 import type { StatsSource } from '@pulo/core/domain/stats';
 import type { StreakSource } from '@pulo/core/domain/streak';
 import type {
@@ -32,6 +34,7 @@ import type {
   GoalChest,
   Habit,
   HabitLog,
+  HabitStats,
   IslandPurchase,
   Purchase,
   RoomDecor,
@@ -105,7 +108,7 @@ export interface Account {
  * Escritas atualizam o cache na hora e vão ao servidor com o `PUT` ou `DELETE` da rota; se falharem, o cache volta
  * ao que era e o erro (`RemoteError`, com texto em português) sobe para a tela.
  */
-export interface RemoteRepository extends Repository, BatchWrites, StreakSource, StatsSource, AchievementSource {
+export interface RemoteRepository extends Repository, BatchWrites, StreakSource, StatsSource, AchievementSource, HabitStatsSource {
   readonly account: Account;
   /**
    * `POST /api/proposals/generate`: o servidor lê os dados, aplica as regras, consulta a IA (se houver) e guarda a proposta.
@@ -139,6 +142,8 @@ export interface RemoteRepository extends Repository, BatchWrites, StreakSource,
    * Se a rede falhar, devolve os últimos.
    */
   getStats(): Promise<ProfileStats>;
+  /** `GET /api/habits/:id/stats`: calculadas pelo servidor, sem cache. Espera as escritas pendentes. */
+  getHabitStats(id: EntityId): Promise<HabitStats>;
   /** `GET /api/data/export`: todos os dados da conta, prontos para virar um arquivo. Espera as escritas pendentes. */
   exportData(): Promise<Record<string, unknown>>;
   /** Os aplicativos (Claude e outros) com acesso à conta. */
@@ -383,16 +388,24 @@ class ApiRepository implements RemoteRepository {
   }
 
   saveBlock(block: RoutineBlock): Promise<void> {
+    const body = this.blockBody(block);
     return this.write(this.blocks, `block:${block.id}`, block.id, block, async () => {
-      await readJson(await this.client.api.blocks[':id'].$put({ param: { id: block.id }, json: block }));
+      await readJson(await this.client.api.blocks[':id'].$put({ param: { id: block.id }, json: body }));
     });
   }
 
   saveBlocks(blocks: readonly RoutineBlock[]): Promise<void> {
     if (blocks.length === 0) return Promise.resolve();
+    const body = blocks.map((block) => this.blockBody(block));
     return this.writeMany(this.blocks, 'blocks:batch', blocks, (b) => b.id, async () => {
-      await readJson(await this.client.api.blocks.$put({ json: { blocks: [...blocks] } }));
+      await readJson(await this.client.api.blocks.$put({ json: { blocks: body } }));
     });
+  }
+
+  /** Como no hábito: o ícone que o bloco em cache tinha e este não tem mais sai com `null` (omitir manteria). */
+  private blockBody(block: RoutineBlock) {
+    const removed = block.icon === undefined && this.blocks.peek(block.id)?.icon !== undefined;
+    return removed ? { ...block, icon: null } : block;
   }
 
   deleteBlock(id: EntityId): Promise<void> {
@@ -408,12 +421,22 @@ class ApiRepository implements RemoteRepository {
   }
 
   /**
-   * O corpo que o servidor espera: soltar a meta é `goalId: null` (omitido, o servidor mantém a gravada).
-   * Calcule antes da escrita otimista, enquanto o cache ainda tem a versão anterior.
+   * Na API, campo omitido mantém o gravado e `null` limpa: o que o hábito em cache tinha e este não tem mais vai como
+   * `null` (o lembrete desligado, como `false`).
    */
   private habitBody(habit: Habit) {
-    const released = habit.goalId === undefined && this.habits.peek(habit.id)?.goalId !== undefined;
-    return released ? { ...habit, goalId: null } : habit;
+    const cached = this.habits.peek(habit.id);
+    const removed = <K extends 'goalId' | 'icon' | 'color' | 'period' | 'reminderMinutes'>(key: K) =>
+      habit[key] === undefined && cached?.[key] !== undefined ? null : habit[key];
+    return {
+      ...habit,
+      goalId: removed('goalId'),
+      icon: removed('icon'),
+      color: removed('color'),
+      period: removed('period'),
+      reminderMinutes: removed('reminderMinutes'),
+      reminderOn: habit.reminderOn ?? (cached?.reminderOn ? false : undefined),
+    };
   }
 
   /** A meta nova do hábito precisa ter chegado ao servidor. */
@@ -846,6 +869,12 @@ class ApiRepository implements RemoteRepository {
       if (!this.stats) throw error;
     }
     return { ...this.stats };
+  }
+
+  async getHabitStats(id: EntityId): Promise<HabitStats> {
+    await Promise.all(this.locks.values());
+    const raw = await readJson(await this.client.api.habits[':id'].stats.$get({ param: { id } }));
+    return habitStatsResponseSchema.parse(raw).stats;
   }
 
   async exportData(): Promise<Record<string, unknown>> {

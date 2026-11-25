@@ -6,7 +6,7 @@ import {
   goalChestMapper,
   goalMapper,
   habitLogMapper,
-  habitMapper,
+ 
   islandPurchaseMapper,
   mascotStateMapper,
   restDayMapper,
@@ -17,6 +17,7 @@ import {
   weeklyProposalMapper,
 } from '@pulo/db';
 import { Hono } from 'hono';
+import { habitFromRow } from '../habits';
 import { type AppEnv, type RouteDeps, queryParams, requireSession } from '../http';
 import { achievementSummaryFromRows, dateFilter, sessionRangeWhere, statsFromRows, streakFromRows, streakReads } from '../queries';
 import {
@@ -84,7 +85,7 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
       user: { id: userId, name, email, image },
       metadata,
       blocks: blocks.map(routineBlockMapper.toDomain),
-      habits: habits.map(habitMapper.toDomain),
+      habits: habits.map(habitFromRow),
       habitLogs: habitLogs.map(habitLogMapper.toDomain),
       sessions: sessions.map(focusSessionMapper.toDomain),
       restDays: restDays.map(restDayMapper.toDomain),

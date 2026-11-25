@@ -14,7 +14,11 @@ afterAll(async () => {
 });
 
 const uuid = () => crypto.randomUUID();
-const habit = (id: string, extra: Record<string, unknown> = {}) => ({ id, title: 'Beber água', weekdays: [0, 2], active: true, ...extra });
+/** O corpo que um hábito tem na resposta: `active` acompanha o `state`. */
+const habit = (id: string, extra: Record<string, unknown> = {}) => {
+  const body = { id, title: 'Beber água', weekdays: [0, 2], active: true, ...extra };
+  return { state: body.active === false ? 'arquivado' : 'ativo', ...body };
+};
 
 describe('/api/habits', () => {
   it('exige sessão', async () => {

@@ -8,6 +8,7 @@ import {
   BLOCK_MIN_MINUTES,
   FOCUS,
   GOALS,
+  HABITS,
   MAX_HABITS_PER_DAY,
   ROOM_GRID,
   TASKS,
@@ -23,6 +24,7 @@ import type {
   GoalMilestone,
   Habit,
   HabitLog,
+  HabitStats,
   IslandPurchase,
   RoomDecor,
   RoomRotation,
@@ -104,30 +106,57 @@ const titleSchema = z.string().trim().min(1).max(API_LIMITS.titleMaxChars);
 
 // ---------- Entidades ----------
 
-export const routineBlockSchema = z
-  .object({
-    id: idSchema,
-    weekday: weekdaySchema,
-    startMinutes: z.number().int().min(0).max(MINUTES_PER_DAY - 1),
-    durationMinutes: z.number().int().min(BLOCK_MIN_MINUTES).max(BLOCK_MAX_MINUTES),
-    kind: z.enum(['foco', 'descanso']),
-    title: titleSchema.optional(),
-  })
-  .refine((block) => block.startMinutes + block.durationMinutes <= MINUTES_PER_DAY, {
-    message: 'o bloco precisa caber dentro do dia',
-    path: ['durationMinutes'],
-  }) satisfies z.ZodType<RoutineBlock, unknown>;
+/** Emoji curto de hábitos e blocos (spec 17). */
+const iconSchema = z.string().trim().min(1).max(HABITS.iconMaxChars).regex(/^\S+$/);
+
+const blockObjectSchema = z.object({
+  id: idSchema,
+  weekday: weekdaySchema,
+  startMinutes: z.number().int().min(0).max(MINUTES_PER_DAY - 1),
+  durationMinutes: z.number().int().min(BLOCK_MIN_MINUTES).max(BLOCK_MAX_MINUTES),
+  kind: z.enum(['foco', 'descanso']),
+  title: titleSchema.optional(),
+  icon: iconSchema.optional(),
+});
+
+const fitsInDay = (block: { startMinutes: number; durationMinutes: number }) => block.startMinutes + block.durationMinutes <= MINUTES_PER_DAY;
+const fitsInDayIssue = { message: 'o bloco precisa caber dentro do dia', path: ['durationMinutes'] };
+
+export const routineBlockSchema = blockObjectSchema.refine(fitsInDay, fitsInDayIssue) satisfies z.ZodType<RoutineBlock, unknown>;
+
+/** Corpo de escrita de um bloco. `icon`: ausente mantém o gravado (clientes antigos), `null` tira. */
+export const routineBlockInputSchema = blockObjectSchema.extend({ icon: iconSchema.nullable().optional() }).refine(fitsInDay, fitsInDayIssue);
+
+export const habitStateSchema = z.enum(['ativo', 'pausado', 'arquivado']);
+
+const reminderMinutesSchema = z.number().int().min(0).max(MINUTES_PER_DAY - 1);
 
 export const habitSchema = z.object({
   id: idSchema,
   title: titleSchema,
   weekdays: z.array(weekdaySchema).min(1).max(7),
-  active: z.boolean(),
+  state: habitStateSchema,
   goalId: idSchema.optional(),
+  icon: iconSchema.optional(),
+  color: z.enum(ACCENT_COLORS).optional(),
+  period: periodSchema.optional(),
+  reminderMinutes: reminderMinutesSchema.optional(),
+  reminderOn: z.boolean().optional(),
 }) satisfies z.ZodType<Habit, unknown>;
 
-/** Corpo de escrita de um hábito. `goalId`: ausente mantém a meta gravada (clientes antigos), `null` solta. */
-export const habitInputSchema = habitSchema.extend({ goalId: idSchema.nullable().optional() });
+/**
+ * Corpo de escrita de um hábito. Campo opcional ausente mantém o gravado (clientes antigos) e `null` tira.
+ * `active` é o contrato antigo: sem `state`, `resolveHabitState` do core decide o estado a partir dele.
+ */
+export const habitInputSchema = habitSchema.extend({
+  state: habitStateSchema.optional(),
+  active: z.boolean().optional(),
+  goalId: idSchema.nullable().optional(),
+  icon: iconSchema.nullable().optional(),
+  color: z.enum(ACCENT_COLORS).nullable().optional(),
+  period: periodSchema.nullable().optional(),
+  reminderMinutes: reminderMinutesSchema.nullable().optional(),
+});
 
 /** Ids repetidos no mesmo lote: o servidor não consegue gravar duas versões do mesmo item de uma vez. */
 function uniqueIds(field: 'blocks' | 'habits') {
@@ -140,9 +169,9 @@ function uniqueIds(field: 'blocks' | 'habits') {
   };
 }
 
-/** Corpo de `PUT /api/blocks`: vários blocos de uma vez (tudo ou nada). Cada item segue `routineBlockSchema`. */
+/** Corpo de `PUT /api/blocks`: vários blocos de uma vez (tudo ou nada). Cada item segue `routineBlockInputSchema`. */
 export const blocksBatchSchema = z
-  .object({ blocks: z.array(routineBlockSchema).min(1).max(API_LIMITS.batchMaxBlocks) })
+  .object({ blocks: z.array(routineBlockInputSchema).min(1).max(API_LIMITS.batchMaxBlocks) })
   .superRefine(uniqueIds('blocks'));
 
 export const habitLogSchema = z.object({
@@ -178,6 +207,18 @@ export const focusSessionSchema = z
       issue('pausedSince', 'pausa antes do início');
     }
   }) satisfies z.ZodType<FocusSession, unknown>;
+
+export const habitStatsResponseSchema = z.object({
+  stats: z.object({
+    sequencia: z.number().int().min(0),
+    recorde: z.number().int().min(0),
+    taxa: z.number().min(0).max(1).nullable(),
+    total: z.number().int().min(0),
+    calendario: z.array(
+      z.array(z.object({ date: dateKeySchema, estado: z.enum(['feito', 'parcial', 'descanso', 'vazio', 'fora', 'futuro']) })),
+    ),
+  }),
+}) satisfies z.ZodType<{ stats: HabitStats }, unknown>;
 
 export const restDaySchema = z.object({ date: dateKeySchema }) satisfies z.ZodType<RestDay, unknown>;
 

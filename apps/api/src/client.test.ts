@@ -46,9 +46,9 @@ describe('hc<AppType>', () => {
     const habitId = crypto.randomUUID();
     const habitRes = await client.api.habits[':id'].$put({
       param: { id: habitId },
-      json: { id: habitId, title: 'Ler', weekdays: [0, 1], active: true },
+      json: { id: habitId, title: 'Ler', weekdays: [0, 1], state: 'ativo' },
     });
-    expectTypeOf((await habitRes.json()).habit).toEqualTypeOf<Habit>();
+    expectTypeOf((await habitRes.json()).habit).toExtend<Habit & { active: boolean }>();
 
     const sessionId = crypto.randomUUID();
     const sessionRes = await client.api.sessions[':id'].$put({

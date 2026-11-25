@@ -386,6 +386,22 @@ enum AccentColor {
   @@map("accent_color")
 }
 
+enum HabitState {
+  ativo
+  pausado
+  arquivado
+
+  @@map("habit_state")
+}
+
+enum HabitPeriod {
+  manha
+  tarde
+  noite
+
+  @@map("habit_period")
+}
+
 enum ProposalOrigin {
   ia
   regra
@@ -405,6 +421,8 @@ model RoutineBlock {
   durationMinutes Int       @db.SmallInt
   kind            BlockKind
   title           String?
+  /// Emoji curto da Linha do dia.
+  icon            String?
 
   focusSessions FocusSession[]
 
@@ -421,7 +439,17 @@ model Habit {
   title    String
   /// Dias da semana (0 a 6) em que o hábito vale.
   weekdays Int[]   @db.SmallInt
-  active   Boolean @default(true)
+  /// Legado, igual a `state = ativo` (gatilho na migração habitos_v2). Não leia nem grave: use `state`.
+  active          Boolean      @default(true)
+  state           HabitState   @default(ativo)
+  icon            String?
+  color           AccentColor?
+  period          HabitPeriod?
+  /// Minutos desde 00:00 (CHECK na migração).
+  reminderMinutes Int?         @db.SmallInt
+  reminderOn      Boolean      @default(false)
+  /// Nulo nos hábitos anteriores à spec 17.
+  createdAt       DateTime?    @default(now()) @db.Timestamptz(3)
   /// Meta que o hábito empurra; se ela for apagada, o hábito fica sem. A rota confere o dono.
   goalId   String?
   goal     Goal?   @relation(fields: [goalId], references: [id], onDelete: SetNull)
@@ -429,7 +457,7 @@ model Habit {
   logs HabitLog[]
 
   @@unique([id, userId])
-  @@index([userId, active])
+  @@index([userId, state])
   @@index([goalId])
   @@map("habit")
 }

@@ -5,7 +5,6 @@ import {
   goalChestMapper,
   goalMapper,
   habitLogMapper,
-  habitMapper,
   islandPurchaseMapper,
   mascotStateMapper,
   restDayMapper,
@@ -17,6 +16,7 @@ import {
   taskSubtaskMapper,
   weeklyProposalMapper,
 } from '@pulo/db';
+import { habitFromRow } from './habits';
 import type { SessionUser } from './http';
 import { listConnections } from './connections';
 import {
@@ -52,7 +52,7 @@ export async function exportData(db: Db, person: SessionUser, exportedAt: number
   const [blocks, habits, habitLogs, sessions, restDays, proposals, goals, goalChests, tasks, subtasks, comments, events, taskCounter, purchases, roomDecor, joiaCredit, mascot, achievements] =
     await db.$transaction([
       db.routineBlock.findMany({ where, select: blockSelect, orderBy: [{ weekday: 'asc' }, { startMinutes: 'asc' }] }),
-      db.habit.findMany({ where, select: habitSelect, orderBy: { id: 'asc' } }),
+      db.habit.findMany({ where, select: { ...habitSelect, createdAt: true }, orderBy: { id: 'asc' } }),
       db.habitLog.findMany({ where, select: habitLogSelect, orderBy: [{ date: 'asc' }, { habitId: 'asc' }] }),
       db.focusSession.findMany({ where, select: sessionSelect, orderBy: { startedAt: 'asc' } }),
       db.restDay.findMany({ where, select: restDaySelect, orderBy: { date: 'asc' } }),
@@ -86,7 +86,7 @@ export async function exportData(db: Db, person: SessionUser, exportedAt: number
     user: { id: userId, name, email, image, createdAt },
     metadata,
     blocks: blocks.map(routineBlockMapper.toDomain),
-    habits: habits.map(habitMapper.toDomain),
+    habits: habits.map(({ createdAt, ...row }) => ({ ...habitFromRow(row), ...(createdAt === null ? {} : { createdAt: createdAt.getTime() }) })),
     habitLogs: habitLogs.map(habitLogMapper.toDomain),
     sessions: sessions.map(focusSessionMapper.toDomain),
     restDays: restDays.map(restDayMapper.toDomain),

@@ -99,7 +99,7 @@ export function defineRepositoryContract(
     it('registros de hábito: um por hábito e dia, filtro por intervalo, apagar', async () => {
       const { r } = await subject();
       const h = uid('h');
-      await r.saveHabit({ id: h, title: 'x', weekdays: [0], active: true });
+      await r.saveHabit({ id: h, title: 'x', weekdays: [0], state: 'ativo' as const });
       await r.saveHabitLog({ habitId: h, date: '2026-11-10', doneAt: 1 });
       await r.saveHabitLog({ habitId: h, date: '2026-11-10', doneAt: 2 });
       await r.saveHabitLog({ habitId: h, date: '2026-11-12', doneAt: 3 });
@@ -112,7 +112,7 @@ export function defineRepositoryContract(
     it('apagar hábito apaga os registros dele', async () => {
       const { r } = await subject();
       const h = uid('h');
-      await r.saveHabit({ id: h, title: 'x', weekdays: [0], active: true });
+      await r.saveHabit({ id: h, title: 'x', weekdays: [0], state: 'ativo' as const });
       await r.saveHabitLog({ habitId: h, date: '2026-11-10', doneAt: 1 });
       await r.deleteHabit(h);
       expect(await r.listHabits()).toEqual([]);
@@ -166,7 +166,7 @@ export function defineRepositoryContract(
       const clock = { now: () => now };
       expect(await verSequencia(r, clock)).toMatchObject({ atual: 0, recorde: 0 });
       const h = uid('h');
-      await r.saveHabit({ id: h, title: 'x', weekdays: [0], active: true });
+      await r.saveHabit({ id: h, title: 'x', weekdays: [0], state: 'ativo' as const });
       await r.saveHabitLog({ habitId: h, date: addDays(today, -2), doneAt: 1 });
       await r.saveRestDay({ date: addDays(today, -1) });
       await r.saveHabitLog({ habitId: h, date: today, doneAt: 2 });
@@ -203,7 +203,7 @@ export function defineRepositoryContract(
       const goal = { id: goalId, title: 'm', icon: '🏃', color: 'foco' as const, state: 'concluida' as const, milestones: [], createdAt: 1, completedAt: 2 };
       await r.saveGoal(goal);
       expect(await r.listGoals()).toEqual([goal]);
-      const habit = { id: habitId, title: 'x', weekdays: [0 as const], active: true };
+      const habit = { id: habitId, title: 'x', weekdays: [0 as const], state: 'ativo' as const };
       await r.saveHabit({ ...habit, goalId });
       expect(await r.listHabits()).toEqual([{ ...habit, goalId }]);
       await r.saveHabit(habit);
@@ -298,7 +298,7 @@ export function defineRepositoryContract(
     it('escritas concorrentes não se perdem', async () => {
       const { r } = await subject();
       const h = uid('h');
-      await r.saveHabit({ id: h, title: 'x', weekdays: [0], active: true });
+      await r.saveHabit({ id: h, title: 'x', weekdays: [0], state: 'ativo' as const });
       await Promise.all(
         Array.from({ length: 20 }, (_, i) => r.saveHabitLog({ habitId: h, date: `2026-11-${String(i + 1).padStart(2, '0')}`, doneAt: i })),
       );
@@ -310,7 +310,7 @@ export function defineRepositoryContract(
       const h = uid('h');
       await r.saveUser(user);
       await r.saveBlock({ id: uid('b'), weekday: 1, startMinutes: 0, durationMinutes: 5, kind: 'descanso' });
-      await r.saveHabit({ id: h, title: 'x', weekdays: [0], active: true });
+      await r.saveHabit({ id: h, title: 'x', weekdays: [0], state: 'ativo' as const });
       await r.saveHabitLog({ habitId: h, date: '2026-11-10', doneAt: 1 });
       await r.saveSession({ ...endedSession(1, 25, 'concluida'), id: uid('s') });
       await r.saveRestDay({ date: '2026-11-10' });

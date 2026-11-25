@@ -21,14 +21,14 @@ export interface StreakInput {
  * (virada às `DAY_ROLLOVER_HOUR`); se já existe um deles no dia seguinte (marcado entre as duas viradas), esse dia já começou,
  * para o que a pessoa acabou de fazer aparecer e o número não mudar de novo na virada. Registros além disso não contam.
  */
-function streakToday(now: number, timeZone: string, rolloverMinutes: number, dated: readonly DateKey[]): DateKey {
+export function streakToday(now: number, timeZone: string, rolloverMinutes: number, dated: readonly DateKey[]): DateKey {
   const own = dateKeyOf(now, timeZone, rolloverMinutes);
   const app = dateKeyOf(now, timeZone);
   return dated.reduce((today, date) => (date > today && date <= app ? date : today), own);
 }
 
 /** Os dias de férias até hoje: períodos encerrados e o atual. */
-function vacationDates(vacation: Vacation | undefined, today: DateKey): DateKey[] {
+export function vacationDates(vacation: Vacation | undefined, today: DateKey): DateKey[] {
   if (!vacation) return [];
   const current = vacation.ligado && vacation.desde ? [{ de: vacation.desde, ate: today }] : [];
   const dates: DateKey[] = [];

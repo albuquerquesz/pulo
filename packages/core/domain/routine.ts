@@ -34,6 +34,8 @@ export interface BlockInput {
   durationMinutes: number;
   kind: RoutineBlock['kind'];
   title?: string;
+  /** Na edição, `undefined` mantém e `null` tira. */
+  icon?: string | null;
 }
 
 /** Blocos de um dia da semana, em ordem de horário. */
@@ -97,7 +99,8 @@ export async function criarBloco(repo: Repository, input: BlockInput, now: numbe
   const all = await repo.listBlocks();
   const error = validateSlot(input, all);
   if (error) return { ok: false, error };
-  const block: RoutineBlock = { id: newId(now, 'bloco'), ...input };
+  const { icon, ...rest } = input;
+  const block: RoutineBlock = { id: newId(now, 'bloco'), ...rest, ...(icon ? { icon } : {}) };
   if (!block.title) delete block.title;
   await repo.saveBlock(block);
   return ok(block);
@@ -111,7 +114,10 @@ export async function editarBloco(
   const all = await repo.listBlocks();
   const current = all.find((b) => b.id === id);
   if (!current) return { ok: false, error: { code: 'bloco_inexistente', message: 'Bloco não encontrado.' } };
-  const next: RoutineBlock = { ...current, ...patch, id };
+  const { icon, ...rest } = patch;
+  const next: RoutineBlock = { ...current, ...rest, id };
+  if (icon !== undefined) next.icon = icon ?? undefined;
+  if (!next.icon) delete next.icon;
   const error = validateSlot(next, all, id);
   if (error) return { ok: false, error };
   await repo.saveBlock(next);
@@ -227,7 +233,7 @@ export function planoInicial(now: number): { blocks: RoutineBlock[]; habits: Hab
     id: newId(now, 'habito'),
     title,
     weekdays: [0, 1, 2, 3, 4, 5, 6],
-    active: true,
+    state: 'ativo',
   }));
   return { blocks, habits };
 }

@@ -22,7 +22,7 @@ describe('schema do domínio no Postgres', () => {
     await t.db.routineBlock.create({
       data: routineBlockMapper.fromDomain('u-map', { id: 'rb1', weekday: 1, startMinutes: 540, durationMinutes: 25, kind: 'foco' }),
     });
-    await t.db.habit.create({ data: habitMapper.fromDomain('u-map', { id: 'h1', title: 'Alongar', weekdays: [0, 3], active: true }) });
+    await t.db.habit.create({ data: habitMapper.fromDomain('u-map', { id: 'h1', title: 'Alongar', weekdays: [0, 3], state: 'ativo' }) });
     await t.db.habitLog.create({ data: habitLogMapper.fromDomain('u-map', { habitId: 'h1', date: '2026-11-22', doneAt: 1000 }) });
     await t.db.mascotState.create({ data: mascotStateMapper.fromDomain('u-map', { phase: 2, careDays: 4, updatedAt: 3000 }) });
     await t.db.weeklyProposal.create({

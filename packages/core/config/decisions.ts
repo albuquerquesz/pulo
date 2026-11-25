@@ -72,6 +72,18 @@ export const BLOCK_MAX_MINUTES = 120;
 /** Cores de destaque que a pessoa pode escolher (nomes do design system, spec 16). */
 export const ACCENT_COLORS = ['sapo', 'agua', 'foco', 'descanso', 'sol', 'atencao'] as const;
 
+/**
+ * Hábitos (spec 17). O ícone é um emoji curto (vale também para o bloco da rotina).
+ * `statsWeeks` é o tamanho do calendário; `statsMaxDays` limita quanto do histórico entra na conta. Proposta.
+ */
+export const HABITS = {
+  iconMaxChars: 16,
+  defaultIcon: '🌱',
+  defaultColor: 'sapo',
+  statsWeeks: 16,
+  statsMaxDays: 3660,
+} as const;
+
 /** Metas de longo prazo. Poucas ativas de cada vez, para cada uma receber atenção de verdade. Proposta. */
 export const GOALS = {
   maxActive: 3,

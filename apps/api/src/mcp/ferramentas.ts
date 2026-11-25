@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { DEFAULT_DAY_END_HOUR, DEFAULT_DAY_START_HOUR, DEFAULT_TIMEZONE, FOCUS, ROOM_GRID, TASKS } from '@pulo/core/config/decisions';
+import { ACCENT_COLORS, DEFAULT_DAY_END_HOUR, DEFAULT_DAY_START_HOUR, DEFAULT_TIMEZONE, FOCUS, HABITS, ROOM_GRID, TASKS } from '@pulo/core/config/decisions';
 import { dateKeyOf, weekdayOf, weekStartOf } from '@pulo/core/domain/day';
 import { preferencesFromMetadata } from '@pulo/core/domain/user-metadata';
 import { concluirFoco, iniciarFoco, interromperFoco, pausarFoco, retomarFoco } from '@pulo/core/domain/foco';
@@ -37,7 +37,7 @@ import {
 } from '@pulo/core/domain/routine';
 import { TASK_COLUMNS, columnTasks, criarTarefa, matchesDueFilter, moverTarefa, positionAt, subtaskProgress, taskCode } from '@pulo/core/domain/tasks';
 import type { Clock, DateKey, Goal, Habit, Repository, RoutineBlock, Task, TaskSubtask, User, Weekday } from '@pulo/core/domain/types';
-import { type ProposalDecisionBody, generateProposalResponseSchema } from '@pulo/core/api/schemas';
+import { type ProposalDecisionBody, generateProposalResponseSchema, habitStateSchema, periodSchema } from '@pulo/core/api/schemas';
 import { z } from 'zod';
 import { ErroDaApi, type ClienteInterno, lerJson } from './repositorio';
 
@@ -78,9 +78,41 @@ const bloco = (b: RoutineBlock) => ({
   minutos: b.durationMinutes,
   tipo: b.kind,
   ...(b.title ? { titulo: b.title } : {}),
+  ...(b.icon ? { icone: b.icon } : {}),
 });
 
-const habito = (h: Habit) => ({ id: h.id, titulo: h.title, dias: h.weekdays.map(nomeDoDia), ativo: h.active });
+const habito = (h: Habit) => ({
+  id: h.id,
+  titulo: h.title,
+  dias: h.weekdays.map(nomeDoDia),
+  estado: h.state,
+  ativo: h.state === 'ativo',
+  ...(h.goalId ? { metaId: h.goalId } : {}),
+  ...(h.icon ? { icone: h.icon } : {}),
+  ...(h.color ? { cor: h.color } : {}),
+  ...(h.period ? { periodo: h.period } : {}),
+  ...(h.reminderMinutes === undefined ? {} : { lembrete: paraHora(h.reminderMinutes), lembreteLigado: h.reminderOn ?? false }),
+});
+
+const iconeSchema = z.string().trim().min(1).max(HABITS.iconMaxChars).regex(/^\S+$/).describe('Um emoji; null tira');
+
+const aparenciaDoHabito = {
+  icone: iconeSchema.nullable().optional(),
+  cor: z.enum(ACCENT_COLORS).nullable().optional().describe('Cor de destaque; null tira'),
+  periodo: periodSchema.nullable().optional().describe('Período do dia; null tira'),
+  lembrete: horaSchema.nullable().optional().describe('Horário do lembrete (HH:MM); null tira. Só a preferência: nenhum aviso é enviado ainda.'),
+  lembreteLigado: z.boolean().optional().describe('Liga ou desliga o lembrete sem perder o horário'),
+};
+
+type AparenciaDoHabito = z.infer<z.ZodObject<typeof aparenciaDoHabito>>;
+
+const paraAparencia = ({ icone, cor, periodo, lembrete, lembreteLigado }: AparenciaDoHabito) => ({
+  ...(icone === undefined ? {} : { icon: icone }),
+  ...(cor === undefined ? {} : { color: cor }),
+  ...(periodo === undefined ? {} : { period: periodo }),
+  ...(lembrete === undefined ? {} : { reminderMinutes: lembrete === null ? null : paraMinutos(lembrete) }),
+  ...(lembreteLigado === undefined ? {} : { reminderOn: lembreteLigado }),
+});
 
 const meta = (g: Goal, hoje: DateKey) => ({
   id: g.id,
@@ -217,12 +249,16 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
 
   server.registerTool(
     'ver_rotina',
-    { title: 'Ver a rotina', description: 'Todos os blocos da semana (foco e descanso) e todos os hábitos, com ids.', annotations: LEITURA },
+    { title: 'Ver a rotina', description: 'Todos os blocos da semana (foco e descanso) e os hábitos (ativos e pausados; os arquivados vêm à parte), com ids.', annotations: LEITURA },
     () =>
       protegido(async () => {
         await pessoa(repo);
         const [blocks, habits] = await Promise.all([repo.listBlocks(), repo.listHabits()]);
-        return resposta({ blocos: blocks.map(bloco), habitos: habits.map(habito) });
+        return resposta({
+          blocos: blocks.map(bloco),
+          habitos: habits.filter((h) => h.state !== 'arquivado').map(habito),
+          habitosArquivados: habits.filter((h) => h.state === 'arquivado').map(habito),
+        });
       }),
   );
 
@@ -363,13 +399,13 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     {
       title: 'Criar hábito',
       description: 'Cria um hábito em alguns dias da semana. Cada dia comporta até 5 hábitos ativos.',
-      inputSchema: { titulo: z.string().min(1).max(80), dias: z.array(diaSchema).min(1) },
+      inputSchema: { titulo: z.string().min(1).max(80), dias: z.array(diaSchema).min(1), ...aparenciaDoHabito },
       annotations: ESCRITA,
     },
-    ({ titulo, dias }) =>
+    ({ titulo, dias, ...aparencia }) =>
       protegido(async () => {
         await pessoa(repo);
-        const r = await criarHabito(repo, { title: titulo, weekdays: dias.map(weekdayDe) }, clock.now());
+        const r = await criarHabito(repo, { title: titulo, weekdays: dias.map(weekdayDe), ...paraAparencia(aparencia) }, clock.now());
         return deCaso(r, () => r.ok && habito(r.value));
       }),
   );
@@ -378,17 +414,26 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     'editar_habito',
     {
       title: 'Editar hábito',
-      description: 'Muda título, dias ou pausa (ativo = false) um hábito.',
-      inputSchema: { id: idSchema, titulo: z.string().min(1).max(80).optional(), dias: z.array(diaSchema).min(1).optional(), ativo: z.boolean().optional() },
+      description: 'Muda título, dias, aparência, lembrete ou estado de um hábito. Pausado sai do Hoje por um tempo; arquivado some das listas; os dois guardam o histórico e voltam com estado ativo.',
+      inputSchema: {
+        id: idSchema,
+        titulo: z.string().min(1).max(80).optional(),
+        dias: z.array(diaSchema).min(1).optional(),
+        estado: habitStateSchema.optional(),
+        ativo: z.boolean().optional().describe('Atalho antigo: false pausa, true reativa. `estado` vence.'),
+        ...aparenciaDoHabito,
+      },
       annotations: ESCRITA,
     },
-    ({ id, titulo, dias, ativo }) =>
+    ({ id, titulo, dias, estado, ativo, ...aparencia }) =>
       protegido(async () => {
         await pessoa(repo);
         const r = await editarHabito(repo, id, {
           ...(titulo ? { title: titulo } : {}),
           ...(dias ? { weekdays: dias.map(weekdayDe) } : {}),
-          ...(ativo === undefined ? {} : { active: ativo }),
+          ...(ativo === undefined ? {} : { state: ativo ? 'ativo' : 'pausado' }),
+          ...(estado ? { state: estado } : {}),
+          ...paraAparencia(aparencia),
         });
         return deCaso(r, () => r.ok && habito(r.value));
       }),
@@ -434,17 +479,25 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     minutos: z.number().int().min(5).max(120).describe('Duração, de 5 a 120 minutos'),
     tipo: z.enum(['foco', 'descanso']),
     titulo: z.string().min(1).max(80).optional(),
+    icone: iconeSchema.optional(),
   };
 
   server.registerTool(
     'criar_bloco',
     { title: 'Criar bloco', description: 'Cria um bloco de foco ou descanso na rotina semanal (sem sobrepor outro).', inputSchema: blocoEntrada, annotations: ESCRITA },
-    ({ dia, inicio, minutos, tipo, titulo }) =>
+    ({ dia, inicio, minutos, tipo, titulo, icone }) =>
       protegido(async () => {
         await pessoa(repo);
         const r = await criarBloco(
           repo,
-          { weekday: weekdayDe(dia), startMinutes: paraMinutos(inicio), durationMinutes: minutos, kind: tipo, ...(titulo ? { title: titulo } : {}) },
+          {
+            weekday: weekdayDe(dia),
+            startMinutes: paraMinutos(inicio),
+            durationMinutes: minutos,
+            kind: tipo,
+            ...(titulo ? { title: titulo } : {}),
+            ...(icone ? { icon: icone } : {}),
+          },
           clock.now(),
         );
         return deCaso(r, () => r.ok && bloco(r.value));
@@ -455,7 +508,7 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     'editar_bloco',
     {
       title: 'Editar ou mover bloco',
-      description: 'Muda dia, horário, duração, tipo ou título de um bloco.',
+      description: 'Muda dia, horário, duração, tipo, título ou ícone de um bloco.',
       inputSchema: {
         id: idSchema,
         dia: diaSchema.optional(),
@@ -463,10 +516,11 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
         minutos: blocoEntrada.minutos.optional(),
         tipo: blocoEntrada.tipo.optional(),
         titulo: blocoEntrada.titulo,
+        icone: iconeSchema.nullable().optional(),
       },
       annotations: ESCRITA,
     },
-    ({ id, dia, inicio, minutos, tipo, titulo }) =>
+    ({ id, dia, inicio, minutos, tipo, titulo, icone }) =>
       protegido(async () => {
         await pessoa(repo);
         const r = await editarBloco(repo, id, {
@@ -475,6 +529,7 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
           ...(minutos ? { durationMinutes: minutos } : {}),
           ...(tipo ? { kind: tipo } : {}),
           ...(titulo ? { title: titulo } : {}),
+          ...(icone === undefined ? {} : { icon: icone }),
         });
         return deCaso(r, () => r.ok && bloco(r.value));
       }),

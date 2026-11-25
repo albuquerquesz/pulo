@@ -96,9 +96,11 @@ export const routineBlockMapper = {
       durationMinutes: row.durationMinutes,
       kind: row.kind,
       ...(row.title === null ? {} : { title: row.title }),
+      ...(row.icon === null ? {} : { icon: row.icon }),
     };
   },
-  fromDomain(userId: string, block: RoutineBlock): Prisma.RoutineBlockUncheckedCreateInput {
+  fromDomain(userId: string, block: Omit<RoutineBlock, 'icon'> & { icon?: string | null }): Prisma.RoutineBlockUncheckedCreateInput {
+    // `icon` ausente: a coluna não é tocada na atualização; `null` tira.
     return {
       id: block.id,
       userId,
@@ -107,31 +109,50 @@ export const routineBlockMapper = {
       durationMinutes: block.durationMinutes,
       kind: block.kind,
       title: block.title ?? null,
+      ...(block.icon === undefined ? {} : { icon: block.icon }),
     };
   },
 };
 
 // ---------- Habit ----------
 
+/** Campos opcionais do hábito na escrita: ausente não toca a coluna, `null` limpa. */
+type HabitWrite = Pick<Habit, 'id' | 'title' | 'weekdays' | 'state' | 'reminderOn'> & {
+  goalId?: string | null;
+  icon?: string | null;
+  color?: Habit['color'] | null;
+  period?: Habit['period'] | null;
+  reminderMinutes?: number | null;
+};
+
 export const habitMapper = {
-  toDomain(row: Omit<HabitRow, 'userId'>): Habit {
+  toDomain(row: Omit<HabitRow, 'userId' | 'active' | 'createdAt'>): Habit {
     return {
       id: row.id,
       title: row.title,
       weekdays: row.weekdays.map(toWeekday),
-      active: row.active,
+      state: row.state,
       ...(row.goalId === null ? {} : { goalId: row.goalId }),
+      ...(row.icon === null ? {} : { icon: row.icon }),
+      ...(row.color === null ? {} : { color: row.color }),
+      ...(row.period === null ? {} : { period: row.period }),
+      ...(row.reminderMinutes === null ? {} : { reminderMinutes: row.reminderMinutes }),
+      ...(row.reminderOn ? { reminderOn: true } : {}),
     };
   },
-  fromDomain(userId: string, habit: Omit<Habit, 'goalId'> & { goalId?: string | null }): Prisma.HabitUncheckedCreateInput {
-    // `goalId` ausente: a coluna não é tocada na atualização; `null` solta a meta.
+  fromDomain(userId: string, habit: HabitWrite): Prisma.HabitUncheckedCreateInput {
     return {
       id: habit.id,
       userId,
       title: habit.title,
       weekdays: habit.weekdays,
-      active: habit.active,
+      state: habit.state,
       ...(habit.goalId === undefined ? {} : { goalId: habit.goalId }),
+      ...(habit.icon === undefined ? {} : { icon: habit.icon }),
+      ...(habit.color === undefined ? {} : { color: habit.color }),
+      ...(habit.period === undefined ? {} : { period: habit.period }),
+      ...(habit.reminderMinutes === undefined ? {} : { reminderMinutes: habit.reminderMinutes }),
+      ...(habit.reminderOn === undefined ? {} : { reminderOn: habit.reminderOn }),
     };
   },
 };
