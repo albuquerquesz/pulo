@@ -78,6 +78,10 @@ erDiagram
     focus_session_state state
     int pausedMs
     timestamptz pausedSince
+    text intention
+    text habitId FK "SET NULL"
+    text goalId FK "SET NULL"
+    text taskId FK "SET NULL"
   }
   rest_day {
     text userId PK
@@ -228,6 +232,9 @@ Os ids das tabelas do domínio têm `@@unique([id, userId])` para dar upsert seg
   ganha `icon`; o índice `(userId, active)` vira `(userId, state)`. A coluna `active` continua, só para a API anterior (janela do
   deploy e volta de versão): o gatilho `habit_sync_active` a mantém igual a `state = 'ativo'`. O código novo não a lê nem grava;
   uma migração futura apaga a coluna e o gatilho.
+- migração `foco_vinculo` (só acrescenta): `focus_session` ganha `intention`, `habitId`, `goalId` e `taskId` (nulos nas sessões
+  que já existiam), no máximo um dos três vínculos (CHECK). Apagar o alvo solta o vínculo e a sessão fica. Que o alvo é da pessoa
+  quem confere é a API. A API anterior não conhece as colunas e as preserva.
 
 ## Rodar
 

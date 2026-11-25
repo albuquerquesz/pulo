@@ -147,6 +147,20 @@ export function achievementSummaryFromRows(streak: Streak, rows: AchievementRows
   });
 }
 
+/** Pomodoros por tarefa de todo o histórico: as sessões concluídas, contadas pelo banco numa query. */
+export function pomodoroRead(db: Db, userId: string) {
+  return db.focusSession.groupBy({
+    by: ['taskId'],
+    where: { userId, state: 'concluida', taskId: { not: null } },
+    orderBy: { taskId: 'asc' },
+    _count: { id: true },
+  });
+}
+
+export function pomodorosFromRows(rows: { taskId: string | null; _count: { id: number } }[]): Record<string, number> {
+  return Object.fromEntries(rows.flatMap((row) => (row.taskId === null ? [] : [[row.taskId, row._count.id]])));
+}
+
 /** Estatísticas de todo o tempo. Os hábitos feitos chegam contados pelo banco; o foco sai das sessões terminadas. */
 export function statsFromRows(desde: number, habitosFeitos: number, sessions: StreakRows['sessions']): ProfileStats {
   return computeStats({ desde, habitosFeitos, sessions: sessions.map(focusSessionMapper.toDomain) });

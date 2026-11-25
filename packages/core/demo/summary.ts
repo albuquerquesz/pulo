@@ -1,4 +1,5 @@
 import { PERIODS } from '../config/decisions';
+import { focusByTarget } from '../domain/foco/targets';
 import type { FocusSession, Period, RestDay, WeekSummary } from '../domain/types';
 import { countCareDays } from './careDays';
 import { addDays, dateKeyOf } from './time';
@@ -56,5 +57,10 @@ export function summarizeDemoWeek(
     careDays,
     daysWithRecord: days.size,
     stable: careDays >= stableMinCareDays,
+    focoPorAlvo: focusByTarget(wSessions),
+    sessoesTerminadas: wSessions.filter((s) => s.state === 'concluida').length,
+    sessoesLargadas: wSessions.filter((s) => s.state === 'interrompida').length,
+    melhorPeriodo:
+      (['manha', 'tarde', 'noite'] as const).filter((p) => focus[p] > 0).sort((a, b) => focus[b] - focus[a])[0] ?? null,
   };
 }

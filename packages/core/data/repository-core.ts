@@ -24,6 +24,7 @@ import type {
 import { systemClock } from '../domain/clock';
 import { newId } from '../domain/ids';
 import { taskChanges } from '../domain/tasks';
+import type { LinkKey } from '../domain/foco/targets';
 
 /** Formato persistido. Versionado para migrações futuras. */
 export interface Database {
@@ -93,6 +94,15 @@ function upsert<T>(list: T[], item: T, same: (a: T) => boolean): void {
   else list.push(item);
 }
 
+/** O alvo apagado sai do foco; a sessão fica (o mesmo SetNull do banco). */
+function unlinkSessions(db: Database, key: LinkKey, id: string): void {
+  db.sessions = db.sessions.map((session) => {
+    if (session[key] !== id) return session;
+    const { [key]: _removed, ...rest } = session;
+    return rest;
+  });
+}
+
 function requireTask(db: Database, taskId: string): void {
   if (!db.tasks.some((task) => task.id === taskId)) throw new Error(`Tarefa ${taskId} não existe.`);
 }
@@ -132,6 +142,7 @@ export function createRepository(store: DatabaseStore, clock: Clock = systemCloc
       write((db) => {
         db.habits = db.habits.filter((h) => h.id !== id);
         db.habitLogs = db.habitLogs.filter((l) => l.habitId !== id);
+        unlinkSessions(db, 'habitId', id);
       }),
     listHabitLogs: (range) => read((db) => db.habitLogs.filter((l) => inRange(l.date, range))),
     saveHabitLog: (log) =>
@@ -168,6 +179,7 @@ export function createRepository(store: DatabaseStore, clock: Clock = systemCloc
           const { goalId: _goalId, ...rest } = habit;
           return rest;
         });
+        unlinkSessions(db, 'goalId', id);
         // A tarefa fica, sem a meta.
         db.tasks = db.tasks.map((task) => {
           if (task.goalId !== id) return task;
@@ -202,6 +214,7 @@ export function createRepository(store: DatabaseStore, clock: Clock = systemCloc
         db.subtasks = db.subtasks.filter((s) => s.taskId !== id);
         db.taskComments = db.taskComments.filter((c) => c.taskId !== id);
         db.taskEvents = db.taskEvents.filter((e) => e.taskId !== id);
+        unlinkSessions(db, 'taskId', id);
       }),
     listSubtasks: () => read((db) => db.subtasks),
     saveSubtask: (subtask) =>

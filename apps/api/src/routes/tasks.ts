@@ -3,6 +3,7 @@ import { idParamSchema, subtaskParamSchema, taskCommentSchema, taskSchema, taskS
 import { taskChanges } from '@pulo/core/domain/tasks';
 import { type Prisma, taskCommentMapper, taskEventMapper, taskMapper, taskSubtaskMapper } from '@pulo/db';
 import { Hono } from 'hono';
+import { pomodoroRead, pomodorosFromRows } from '../queries';
 import { ApiError, type AppEnv, type Client, type RouteDeps, assertNotInFuture, jsonBody, pathParams, requireMatch, requireSession, sameValue } from '../http';
 import { taskCommentSelect, taskEventSelect, taskSelect, taskSubtaskSelect } from '../selects';
 
@@ -26,11 +27,16 @@ export function taskRoutes({ auth, db, now }: RouteDeps) {
     .use(requireSession(auth))
     .get('/', async (c) => {
       const where = { userId: c.var.user.id };
-      const [tasks, subtasks] = await db.$transaction([
+      const [tasks, subtasks, done] = await db.$transaction([
         db.task.findMany({ where, select: taskSelect, orderBy: { number: 'asc' } }),
         db.taskSubtask.findMany({ where, select: taskSubtaskSelect, orderBy: [{ position: 'asc' }, { id: 'asc' }] }),
+        pomodoroRead(db, c.var.user.id),
       ]);
-      return c.json({ tasks: tasks.map(taskMapper.toDomain), subtasks: subtasks.map(taskSubtaskMapper.toDomain) });
+      return c.json({
+        tasks: tasks.map(taskMapper.toDomain),
+        subtasks: subtasks.map(taskSubtaskMapper.toDomain),
+        pomodoros: pomodorosFromRows(done),
+      });
     })
     .put('/:id', pathParams(idParamSchema), jsonBody(taskSchema), async (c) => {
       const task = c.req.valid('json');

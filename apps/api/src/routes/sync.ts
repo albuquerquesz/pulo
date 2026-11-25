@@ -1,5 +1,6 @@
 import { syncQuerySchema } from '@pulo/core/api/schemas';
 import { computeAchievements } from '@pulo/core/domain/achievements';
+import { countPomodoros } from '@pulo/core/domain/tasks';
 import {
   achievementMapper,
   focusSessionMapper,
@@ -94,6 +95,8 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
       goalChests: goalChests.map(goalChestMapper.toDomain),
       tasks: tasks.map(taskMapper.toDomain),
       subtasks: subtasks.map(taskSubtaskMapper.toDomain),
+      // Todo o histórico (não só o intervalo), das mesmas leituras da sequência.
+      pomodoros: countPomodoros(allSessions.map(focusSessionMapper.toDomain)),
       islandPurchases: islandPurchases.map(islandPurchaseMapper.toDomain),
       housePurchases: housePurchases.map(islandPurchaseMapper.toDomain),
       roomDecor: roomDecor.map(roomPlacementMapper.toDomain),

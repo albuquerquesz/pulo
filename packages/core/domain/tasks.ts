@@ -79,8 +79,29 @@ export function subtaskProgress(subtasks: readonly TaskSubtask[], taskId: Entity
   return { done: own.filter((subtask) => subtask.done).length, total: own.length };
 }
 
-/** Uma sessão de foco ligada (ou não) a uma tarefa. A spec 19 põe o `taskId` na `FocusSession`. */
-export type TaskFocus = Pick<FocusSession, 'state'> & { taskId?: EntityId };
+/** O que importa de uma sessão de foco para os pomodoros. */
+export type TaskFocus = Pick<FocusSession, 'state' | 'taskId'>;
+
+/** Pomodoros feitos por tarefa (só as que têm algum). Nunca é gravado. */
+export function countPomodoros(sessions: readonly TaskFocus[]): Record<EntityId, number> {
+  const done: Record<EntityId, number> = {};
+  for (const { state, taskId } of sessions) if (state === 'concluida' && taskId !== undefined) done[taskId] = (done[taskId] ?? 0) + 1;
+  return done;
+}
+
+/** Repositório que já recebe os pomodoros contados (o remoto: o servidor enxerga todo o histórico). */
+export interface PomodoroSource {
+  getPomodoros(): Promise<Record<EntityId, number>>;
+}
+
+export function providesPomodoros(repo: Repository): repo is Repository & PomodoroSource {
+  return 'getPomodoros' in repo && typeof repo.getPomodoros === 'function';
+}
+
+/** Os pomodoros de um repositório: os do servidor, quando ele os fornece; senão (demo, memória), contados das sessões. */
+export async function verPomodoros(repo: Repository): Promise<Record<EntityId, number>> {
+  return providesPomodoros(repo) ? repo.getPomodoros() : countPomodoros(await repo.listSessions());
+}
 
 /** Pomodoros feitos: sessões concluídas com esta tarefa. Nunca é gravado. */
 export function pomodorosDone(sessions: readonly TaskFocus[], taskId: EntityId): number {

@@ -1,3 +1,4 @@
+import type { LinkKey } from '@pulo/core/domain/foco/targets';
 import {
   type ApiErrorCode,
   achievementsResponseSchema,
@@ -144,6 +145,11 @@ export interface RemoteRepository extends Repository, BatchWrites, StreakSource,
   getStats(): Promise<ProfileStats>;
   /** `GET /api/habits/:id/stats`: calculadas pelo servidor, sem cache. Espera as escritas pendentes. */
   getHabitStats(id: EntityId): Promise<HabitStats>;
+  /**
+   * Pomodoros feitos por tarefa, de todo o histórico: os do `GET /api/sync` mais os focos concluídos aqui depois dele.
+   * Sem rede; espera as escritas pendentes.
+   */
+  getPomodoros(): Promise<Record<EntityId, number>>;
   /** `GET /api/data/export`: todos os dados da conta, prontos para virar um arquivo. Espera as escritas pendentes. */
   exportData(): Promise<Record<string, unknown>>;
   /** Os aplicativos (Claude e outros) com acesso à conta. */
@@ -167,6 +173,7 @@ const compareBlocks = (a: RoutineBlock, b: RoutineBlock) => a.weekday - b.weekda
 const taskActivitySchema = z.object({ events: z.array(taskEventSchema), comments: z.array(taskCommentSchema) });
 const logKey = (habitId: EntityId, date: DateKey) => `${habitId}|${date}`;
 /** Chaves das escritas que podem mudar a sequência: hábitos e registros, sessões, descansos, perfil e apagar tudo. */
+const SESSION_OPTIONALS = ['intention', 'habitId', 'goalId', 'taskId'] as const;
 const STREAK_LOCKS = /^(habit|log|session|rest):|^(user|all)$/;
 /** As que mudam a sequência e as compras da casa mudam as conquistas. */
 const ACHIEVEMENT_LOCKS = /^(habit|log|session|rest|house):|^(user|all)$/;
@@ -209,6 +216,7 @@ class ApiRepository implements RemoteRepository {
 
   private readonly tasks = new Collection<Task>((t) => t.id, cloneTask);
   private readonly subtasks = new Collection<TaskSubtask>((s) => s.id, cloneSubtask);
+  private pomodoros: Record<EntityId, number> = {};
 
   /** Uma escrita por chave de cada vez, na ordem em que foram pedidas (escritas em chaves diferentes seguem em paralelo). */
   private readonly locks = new Map<string, Promise<void>>();
@@ -246,6 +254,7 @@ class ApiRepository implements RemoteRepository {
     this.goalChests.replaceAll(data.goalChests);
     this.tasks.replaceAll(data.tasks);
     this.subtasks.replaceAll(data.subtasks);
+    this.pomodoros = { ...data.pomodoros };
     this.islandPurchases.replaceAll(data.islandPurchases);
     this.housePurchases.replaceAll(data.housePurchases);
     this.roomDecor.replaceAll(data.roomDecor);
@@ -462,7 +471,8 @@ class ApiRepository implements RemoteRepository {
   }
 
   deleteHabit(id: EntityId): Promise<void> {
-    // O servidor apaga os registros do hábito junto; o cache faz o mesmo e devolve se der erro.
+    // O servidor apaga os registros do hábito junto e solta os focos; o cache faz o mesmo e devolve se der erro.
+    const relink = this.unlinkSessions('habitId', id);
     const logs = this.habitLogs.raw().filter((log) => log.habitId === id);
     for (const log of logs) this.habitLogs.remove(logKey(log.habitId, log.date));
     return this.write(
@@ -474,6 +484,7 @@ class ApiRepository implements RemoteRepository {
         await readJson(await this.client.api.habits[':id'].$delete({ param: { id } }));
       },
       () => {
+        relink();
         for (const log of logs) this.habitLogs.restore(logKey(log.habitId, log.date), log);
       },
     );
@@ -508,14 +519,66 @@ class ApiRepository implements RemoteRepository {
     return this.sessions.values().sort((a, b) => a.startedAt - b.startedAt);
   }
 
+  /** O alvo pode estar sendo criado agora: o foco espera a escrita dele. A sessão fica como o servidor devolveu. */
   saveSession(session: FocusSession): Promise<void> {
-    return this.write(this.sessions, `session:${session.id}`, session.id, session, async () => {
-      const { mascot, newAchievements } = await readJson(
-        await this.client.api.sessions[':id'].$put({ param: { id: session.id }, json: session }),
+    const { id, habitId, goalId, taskId } = session;
+    const previous = this.sessions.peek(id);
+    const body = this.sessionBody(session, previous);
+    const targets = [habitId && `habit:${habitId}`, goalId && `goal:${goalId}`, taskId && `task:${taskId}`];
+    let stored: FocusSession | undefined;
+    const done = this.write(this.sessions, `session:${id}`, id, session, async () => {
+      await Promise.all(targets.map((lock) => (lock ? this.locks.get(lock) : undefined)));
+      const { session: saved, mascot, newAchievements } = await readJson(
+        await this.client.api.sessions[':id'].$put({ param: { id }, json: body }),
       );
+      // Muda a instância guardada no lugar (o rollback compara identidade): o vínculo é o do servidor.
+      if (stored) {
+        for (const key of SESSION_OPTIONALS) delete stored[key];
+        Object.assign(stored, saved);
+      }
+      if (saved.state === 'concluida' && previous?.state !== 'concluida' && saved.taskId !== undefined) {
+        this.pomodoros[saved.taskId] = (this.pomodoros[saved.taskId] ?? 0) + 1;
+      }
       this.mascotFrom(mascot);
       this.unlocked(newAchievements);
     });
+    // `write` já guardou a cópia otimista antes de devolver a promessa.
+    stored = this.sessions.peek(id);
+    return done;
+  }
+
+  /** Como no hábito: a intenção ou o vínculo que a sessão em cache tinha e esta não tem mais vai como `null`. */
+  private sessionBody(session: FocusSession, cached: FocusSession | undefined) {
+    const removed = (key: (typeof SESSION_OPTIONALS)[number]) =>
+      session[key] === undefined && cached?.[key] !== undefined ? null : session[key];
+    return {
+      ...session,
+      intention: removed('intention'),
+      habitId: removed('habitId'),
+      goalId: removed('goalId'),
+      taskId: removed('taskId'),
+    };
+  }
+
+  /** Solta no cache os focos ligados ao alvo apagado. Devolve como desfazer (só nas sessões que ninguém mexeu depois). */
+  private unlinkSessions(key: LinkKey, id: EntityId): () => void {
+    const released = this.sessions
+      .raw()
+      .filter((session) => session[key] === id)
+      .map((session) => {
+        const { [key]: _removed, ...rest } = session;
+        return { before: session, after: this.sessions.put(rest) };
+      });
+    return () => {
+      for (const { before, after } of released) {
+        if (this.sessions.peek(before.id) === after) this.sessions.restore(before.id, before);
+      }
+    };
+  }
+
+  async getPomodoros(): Promise<Record<EntityId, number>> {
+    await Promise.all(this.locks.values());
+    return Object.fromEntries(Object.entries(this.pomodoros).filter(([taskId]) => this.tasks.peek(taskId) !== undefined));
   }
 
   // ---------- Dias de descanso ----------
@@ -620,6 +683,7 @@ class ApiRepository implements RemoteRepository {
     const released = habits.map(({ goalId: _goalId, ...habit }) => this.habits.put(habit));
     const linked = this.tasks.raw().filter((task) => task.goalId === id);
     const unlinked = linked.map(({ goalId: _goalId, ...task }) => this.tasks.put(task));
+    const relink = this.unlinkSessions('goalId', id);
     return this.write(
       this.goals,
       `goal:${id}`,
@@ -629,6 +693,7 @@ class ApiRepository implements RemoteRepository {
         await readJson(await this.client.api.goals[':id'].$delete({ param: { id } }));
       },
       () => {
+        relink();
         if (chest !== undefined) this.goalChests.restore(id, chest);
         habits.forEach((habit, i) => {
           if (this.habits.peek(habit.id) === released[i]) this.habits.restore(habit.id, habit);
@@ -687,6 +752,7 @@ class ApiRepository implements RemoteRepository {
   deleteTask(id: EntityId): Promise<void> {
     const own = this.subtasks.raw().filter((subtask) => subtask.taskId === id);
     for (const subtask of own) this.subtasks.remove(subtask.id);
+    const relink = this.unlinkSessions('taskId', id);
     return this.write(
       this.tasks,
       `task:${id}`,
@@ -696,6 +762,7 @@ class ApiRepository implements RemoteRepository {
         await readJson(await this.client.api.tasks[':id'].$delete({ param: { id } }));
       },
       () => {
+        relink();
         for (const subtask of own) this.subtasks.restore(subtask.id, subtask);
       },
     );
@@ -912,6 +979,7 @@ class ApiRepository implements RemoteRepository {
     }
     this.mascot = null;
     this.joiaCredit = 0;
+    this.pomodoros = {};
   }
 
   // ---------- Apagar tudo ----------

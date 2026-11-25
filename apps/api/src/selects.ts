@@ -38,6 +38,10 @@ export const sessionSelect = {
   state: true,
   pausedMs: true,
   pausedSince: true,
+  intention: true,
+  habitId: true,
+  goalId: true,
+  taskId: true,
 } as const satisfies Prisma.FocusSessionSelect;
 
 export const restDaySelect = { date: true } as const satisfies Prisma.RestDaySelect;

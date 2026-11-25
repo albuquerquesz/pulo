@@ -133,6 +133,18 @@ export function defineRepositoryContract(
       expect(await r.listSessions()).toHaveLength(2);
     });
 
+    it('sessões: intenção e vínculo ficam, e apagar o alvo solta o foco sem apagar', async () => {
+      const { r } = await subject();
+      const habitId = uid('h');
+      await r.saveHabit({ id: habitId, title: 'Ler', weekdays: [0], state: 'ativo' });
+      const session = { ...endedSession(sp(2026, 11, 9), 25, 'concluida'), id: uid('s'), intention: 'Capítulo 2', habitId };
+      await r.saveSession(session);
+      expect(await r.listSessions()).toEqual([session]);
+      await r.deleteHabit(habitId);
+      const { habitId: _gone, ...unlinked } = session;
+      expect(await r.listSessions()).toEqual([unlinked]);
+    });
+
     it('descanso, propostas e estado do mascote', async () => {
       const { r } = await subject();
       await r.saveRestDay({ date: '2026-11-10' });
