@@ -5,7 +5,7 @@ import { joiasGanhas, type FontesDeJoias } from './joias';
 import { endedSession, sp } from './test-utils';
 
 const clock = { now: () => 5 };
-const nada: FontesDeJoias = { habitLogs: [], sessions: [], restDays: [], goals: [], credito: 0 };
+const nada: FontesDeJoias = { habitLogs: [], sessions: [], restDays: [], goals: [], baus: [], credito: 0 };
 const habitos = (n: number) => Array.from({ length: n }, (_, i) => ({ habitId: 'h', date: `2026-11-${String(i + 1).padStart(2, '0')}`, doneAt: i }));
 
 describe('ilha: joias', () => {
@@ -15,6 +15,7 @@ describe('ilha: joias', () => {
       habitLogs: habitos(4),
       sessions: [endedSession(sp(2026, 11, 2), 25, 'concluida'), endedSession(sp(2026, 11, 3), 25, 'interrompida', 5)],
       restDays: [{ date: '2026-11-04' }],
+      baus: [{ goalId: 'g', abertoEm: 2, joias: JOIAS.por.goalCompleted }],
       goals: [
         { id: 'g', title: 'x', state: 'concluida', completedAt: 1, createdAt: 0, milestones: [{ id: 'm1', title: 'a', doneAt: 1 }, { id: 'm2', title: 'b' }] },
       ],

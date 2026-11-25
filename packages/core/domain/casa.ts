@@ -135,16 +135,17 @@ export function validarCompraDaDecoracao(item: string, estado: EstadoDaCasa): Re
 
 /** Estado atual da casa, lido do repositório. */
 export async function verCasa(repo: Repository): Promise<EstadoDaCasa> {
-  const [habitLogs, sessions, restDays, goals, credito, casa, quarto] = await Promise.all([
+  const [habitLogs, sessions, restDays, goals, baus, credito, casa, quarto] = await Promise.all([
     repo.listHabitLogs(),
     repo.listSessions(),
     repo.listRestDays(),
     repo.listGoals(),
+    repo.listGoalChests(),
     repo.getJoiaCredit(),
     repo.listHousePurchases(),
     repo.listRoomDecor(),
   ]);
-  return estadoDaCasa({ habitLogs, sessions, restDays, goals, credito }, casa, quarto);
+  return estadoDaCasa({ habitLogs, sessions, restDays, goals, baus, credito }, casa, quarto);
 }
 
 /** Constrói uma parte da casa com joias. */

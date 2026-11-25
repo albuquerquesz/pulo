@@ -69,10 +69,19 @@ export const MAX_HABITS_PER_DAY = 5;
 export const BLOCK_MIN_MINUTES = 5;
 export const BLOCK_MAX_MINUTES = 120;
 
+/** Cores de destaque que a pessoa pode escolher (nomes do design system, spec 16). */
+export const ACCENT_COLORS = ['sapo', 'agua', 'foco', 'descanso', 'sol', 'atencao'] as const;
+
 /** Metas de longo prazo. Poucas ativas de cada vez, para cada uma receber atenção de verdade. Proposta. */
 export const GOALS = {
   maxActive: 3,
   maxMilestones: 12,
+  /** O ícone é um emoji curto (em unidades UTF-16: um emoji composto passa de dez). */
+  iconMaxChars: 16,
+  defaultIcon: '🎯',
+  defaultColor: 'agua',
+  /** Ritmo: quanto o feito pode ficar abaixo do esperado (0 a 1) e ainda estar no ritmo. */
+  paceTolerance: 0.1,
 } as const;
 
 /**

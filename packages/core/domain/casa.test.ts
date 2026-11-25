@@ -5,7 +5,7 @@ import { joiasDoFoco, type FontesDeJoias } from './joias';
 import { endedSession, sp } from './test-utils';
 
 const clock = { now: () => 5 };
-const nada: FontesDeJoias = { habitLogs: [], sessions: [], restDays: [], goals: [], credito: 0 };
+const nada: FontesDeJoias = { habitLogs: [], sessions: [], restDays: [], goals: [], baus: [], credito: 0 };
 const habitos = (n: number) =>
   Array.from({ length: n }, (_, i) => ({ habitId: 'h', date: new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10), doneAt: i }));
 const canto = { x: 0, y: 0, rotation: 0 } as const;

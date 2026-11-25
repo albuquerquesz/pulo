@@ -1,5 +1,6 @@
 // Suíte de contrato do `Repository`, reutilizável por qualquer implementação (memória, armazenamento,
 // cliente remoto). Usa `describe`, `it` e `expect` globais: roda no Jest do core e no Vitest (`globals: true`).
+import { JOIAS } from '../config/decisions';
 import { dateKeyOf, addDays } from '../domain/day';
 import { verSequencia } from '../domain/streak';
 import { endedSession, sp } from '../domain/test-utils';
@@ -193,6 +194,26 @@ export function defineRepositoryContract(
       expect((await r.listGoals())[0].milestones[0].title).toBe('5 km');
       await r.deleteGoal(goal.id);
       expect(await r.listGoals()).toEqual([]);
+    });
+
+    it('metas: ícone, cor, baú uma vez e hábito atrelado, que fica solto ao apagar a meta', async () => {
+      const { r } = await subject();
+      const goalId = uid('g');
+      const habitId = uid('h');
+      const goal = { id: goalId, title: 'm', icon: '🏃', color: 'foco' as const, state: 'concluida' as const, milestones: [], createdAt: 1, completedAt: 2 };
+      await r.saveGoal(goal);
+      expect(await r.listGoals()).toEqual([goal]);
+      const habit = { id: habitId, title: 'x', weekdays: [0 as const], active: true };
+      await r.saveHabit({ ...habit, goalId });
+      expect(await r.listHabits()).toEqual([{ ...habit, goalId }]);
+      await r.saveHabit(habit);
+      expect(await r.listHabits()).toEqual([habit]);
+      await r.saveHabit({ ...habit, goalId });
+      await r.saveGoalChest({ goalId, abertoEm: 3, joias: JOIAS.por.goalCompleted });
+      expect(await r.listGoalChests()).toMatchObject([{ goalId, joias: JOIAS.por.goalCompleted }]);
+      await r.deleteGoal(goalId);
+      expect(await r.listGoalChests()).toEqual([]);
+      expect(await r.listHabits()).toEqual([habit]);
     });
 
     it('tarefas: criar numera em sequência, mover grava um evento só e apagar leva tudo junto', async () => {
