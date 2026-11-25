@@ -221,6 +221,25 @@ body {
   }
 }
 
+/* As joias saem do baú, se espalham e entram no saldo. */
+@theme inline {
+  --animate-joia-entra: joia-entra 0.9s ease-in forwards;
+  @keyframes joia-entra {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.4);
+    }
+    25% {
+      opacity: 1;
+      transform: translate(calc(-50% + var(--abre)), calc(-50% - 56px)) scale(1.15);
+    }
+    100% {
+      opacity: 0.2;
+      transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.7);
+    }
+  }
+}
+
 /* Nuvens: quatro faixas que não se cruzam. */
 .nv {
   position: absolute;

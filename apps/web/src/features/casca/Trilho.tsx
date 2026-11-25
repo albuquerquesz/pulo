@@ -2,20 +2,29 @@ import { Link } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 
 import { CasaDaIlha } from '@/mascot/ilha/CasaDaIlha';
-import { Barra, Bau, Foguinho, Joia, FUNDO_DA_COR } from '@/ui';
+import { Barra, Foguinho, Joia, FUNDO_DA_COR } from '@/ui';
 
+import { ProgressoDaMeta } from '../metas/ProgressoDaMeta';
 import { fraseDaProximaParte, type DadosDoTrilho, type MetaDoTrilho } from './logic';
 
 const CARTAO = 'rounded-md border border-b-4 border-line bg-surface';
 const ICONE = 'contorno-branco block size-[30px] shrink-0';
 
-type NumeroProps = { titulo: string; valor: ReactNode; cor: string; icone: ReactNode };
+type NumeroProps = {
+  titulo: string;
+  valor: ReactNode;
+  cor: string;
+  icone: ReactNode;
+  /** Marca o número para onde as joias voam ao abrir um baú. */
+  destinoDasJoias?: boolean;
+};
 
-function Numero({ titulo, valor, cor, icone }: NumeroProps) {
+function Numero({ titulo, valor, cor, icone, destinoDasJoias }: NumeroProps) {
   return (
     <span
       role="group"
       title={titulo}
+      data-destino-das-joias={destinoDasJoias || undefined}
       aria-label={titulo}
       className={`inline-flex cursor-default items-center gap-2 rounded-sm px-2.5 py-1.5 text-[19px] leading-none font-extrabold tabular-nums hover:bg-line/50 ${cor}`}
     >
@@ -54,7 +63,7 @@ export function NumerosDoDia({ dados }: { dados: DadosDoTrilho }) {
           </svg>
         }
       />
-      <Numero titulo="joias (saldo)" valor={dados.joias} cor="text-numero-joia" icone={<Joia largura={26} altura={30} contorno="branco" />} />
+      <Numero destinoDasJoias titulo="joias (saldo)" valor={dados.joias} cor="text-numero-joia" icone={<Joia largura={26} altura={30} contorno="branco" />} />
     </div>
   );
 }
@@ -97,17 +106,7 @@ function Meta({ meta }: { meta: MetaDoTrilho }) {
       </span>
       <div>
         <b className="mb-1.5 block">{meta.titulo}</b>
-        <div className="flex items-center gap-2">
-          <Barra
-            rotulo={meta.titulo}
-            feito={meta.feito}
-            total={meta.total}
-            texto={`${meta.feito} / ${meta.total}`}
-            cor={meta.concluida ? 'sol' : 'sapo'}
-            className="flex-1"
-          />
-          <Bau aberto={meta.bauAberto} className="-my-4 -mr-1 size-14" />
-        </div>
+        <ProgressoDaMeta meta={meta} bau="-my-4 -mr-1 size-14" />
       </div>
     </li>
   );

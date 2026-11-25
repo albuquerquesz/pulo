@@ -1,10 +1,11 @@
 import { useState, type ReactNode } from 'react';
 
 import type { EntityId, Goal, GoalChest, Habit } from '@pulo/core/domain/types';
-import { Barra, Bau, FUNDO_DA_COR } from '@/ui';
+import { FUNDO_DA_COR } from '@/ui';
 
 import { metaNaTela } from '../casca/logic';
 import { CARTAO } from '../hoje/estilos';
+import { ProgressoDaMeta } from '../metas/ProgressoDaMeta';
 import { BOTAO_FANTASMA, ICONE } from './estilos';
 
 type OpcaoProps = { grupo: string; marcada: boolean; onEscolher: () => void; children: ReactNode };
@@ -49,17 +50,7 @@ export function MetaDoHabito({ habito, metas, baus, onTrocar, onVerMeta }: MetaD
             </span>
             <div>
               <b className="mb-1.5 block">{meta.titulo}</b>
-              <div className="flex items-center gap-2">
-                <Barra
-                  rotulo={meta.titulo}
-                  feito={meta.feito}
-                  total={meta.total}
-                  texto={`${meta.feito} / ${meta.total}`}
-                  cor={meta.concluida ? 'sol' : 'sapo'}
-                  className="flex-1"
-                />
-                <Bau aberto={meta.bauAberto} className="-my-3.5 -mr-1 size-12" />
-              </div>
+              <ProgressoDaMeta meta={meta} bau="-my-3.5 -mr-1 size-12" />
             </div>
           </div>
           <div className="flex flex-wrap gap-2">

@@ -1,23 +1,13 @@
 import { useState } from 'react';
 
-import { ACCENT_COLORS, HABITS } from '@pulo/core/config/decisions';
+import { HABITS } from '@pulo/core/config/decisions';
 import type { HabitInput } from '@pulo/core/domain/habits';
 import type { AccentColor, Habit, Weekday } from '@pulo/core/domain/types';
-import { Botao, Modal } from '@/ui';
+import { Botao, CAMPO_DO_MODAL, Modal, SeletorDeCor } from '@/ui';
 
 import { Dias } from './Dias';
 import { alternarDia, SEMANA_DA_TELA } from './logic';
 import { Periodo } from './Periodo';
-
-const CAMPO = 'min-h-12 w-full rounded-sm border-2 border-contorno bg-white px-3 text-base';
-const COR: Record<AccentColor, string> = {
-  sapo: 'bg-sapo',
-  agua: 'bg-agua',
-  foco: 'bg-foco',
-  descanso: 'bg-descanso',
-  sol: 'bg-sol',
-  atencao: 'bg-atencao',
-};
 
 type FormularioDeHabitoProps = {
   /** Sem ele, é um hábito novo. */
@@ -60,24 +50,13 @@ export function FormularioDeHabito({ habito, onSalvar, onFechar }: FormularioDeH
         <h2 className="text-center text-2xl font-black">{nome}</h2>
         <label className="flex flex-col gap-1 font-extrabold">
           Nome
-          <input value={titulo} onChange={(e) => setTitulo(e.target.value)} className={CAMPO} />
+          <input value={titulo} onChange={(e) => setTitulo(e.target.value)} className={CAMPO_DO_MODAL} />
         </label>
         <label className="flex flex-col gap-1 font-extrabold">
           Ícone
-          <input value={icone} maxLength={HABITS.iconMaxChars} onChange={(e) => setIcone(e.target.value)} className={CAMPO} />
+          <input value={icone} maxLength={HABITS.iconMaxChars} onChange={(e) => setIcone(e.target.value)} className={CAMPO_DO_MODAL} />
         </label>
-        <div role="group" aria-label="Cor" className="flex flex-wrap gap-2">
-          {ACCENT_COLORS.map((c) => (
-            <button
-              key={c}
-              type="button"
-              aria-label={`Cor ${c}`}
-              aria-pressed={c === cor}
-              onClick={() => setCor(c)}
-              className={`size-11 cursor-pointer rounded-full border-contorno ${COR[c]} ${c === cor ? 'border-4' : 'border-2'}`}
-            />
-          ))}
-        </div>
+        <SeletorDeCor cor={cor} onEscolher={setCor} />
         <Dias dias={dias} onAlternar={(dia) => setDias(alternarDia(dias, dia))} />
         <Periodo periodo={periodo} onEscolher={(p) => setPeriodo(p === periodo ? undefined : p)} />
         <Botao titulo="Salvar" tipo="submit" carregando={salvando} />
