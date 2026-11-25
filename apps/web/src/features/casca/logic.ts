@@ -73,25 +73,28 @@ export interface MetaDoTrilho {
   bauAberto: boolean;
 }
 
+/** A meta como o trilho e a página do hábito mostram: ícone, cor, barra e baú. */
+export function metaNaTela(meta: Goal, baus: readonly GoalChest[]): MetaDoTrilho {
+  const { done, total } = goalProgress(meta);
+  const concluida = meta.state === 'concluida';
+  return {
+    id: meta.id,
+    titulo: meta.title,
+    icone: meta.icon ?? GOALS.defaultIcon,
+    cor: meta.color ?? GOALS.defaultColor,
+    // Sem marcos, a meta é um passo só.
+    feito: total === 0 ? Number(concluida) : done,
+    total: total === 0 ? 1 : total,
+    concluida,
+    bauAberto: estadoDoBau(meta, baus) === 'aberto',
+  };
+}
+
 /** Até três metas: as ativas (prazo mais perto antes) e, se sobrar lugar, as concluídas mais recentes. */
 export function metasDoTrilho(metas: readonly Goal[], baus: readonly GoalChest[]): MetaDoTrilho[] {
   return sortGoals(metas)
     .slice(0, GOALS.maxActive)
-    .map((meta) => {
-      const { done, total } = goalProgress(meta);
-      const concluida = meta.state === 'concluida';
-      return {
-        id: meta.id,
-        titulo: meta.title,
-        icone: meta.icon ?? GOALS.defaultIcon,
-        cor: meta.color ?? GOALS.defaultColor,
-        // Sem marcos, a meta é um passo só.
-        feito: total === 0 ? Number(concluida) : done,
-        total: total === 0 ? 1 : total,
-        concluida,
-        bauAberto: estadoDoBau(meta, baus) === 'aberto',
-      };
-    });
+    .map((meta) => metaNaTela(meta, baus));
 }
 
 export interface HabitosDoDia {
