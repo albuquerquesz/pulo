@@ -62,7 +62,8 @@ export function repositorioInterno(api: ClienteInterno): Repository {
 
     listHabits: async () => (await lerJson(await api.api.habits.$get())).habits,
     saveHabit: async (habit) => {
-      await lerJson(await api.api.habits[':id'].$put({ param: { id: habit.id }, json: habit }));
+      // Aqui o hábito sempre acabou de ser lido: sem `goalId` quer dizer sem meta.
+      await lerJson(await api.api.habits[':id'].$put({ param: { id: habit.id }, json: { ...habit, goalId: habit.goalId ?? null } }));
     },
     deleteHabit: async (id) => {
       await lerJson(await api.api.habits[':id'].$delete({ param: { id } }));
@@ -99,6 +100,11 @@ export function repositorioInterno(api: ClienteInterno): Repository {
     },
     deleteGoal: async (id) => {
       await lerJson(await api.api.goals[':id'].$delete({ param: { id } }));
+    },
+
+    listGoalChests: async () => (await lerJson(await api.api.goals.$get())).chests,
+    saveGoalChest: async (chest) => {
+      await lerJson(await api.api.goals[':id'].chest.$post({ param: { id: chest.goalId } }));
     },
 
     listIslandPurchases: async () => (await lerJson(await api.api.island.purchases.$get())).purchases,

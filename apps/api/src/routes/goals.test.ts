@@ -104,7 +104,7 @@ describe('/api/goals', () => {
     await small.call('PUT', `/api/goals/${id}`, goal(id));
     const get = await queriesOf(database, small, 'GET', '/api/goals');
     expect(await queriesOf(database, big, 'GET', '/api/goals')).toBe(get);
-    expect(get).toBe(3);
+    expect(get).toBe(4);
 
     const bigId = uuid();
     const put = await queriesOf(database, small, 'PUT', `/api/goals/${id}`, goal(id));

@@ -22,6 +22,7 @@ const WHERE_IN_FILE: Record<string, string | null> = {
   rest_day: 'restDays',
   weekly_proposal: 'proposals',
   goal: 'goals',
+  goal_chest: 'goalChests',
   task: 'tasks',
   task_subtask: 'subtasks',
   task_comment: 'taskComments',
@@ -91,6 +92,6 @@ describe('GET /api/data/export', () => {
     const one = await queriesOf(database, small, 'GET', '/api/data/export');
     expect(await queriesOf(database, big, 'GET', '/api/data/export')).toBe(one);
     // 2 de sessão, 16 leituras numa transação e as conexões.
-    expect(one).toBe(19);
+    expect(one).toBe(20);
   });
 });

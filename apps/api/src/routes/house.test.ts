@@ -165,9 +165,9 @@ describe('/api/house e /api/room', () => {
       return count;
     };
     // 2 de sessão + 7 leituras + o insert.
-    expect(await both('PUT', '/api/house/cerca', parte('cerca'))).toBe(10);
+    expect(await both('PUT', '/api/house/cerca', parte('cerca'))).toBe(11);
     // 2 de sessão + 7 leituras + 2 inserts + a leitura da resposta.
-    expect(await both('PUT', '/api/room/tapete', decor('tapete'))).toBe(12);
+    expect(await both('PUT', '/api/room/tapete', decor('tapete'))).toBe(13);
     expect(await both('GET', '/api/house')).toBe(4);
     expect(await both('GET', '/api/room')).toBe(3);
     const spot = { x: 0, y: 0, rotation: 0 };

@@ -24,6 +24,7 @@ export async function seedEverything({ db }: TestDatabase, userId: string, mark:
     data: list.map((i) => ({ id: id('proposta', i), userId, weekStart: new Date(Date.UTC(2026, 0, 5 + 7 * i)), state: 'pendente' as const, patternText: id('padrao', i), changes: [], origin: 'regra' as const, createdAt: at })),
   });
   await db.goal.createMany({ data: list.map((i) => ({ id: id('meta', i), userId, title: id('meta-titulo', i), state: 'ativa' as const, milestones: [], createdAt: at })) });
+  await db.goalChest.createMany({ data: list.map((i) => ({ userId, goalId: id('meta', i), abertoEm: at, joias: 10 })) });
   await db.task.createMany({
     data: list.map((i) => ({ id: id('tarefa', i), userId, number: i + 1, title: id('tarefa-titulo', i), status: 'afazer' as const, position: i, priority: 'normal' as const, tags: [], goalId: id('meta', i), pomodorosEstimated: 0, createdAt: at })),
   });

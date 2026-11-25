@@ -122,7 +122,7 @@ describe('/api/sync', () => {
     await seed(big, 50);
     const one = await queriesOf(database, small, 'GET', `/api/sync${RANGE}`);
     expect(await queriesOf(database, big, 'GET', `/api/sync${RANGE}`)).toBe(one);
-    // 2 de sessão + 17 leituras numa transação.
-    expect(one).toBe(19);
+    // 2 de sessão + 18 leituras numa transação.
+    expect(one).toBe(20);
   });
 });

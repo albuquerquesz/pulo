@@ -138,9 +138,9 @@ describe('/api/island', () => {
     await joiasPorDescanso(big, 50);
     const put = await queriesOf(database, small, 'PUT', '/api/island/purchases/banco', compra('banco', 8));
     expect(await queriesOf(database, big, 'PUT', '/api/island/purchases/banco', compra('banco', 8))).toBe(put);
-    // 2 de sessão + 6 leituras + o insert.
-    expect(put).toBe(9);
-    expect(await queriesOf(database, big, 'PUT', '/api/island/purchases/banco', compra('banco', 8))).toBe(8);
+    // 2 de sessão + 7 leituras + o insert.
+    expect(put).toBe(10);
+    expect(await queriesOf(database, big, 'PUT', '/api/island/purchases/banco', compra('banco', 8))).toBe(9);
     const get = await queriesOf(database, small, 'GET', '/api/island/purchases');
     expect(await queriesOf(database, big, 'GET', '/api/island/purchases')).toBe(get);
     expect(get).toBe(3);
