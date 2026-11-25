@@ -13,9 +13,21 @@ export interface SessaoDemo {
   clock: DemoClock;
 }
 
+/** O relógio parte do instante do rascunho e segue o tempo real, para o foco andar na tela. */
+function relogioCorrendo(base: DemoClock): DemoClock {
+  const abertura = Date.now();
+  return { ...base, now: () => base.now() + (Date.now() - abertura) };
+}
+
+export interface OpcoesDoDemo {
+  /** O relógio anda (no app); sem isto fica parado no instante do rascunho (testes). */
+  aoVivo?: boolean;
+}
+
 /** Ponto único do modo demo: repositório em memória com dados sintéticos e o relógio do demo. */
-export async function criarSessaoDemo(): Promise<SessaoDemo> {
-  const clock = createDemoClock(localToMs(DIA_DO_DEMO, MINUTOS_DO_DEMO));
+export async function criarSessaoDemo({ aoVivo = false }: OpcoesDoDemo = {}): Promise<SessaoDemo> {
+  const parado = createDemoClock(localToMs(DIA_DO_DEMO, MINUTOS_DO_DEMO));
+  const clock = aoVivo ? relogioCorrendo(parado) : parado;
   const repo = createMemoryRepository();
   await seedRepository(repo, clock);
   await completarDemo(repo, clock);
