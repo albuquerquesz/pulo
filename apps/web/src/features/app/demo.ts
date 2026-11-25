@@ -3,6 +3,7 @@ import { createDemoClock, localToMs, seedRepository, type DemoClock } from '@pul
 import type { Repository } from '@pulo/core/domain/types';
 
 import { completarDemo, DIA_DO_DEMO, MINUTOS_DO_DEMO } from './demoDoRascunho';
+import { comHistoricoDosHabitos } from './demoDosHabitos';
 import type { PessoaLogada } from '../sessao/auth';
 
 /** A pessoa de exemplo que a casca mostra no demo (a do rascunho). */
@@ -31,5 +32,5 @@ export async function criarSessaoDemo({ aoVivo = false }: OpcoesDoDemo = {}): Pr
   const repo = createMemoryRepository(undefined, clock);
   await seedRepository(repo, clock);
   await completarDemo(repo, clock);
-  return { repo, clock };
+  return { repo: comHistoricoDosHabitos(repo, clock), clock };
 }
