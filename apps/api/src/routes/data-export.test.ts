@@ -32,6 +32,7 @@ const WHERE_IN_FILE: Record<string, string | null> = {
   room_placement: 'roomDecor',
   joia_credit: 'joiaCredit',
   mascot_state: 'mascot',
+  achievement: 'achievements',
   oauth_consent: 'connections',
   session: null,
   account: null,
@@ -91,7 +92,7 @@ describe('GET /api/data/export', () => {
     await seedEverything(database, big.id, 'cinquenta', 50);
     const one = await queriesOf(database, small, 'GET', '/api/data/export');
     expect(await queriesOf(database, big, 'GET', '/api/data/export')).toBe(one);
-    // 2 de sessão, 16 leituras numa transação e as conexões.
-    expect(one).toBe(20);
+    // 2 de sessão, 18 leituras numa transação e as conexões.
+    expect(one).toBe(21);
   });
 });

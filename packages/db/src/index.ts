@@ -1,6 +1,7 @@
 export { createDb, type CreateDbOptions, type Db, type QueryEvent } from './client';
 export { dateKeyToDate, dateToDateKey, dateToMs, msToDate } from './dates';
 export {
+  achievementMapper,
   focusSessionMapper,
   goalChestMapper,
   goalMapper,

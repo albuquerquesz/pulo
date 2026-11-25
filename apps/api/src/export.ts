@@ -1,5 +1,6 @@
 import {
   type Db,
+  achievementMapper,
   focusSessionMapper,
   goalChestMapper,
   goalMapper,
@@ -19,6 +20,7 @@ import {
 import type { SessionUser } from './http';
 import { listConnections } from './connections';
 import {
+  achievementSelect,
   blockSelect,
   goalChestSelect,
   goalSelect,
@@ -47,7 +49,7 @@ export const EXPORT_VERSION = 1;
 export async function exportData(db: Db, person: SessionUser, exportedAt: number) {
   const { id: userId, name, email, image, createdAt, metadata } = person;
   const where = { userId };
-  const [blocks, habits, habitLogs, sessions, restDays, proposals, goals, goalChests, tasks, subtasks, comments, events, taskCounter, purchases, roomDecor, joiaCredit, mascot] =
+  const [blocks, habits, habitLogs, sessions, restDays, proposals, goals, goalChests, tasks, subtasks, comments, events, taskCounter, purchases, roomDecor, joiaCredit, mascot, achievements] =
     await db.$transaction([
       db.routineBlock.findMany({ where, select: blockSelect, orderBy: [{ weekday: 'asc' }, { startMinutes: 'asc' }] }),
       db.habit.findMany({ where, select: habitSelect, orderBy: { id: 'asc' } }),
@@ -71,6 +73,7 @@ export async function exportData(db: Db, person: SessionUser, exportedAt: number
       }),
       db.joiaCredit.findUnique({ where, select: { amount: true } }),
       db.mascotState.findUnique({ where, select: mascotSelect }),
+      db.achievement.findMany({ where, select: achievementSelect, orderBy: { conquistadaEm: 'asc' } }),
     ]);
   const connections = await listConnections(db, userId);
 
@@ -100,6 +103,7 @@ export async function exportData(db: Db, person: SessionUser, exportedAt: number
     islandPurchases: purchasesOf('antiga'),
     joiaCredit: joiaCredit?.amount ?? 0,
     mascot: mascot === null ? null : mascotStateMapper.toDomain(mascot),
+    achievements: achievements.map(achievementMapper.toDomain),
     connections,
   };
 }

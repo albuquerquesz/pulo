@@ -28,6 +28,7 @@ erDiagram
   user ||--o| joia_credit : tem
   island_purchase ||--o| room_placement : posiciona
   user ||--o| mascot_state : tem
+  user ||--o{ achievement : conquistou
   habit ||--o{ habit_log : registra
   routine_block |o--o{ focus_session : "ocorre em"
 
@@ -168,6 +169,11 @@ erDiagram
     text userId PK
     int amount "maior que 0"
   }
+  achievement {
+    text userId PK
+    text achievement PK "id do catálogo"
+    timestamptz conquistadaEm
+  }
   mascot_state {
     text userId PK
     smallint phase "1 a 4"
@@ -201,6 +207,9 @@ Regras que o banco garante (migração `restricoes`, em SQL):
 - migração `metas_v2`: `goal` ganha `icon` e `color` (nulos nas que já existiam), `habit` ganha `goalId` (apagar a meta solta o
   hábito; que a meta é da pessoa quem confere é a API) e `goal_chest` guarda um resgate por meta (sai junto com ela). A migração
   cria, uma vez, o resgate já aberto das metas que estavam concluídas, com as 10 joias que elas já valiam.
+- migração `conquistas` (só a tabela nova): `achievement` guarda uma linha por pessoa e conquista (chave `userId, achievement`),
+  com a data em que a regra passou pela primeira vez. O progresso é calculado. Sem preenchimento retroativo: quem já cumpria uma
+  regra a recebe na próxima escrita que confere conquistas.
 
 Convenções de tipo: `DateKey` do domínio ('AAAA-MM-DD', o dia lógico) é `date`; instantes (ms) são `timestamptz`;
 os enums do Prisma têm os mesmos valores das uniões de `packages/core/domain/types.ts`.

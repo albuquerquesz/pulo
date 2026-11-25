@@ -305,6 +305,36 @@ export interface Streak {
   semana: StreakDay[];
 }
 
+// ---------- Conquistas (spec 14) ----------
+
+export type AchievementId =
+  | 'primeira-semana'
+  | 'foco-profundo'
+  | 'descanso-sabido'
+  | 'mes-de-fogo'
+  | 'casa-inteira'
+  | 'segredo';
+
+/** Uma conquista gravada. `id` é o que está no banco (do catálogo). */
+export interface UnlockedAchievement {
+  id: string;
+  conquistadaEm: number;
+}
+
+/** Uma conquista como a pessoa a vê. Progresso é calculado; só a data da conquista é gravada. */
+export interface Achievement {
+  id: AchievementId;
+  /** Nome e emoji do catálogo; ausentes na secreta ainda não conquistada. */
+  nome?: string;
+  emoji?: string;
+  conquistada: boolean;
+  /** Instante (ms) em que foi gravada. Ausente no que o app calcula sozinho (demo). */
+  conquistadaEm?: number;
+  /** De 0 a `meta`. */
+  progresso: number;
+  meta: number;
+}
+
 // ---------- Resumo da semana (entrada da IA e das telas) ----------
 // Não contém títulos, nomes nem texto livre.
 

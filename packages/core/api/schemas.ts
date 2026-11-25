@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
-import { ACCENT_COLORS,
+import {
+  ACCENT_COLORS,
   ACCOUNT,
+  ACHIEVEMENTS,
   BLOCK_MAX_MINUTES,
   BLOCK_MIN_MINUTES,
   FOCUS,
@@ -13,6 +15,7 @@ import { ACCENT_COLORS,
 } from '../config/decisions';
 import { addDays, isDateKey, weekdayOf } from '../domain/day';
 import type {
+  Achievement,
   BlockSlot,
   DateKey,
   FocusSession,
@@ -285,6 +288,19 @@ export const profileStatsSchema = z.object({
 
 /** Resposta de `GET /api/stats`. */
 export const statsResponseSchema = z.object({ stats: profileStatsSchema });
+
+export const achievementSchema = z.object({
+  id: z.enum(ACHIEVEMENTS.map((item) => item.id)),
+  nome: z.string().optional(),
+  emoji: z.string().optional(),
+  conquistada: z.boolean(),
+  conquistadaEm: msSchema.optional(),
+  progresso: z.number().int().min(0),
+  meta: z.number().int().min(1),
+}) satisfies z.ZodType<Achievement, unknown>;
+
+/** Resposta de `GET /api/achievements`. */
+export const achievementsResponseSchema = z.object({ achievements: z.array(achievementSchema) });
 
 // ---------- Conta (spec 15) ----------
 

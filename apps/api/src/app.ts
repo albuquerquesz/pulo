@@ -9,6 +9,7 @@ import { meRoutes } from './me';
 import { resolveMcpConfig } from './mcp-config';
 import { lerPessoa, mcpRoutes } from './mcp/rotas';
 import { accountRoutes } from './routes/account';
+import { achievementRoutes } from './routes/achievements';
 import { blockRoutes } from './routes/blocks';
 import { connectionRoutes } from './routes/connections';
 import { dataRoutes } from './routes/data';
@@ -94,6 +95,7 @@ export function createApp(env: ApiEnv, db: Db, now = Date.now, options: AppOptio
     .route('/api/mascot', mascotRoutes(deps))
     .route('/api/week-summary', weekSummaryRoutes(deps))
     .route('/api/streak', streakRoutes(deps))
+    .route('/api/achievements', achievementRoutes(deps))
     .route('/api/sync', syncRoutes(deps))
     .route('/api/data', dataRoutes(deps))
     .route('/api/stats', statsRoutes(deps))

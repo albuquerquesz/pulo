@@ -7,6 +7,7 @@ import type {
   User,
   Weekday,
 } from '../domain/types';
+import { FOCUS } from '../config/decisions';
 import { addDays, localToMs, weekdayOf } from './time';
 
 /** Segunda da primeira das 4 semanas sintéticas. A última termina em 22/11/2026. */
@@ -105,7 +106,9 @@ export function generateDemoData(seed: number = DEMO_DEFAULT_SEED, createdAt = 0
           pausedMs: 0,
         });
       };
-      mk(`demo-sessao-${date}-m`, 'manha', MORNING_START + int(0, 5), BLOCK_MINUTES, 'concluida');
+      // O primeiro foco é um longo, para o demo mostrar a conquista de foco profundo.
+      const morningMinutes = w === 0 && wd === 0 ? FOCUS.maxMinutes : BLOCK_MINUTES;
+      mk(`demo-sessao-${date}-m`, 'manha', MORNING_START + int(0, 5), morningMinutes, 'concluida');
       // Tarde: na maioria dos dias interrompida (padrão que a IA pode notar).
       const afternoonDone = rnd() < 0.25;
       mk(`demo-sessao-${date}-t`, 'tarde', AFTERNOON_START + int(0, 5), BLOCK_MINUTES, afternoonDone ? 'concluida' : 'interrompida');

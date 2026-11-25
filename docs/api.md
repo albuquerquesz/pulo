@@ -78,12 +78,12 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `PUT /api/habits/:id` | `Habit` (`goalId` pode ser `null`) | `{ habit }` | 4 (5 quando traz meta) |
 | `DELETE /api/habits/:id` | | `{ deleted }` (os registros do hábito saem junto) | 3 |
 | `GET /api/habit-logs?from&to` | | `{ habitLogs: HabitLog[] }` | 3 |
-| `PUT /api/habit-logs/:habitId/:date` | `HabitLog` | `{ habitLog }` | 4 |
+| `PUT /api/habit-logs/:habitId/:date` | `HabitLog` | `{ habitLog, newAchievements }` | 9 (10 ao destravar) |
 | `DELETE /api/habit-logs/:habitId/:date` | | `{ deleted }` | 3 |
 | `GET /api/sessions?from&to` | | `{ sessions: FocusSession[] }` | 3 |
-| `PUT /api/sessions/:id` | `FocusSession` | `{ session, mascot: MascotState \| null }` | 4 em andamento, 8 ao encerrar |
+| `PUT /api/sessions/:id` | `FocusSession` | `{ session, mascot: MascotState \| null, newAchievements }` | 4 em andamento, 13 ao encerrar (14 ao destravar) |
 | `GET /api/rest-days?from&to` | | `{ restDays: RestDay[] }` | 3 |
-| `PUT /api/rest-days/:date` | (sem corpo) | `{ restDay, mascot: MascotState }` | 7 |
+| `PUT /api/rest-days/:date` | (sem corpo) | `{ restDay, mascot: MascotState, newAchievements }` | 12 (13 ao destravar) |
 | `DELETE /api/rest-days/:date` | | `{ deleted, mascot: MascotState }` | 7 |
 | `GET /api/proposals` | | `{ proposals: WeeklyProposal[] }` (semana mais nova primeiro) | 3 |
 | `PUT /api/proposals/:id` | `WeeklyProposal` | `{ proposal }` | 4 |
@@ -103,7 +103,7 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `GET /api/island/purchases` | | `{ purchases: IslandPurchase[] }` (mais antiga primeiro) | 3 |
 | `PUT /api/island/purchases/:item` | `IslandPurchase` | `{ purchase }` | 10 comprando, 9 repetindo |
 | `GET /api/house` | | `{ purchases: Purchase[], joiaCredit: number }` | 4 |
-| `PUT /api/house/:item` | `Purchase` | `{ purchase }` | 11 comprando |
+| `PUT /api/house/:item` | `Purchase` | `{ purchase, newAchievements }` | 16 comprando (17 ao destravar) |
 | `GET /api/room` | | `{ decor: RoomDecor[] }` (mais antiga primeiro) | 3 |
 | `PUT /api/room/:item` | `RoomDecor` | `{ decor }` | 13 comprando |
 | `PATCH /api/room/:item` | `RoomSpot` | `{ item, spot }` | 3 |
@@ -111,12 +111,13 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `GET /api/week-summary?date` | | `{ summary: WeekSummary }` | 5 |
 | `GET /api/streak` | | `{ streak: Streak }` | 5 |
 | `GET /api/stats` | | `{ stats: ProfileStats }` | 4 |
-| `GET /api/data/export` | | arquivo JSON com tudo da pessoa | 20 |
+| `GET /api/achievements` | | `{ achievements: Achievement[] }` | 7 |
+| `GET /api/data/export` | | arquivo JSON com tudo da pessoa | 21 |
 | `DELETE /api/account` | `{ confirm: 'EXCLUIR' }` | `{ deleted: true }` e o cookie apagado | fixo (igual com 1 ou 50 registros) |
 | `GET /api/mcp/connections` | | `{ connections: McpConnection[] }` (a mais recente primeiro) | 3 |
 | `DELETE /api/mcp/connections/:clientId` | | `{ deleted }` | 6 |
-| `GET /api/sync?from&to` | | ver abaixo (inclui `goals`, `goalChests`, `tasks`, `subtasks`, `islandPurchases`, `housePurchases`, `roomDecor`, `joiaCredit`, `streak` e `stats`) | 20 |
-| `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, goals, islandPurchases, mascot, tasks } }` | 13 |
+| `GET /api/sync?from&to` | | ver abaixo (inclui `goals`, `goalChests`, `tasks`, `subtasks`, `islandPurchases`, `housePurchases`, `roomDecor`, `joiaCredit`, `streak`, `stats` e `achievements`) | 21 |
+| `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, goals, islandPurchases, mascot, tasks, achievements } }` | 14 |
 
 Já existiam e continuam: `GET /health`, `/api/auth/*`, `GET /api/me`, `PATCH /api/me/metadata`, `POST /weekly-ai`.
 
@@ -156,7 +157,7 @@ Rota do Better Auth. Corpo `{ name?, image? }`: nome de 1 a `ACCOUNT.nameMaxChar
 
 Download (`Content-Disposition`, `Cache-Control: no-store`) com `exportVersion`, `exportedAt`, `user` (id, nome, email, foto, criação),
 `metadata`, `blocks`, `habits`, `habitLogs`, `sessions`, `restDays`, `proposals`, `goals`, `goalChests`, `tasks`, `subtasks`, `taskComments`,
-`taskEvents`, `lastTaskNumber`, `housePurchases`, `roomDecor`, `islandPurchases`, `joiaCredit`, `mascot` e `connections`.
+`taskEvents`, `lastTaskNumber`, `housePurchases`, `roomDecor`, `islandPurchases`, `joiaCredit`, `mascot`, `achievements` (id e data) e `connections`.
 Sem recorte de datas. Nunca entram tokens, segredos, sessões de login nem contas OAuth. Tabela nova com `userId` precisa entrar
 no arquivo (`data-export.test.ts` cobra).
 
@@ -317,9 +318,32 @@ A regra é a função pura `computeStreak` do core (`@pulo/core/domain/streak`),
   e o começo do dia dela, o dia novo passa a ser o `hoje` da sequência. Registros em datas futuras não contam.
 - Leituras fixas numa transação: hábitos feitos agrupados por dia, sessões encerradas e descansos, de todo o histórico.
 
+### Conquistas
+
+`Achievement`: `{ id, nome?, emoji?, conquistada, conquistadaEm?, progresso, meta }`. O catálogo é `ACHIEVEMENTS` do `decisions.ts`
+e as regras são puras em `@pulo/core/domain/achievements`. O `/api/sync` (campo `achievements`) e `GET /api/achievements` trazem o
+catálogo inteiro, na mesma ordem. A secreta não conquistada vem sem `nome` e `emoji`.
+
+| Id | Regra | `meta` |
+| --- | --- | --- |
+| `primeira-semana` | dias seguidos (a sequência de `GET /api/streak`; vale o recorde) | 7 |
+| `foco-profundo` | uma sessão encerrada com esses minutos focados (sem pausas) | 50 |
+| `descanso-sabido` | dias de descanso marcados (férias não contam) | 4 |
+| `mes-de-fogo` | dias seguidos | 30 |
+| `casa-inteira` | partes da casa prontas (o quarto já conta) | 6 |
+| `segredo` | regra ainda não escolhida: ninguém recebe | 1 |
+
+- **Gravação:** só `(conquista, conquistadaEm)`, na primeira vez que a regra passa, com o relógio do servidor. Nunca some, mesmo
+  apagando os registros (só `DELETE /api/data` e a exclusão da conta). O progresso é calculado e não é gravado.
+- **Quem destrava:** `PUT` de hábito feito, de sessão encerrada, de descanso e de compra na casa, depois da escrita confirmada.
+  A resposta traz `newAchievements` só com as gravadas naquela chamada (lista vazia no resto): repetir o `PUT` não repete a comemoração,
+  e dois aparelhos juntos não comemoram a mesma duas vezes.
+- **Antes da primeira escrita:** quem já cumpria uma regra vê `conquistada: false` com o progresso cheio e a ganha na próxima dessas escritas.
+- Em `progresso` das sequências vale a sequência viva (`atual`) até o recorde alcançar a meta.
+
 ### `GET /api/sync?from&to`
 
-`from` e `to` obrigatórios, até 400 dias. Dezoito leituras numa transação (as estatísticas reaproveitam as da sequência), resposta:
+`from` e `to` obrigatórios, até 400 dias. Dezenove leituras numa transação (as estatísticas reaproveitam as da sequência), resposta:
 
 ```json
 {
@@ -327,7 +351,9 @@ A regra é a função pura `computeStreak` do core (`@pulo/core/domain/streak`),
   "metadata": { "version": 1, "theme": "sistema", "reduceMotion": false, "timezone": "America/Sao_Paulo", "onboarding": { "completed": false, "completedAt": null }, "profile": null },
   "blocks": [], "habits": [], "habitLogs": [], "sessions": [], "restDays": [],
   "proposals": [], "goals": [], "goalChests": [], "tasks": [], "subtasks": [], "islandPurchases": [], "housePurchases": [], "roomDecor": [], "joiaCredit": 0, "mascot": null,
-  "streak": { "atual": 0, "recorde": 0, "semana": [{ "date": "2026-11-15", "estado": "vazio" }] }, "stats": { "habitosFeitos": 0, "minutosDeFoco": 0, "desde": 1795000000000 }, "serverTime": 1795000000000
+  "streak": { "atual": 0, "recorde": 0, "semana": [{ "date": "2026-11-15", "estado": "vazio" }] }, "stats": { "habitosFeitos": 0, "minutosDeFoco": 0, "desde": 1795000000000 },
+  "achievements": [{ "id": "primeira-semana", "nome": "Primeira semana", "emoji": "🔥", "conquistada": false, "progresso": 0, "meta": 7 }],
+  "serverTime": 1795000000000
 }
 ```
 
@@ -337,7 +363,7 @@ em andamento. `streak` olha todo o histórico, não só o intervalo (acima; `sem
 ### `DELETE /api/data`
 
 O `clearAll` do servidor, único jeito de zerar o progresso: apaga blocos, hábitos (e seus registros), sessões, descansos,
-propostas, metas (e baús), tarefas (com subtarefas, comentários e histórico; a numeração volta a 1), compras com joias (e posições do quarto), crédito de joias e o estado do sapo da pessoa, numa transação. Conta, login e metadados (tema, fuso, onboarding) ficam.
+propostas, metas (e baús), tarefas (com subtarefas, comentários e histórico; a numeração volta a 1), compras com joias (e posições do quarto), crédito de joias, conquistas e o estado do sapo da pessoa, numa transação. Conta, login e metadados (tema, fuso, onboarding) ficam.
 
 ## Mapa para o `Repository`
 
@@ -366,6 +392,7 @@ propostas, metas (e baús), tarefas (com subtarefas, comentários e histórico; 
 | `verEstatisticas` do core (`getStats` só no `RemoteRepository`) | `GET /api/sync` e `GET /api/stats` |
 | `exportData`, `deleteAccount` (só no `RemoteRepository`) | `GET /api/data/export`, `DELETE /api/account` |
 | `listConnections`, `disconnect` (só no `RemoteRepository`) | `GET`, `DELETE /api/mcp/connections` |
+| `verConquistas` do core (`getAchievements` só no `RemoteRepository`) | `GET /api/sync` e `GET /api/achievements` |
 | `clearAll` | `DELETE /api/data` |
 
 ## Cliente no app: `@pulo/client`
@@ -388,6 +415,9 @@ propostas, metas (e baús), tarefas (com subtarefas, comentários e histórico; 
 - **Sequência:** `getStreak()` (ou `verSequencia(repo, clock)` do core) devolve a do sync, sem rede. Depois de uma escrita em hábito,
   registro, sessão, descanso, perfil ou do `clearAll`, ou na virada do dia, espera as escritas pendentes e chama `GET /api/streak`;
   sem rede, devolve a última conhecida.
+- **Conquistas:** `getAchievements()` (ou `verConquistas(repo, clock)`) devolve as do sync; depois de uma escrita que pode mudá-las
+  (hábito, registro, sessão, descanso, casa, perfil, `clearAll`) ou na virada do dia, chama `GET /api/achievements`.
+  `onNewAchievements(listener)` avisa as destravadas por uma escrita (para o sapo comemorar) e devolve como cancelar.
 - **Tarefas:** `saveTask` mostra o cartão na hora e preenche `number` com a resposta. Tarefa, subtarefas e comentários seguem em
   ordem; comentários e histórico não ficam em cache. Apagar uma meta solta o vínculo no cache.
 - **Lote:** `saveBlocks(blocks)` e `saveHabits(habits)` (cache otimista, um `PUT` cada, tudo ou nada com rollback do cache). `saveBlock` e `saveHabit` continuam.

@@ -125,6 +125,20 @@ export const ROOM_DECOR = {
 export const ROOM_GRID = { columns: 6, rows: 6, rotations: [0, 90, 180, 270] } as const;
 
 /**
+ * Conquistas (spec 14): catálogo na ordem em que aparecem. `meta` é o alvo numérico de cada regra
+ * (`@pulo/core/domain/achievements`): dias seguidos, minutos de uma sessão de foco, dias de descanso ou partes da casa.
+ * A regra da secreta ainda não foi escolhida: ela não é concedida a ninguém. Proposta.
+ */
+export const ACHIEVEMENTS = [
+  { id: 'primeira-semana', nome: 'Primeira semana', emoji: '🔥', secreta: false, meta: 7 },
+  { id: 'foco-profundo', nome: 'Foco profundo', emoji: '⏱️', secreta: false, meta: 50 },
+  { id: 'descanso-sabido', nome: 'Descanso sabido', emoji: '🌙', secreta: false, meta: 4 },
+  { id: 'mes-de-fogo', nome: 'Mês de fogo', emoji: '🏆', secreta: false, meta: 30 },
+  { id: 'casa-inteira', nome: 'Casa inteira', emoji: '🏡', secreta: false, meta: Object.keys(HOUSE.partCost).length },
+  { id: 'segredo', nome: 'Segredo', emoji: '✨', secreta: true, meta: 1 },
+] as const;
+
+/**
  * Ilha antiga (spec 12), em modo legado até a tela nova: catálogo de áreas e enfeites. As compras dela
  * não gastam joias na casa nem no quarto (o valor volta para a pessoa).
  */

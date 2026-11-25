@@ -2,6 +2,7 @@ import { dateRangeQuerySchema, focusSessionSchema, idParamSchema } from '@pulo/c
 import type { FocusSession } from '@pulo/core/domain/types';
 import { focusSessionMapper } from '@pulo/db';
 import { Hono } from 'hono';
+import { unlockAchievements } from '../achievements';
 import {
   ApiError,
   type AppEnv,
@@ -79,7 +80,9 @@ export function sessionRoutes({ auth, db, now }: RouteDeps) {
         const mascot = saved.state === 'em_andamento' ? null : await refreshMascot(tx, userId, metadata.timezone, serverNow);
         return { session: saved, mascot };
       });
-      return c.json(result);
+      // Só uma sessão encerrada muda sequência ou foco.
+      const newAchievements = result.session.state === 'em_andamento' ? [] : await unlockAchievements(db, c.var.user, serverNow);
+      return c.json({ ...result, newAchievements });
     });
 }
 

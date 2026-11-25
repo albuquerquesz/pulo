@@ -46,7 +46,7 @@ describe('/api/house e /api/room', () => {
     await joias(me, 200);
     const res = await me.call('PUT', '/api/house/varanda', parte('varanda'));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ purchase: parte('varanda') });
+    expect(await res.json()).toEqual({ purchase: parte('varanda'), newAchievements: [] });
     expect((await me.call('PUT', '/api/house/varanda', parte('varanda'))).status).toBe(200);
     expect(await erro(await me.call('PUT', '/api/house/varanda', parte('varanda', TEST_NOW - 2)))).toEqual({ status: 409, error: 'ja_comprado' });
     expect(await casa(me)).toEqual({ purchases: [parte('varanda')], joiaCredit: 200 });
@@ -155,6 +155,8 @@ describe('/api/house e /api/room', () => {
     for (const [user, n] of [[small, 1], [big, 50]] as const) {
       await joias(user, 500);
       await database.db.restDay.createMany({ data: Array.from({ length: n }, (_, i) => ({ userId: user.id, date: new Date(Date.UTC(2025, 0, 1 + i)) })) });
+      // Já gravada, para a contagem não incluir o INSERT de uma conquista só em quem tem muitos descansos.
+      await database.db.achievement.create({ data: { userId: user.id, achievement: 'descanso-sabido', conquistadaEm: new Date(TEST_NOW) } });
       await database.db.islandPurchase.createMany({
         data: Array.from({ length: n }, (_, i) => ({ userId: user.id, item: `antigo${i}`, cost: 1, createdAt: new Date(TEST_NOW - 10) })),
       });
@@ -164,8 +166,8 @@ describe('/api/house e /api/room', () => {
       expect(await queriesOf(database, big, method, path, body)).toBe(count);
       return count;
     };
-    // 2 de sessão + 7 leituras + o insert.
-    expect(await both('PUT', '/api/house/cerca', parte('cerca'))).toBe(11);
+    // 2 de sessão + 7 leituras + o insert + 5 leituras das conquistas.
+    expect(await both('PUT', '/api/house/cerca', parte('cerca'))).toBe(16);
     // 2 de sessão + 7 leituras + 2 inserts + a leitura da resposta.
     expect(await both('PUT', '/api/room/tapete', decor('tapete'))).toBe(13);
     expect(await both('GET', '/api/house')).toBe(4);
