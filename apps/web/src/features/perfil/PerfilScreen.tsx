@@ -1,142 +1,141 @@
 import { useState } from 'react';
 
-import type { User } from '@pulo/core/domain/types';
+import { DEFAULT_TIMEZONE } from '@pulo/core/config/decisions';
+import { dateKeyOf } from '@pulo/core/domain/day';
+import type { PreferencesPatch } from '@pulo/core/domain/user-metadata';
 
-import { Botao, Cartao, Texto } from '@/ui';
+import { Botao } from '@/ui';
 
-import { confirmar, Secao, Tela, useApp } from '../app';
-import { ambienteDoApp, apiUrl } from '../sessao/config';
-import { EscolhaDeHora } from './HorarioDoDia';
+import { Tela, useApp, useCarregar } from '../app';
+import { temConta, temPreferencias } from '../app/conta';
+import { contaNaTela } from '../casca/logic';
+import { baixarJson } from './baixar';
+import { Cabecalho } from './Cabecalho';
+import { ClaudeDialogo } from './ClaudeDialogo';
+import { Conquistas } from './Conquistas';
+import { Conta } from './Conta';
+import { EditarPerfil } from './EditarPerfil';
+import { Estatisticas } from './Estatisticas';
+import { ExcluirConta } from './ExcluirConta';
+import { carregarPerfil, desdeQuando, medalha, nomeDoArquivo } from './logic';
+import { PainelDemo } from './PainelDemo';
+import { Preferencias } from './Preferencias';
+import { Rotina } from './Rotina';
+import { useConexoes, type Conexoes } from './useConexoes';
 
-type OpcaoDeTema = { chave: User['theme']; rotulo: string };
+type DialogoAberto = 'editar' | 'claude' | 'excluir' | null;
 
-const TEMAS: OpcaoDeTema[] = [
-  { chave: 'claro', rotulo: 'Claro' },
-  { chave: 'escuro', rotulo: 'Escuro' },
-  { chave: 'sistema', rotulo: 'Sistema' },
-];
-
-export function PerfilScreen() {
-  const { user, atualizarPerfil, apagarDados, demo, demoClock, enableDemo, disableDemo, refresh, pessoa, sair } = useApp();
-  if (!user) return null;
-
-  const inicio = Math.round(user.dayStartMinutes / 60);
-  const fim = Math.round(user.dayEndMinutes / 60);
-
-  const apagar = async () => {
-    const ok = await confirmar(
-      'Apagar todos os meus dados?',
-      demo
-        ? 'Isso remove os dados de exemplo do demo. Sua conta e seus dados de verdade não são tocados.'
-        : 'Isso remove seu sapo, sua rotina e seu progresso da sua conta, em todos os aparelhos. Não dá para desfazer.',
-    );
-    if (ok) await apagarDados();
-  };
-
-  return (
-    <Tela titulo="Perfil">
-      <Texto cor="muted">Seu sapo se chama {user.frogName}.</Texto>
-
-      <Secao titulo="Seu dia">
-        <EscolhaDeHora rotulo="Começa às" horas={inicio} min={0} max={Math.min(22, fim - 1)} onChange={(h) => void atualizarPerfil({ dayStartMinutes: h * 60 })} />
-        <EscolhaDeHora rotulo="Termina às" horas={fim} min={inicio + 1} max={24} onChange={(h) => void atualizarPerfil({ dayEndMinutes: h * 60 })} />
-      </Secao>
-
-      <Secao titulo="Aparência">
-        <div className="flex gap-2" role="radiogroup" aria-label="Tema">
-          {TEMAS.map((o) => (
-            <Cartao
-              key={o.chave}
-              selecionado={user.theme === o.chave}
-              onPress={() => void atualizarPerfil({ theme: o.chave })}
-              rotulo={`Tema ${o.rotulo.toLowerCase()}`}
-              className="min-h-12 flex-1 justify-center"
-            >
-              <Texto className="text-center">{o.rotulo}</Texto>
-            </Cartao>
-          ))}
-        </div>
-        <label className="flex min-h-12 cursor-pointer items-center gap-3">
-          <Texto como="span" className="flex-1">
-            Reduzir movimento
-          </Texto>
-          <input
-            type="checkbox"
-            role="switch"
-            checked={user.reduceMotion}
-            onChange={(e) => void atualizarPerfil({ reduceMotion: e.target.checked })}
-            aria-label="Reduzir movimento"
-            className="size-6 accent-agua"
-          />
-        </label>
-      </Secao>
-
-      <Secao titulo="Modo demo">
-        {demo && demoClock ? (
-          <Cartao testID="painel-demo">
-            <Texto>Modo demo, dados de exemplo. Nada aqui é seu de verdade.</Texto>
-            <Botao titulo="Avançar 1 dia" onPress={() => { demoClock.advanceDays(1); refresh(); }} />
-            <Botao titulo="Avançar 1 semana" onPress={() => { demoClock.advanceWeeks(1); refresh(); }} />
-            <Botao titulo="Reiniciar o demo" variante="fantasma" onPress={() => void enableDemo()} />
-            <Botao titulo="Desligar modo demo" variante="fantasma" onPress={() => void disableDemo()} />
-            <Texto variante="legenda" cor="muted">
-              Hoje no demo: {demoClock.today()}
-            </Texto>
-          </Cartao>
-        ) : (
-          <Cartao onPress={() => void enableDemo()} rotulo="Ligar modo demo, com dados de exemplo">
-            <Texto>Ligar modo demo</Texto>
-            <Texto variante="legenda" cor="muted">
-              Carrega quatro semanas de dados de exemplo, sem mexer nos seus.
-            </Texto>
-          </Cartao>
-        )}
-      </Secao>
-
-      <Secao titulo="Seus dados">
-        <Botao titulo="Apagar todos os meus dados" variante="fantasma" onPress={() => void apagar()} />
-      </Secao>
-
-      {pessoa ? <ConectarIa /> : null}
-
-      {pessoa ? (
-        <Secao titulo="Sua conta">
-          <Texto cor="muted">Você entrou como {pessoa.email}.</Texto>
-          <Botao titulo="Sair da conta" variante="fantasma" onPress={() => void sair()} testID="sair" />
-        </Secao>
-      ) : null}
-    </Tela>
-  );
+function estadoDoClaude(conexoes: Conexoes): string | null {
+  if (conexoes.tipo === 'carregando') return null;
+  if (conexoes.tipo === 'erro') return 'Ver';
+  return conexoes.lista.length > 0 ? 'Conectado' : 'Conectar';
 }
 
-/** Endereço do servidor MCP para colar no Claude (ou outro cliente): a IA entra com a mesma conta e faz o que as telas fazem. */
-function ConectarIa() {
-  const api = apiUrl(ambienteDoApp(), import.meta.env.DEV);
-  const [copiado, setCopiado] = useState(false);
-  if (!api) return null;
-  const endereco = `${api}/mcp`;
-  const copiar = async () => {
+/** O Perfil: cabeçalho, estatísticas, conquistas, rotina, preferências e conta. */
+export function PerfilScreen() {
+  const app = useApp();
+  const { repo, clock, user, demo, demoClock, refresh, atualizarPerfil } = app;
+  const { estado, recarregar } = useCarregar(() => carregarPerfil(repo, clock));
+  const { conexoes, desconectar, tentarDeNovo } = useConexoes();
+  const [dialogo, setDialogo] = useState<DialogoAberto>(null);
+  const [baixando, setBaixando] = useState(false);
+  if (!user) return null;
+
+  const fuso = user.timezone || DEFAULT_TIMEZONE;
+  const conta = contaNaTela(app.conta, user);
+  const dados = estado.tipo === 'ok' ? estado.dados : null;
+  const fechar = () => setDialogo(null);
+
+  const mudar = async (patch: PreferencesPatch) => {
+    if (!temPreferencias(repo)) return;
+    const gravando = repo.savePreferences(patch);
+    // O cache já mudou: a tela mostra a escolha sem esperar o servidor.
+    void recarregar();
     try {
-      await navigator.clipboard.writeText(endereco);
-      setCopiado(true);
+      await gravando;
     } catch {
-      setCopiado(false);
+      // O repositório já avisou e voltou ao que era.
+    }
+    refresh();
+  };
+
+  const baixar = async () => {
+    if (!temConta(repo)) return;
+    setBaixando(true);
+    try {
+      baixarJson(nomeDoArquivo(dateKeyOf(clock.now(), fuso)), await repo.exportData());
+    } catch {
+      // O repositório já avisou o que houve.
+    } finally {
+      setBaixando(false);
     }
   };
+
   return (
-    <Secao titulo="Conectar uma IA">
-      <Texto cor="muted">
-        Adicione o Pulo como conector MCP no Claude ou em outro app. Ele pede para você entrar e liberar, e depois cuida da sua rotina, hábitos e metas por você.
-      </Texto>
-      <Cartao>
-        <Texto variante="legenda" cor="muted">
-          Endereço do conector
-        </Texto>
-        <Texto className="break-all" data-testid="endereco-mcp">
-          {endereco}
-        </Texto>
-      </Cartao>
-      <Botao titulo={copiado ? 'Copiado' : 'Copiar endereço'} onPress={() => void copiar()} />
-    </Secao>
+    <Tela>
+      {dados ? (
+        <>
+          <Cabecalho
+            conta={conta}
+            desde={desdeQuando(dados.estatisticas.desde, fuso)}
+            nomeDoSapo={user.frogName}
+            sapo={dados.sapo}
+            saldo={dados.saldo}
+            onEditar={() => setDialogo('editar')}
+          />
+          <Estatisticas sequencia={dados.sequencia} estatisticas={dados.estatisticas} />
+          <Conquistas medalhas={dados.conquistas.map((c) => medalha(c, fuso))} />
+        </>
+      ) : null}
+      {estado.tipo === 'carregando' ? (
+        <p role="status" className="text-muted">
+          Abrindo seu perfil…
+        </p>
+      ) : null}
+      {estado.tipo === 'erro' ? (
+        <div role="alert" className="flex flex-col items-start gap-2 text-muted">
+          Não consegui abrir seu perfil.
+          <Botao titulo="Tentar de novo" variante="fantasma" largura="auto" onPress={() => void recarregar()} />
+        </div>
+      ) : null}
+
+      <div className="@container">
+        <div className="grid items-stretch gap-6 @xl:grid-cols-2 @xl:gap-4">
+          {dados ? (
+            <>
+              <Rotina
+                comecoDoDia={user.dayStartMinutes}
+                preferencias={dados.preferencias}
+                onComecoDoDia={(dayStartMinutes) => void atualizarPerfil({ dayStartMinutes })}
+                onMudar={(patch) => void mudar(patch)}
+              />
+              <Preferencias
+                tema={user.theme}
+                preferencias={dados.preferencias}
+                onTema={(theme) => void atualizarPerfil({ theme })}
+                onMudar={(patch) => void mudar(patch)}
+                claude={estadoDoClaude(conexoes)}
+                onClaude={() => setDialogo('claude')}
+              />
+            </>
+          ) : null}
+          {/* A conta fica à mão mesmo se os números não abrirem. */}
+          <Conta
+            baixando={baixando}
+            onBaixar={() => void baixar()}
+            onSair={() => void (demo ? app.disableDemo() : app.sair())}
+            onExcluir={() => setDialogo('excluir')}
+          />
+        </div>
+      </div>
+
+      {demoClock ? <PainelDemo relogio={demoClock} onAvancar={refresh} onReiniciar={() => void app.enableDemo()} /> : null}
+
+      {dialogo === 'editar' ? <EditarPerfil conta={conta} onSalvar={app.editarConta} onFechar={fechar} /> : null}
+      {dialogo === 'claude' ? <ClaudeDialogo conexoes={conexoes} onDesconectar={desconectar} onTentarDeNovo={tentarDeNovo} onFechar={fechar} /> : null}
+      {dialogo === 'excluir' ? (
+        <ExcluirConta demo={demo} onExcluir={demo ? app.disableDemo : app.excluirConta} onFechar={fechar} />
+      ) : null}
+    </Tela>
   );
 }

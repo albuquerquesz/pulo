@@ -11,11 +11,12 @@ import type { AccentColor, Clock, DateKey, FocusSession, Goal, GoalChest, Habit,
 export interface ContaNaTela {
   nome: string;
   email: string;
+  foto?: string | null;
 }
 
-/** Quem a casca e o Hoje mostram: a conta logada, a pessoa do demo ou, sem conta, o nome do sapo. */
-export function contaNaTela(pessoa: ContaNaTela | null, doDemo: ContaNaTela | null, user: User | null): ContaNaTela {
-  return pessoa ?? doDemo ?? { nome: user?.frogName ?? 'Você', email: '' };
+/** Quem a casca e o Hoje mostram: a conta (logada ou do demo) ou, sem conta, o nome do sapo. */
+export function contaNaTela(pessoa: ContaNaTela | null, user: User | null): ContaNaTela {
+  return pessoa ?? { nome: user?.frogName ?? 'Você', email: '' };
 }
 
 export type ChaveDaAba = 'hoje' | 'ilha' | 'tarefas' | 'habitos' | 'metas';

@@ -10,6 +10,8 @@ import type { Clock, FocusSession, Goal, Habit, Repository, RoomDecor, RoutineBl
 import type { ExtrasDoFoco } from '../foco/logic';
 import type { VinculoDaCasa } from '../foco/vinculo';
 
+import { verPreferencias } from '../app/conta';
+
 /** O controle dos minutos anda de 5 em 5, entre os limites de `FOCUS`. */
 export const PASSO_DOS_MINUTOS = 5;
 
@@ -75,11 +77,13 @@ export interface DadosDaCasa {
   opcoes: OpcaoDeVinculo[];
   /** O bloco da rotina que veio pela URL, se ainda existe. */
   bloco: RoutineBlock | null;
+  /** A duração de foco das preferências, para quando não há bloco. */
+  minutosPreferidos: number;
 }
 
 export async function carregarCasa(repo: Repository, clock: Clock, user: User, busca: VinculoDaCasa): Promise<DadosDaCasa> {
   const hoje = dateKeyOf(clock.now(), user.timezone);
-  const [casa, sequencia, quarto, blocos, habitos, registros, metas, tarefas] = await Promise.all([
+  const [casa, sequencia, quarto, blocos, habitos, registros, metas, tarefas, preferencias] = await Promise.all([
     verCasa(repo),
     verSequencia(repo, clock),
     repo.listRoomDecor(),
@@ -88,6 +92,7 @@ export async function carregarCasa(repo: Repository, clock: Clock, user: User, b
     repo.listHabitLogs({ from: hoje, to: hoje }),
     repo.listGoals(),
     repo.listTasks(),
+    verPreferencias(repo),
   ]);
   const feitos = new Set(registros.map((r) => r.habitId));
   const pendentes = habitsForDate(habitos, hoje).filter((h) => !feitos.has(h.id));
@@ -97,5 +102,6 @@ export async function carregarCasa(repo: Repository, clock: Clock, user: User, b
     quarto,
     opcoes: opcoesDeVinculo(busca, { habitos, pendentes, metas, tarefas }),
     bloco: blocos.find((b) => b.id === busca.bloco) ?? null,
+    minutosPreferidos: preferencias.focusMinutes,
   };
 }

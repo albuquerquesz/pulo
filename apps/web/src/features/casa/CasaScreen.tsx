@@ -1,7 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 
-import { FOCUS } from '@pulo/core/config/decisions';
 import { BarraValor, BotaoCanto, Foguinho, Joia, Nuvens, Placa, pontoNaCena, useCamera, type LimitesDaCamera, type Ponto } from '@/ui';
 
 import { useApp, useCarregar } from '../app';
@@ -247,7 +246,7 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
 
         {timer && dados ? (
           <TimerModal
-            minutosIniciais={dados.bloco?.durationMinutes ?? FOCUS.defaultMinutes}
+            minutosIniciais={dados.bloco?.durationMinutes ?? dados.minutosPreferidos}
             opcoes={dados.opcoes}
             onVoltar={() => setTimer(false)}
             onComecar={(minutos, opcao) => void comecar(minutos, opcao)}

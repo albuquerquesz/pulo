@@ -7,6 +7,13 @@ export interface PessoaLogada {
   id: string;
   nome: string;
   email: string;
+  /** Endereço `https` da foto; ausente ou `null` mostra a inicial. */
+  foto?: string | null;
+}
+
+export interface MudancaDeConta {
+  nome: string;
+  foto: string | null;
 }
 
 /** Opções de rede do `RemoteRepository`: o cookie da sessão é do navegador (HttpOnly), o app nunca o lê nem o guarda. */
@@ -23,9 +30,12 @@ export interface Autenticacao {
   /** Abre o login do Google. A página sai para o Google e volta. */
   entrarComGoogle(): Promise<void>;
   sair(): Promise<void>;
+  /** Muda nome e foto da conta. */
+  atualizarConta(mudanca: MudancaDeConta): Promise<void>;
   rede(): RedeDaSessao;
 }
 
+const MENSAGEM_PERFIL = 'Não consegui salvar seu perfil. Tente de novo.';
 const MENSAGEM_LOGIN = 'Não consegui entrar com o Google. Tente de novo.';
 
 /**
@@ -42,12 +52,16 @@ export function criarAutenticacao(baseUrl: string): Autenticacao {
       if (error) throw new Error(MENSAGEM_LOGIN);
     },
     sair: async () => void (await client.signOut()),
+    atualizarConta: async ({ nome, foto }) => {
+      const { error } = await client.updateUser({ name: nome, image: foto });
+      if (error) throw new Error(MENSAGEM_PERFIL);
+    },
     rede: () => ({ baseUrl }),
   };
 }
 
 interface RespostaDeSessao {
-  data: { user: { id: string; name: string; email: string } } | null;
+  data: { user: { id: string; name: string; email: string; image?: string | null } } | null;
   error: { status: number } | null;
 }
 
@@ -58,7 +72,7 @@ async function lerSessao(pedido: Promise<RespostaDeSessao>): Promise<PessoaLogad
   } catch (cause) {
     throw new RemoteError({ kind: 'rede', mensagem: MENSAGEM_SEM_SINAL, cause });
   }
-  if (resposta.data) return { id: resposta.data.user.id, nome: resposta.data.user.name, email: resposta.data.user.email };
+  if (resposta.data) return { id: resposta.data.user.id, nome: resposta.data.user.name, email: resposta.data.user.email, foto: resposta.data.user.image ?? null };
   // 4xx (sem cookie, sessão vencida) = sem login; 0 ou 5xx = o servidor não respondeu direito.
   if (resposta.error && (resposta.error.status === 0 || resposta.error.status >= 500)) {
     throw new RemoteError({ kind: 'rede', mensagem: MENSAGEM_SEM_SINAL });

@@ -4,7 +4,6 @@ import { useConsultaDeMidia } from '@/theme';
 import { Botao } from '@/ui';
 
 import { useApp, useCarregar } from '../app';
-import { PESSOA_DO_DEMO } from '../app/demo';
 import { Conta } from './Conta';
 import { abaAtiva, carregarTrilho, contaNaTela, telaDeImersao } from './logic';
 import { Navegacao } from './Navegacao';
@@ -38,7 +37,7 @@ type CascaProps = { caminho: string; children: ReactNode };
  * No celular é uma coluna com o menu embaixo, e o que é do trilho entra no Hoje (acima e abaixo do conteúdo).
  */
 export function Casca({ caminho, children }: CascaProps) {
-  const { repo, clock, user, pessoa, demo } = useApp();
+  const { repo, clock, user, conta: pessoa } = useApp();
   const largo = useConsultaDeMidia(CONSULTA_DO_TRILHO);
   const { estado, recarregar } = useCarregar(async () => {
     if (!user) throw new Error('sem usuário');
@@ -50,7 +49,7 @@ export function Casca({ caminho, children }: CascaProps) {
   const comTrilho = largo && !imersao;
   const noConteudo = !largo && noHoje;
   const dados = estado.tipo === 'ok' ? estado.dados : null;
-  const conta = contaNaTela(pessoa, demo ? PESSOA_DO_DEMO : null, user);
+  const conta = contaNaTela(pessoa, user);
   const noPerfil = caminho === '/perfil';
   const falha =
     estado.tipo === 'erro' ? (

@@ -10,7 +10,6 @@ import { Botao } from '@/ui';
 
 import { useApp, useCarregar } from '../app';
 import { perguntar } from '../app/confirmar';
-import { PESSOA_DO_DEMO } from '../app/demo';
 import { contaNaTela } from '../casca/logic';
 import { Atividade } from './Atividade';
 import { CartaoDaTarefa, type AcoesDoCartao } from './CartaoDaTarefa';
@@ -34,7 +33,7 @@ import { TextoEditavel } from './TextoEditavel';
 
 /** O quadro de tarefas com a gaveta de detalhe. */
 export function TarefasScreen() {
-  const { repo, clock, user, pessoa, demo, mostrarAviso } = useApp();
+  const { repo, clock, user, conta, mostrarAviso } = useApp();
   const navegar = useNavigate();
   const { estado, recarregar } = useCarregar(async () => {
     const [tarefas, subtarefas, metas] = await Promise.all([repo.listTasks(), repo.listSubtasks(), repo.listGoals()]);
@@ -129,7 +128,7 @@ export function TarefasScreen() {
     setGaveta((g) => (g ? { ...g, aberta: false } : g));
   };
   const detalhe = dados?.tarefas.find((t) => t.id === gaveta?.id) ?? null;
-  const nome = contaNaTela(pessoa, demo ? PESSOA_DO_DEMO : null, user).nome.split(' ')[0] ?? '';
+  const nome = contaNaTela(conta, user).nome.split(' ')[0] ?? '';
 
   const excluir = (tarefa: Task) => {
     fechar();

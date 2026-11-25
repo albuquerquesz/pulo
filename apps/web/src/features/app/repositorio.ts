@@ -1,8 +1,13 @@
 import { isRemoteError, mensagemDeErro, RemoteError } from '@pulo/client';
 import { type BatchRepository, supportsBatch } from '@pulo/core/data/batch';
+import { providesAchievements } from '@pulo/core/domain/achievements';
 import { providesHabitStats } from '@pulo/core/domain/habit-stats';
+import { providesStats } from '@pulo/core/domain/stats';
+import { providesStreak } from '@pulo/core/domain/streak';
 import { providesPomodoros } from '@pulo/core/domain/tasks';
 import type { Repository } from '@pulo/core/domain/types';
+
+import { temAvisosDeConquista, temConta, temPreferencias } from './conta';
 
 /** Repositório "fechado": enquanto não há dados (login ou carregando), qualquer uso falha em vez de gravar no lugar errado. */
 export const repositorioFechado: Repository = (() => {
@@ -67,10 +72,10 @@ export interface AvisosDeErro {
  */
 export function comAvisosDeErro(repo: Repository, avisos: AvisosDeErro): Repository {
   const guardar =
-    <A extends unknown[]>(escrita: (...args: A) => Promise<void>) =>
-    async (...args: A): Promise<void> => {
+    <A extends unknown[], R>(escrita: (...args: A) => Promise<R>) =>
+    async (...args: A): Promise<R> => {
       try {
-        await escrita(...args);
+        return await escrita(...args);
       } catch (erro) {
         if (isRemoteError(erro) && erro.kind === 'sessao') avisos.sessaoExpirou();
         else avisos.avisar(mensagemDeErro(erro));
@@ -121,11 +126,29 @@ export function comAvisosDeErro(repo: Repository, avisos: AvisosDeErro): Reposit
     saveMascotState: guardar((m) => repo.saveMascotState(m)),
     clearAll: guardar(() => repo.clearAll()),
   };
-  // O remoto conta com todo o histórico (pomodoros e estatísticas): sem repassar, a tela contaria só o que veio no sync.
+  // O que o remoto oferece além do contrato (todo o histórico, preferências e conta): sem repassar, a tela
+  // calcularia só com o que veio no sync ou ficaria sem a função.
   const contado: Repository = {
     ...base,
     ...(providesPomodoros(repo) ? { getPomodoros: () => repo.getPomodoros() } : {}),
     ...(providesHabitStats(repo) ? { getHabitStats: (id: string) => repo.getHabitStats(id) } : {}),
+    ...(providesStreak(repo) ? { getStreak: () => repo.getStreak() } : {}),
+    ...(providesStats(repo) ? { getStats: () => repo.getStats() } : {}),
+    ...(providesAchievements(repo) ? { getAchievements: () => repo.getAchievements() } : {}),
+    ...(temAvisosDeConquista(repo)
+      ? { onNewAchievements: (ouvir: Parameters<typeof repo.onNewAchievements>[0]) => repo.onNewAchievements(ouvir) }
+      : {}),
+    ...(temPreferencias(repo)
+      ? { getPreferences: () => repo.getPreferences(), savePreferences: guardar((patch: Parameters<typeof repo.savePreferences>[0]) => repo.savePreferences(patch)) }
+      : {}),
+    ...(temConta(repo)
+      ? {
+          exportData: guardar(() => repo.exportData()),
+          listConnections: () => repo.listConnections(),
+          disconnect: guardar((clientId: string) => repo.disconnect(clientId)),
+          deleteAccount: guardar(() => repo.deleteAccount()),
+        }
+      : {}),
   };
   // Repositório com escritas em lote (o remoto): o lote também avisa em caso de erro.
   if (!supportsBatch(repo)) return contado;

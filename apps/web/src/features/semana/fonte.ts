@@ -2,6 +2,7 @@ import { isRemoteError, type RemoteRepository } from '@pulo/client';
 import type { ProposalOutcome, UndoToken, WeeklyAiClient } from '@pulo/core/domain/ia';
 import type { BlockSlot, Clock, Repository, RoutineBlock, WeeklyProposal } from '@pulo/core/domain/types';
 
+import { verPreferencias } from '../app/conta';
 import type { Origem } from '../app/origem';
 import { aceitar, desfazer, editarHorario, gerarEGuardarProposta, negar, type DadosSemana, type Decisao } from './logic';
 
@@ -41,7 +42,8 @@ export function criarFonteLocal(repo: Repository, clock: Clock, ia: WeeklyAiClie
     return res.ok ? { ok: true, decisao: daLogica(res.decisao) } : res;
   };
   return {
-    gerar: (dados) => gerarEGuardarProposta(repo, clock, dados, ia),
+    // Com o assistente desligado, só a regra: nada vai para o modelo.
+    gerar: async (dados) => gerarEGuardarProposta(repo, clock, dados, (await verPreferencias(repo)).aiEnabled ? ia : null),
     aceitar: (proposta) => resultado(aceitar(repo, clock, proposta)),
     editarHorario: (proposta, indice, novo) => resultado(editarHorario(repo, clock, proposta, indice, novo)),
     negar: (proposta) => negar(repo, clock, proposta),

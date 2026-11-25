@@ -24,6 +24,7 @@ import type {
   Weekday,
 } from '@pulo/core/domain/types';
 
+import { verPreferencias } from '../app/conta';
 import { minutosDeFocoDoDia } from '../casca/logic';
 import type { VinculoDaCasa } from '../foco/vinculo';
 
@@ -373,7 +374,7 @@ export async function carregarHoje(repo: Repository, clock: Clock, user: User, n
   const agora = clock.now();
   const fuso = user.timezone;
   const hoje = dateKeyOf(agora, fuso);
-  const [blocks, habitos, habitLogs, sessions, restDays, goals, baus, tarefas, sequencia] = await Promise.all([
+  const [blocks, habitos, habitLogs, sessions, restDays, goals, baus, tarefas, sequencia, preferencias] = await Promise.all([
     repo.listBlocks(),
     repo.listHabits(),
     repo.listHabitLogs(),
@@ -383,6 +384,7 @@ export async function carregarHoje(repo: Repository, clock: Clock, user: User, n
     repo.listGoalChests(),
     repo.listTasks(),
     verSequencia(repo, clock),
+    verPreferencias(repo),
   ]);
   const alvos: Alvos = { habitos, metas: goals, tarefas };
   const deHoje = blocksForWeekday(blocks, weekdayOf(hoje));
@@ -396,7 +398,7 @@ export async function carregarHoje(repo: Repository, clock: Clock, user: User, n
         titulo: proximo.intencao ?? TITULO_DO_BLOCO.foco,
         minutos: Math.min(FOCUS.maxMinutes, Math.max(FOCUS.minMinutes, proximo.bloco.durationMinutes)),
       }
-    : { busca: {}, alvo: null, titulo: null, minutos: FOCUS.defaultMinutes };
+    : { busca: {}, alvo: null, titulo: null, minutos: preferencias.focusMinutes };
   const feitos = new Set(habitLogs.filter((r) => r.date === hoje).map((r) => r.habitId));
   return {
     saudacao: saudacao(agora, fuso, nome),

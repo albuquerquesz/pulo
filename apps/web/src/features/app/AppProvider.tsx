@@ -8,10 +8,11 @@ import type { WeeklyAiClient } from '@pulo/core/domain/ia';
 import type { Clock, FrogEvent, Repository, User } from '@pulo/core/domain/types';
 import { eventoAtivo } from '@/mascot';
 
-import type { Autenticacao, PessoaLogada } from '../sessao/auth';
+import type { Autenticacao, MudancaDeConta, PessoaLogada } from '../sessao/auth';
 import { ambienteDoApp, endpointDaIa } from '../sessao/config';
 import { apagarTodosOsDados, concluirOnboarding, criarClienteDeIa, demoPedidoNaUrl, salvarPerfil, type DadosDoOnboarding } from './core';
-import { criarSessaoDemo } from './demo';
+import { temConta } from './conta';
+import { criarSessaoDemo, PESSOA_DO_DEMO } from './demo';
 import { criarFonteDeProposta, criarFonteLocal, type PropostaFonte } from '../semana/fonte';
 import { escolherOrigem } from './origem';
 import { comAvisosDeErro, repositorioFechado } from './repositorio';
@@ -49,6 +50,12 @@ export interface AppValue {
   fase: FaseDoApp;
   /** Pessoa logada (nunca no demo). */
   pessoa: PessoaLogada | null;
+  /** Quem a casca e o Perfil mostram: a pessoa logada ou a de exemplo do demo. */
+  conta: PessoaLogada | null;
+  /** Grava nome e foto. Lança com texto em português se o servidor recusar. */
+  editarConta(mudanca: MudancaDeConta): Promise<void>;
+  /** Exclui a conta de vez e volta à entrada. A tela pede a confirmação antes (no demo ela só desliga o demo). */
+  excluirConta(): Promise<void>;
   /** O login está configurado (há endereço da API). Sem ele só o demo funciona. */
   loginDisponivel: boolean;
   entrando: boolean;
@@ -110,6 +117,7 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
   const [ativo, setAtivo] = useState<Ativo>(SEM_DADOS);
   const [fase, setFase] = useState<FaseDoApp>('carregando');
   const [pessoa, setPessoa] = useState<PessoaLogada | null>(null);
+  const [pessoaDoDemo, setPessoaDoDemo] = useState(PESSOA_DO_DEMO);
   const [entrando, setEntrando] = useState(false);
   const [erroDeLogin, setErroDeLogin] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -181,6 +189,7 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
         const origem = escolherOrigem({ demo, temSessao: quem !== null });
         if (origem === 'demo') {
           const s = await criarSessaoDemo({ aoVivo: true });
+          setPessoaDoDemo(PESSOA_DO_DEMO);
           setAtivo({ repo: s.repo, clock: s.clock, demoClock: s.clock, propostas: criarFonteDeProposta(origem, { repo: s.repo, clock: s.clock, ia: aiClient, avisos: SEM_AVISOS }) });
           setUser(await s.repo.getUser());
           setFase('pronto');
@@ -255,6 +264,33 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
     setVersao((v) => v + 1);
   }, [auth]);
 
+  const noDemo = ativo.demoClock !== null;
+  const conta = noDemo ? pessoaDoDemo : pessoa;
+
+  const editarConta = useCallback(
+    async (mudanca: MudancaDeConta) => {
+      const aplicar = (atual: PessoaLogada): PessoaLogada => ({ ...atual, ...mudanca });
+      if (noDemo) {
+        setPessoaDoDemo(aplicar);
+        return;
+      }
+      await auth?.atualizarConta(mudanca);
+      setPessoa((atual) => (atual ? aplicar(atual) : atual));
+    },
+    [auth, noDemo],
+  );
+
+  const excluirConta = useCallback(async () => {
+    if (!temConta(ativo.repo)) return;
+    await ativo.repo.deleteAccount();
+    // O servidor já apagou o cookie: não há sessão para encerrar.
+    setPessoa(null);
+    setUser(null);
+    setAtivo(SEM_DADOS);
+    setFase('login');
+    setVersao((v) => v + 1);
+  }, [ativo]);
+
   // Abertura
   useEffect(() => {
     const search = (globalThis as { location?: { search?: string } }).location?.search;
@@ -319,6 +355,9 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
       disableDemo,
       fase,
       pessoa,
+      conta,
+      editarConta,
+      excluirConta,
       loginDisponivel: auth !== null,
       entrando,
       erroDeLogin,
@@ -334,7 +373,7 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
       mostrarAviso,
       esconderAviso,
     }),
-    [ativo, user, carregando, versao, refresh, aiClient, enableDemo, disableDemo, fase, pessoa, auth, entrando, erroDeLogin, entrar, sair, tentarDeNovo, onboarding, atualizarPerfil, apagarDados, evento, emitirEvento, aviso, mostrarAviso, esconderAviso],
+    [ativo, user, carregando, versao, refresh, aiClient, enableDemo, disableDemo, fase, pessoa, conta, editarConta, excluirConta, auth, entrando, erroDeLogin, entrar, sair, tentarDeNovo, onboarding, atualizarPerfil, apagarDados, evento, emitirEvento, aviso, mostrarAviso, esconderAviso],
   );
 
   return <AppContext.Provider value={valor}>{children}</AppContext.Provider>;
