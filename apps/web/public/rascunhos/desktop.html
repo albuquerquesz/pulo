@@ -1257,7 +1257,7 @@ function renderDrawer(){const t=tarefas.find(x=>x.id===drAberta);if(!t)return;co
  const sel=(id,opts,val)=>`<select id="${id}">${opts.map(([v,l])=>`<option value="${v}"${String(v)===String(val)?' selected':''}>${l}</option>`).join('')}</select>`;
  const livres=etiquetas.filter(g=>!t.tags.includes(g));
  const metasAt=metas.filter(m=>!m.ok);
- d.innerHTML=`<div class="dr-topo"><span class="tc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"><path d="M7 4h10v16l-5-4-5 4z"/></svg></span><span class="tc-cod">${t.cod}</span><div class="dr-acoes">${t.c!=='feito'?'<button class="dr-ico" id="dr-focar" title="Focar nessa tarefa">▶</button>':''}<button class="dr-ico" id="dr-excluir" title="Excluir">🗑</button><button class="dr-ico" id="dr-x" title="Fechar">✕</button></div></div>
+ d.innerHTML=`<div class="dr-topo"><div class="dr-acoes">${t.c!=='feito'?'<button class="dr-ico" id="dr-focar" title="Focar nessa tarefa">▶</button>':''}<button class="dr-ico" id="dr-excluir" title="Excluir">🗑</button><button class="dr-ico" id="dr-x" title="Fechar">✕</button></div></div>
  <div class="dr-grid">
  <div class="dr-main">
   <div class="dr-titulo" id="dr-titulo" contenteditable="true" spellcheck="false">${t.t}</div>

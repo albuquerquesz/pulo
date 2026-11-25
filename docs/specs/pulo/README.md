@@ -24,6 +24,22 @@ Prazo: entrega em **30/11/2026 às 23h59**. Estimativa de esforço (minha, não 
 | [10](10-demo-web-e-entrega.md) | Demo, web e entrega: exportação, modo demo, regras do hackathon, plano de 9 dias | Entrega | M | todas | a rever |
 | [11](11-metas.md) | Metas de longo prazo: aba Metas, marcos, limite de ativas | Rotina e foco | M | 01, 02, 09 | feita no web |
 | [12](12-ilha.md) | Ilha do sapo: mapa isométrico com níveis, moscas e enfeites | Mascote | M | 01, 03, 04, 11 | feita no web |
+| [13](13-sequencia.md) | Sequência com foguinho: dias seguidos, recorde, semana | Rascunho desktop | M | 01 | a fazer |
+| [14](14-conquistas.md) | Conquistas: catálogo, progresso, data da conquista | Rascunho desktop | M | 13, 18 | a fazer |
+| [15](15-perfil-e-conta.md) | Perfil: estatísticas, preferências, exportar, excluir conta, Claude conectado | Rascunho desktop | M | 13 | a fazer |
+| [16](16-metas-v2.md) | Metas com ícone, ritmo, baú e hábitos atrelados | Rascunho desktop | M | 11, 18 | a fazer |
+| [17](17-habitos-v2.md) | Hábitos: período, lembrete, pausar e arquivar, estatísticas e calendário | Rascunho desktop | M | 05, 16 | a fazer |
+| [18](18-joias-e-casa.md) | Joias no lugar de moscas, casa na ilha e decoração do quarto | Rascunho desktop | L | 12 | a fazer |
+| [19](19-foco-na-casa.md) | Foco com intenção, vínculo e meta diária | Rascunho desktop | M | 06, 15, 18, 20 | a fazer |
+| [20](20-tarefas.md) | Tarefas em quadro: kanban, subtarefas, comentários, atividade | Rascunho desktop | L | 19 | a fazer |
+| [21](21-web-casca-desktop.md) | Web: casca do rascunho, navegação, trilho, joias e peças compartilhadas | Telas do rascunho | L | 13 a 20 | a fazer |
+| [22](22-web-hoje.md) | Web: Hoje com próximo foco, sequência, semana, hábitos, tarefas e linha do dia | Telas do rascunho | M | 21 | a fazer |
+| [23](23-web-casa-e-foco.md) | Web: Casa com quarto, câmera, timer, sapo andando e decoração com loja | Telas do rascunho | L | 21 | a fazer |
+| [24](24-web-ilha-casa.md) | Web: Ilha com a casa em partes | Telas do rascunho | M | 21, 23 | a fazer |
+| [25](25-web-tarefas.md) | Web: Tarefas com quadro e gaveta | Telas do rascunho | L | 21 | a fazer |
+| [26](26-web-habitos.md) | Web: página de Hábitos | Telas do rascunho | M | 21 | a fazer |
+| [27](27-web-metas.md) | Web: Metas com ritmo e baú | Telas do rascunho | M | 21 | a fazer |
+| [28](28-web-perfil.md) | Web: Perfil completo | Telas do rascunho | M | 21 | a fazer |
 
 ## Como as specs se ligam
 
