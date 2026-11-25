@@ -33,6 +33,10 @@ function summary(over: Partial<WeekSummary> = {}): WeekSummary {
     careDays: 5,
     daysWithRecord: 5,
     stable: true,
+    focoPorAlvo: [],
+    sessoesTerminadas: 5,
+    sessoesLargadas: 2,
+    melhorPeriodo: 'manha',
     ...over,
   };
 }

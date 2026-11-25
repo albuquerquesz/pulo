@@ -1,5 +1,6 @@
 import { FOCUS } from '../../config/decisions';
 import type { EntityId, FocusSession } from '../types';
+import type { FocusLink } from './targets';
 
 /**
  * Máquina do timer, baseada em horário. Nada é contado: o restante vem sempre de
@@ -63,8 +64,14 @@ export function isValidBreakMinutes(minutes: number): boolean {
   return Number.isInteger(minutes) && minutes >= FOCUS.minBreakMinutes && minutes <= FOCUS.maxBreakMinutes;
 }
 
-export function startSession(id: EntityId, now: number, plannedMinutes: number, blockId?: EntityId): FocusSession {
-  const session: FocusSession = { id, startedAt: now, plannedMinutes, state: 'em_andamento', pausedMs: 0 };
+export function startSession(
+  id: EntityId,
+  now: number,
+  plannedMinutes: number,
+  blockId?: EntityId,
+  extras: FocusLink & { intention?: string } = {},
+): FocusSession {
+  const session: FocusSession = { id, startedAt: now, plannedMinutes, state: 'em_andamento', pausedMs: 0, ...extras };
   if (blockId !== undefined) session.blockId = blockId;
   return session;
 }

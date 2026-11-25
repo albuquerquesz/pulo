@@ -43,6 +43,7 @@ import type {
   Weekday,
   WeeklyProposal,
 } from '../domain/types';
+import { linkCount } from '../domain/foco/targets';
 
 /**
  * Contrato da API REST do Pulo: os mesmos schemas validam o corpo no servidor (apps/api) e servem
@@ -180,8 +181,10 @@ export const habitLogSchema = z.object({
   doneAt: msSchema,
 }) satisfies z.ZodType<HabitLog, unknown>;
 
-export const focusSessionSchema = z
-  .object({
+/** Texto curto, sem espaços nas pontas. */
+const intentionSchema = z.string().trim().min(1).max(FOCUS.intentionMaxChars);
+
+const focusSessionFields = z.object({
     id: idSchema,
     blockId: idSchema.optional(),
     startedAt: msSchema,
@@ -190,8 +193,16 @@ export const focusSessionSchema = z
     state: z.enum(['em_andamento', 'concluida', 'interrompida']),
     pausedMs: z.number().int().min(0).max(MAX_EPOCH_MS),
     pausedSince: msSchema.optional(),
-  })
-  .superRefine((session, ctx) => {
+    intention: intentionSchema.optional(),
+    habitId: idSchema.optional(),
+    goalId: idSchema.optional(),
+    taskId: idSchema.optional(),
+  });
+
+type FocusSessionShape = Omit<FocusSession, 'intention' | 'habitId' | 'goalId' | 'taskId'> &
+  Partial<Record<'intention' | 'habitId' | 'goalId' | 'taskId', string | null>>;
+
+function checkSession(session: FocusSessionShape, ctx: z.RefinementCtx): void {
     const issue = (path: string, message: string) => ctx.addIssue({ code: 'custom', path: [path], message });
     if (session.state === 'em_andamento') {
       if (session.endedAt !== undefined) issue('endedAt', 'sessão em andamento não tem endedAt');
@@ -206,7 +217,26 @@ export const focusSessionSchema = z
     if (session.pausedSince !== undefined && session.pausedSince < session.startedAt) {
       issue('pausedSince', 'pausa antes do início');
     }
-  }) satisfies z.ZodType<FocusSession, unknown>;
+  
+    if (linkCount(session) > 1) issue('taskId', 'o foco se liga a um hábito, uma meta ou uma tarefa, só um deles');
+}
+
+export const focusSessionSchema = focusSessionFields.superRefine(checkSession) satisfies z.ZodType<FocusSession, unknown>;
+
+/**
+ * Corpo de `PUT /api/sessions/:id`. Na intenção e no vínculo, campo omitido mantém o gravado (clientes antigos não os
+ * apagam) e `null` limpa. Mandar um alvo troca o anterior.
+ */
+export const focusSessionInputSchema = focusSessionFields
+  .extend({
+    intention: intentionSchema.nullable().optional(),
+    habitId: idSchema.nullable().optional(),
+    goalId: idSchema.nullable().optional(),
+    taskId: idSchema.nullable().optional(),
+  })
+  .superRefine(checkSession);
+
+export type FocusSessionInput = z.infer<typeof focusSessionInputSchema>;
 
 export const habitStatsResponseSchema = z.object({
   stats: z.object({

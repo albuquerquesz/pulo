@@ -106,16 +106,10 @@ export function ritmo(meta: Goal, hoje: DateKey, timeZone: string = DEFAULT_TIME
   return { esperado, atual, estado: noRitmo ? 'no-ritmo' : 'atras' };
 }
 
-/** Sessão de foco com o vínculo opcional que a spec 19 grava (`goalId` direto ou `habitId`). */
-export interface LinkedSession extends FocusSession {
-  goalId?: EntityId;
-  habitId?: EntityId;
-}
-
 export interface GoalRecords {
   habits: readonly Habit[];
   habitLogs: readonly HabitLog[];
-  sessions: readonly LinkedSession[];
+  sessions: readonly FocusSession[];
 }
 
 export interface GoalNumbers {
@@ -134,7 +128,7 @@ export function numerosDaMeta(meta: Goal, registros: GoalRecords, hoje: DateKey)
   const atrelados = registros.habits.filter((h) => h.goalId === meta.id);
   const ids = new Set(atrelados.map((h) => h.id));
   // O vínculo direto vence: sessão ligada a outra meta não conta aqui pelo hábito.
-  const daMeta = (s: LinkedSession) => (s.goalId !== undefined ? s.goalId === meta.id : s.habitId !== undefined && ids.has(s.habitId));
+  const daMeta = (s: FocusSession) => (s.goalId !== undefined ? s.goalId === meta.id : s.habitId !== undefined && ids.has(s.habitId));
   const ms = registros.sessions.filter(daMeta).reduce((total, s) => total + focusedMs(s), 0);
   return {
     habitos: atrelados.filter((h) => h.state !== 'arquivado'),

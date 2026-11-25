@@ -185,6 +185,8 @@ export const FOCUS = {
   defaultBreakMinutes: 5,
   minBreakMinutes: 3,
   maxBreakMinutes: 15,
+  /** Intenção do foco, em texto curto (spec 19). */
+  intentionMaxChars: 140,
 } as const;
 
 /** Sons de fundo do foco (spec 15). */

@@ -147,7 +147,7 @@ describe('resumo da semana', () => {
     expect(s.careDays).toBe(2); // 9 (concluídas) e 12 (descanso); a de 10 foi <50%
     expect(s.daysWithRecord).toBe(3);
   });
-  it('não inclui texto livre: só números, nulos e datas', () => {
+  it('não inclui texto livre: só números, nulos, datas e o período', () => {
     const s = buildWeekSummary({
       weekStart: '2026-11-09',
       timeZone: TZ,
@@ -159,7 +159,7 @@ describe('resumo da semana', () => {
       if (typeof v === 'string') strings.push(v);
       return v;
     });
-    expect(strings.sort()).toEqual(['2026-11-09', '2026-11-15']);
+    expect(strings.sort()).toEqual(['2026-11-09', '2026-11-15', 'manha']);
   });
   it('5 dias de cuidado é estável, 4 não', () => {
     const mk = (n: number) =>

@@ -1,5 +1,6 @@
 import { STABLE_WEEK_MIN_CARE_DAYS } from '../config/decisions';
 import { effectiveMs, sessionCountsAsCare, sessionDateKey } from './care-days';
+import { focusByTarget } from './foco/targets';
 import { periodOf, weekDates, weekEndOf, weekStartOf } from './day';
 import type {
   DateKey,
@@ -42,6 +43,7 @@ export function buildWeekSummary(input: WeekSummaryInput): WeekSummary {
   const record = new Set<DateKey>();
   const care = new Set<DateKey>();
   let totalSessions = 0;
+  const counted: FocusSession[] = [];
 
   for (const s of input.sessions) {
     if (s.state === 'em_andamento') continue;
@@ -49,6 +51,7 @@ export function buildWeekSummary(input: WeekSummaryInput): WeekSummary {
     if (!days.has(key)) continue;
     const period = periodOf(s.startedAt, timeZone);
     record.add(key);
+    counted.push(s);
     totalSessions += 1;
     minutesMs[period] += effectiveMs(s);
     if (s.state === 'concluida') sessionStats[period].completed += 1;
@@ -74,6 +77,11 @@ export function buildWeekSummary(input: WeekSummaryInput): WeekSummary {
     focusMinutesByPeriod[p] = Math.round(minutesMs[p] / 60_000);
   }
 
+  // Empate: mais sessões concluídas e, ainda assim, o período mais cedo.
+  const [best] = [...PERIOD_LIST].sort(
+    (a, b) => minutesMs[b] - minutesMs[a] || sessionStats[b].completed - sessionStats[a].completed,
+  );
+
   return {
     weekStart,
     weekEnd,
@@ -84,6 +92,10 @@ export function buildWeekSummary(input: WeekSummaryInput): WeekSummary {
     careDays: care.size,
     daysWithRecord: record.size,
     stable: care.size >= STABLE_WEEK_MIN_CARE_DAYS,
+    focoPorAlvo: focusByTarget(counted),
+    sessoesTerminadas: PERIOD_LIST.reduce((n, p) => n + sessionStats[p].completed, 0),
+    sessoesLargadas: PERIOD_LIST.reduce((n, p) => n + sessionStats[p].interrupted, 0),
+    melhorPeriodo: best !== undefined && minutesMs[best] > 0 ? best : null,
   };
 }
 

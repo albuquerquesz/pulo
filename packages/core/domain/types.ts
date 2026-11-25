@@ -91,6 +91,24 @@ export interface FocusSession {
   pausedMs: number;
   /** Se está pausada agora, o instante em que a pausa começou. */
   pausedSince?: number;
+  /** No que a pessoa vai focar, em texto curto (spec 19). */
+  intention?: string;
+  /** Vínculo opcional (spec 19): no máximo um entre `habitId`, `goalId` e `taskId`. Apagar o alvo solta o vínculo. */
+  habitId?: EntityId;
+  goalId?: EntityId;
+  taskId?: EntityId;
+}
+
+/** Para onde foi um foco (spec 19). */
+export interface FocusTarget {
+  tipo: 'habito' | 'meta' | 'tarefa';
+  id: EntityId;
+}
+
+/** Minutos de foco de um alvo; `alvo` nulo junta as sessões sem vínculo. */
+export interface TargetFocus {
+  alvo: FocusTarget | null;
+  minutos: number;
 }
 
 export interface RestDay {
@@ -396,6 +414,13 @@ export interface WeekSummary {
   daysWithRecord: number;
   /** careDays >= STABLE_WEEK_MIN_CARE_DAYS. */
   stable: boolean;
+  /** Minutos de foco da semana por alvo, do maior para o menor (spec 19). Só ids, sem títulos. */
+  focoPorAlvo: TargetFocus[];
+  sessoesTerminadas: number;
+  /** Sessões interrompidas antes do fim. */
+  sessoesLargadas: number;
+  /** Período do dia com mais minutos de foco; `null` sem nenhum minuto. */
+  melhorPeriodo: Period | null;
 }
 
 // ---------- Repositório ----------
