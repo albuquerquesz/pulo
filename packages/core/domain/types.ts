@@ -138,16 +138,32 @@ export interface Goal {
 }
 
 /**
- * Compra na ilha (spec 12): uma área aberta ou um enfeite. Uma por item; nunca muda nem some (só `clearAll`).
- * O saldo de moscas é calculado a partir dos registros, nunca gravado.
+ * Compra com joias (spec 18). Uma por item; o preço nunca muda nem some (só `clearAll`).
+ * O saldo de joias é calculado a partir dos registros, nunca gravado.
  */
-export interface IslandPurchase {
-  /** Id do item no catálogo (`ISLAND.areaCost` ou `ISLAND.decorCost`). */
+export interface Purchase {
+  /** Id do item no catálogo (`HOUSE`, `ROOM_DECOR` ou, no legado, `ISLAND`). */
   item: string;
-  /** Moscas pagas, igual ao preço do catálogo na hora da compra. */
+  /** Joias pagas, igual ao preço do catálogo na hora da compra. */
   cost: number;
   createdAt: number;
 }
+
+/** Compra da ilha antiga (spec 12, legado): área ou enfeite. */
+export type IslandPurchase = Purchase;
+
+/** Giro de um item no chão do quarto, em graus (`ROOM_GRID.rotations`). */
+export type RoomRotation = 0 | 90 | 180 | 270;
+
+/** Lugar de um item no chão do quarto. Mover é grátis. */
+export interface RoomSpot {
+  x: number;
+  y: number;
+  rotation: RoomRotation;
+}
+
+/** Decoração comprada, onde está no quarto. */
+export interface RoomDecor extends Purchase, RoomSpot {}
 
 /** Derivado e guardado em cache. Nunca é a fonte da verdade. */
 export interface MascotState {
@@ -244,6 +260,17 @@ export interface Repository {
 
   listIslandPurchases(): Promise<IslandPurchase[]>;
   saveIslandPurchase(purchase: IslandPurchase): Promise<void>;
+
+  /** Partes da casa compradas. */
+  listHousePurchases(): Promise<Purchase[]>;
+  saveHousePurchase(purchase: Purchase): Promise<void>;
+  /** Decorações compradas, com a posição. */
+  listRoomDecor(): Promise<RoomDecor[]>;
+  saveRoomDecor(decor: RoomDecor): Promise<void>;
+  /** Muda a posição de uma decoração já comprada. Item não comprado não faz nada no repositório local. */
+  moveRoomDecor(item: string, spot: RoomSpot): Promise<void>;
+  /** Joias de ganho histórico dadas na troca de regra (spec 18); 0 para quem começou depois. Só o servidor concede. */
+  getJoiaCredit(): Promise<number>;
 
   getMascotState(): Promise<MascotState | null>;
   saveMascotState(state: MascotState): Promise<void>;

@@ -4,6 +4,8 @@ import type {
   FocusSession,
   Goal,
   IslandPurchase,
+  Purchase,
+  RoomDecor,
   Habit,
   HabitLog,
   MascotState,
@@ -26,6 +28,9 @@ export interface Database {
   proposals: WeeklyProposal[];
   goals: Goal[];
   islandPurchases: IslandPurchase[];
+  housePurchases: Purchase[];
+  roomDecor: RoomDecor[];
+  joiaCredit: number;
   mascot: MascotState | null;
 }
 
@@ -41,6 +46,9 @@ export function emptyDatabase(): Database {
     proposals: [],
     goals: [],
     islandPurchases: [],
+    housePurchases: [],
+    roomDecor: [],
+    joiaCredit: 0,
     mascot: null,
   };
 }
@@ -128,6 +136,14 @@ export function createRepository(store: DatabaseStore): Repository {
 
     listIslandPurchases: () => read((db) => db.islandPurchases),
     saveIslandPurchase: (purchase) => write((db) => upsert(db.islandPurchases, clone(purchase), (p) => p.item === purchase.item)),
+
+    listHousePurchases: () => read((db) => db.housePurchases),
+    saveHousePurchase: (purchase) => write((db) => upsert(db.housePurchases, clone(purchase), (p) => p.item === purchase.item)),
+    listRoomDecor: () => read((db) => db.roomDecor),
+    saveRoomDecor: (decor) => write((db) => upsert(db.roomDecor, clone(decor), (d) => d.item === decor.item)),
+    moveRoomDecor: (item, spot) =>
+      write((db) => void (db.roomDecor = db.roomDecor.map((d) => (d.item === item ? { ...d, ...spot } : d)))),
+    getJoiaCredit: () => read((db) => db.joiaCredit),
 
     getMascotState: () => read((db) => db.mascot),
     saveMascotState: (state) => write((db) => void (db.mascot = clone(state))),

@@ -2,6 +2,8 @@ import type {
   FocusSession,
   Goal,
   IslandPurchase,
+  Purchase,
+  RoomDecor,
   Habit,
   HabitLog,
   MascotState,
@@ -24,6 +26,8 @@ export function createFakeRepository(): Repository {
   const proposals = new Map<string, WeeklyProposal>();
   const goals = new Map<string, Goal>();
   const compras = new Map<string, IslandPurchase>();
+  const casa = new Map<string, Purchase>();
+  const quarto = new Map<string, RoomDecor>();
   const inRange = (d: string, r?: { from: string; to: string }) => !r || (d >= r.from && d <= r.to);
   return {
     getUser: async () => user,
@@ -52,6 +56,15 @@ export function createFakeRepository(): Repository {
     deleteGoal: async (id) => void goals.delete(id),
     listIslandPurchases: async () => [...compras.values()],
     saveIslandPurchase: async (c) => void compras.set(c.item, c),
+    listHousePurchases: async () => [...casa.values()],
+    saveHousePurchase: async (c) => void casa.set(c.item, c),
+    listRoomDecor: async () => [...quarto.values()],
+    saveRoomDecor: async (d) => void quarto.set(d.item, d),
+    moveRoomDecor: async (item, spot) => {
+      const atual = quarto.get(item);
+      if (atual) quarto.set(item, { ...atual, ...spot });
+    },
+    getJoiaCredit: async () => 0,
     getMascotState: async () => mascot,
     saveMascotState: async (m) => void (mascot = m),
     clearAll: async () => {
@@ -65,6 +78,8 @@ export function createFakeRepository(): Repository {
       proposals.clear();
       goals.clear();
       compras.clear();
+      casa.clear();
+      quarto.clear();
     },
   };
 }

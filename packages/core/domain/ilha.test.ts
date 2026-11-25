@@ -1,15 +1,17 @@
-import { ISLAND } from '../config/decisions';
+import { ISLAND, JOIAS } from '../config/decisions';
 import { createMemoryRepository } from '../data/memory-repository';
-import { AREAS, comprarNaIlha, estadoDaIlha, moscasGanhas, validarCompra, type FontesDeMoscas } from './ilha';
+import { AREAS, comprarNaIlha, estadoDaIlha, validarCompra } from './ilha';
+import { joiasGanhas, type FontesDeJoias } from './joias';
 import { endedSession, sp } from './test-utils';
 
 const clock = { now: () => 5 };
-const nada: FontesDeMoscas = { habitLogs: [], sessions: [], restDays: [], goals: [] };
+const nada: FontesDeJoias = { habitLogs: [], sessions: [], restDays: [], goals: [], credito: 0 };
 const habitos = (n: number) => Array.from({ length: n }, (_, i) => ({ habitId: 'h', date: `2026-11-${String(i + 1).padStart(2, '0')}`, doneAt: i }));
 
-describe('ilha: moscas', () => {
+describe('ilha: joias', () => {
   it('soma hábitos, focos que contam como cuidado, descansos, marcos e metas concluídas', () => {
-    const ganhas = moscasGanhas({
+    const ganhas = joiasGanhas({
+      credito: 7,
       habitLogs: habitos(4),
       sessions: [endedSession(sp(2026, 11, 2), 25, 'concluida'), endedSession(sp(2026, 11, 3), 25, 'interrompida', 5)],
       restDays: [{ date: '2026-11-04' }],
@@ -17,14 +19,17 @@ describe('ilha: moscas', () => {
         { id: 'g', title: 'x', state: 'concluida', completedAt: 1, createdAt: 0, milestones: [{ id: 'm1', title: 'a', doneAt: 1 }, { id: 'm2', title: 'b' }] },
       ],
     });
-    const por = ISLAND.fliesPer;
+    const por = JOIAS.por;
+    // 25 minutos concluídos e 5 de uma interrompida.
+    const focos = 6;
     expect(ganhas).toEqual({
       habitos: 4 * por.habitDone,
-      focos: por.careSession,
+      focos,
+      anteriores: 7,
       descansos: por.restDay,
       marcos: por.milestoneDone,
       metas: por.goalCompleted,
-      total: 4 * por.habitDone + por.careSession + por.restDay + por.milestoneDone + por.goalCompleted,
+      total: 4 * por.habitDone + focos + 7 + por.restDay + por.milestoneDone + por.goalCompleted,
     });
   });
 
@@ -48,7 +53,7 @@ describe('ilha: mapa e compras', () => {
     expect(validarCompra('banco', rica)).toMatchObject({ ok: false, error: { code: 'ja_comprado' } });
     expect(validarCompra('castelo', rica)).toMatchObject({ ok: false, error: { code: 'area_fechada' } });
     expect(validarCompra('lanterna', rica)).toEqual({ ok: true, value: ISLAND.decorCost.lanterna });
-    expect(validarCompra('praia', rica)).toMatchObject({ ok: false, error: { code: 'moscas_insuficientes', message: 'Faltam 18 moscas.' } });
+    expect(validarCompra('praia', rica)).toMatchObject({ ok: false, error: { code: 'joias_insuficientes', message: 'Faltam 18 joias.' } });
   });
 
   it('comprar grava a compra pelo preço do catálogo e abre a próxima área', async () => {
