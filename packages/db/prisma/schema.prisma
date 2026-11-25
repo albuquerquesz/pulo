@@ -454,7 +454,8 @@ model Habit {
   goalId   String?
   goal     Goal?   @relation(fields: [goalId], references: [id], onDelete: SetNull)
 
-  logs HabitLog[]
+  logs          HabitLog[]
+  focusSessions FocusSession[]
 
   @@unique([id, userId])
   @@index([userId, state])
@@ -493,10 +494,22 @@ model FocusSession {
   pausedMs       Int               @default(0)
   /// Se está pausada agora, quando a pausa começou.
   pausedSince    DateTime?         @db.Timestamptz(3)
+  /// No que a pessoa vai focar, em texto curto.
+  intention      String?
+  /// Vínculo opcional, no máximo um dos três (CHECK na migração). A rota confere o dono; apagar o alvo deixa a sessão.
+  habitId        String?
+  habit          Habit?            @relation(fields: [habitId], references: [id], onDelete: SetNull)
+  goalId         String?
+  goal           Goal?             @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  taskId         String?
+  task           Task?             @relation(fields: [taskId], references: [id], onDelete: SetNull)
 
   @@unique([id, userId])
   @@index([userId, startedAt])
   @@index([blockId])
+  @@index([habitId])
+  @@index([goalId])
+  @@index([taskId])
   @@map("focus_session")
 }
 
@@ -545,9 +558,10 @@ model Goal {
   icon        String?
   color       AccentColor?
 
-  tasks  Task[]
-  habits Habit[]
-  chest  GoalChest[]
+  tasks         Task[]
+  habits        Habit[]
+  chest         GoalChest[]
+  focusSessions FocusSession[]
 
   @@unique([id, userId])
   @@index([userId, state])
@@ -600,9 +614,10 @@ model Task {
   createdAt          DateTime     @db.Timestamptz(3)
   completedAt        DateTime?    @db.Timestamptz(3)
 
-  subtasks TaskSubtask[]
-  comments TaskComment[]
-  events   TaskEvent[]
+  subtasks      TaskSubtask[]
+  comments      TaskComment[]
+  events        TaskEvent[]
+  focusSessions FocusSession[]
 
   @@unique([id, userId])
   @@unique([userId, number])

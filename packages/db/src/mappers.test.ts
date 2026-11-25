@@ -105,11 +105,13 @@ describe('mapeadores', () => {
     const runningRow: FocusSessionRow = {
       id: 's1', userId: USER, blockId: null, startedAt: new Date(1000), endedAt: null,
       plannedMinutes: 25, state: 'em_andamento', pausedMs: 5000, pausedSince: new Date(9000),
+      intention: null, habitId: null, goalId: null, taskId: null,
     };
-    const done: FocusSession = { id: 's2', blockId: 'b1', startedAt: 1000, endedAt: 2_000_000, plannedMinutes: 25, state: 'concluida', pausedMs: 0 };
+    const done: FocusSession = { id: 's2', blockId: 'b1', intention: 'Capítulo 2', taskId: 't1', startedAt: 1000, endedAt: 2_000_000, plannedMinutes: 25, state: 'concluida', pausedMs: 0 };
     const doneRow: FocusSessionRow = {
       id: 's2', userId: USER, blockId: 'b1', startedAt: new Date(1000), endedAt: new Date(2_000_000),
       plannedMinutes: 25, state: 'concluida', pausedMs: 0, pausedSince: null,
+      intention: 'Capítulo 2', habitId: null, goalId: null, taskId: 't1',
     };
     expect(focusSessionMapper.fromDomain(USER, running)).toStrictEqual(runningRow);
     expect(focusSessionMapper.toDomain(runningRow)).toStrictEqual(running);

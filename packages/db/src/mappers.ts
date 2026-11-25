@@ -181,6 +181,10 @@ export const focusSessionMapper = {
       ...(row.blockId === null ? {} : { blockId: row.blockId }),
       ...(row.endedAt === null ? {} : { endedAt: dateToMs(row.endedAt) }),
       ...(row.pausedSince === null ? {} : { pausedSince: dateToMs(row.pausedSince) }),
+      ...(row.intention === null ? {} : { intention: row.intention }),
+      ...(row.habitId === null ? {} : { habitId: row.habitId }),
+      ...(row.goalId === null ? {} : { goalId: row.goalId }),
+      ...(row.taskId === null ? {} : { taskId: row.taskId }),
     };
   },
   fromDomain(userId: string, session: FocusSession): Prisma.FocusSessionUncheckedCreateInput {
@@ -194,6 +198,10 @@ export const focusSessionMapper = {
       state: session.state,
       pausedMs: session.pausedMs,
       pausedSince: session.pausedSince === undefined ? null : msToDate(session.pausedSince),
+      intention: session.intention ?? null,
+      habitId: session.habitId ?? null,
+      goalId: session.goalId ?? null,
+      taskId: session.taskId ?? null,
     };
   },
 };
