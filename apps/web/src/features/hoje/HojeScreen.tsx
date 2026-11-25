@@ -100,7 +100,7 @@ export function HojeScreen() {
       return;
     }
     refresh();
-    await navigate({ to: '/foco' });
+    await navigate({ to: '/casa' });
   };
 
   const descansar = async () => {

@@ -11,7 +11,7 @@ export function WelcomeScreen() {
 
   if (fase === 'sem_conexao') {
     return (
-      <Tela semBarra>
+      <Tela>
         <EstadoVazio titulo="Sem sinal por aqui" texto={TEXTO_SEM_SINAL} acao="Tentar de novo" onAcao={() => void tentarDeNovo()} />
         <Botao titulo="Entrar com outra conta" variante="fantasma" onPress={() => void sair()} />
         <Botao titulo="Ver o demo" variante="fantasma" onPress={() => void enableDemo()} />
@@ -20,7 +20,7 @@ export function WelcomeScreen() {
   }
 
   return (
-    <Tela semBarra>
+    <Tela>
       <div className="flex justify-center pt-6">
         <Sapo fase={1} estado="feliz" tamanho={160} />
       </div>

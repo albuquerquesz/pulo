@@ -28,7 +28,7 @@ export function OnboardingScreen() {
   };
 
   return (
-    <Tela semBarra>
+    <Tela>
       <div className="flex justify-center">
         <Sapo fase={1} estado="feliz" tamanho={180} />
       </div>

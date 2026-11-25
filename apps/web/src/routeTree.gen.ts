@@ -13,11 +13,14 @@ import { Route as AbasRouteImport } from './routes/_abas'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as AbasIndexRouteImport } from './routes/_abas/index'
+import { Route as AbasCasaRouteImport } from './routes/_abas/casa'
 import { Route as AbasFocoRouteImport } from './routes/_abas/foco'
+import { Route as AbasHabitosRouteImport } from './routes/_abas/habitos'
 import { Route as AbasIlhaRouteImport } from './routes/_abas/ilha'
 import { Route as AbasMetasRouteImport } from './routes/_abas/metas'
 import { Route as AbasPerfilRouteImport } from './routes/_abas/perfil'
 import { Route as AbasSemanaRouteImport } from './routes/_abas/semana'
+import { Route as AbasTarefasRouteImport } from './routes/_abas/tarefas'
 import { Route as OauthConsentimentoRouteImport } from './routes/oauth/consentimento'
 import { Route as OauthEntrarRouteImport } from './routes/oauth/entrar'
 
@@ -40,9 +43,19 @@ const AbasIndexRoute = AbasIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AbasRoute,
 } as any)
+const AbasCasaRoute = AbasCasaRouteImport.update({
+  id: '/casa',
+  path: '/casa',
+  getParentRoute: () => AbasRoute,
+} as any)
 const AbasFocoRoute = AbasFocoRouteImport.update({
   id: '/foco',
   path: '/foco',
+  getParentRoute: () => AbasRoute,
+} as any)
+const AbasHabitosRoute = AbasHabitosRouteImport.update({
+  id: '/habitos',
+  path: '/habitos',
   getParentRoute: () => AbasRoute,
 } as any)
 const AbasIlhaRoute = AbasIlhaRouteImport.update({
@@ -65,6 +78,11 @@ const AbasSemanaRoute = AbasSemanaRouteImport.update({
   path: '/semana',
   getParentRoute: () => AbasRoute,
 } as any)
+const AbasTarefasRoute = AbasTarefasRouteImport.update({
+  id: '/tarefas',
+  path: '/tarefas',
+  getParentRoute: () => AbasRoute,
+} as any)
 const OauthConsentimentoRoute = OauthConsentimentoRouteImport.update({
   id: '/oauth/consentimento',
   path: '/oauth/consentimento',
@@ -80,22 +98,28 @@ export interface FileRoutesByFullPath {
   '/': typeof AbasIndexRoute
   '/onboarding': typeof OnboardingRoute
   '/welcome': typeof WelcomeRoute
+  '/casa': typeof AbasCasaRoute
   '/foco': typeof AbasFocoRoute
+  '/habitos': typeof AbasHabitosRoute
   '/ilha': typeof AbasIlhaRoute
   '/metas': typeof AbasMetasRoute
   '/perfil': typeof AbasPerfilRoute
   '/semana': typeof AbasSemanaRoute
+  '/tarefas': typeof AbasTarefasRoute
   '/oauth/consentimento': typeof OauthConsentimentoRoute
   '/oauth/entrar': typeof OauthEntrarRoute
 }
 export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/welcome': typeof WelcomeRoute
+  '/casa': typeof AbasCasaRoute
   '/foco': typeof AbasFocoRoute
+  '/habitos': typeof AbasHabitosRoute
   '/ilha': typeof AbasIlhaRoute
   '/metas': typeof AbasMetasRoute
   '/perfil': typeof AbasPerfilRoute
   '/semana': typeof AbasSemanaRoute
+  '/tarefas': typeof AbasTarefasRoute
   '/oauth/consentimento': typeof OauthConsentimentoRoute
   '/oauth/entrar': typeof OauthEntrarRoute
   '/': typeof AbasIndexRoute
@@ -105,11 +129,14 @@ export interface FileRoutesById {
   '/_abas': typeof AbasRouteWithChildren
   '/onboarding': typeof OnboardingRoute
   '/welcome': typeof WelcomeRoute
+  '/_abas/casa': typeof AbasCasaRoute
   '/_abas/foco': typeof AbasFocoRoute
+  '/_abas/habitos': typeof AbasHabitosRoute
   '/_abas/ilha': typeof AbasIlhaRoute
   '/_abas/metas': typeof AbasMetasRoute
   '/_abas/perfil': typeof AbasPerfilRoute
   '/_abas/semana': typeof AbasSemanaRoute
+  '/_abas/tarefas': typeof AbasTarefasRoute
   '/oauth/consentimento': typeof OauthConsentimentoRoute
   '/oauth/entrar': typeof OauthEntrarRoute
   '/_abas/': typeof AbasIndexRoute
@@ -120,22 +147,28 @@ export interface FileRouteTypes {
     | '/'
     | '/onboarding'
     | '/welcome'
+    | '/casa'
     | '/foco'
+    | '/habitos'
     | '/ilha'
     | '/metas'
     | '/perfil'
     | '/semana'
+    | '/tarefas'
     | '/oauth/consentimento'
     | '/oauth/entrar'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/onboarding'
     | '/welcome'
+    | '/casa'
     | '/foco'
+    | '/habitos'
     | '/ilha'
     | '/metas'
     | '/perfil'
     | '/semana'
+    | '/tarefas'
     | '/oauth/consentimento'
     | '/oauth/entrar'
     | '/'
@@ -144,11 +177,14 @@ export interface FileRouteTypes {
     | '/_abas'
     | '/onboarding'
     | '/welcome'
+    | '/_abas/casa'
     | '/_abas/foco'
+    | '/_abas/habitos'
     | '/_abas/ilha'
     | '/_abas/metas'
     | '/_abas/perfil'
     | '/_abas/semana'
+    | '/_abas/tarefas'
     | '/oauth/consentimento'
     | '/oauth/entrar'
     | '/_abas/'
@@ -192,11 +228,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AbasIndexRouteImport
       parentRoute: typeof AbasRoute
     }
+    '/_abas/casa': {
+      id: '/_abas/casa'
+      path: '/casa'
+      fullPath: '/casa'
+      preLoaderRoute: typeof AbasCasaRouteImport
+      parentRoute: typeof AbasRoute
+    }
     '/_abas/foco': {
       id: '/_abas/foco'
       path: '/foco'
       fullPath: '/foco'
       preLoaderRoute: typeof AbasFocoRouteImport
+      parentRoute: typeof AbasRoute
+    }
+    '/_abas/habitos': {
+      id: '/_abas/habitos'
+      path: '/habitos'
+      fullPath: '/habitos'
+      preLoaderRoute: typeof AbasHabitosRouteImport
       parentRoute: typeof AbasRoute
     }
     '/_abas/ilha': {
@@ -227,6 +277,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AbasSemanaRouteImport
       parentRoute: typeof AbasRoute
     }
+    '/_abas/tarefas': {
+      id: '/_abas/tarefas'
+      path: '/tarefas'
+      fullPath: '/tarefas'
+      preLoaderRoute: typeof AbasTarefasRouteImport
+      parentRoute: typeof AbasRoute
+    }
     '/oauth/consentimento': {
       id: '/oauth/consentimento'
       path: '/oauth/consentimento'
@@ -245,20 +302,26 @@ declare module '@tanstack/react-router' {
 }
 
 interface AbasRouteChildren {
+  AbasCasaRoute: typeof AbasCasaRoute
   AbasFocoRoute: typeof AbasFocoRoute
+  AbasHabitosRoute: typeof AbasHabitosRoute
   AbasIlhaRoute: typeof AbasIlhaRoute
   AbasMetasRoute: typeof AbasMetasRoute
   AbasPerfilRoute: typeof AbasPerfilRoute
   AbasSemanaRoute: typeof AbasSemanaRoute
+  AbasTarefasRoute: typeof AbasTarefasRoute
   AbasIndexRoute: typeof AbasIndexRoute
 }
 
 const AbasRouteChildren: AbasRouteChildren = {
+  AbasCasaRoute: AbasCasaRoute,
   AbasFocoRoute: AbasFocoRoute,
+  AbasHabitosRoute: AbasHabitosRoute,
   AbasIlhaRoute: AbasIlhaRoute,
   AbasMetasRoute: AbasMetasRoute,
   AbasPerfilRoute: AbasPerfilRoute,
   AbasSemanaRoute: AbasSemanaRoute,
+  AbasTarefasRoute: AbasTarefasRoute,
   AbasIndexRoute: AbasIndexRoute,
 }
 
