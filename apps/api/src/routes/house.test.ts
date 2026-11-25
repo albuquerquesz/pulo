@@ -17,6 +17,7 @@ const compra = (item: string, cost: number, createdAt = TEST_NOW - 1) => ({ item
 const parte = (item: keyof typeof HOUSE.partCost, createdAt?: number) => compra(item, HOUSE.partCost[item], createdAt);
 const decor = (item: keyof typeof ROOM_DECOR.itemCost, createdAt?: number) => ({
   ...compra(item, ROOM_DECOR.itemCost[item], createdAt),
+  comodo: 'quarto',
   x: 1,
   y: 2,
   rotation: 90,
@@ -72,7 +73,7 @@ describe('/api/house e /api/room', () => {
   it('decoração: compra com posição, move de graça e a repetição não desfaz a mudança', async () => {
     const me = await h.newUser();
     await joias(me, ROOM_DECOR.itemCost.tapete);
-    const spot = { x: 5, y: 5, rotation: 270 };
+    const spot = { x: 5, y: 5, rotation: 270, comodo: 'quarto' };
     expect(await erro(await me.call('PATCH', '/api/room/tapete', spot))).toEqual({ status: 404, error: 'nao_encontrado' });
     expect(await erro(await me.call('PATCH', '/api/room/praia', spot))).toEqual({ status: 404, error: 'item_inexistente' });
     expect((await me.call('PUT', '/api/room/tapete', decor('tapete'))).status).toBe(200);
@@ -85,6 +86,58 @@ describe('/api/house e /api/room', () => {
     const outra = await h.newUser();
     expect(await erro(await outra.call('PATCH', '/api/room/tapete', spot))).toEqual({ status: 404, error: 'nao_encontrado' });
     expect(await quarto(outra)).toEqual([]);
+  });
+
+  it('parte sem o requisito é 409 falta_requisito, com o id que falta', async () => {
+    const me = await h.newUser();
+    await joias(me, 2000);
+    const res = await me.call('PUT', '/api/house/torre', parte('torre'));
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: 'falta_requisito', requer: 'segundo-andar', message: 'Precisa do Segundo andar.' });
+    for (const item of ['sala', 'segundo-andar', 'torre'] as const) {
+      expect((await me.call('PUT', `/api/house/${item}`, parte(item))).status).toBe(200);
+    }
+    expect((await casa(me)).purchases).toHaveLength(3);
+  });
+
+  it('quem comprou as partes antigas continua com todas e pode comprar as que dependem delas', async () => {
+    const me = await h.newUser();
+    await joias(me, 500);
+    const antigas = ['cozinha', 'varanda', 'jardim', 'arvore', 'cerca'] as const;
+    await database.db.islandPurchase.createMany({
+      data: antigas.map((item) => ({ userId: me.id, item, kind: 'casa' as const, cost: HOUSE.partCost[item], createdAt: new Date(TEST_NOW - 10) })),
+    });
+    expect((await casa(me)).purchases.map((p: { item: string }) => p.item).sort()).toEqual([...antigas].sort());
+    expect((await me.call('PUT', '/api/house/chamine', parte('chamine'))).status).toBe(200);
+  });
+
+  it('decoração por cômodo: recusa cômodo não comprado e move entre cômodos de graça', async () => {
+    const me = await h.newUser();
+    await joias(me, HOUSE.partCost.cozinha + ROOM_DECOR.itemCost.tapete);
+    const naCozinha = { ...decor('tapete'), comodo: 'cozinha' };
+    const recusa = { status: 400, error: 'comodo_nao_comprado' };
+    expect(await erro(await me.call('PUT', '/api/room/tapete', naCozinha))).toEqual(recusa);
+    expect(await quarto(me)).toEqual([]);
+    // Sem `comodo` (cliente antigo) vai para o quarto.
+    const { comodo: _, ...semComodo } = decor('tapete');
+    expect(await (await me.call('PUT', '/api/room/tapete', semComodo)).json()).toEqual({ decor: decor('tapete') });
+    expect(await erro(await me.call('PUT', '/api/room/tapete', naCozinha))).toEqual(recusa);
+    expect(await erro(await me.call('PATCH', '/api/room/tapete', { x: 0, y: 0, rotation: 0, comodo: 'cozinha' }))).toEqual(recusa);
+    expect(await erro(await me.call('PATCH', '/api/room/tapete', { x: 0, y: 0, rotation: 0, comodo: 'porao' }))).toEqual({
+      status: 400,
+      error: 'corpo_invalido',
+    });
+
+    await me.call('PUT', '/api/house/cozinha', parte('cozinha'));
+    // `PUT` com o cômodo novo muda o item de lugar sem cobrar.
+    expect(await (await me.call('PUT', '/api/room/tapete', naCozinha)).json()).toEqual({ decor: naCozinha });
+    expect(await quarto(me)).toEqual([naCozinha]);
+    // Mover sem dizer o cômodo mantém o atual; o `PATCH` também muda de cômodo.
+    await me.call('PATCH', '/api/room/tapete', { x: 3, y: 3, rotation: 0 });
+    expect(await quarto(me)).toEqual([{ ...naCozinha, x: 3, y: 3, rotation: 0 }]);
+    await me.call('PATCH', '/api/room/tapete', { x: 3, y: 3, rotation: 0, comodo: 'quarto' });
+    const sync = await (await me.call('GET', '/api/sync?from=2026-11-01&to=2026-11-30')).json();
+    expect(sync.roomDecor).toEqual([{ ...decor('tapete'), x: 3, y: 3, rotation: 0 }]);
   });
 
   it('dois aparelhos comprando o mesmo item ao mesmo tempo: só um paga', async () => {

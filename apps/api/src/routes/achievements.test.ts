@@ -1,3 +1,4 @@
+import { HOUSE } from '@pulo/core/config/decisions';
 // Conquistas (spec 14): destravadas pelas escritas, mostradas no sync e em GET /api/achievements.
 import { ACHIEVEMENTS } from '@pulo/core/config/decisions';
 import { addDays } from '@pulo/core/domain/day';
@@ -119,13 +120,25 @@ describe('escritas que destravam', () => {
   it('a última parte da casa destrava casa inteira', async () => {
     const me = await h.newUser();
     await database.db.joiaCredit.create({ data: { userId: me.id, amount: 1000 } });
-    const costs = { cozinha: 120, varanda: 80, jardim: 60, arvore: 90, cerca: 40 };
-    const unlocked: string[][] = [];
-    for (const [item, cost] of Object.entries(costs)) {
+    await database.db.joiaCredit.update({ where: { userId: me.id }, data: { amount: 5000 } });
+    const unlocked: Record<string, string[]> = {};
+    // A ordem do catálogo não respeita os requisitos: compra o que já está liberado, em voltas.
+    const faltam = HOUSE.parts.filter((p) => p.custo > 0);
+    const prontas = new Set(['quarto']);
+    while (faltam.length > 0) {
+      const indice = faltam.findIndex((p) => !p.requer || prontas.has(p.requer));
+      const [parte] = faltam.splice(indice, 1);
+      if (!parte) throw new Error('requisito sem saída');
+      const { id: item, custo: cost } = parte;
       const res = await (await me.call('PUT', `/api/house/${item}`, { item, cost, createdAt: TEST_NOW - MIN })).json();
-      unlocked.push(ids(res.newAchievements));
+      prontas.add(item);
+      if (res.newAchievements.length > 0) unlocked[item] = ids(res.newAchievements);
     }
-    expect(unlocked).toEqual([[], [], [], [], ['casa-inteira']]);
+    expect(unlocked).toEqual({
+      'segundo-andar': ['dois-andares'],
+      escritorio: ['cinco-comodos'],
+      piscina: ['casa-inteira'],
+    });
   });
 
   it('duas escritas simultâneas comemoram uma vez só', async () => {

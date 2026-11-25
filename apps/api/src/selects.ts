@@ -81,7 +81,7 @@ export const goalChestSelect = { goalId: true, abertoEm: true, joias: true } as 
 
 export const islandPurchaseSelect = { item: true, cost: true, createdAt: true } as const satisfies Prisma.IslandPurchaseSelect;
 
-export const roomSpotSelect = { x: true, y: true, rotation: true } as const satisfies Prisma.RoomPlacementSelect;
+export const roomSpotSelect = { x: true, y: true, rotation: true, comodo: true } as const satisfies Prisma.RoomPlacementSelect;
 
 export const roomDecorSelect = { ...islandPurchaseSelect, placement: { select: roomSpotSelect } } as const satisfies Prisma.IslandPurchaseSelect;
 

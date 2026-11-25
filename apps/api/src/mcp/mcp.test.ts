@@ -165,7 +165,7 @@ describe('servidor MCP', () => {
 
     // Ilha: conta nova não tem joias, então a compra é recusada com a mensagem da tela.
     const mapa = await ferramenta(token, 'ver_ilha');
-    expect(mapa.dados).toMatchObject({ saldo: 0, moeda: 'joias', casa: { construidas: 1, total: 6 } });
+    expect(mapa.dados).toMatchObject({ saldo: 0, moeda: 'joias', casa: { construidas: 1, total: 24 } });
     expect(await ferramenta(token, 'comprar_na_ilha', { item: 'cerca' })).toMatchObject({ erro: true, texto: 'Faltam 40 joias.' });
     expect(await ferramenta(token, 'comprar_na_ilha', { item: 'tapete', x: 1, y: 1 })).toMatchObject({ erro: true, texto: 'Faltam 10 joias.' });
     expect(await ferramenta(token, 'mover_decoracao', { item: 'tapete', x: 1, y: 1 })).toMatchObject({ erro: true });

@@ -50,6 +50,7 @@ export class ApiError extends Error {
     readonly code: ApiErrorCode,
     message?: string,
     readonly issues?: ApiErrorBody['issues'],
+    readonly requer?: ApiErrorBody['requer'],
   ) {
     super(message ?? code);
   }
@@ -95,7 +96,7 @@ export const pathParams = <S extends z.ZodType>(schema: S) =>
 // ---------- Erros ----------
 
 function errorBody(error: ApiError): ApiErrorBody {
-  return apiErrorSchema.parse({ error: error.code, message: error.message, issues: error.issues });
+  return apiErrorSchema.parse({ error: error.code, message: error.message, requer: error.requer, issues: error.issues });
 }
 
 /** Falha de serialização e deadlock: duas escritas ao mesmo tempo, e quem perdeu pode tentar de novo. */
