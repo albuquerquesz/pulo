@@ -37,11 +37,14 @@ Nunca há stack trace; erro inesperado vira 500 `erro_interno` e o detalhe fica 
 | 400 | `parametro_invalido` | id ou data inválidos no caminho |
 | 400 | `id_divergente`, `data_divergente` | caminho diferente do corpo |
 | 400 | `horario_no_futuro` | instante do app no futuro |
-| 404 | `referencia_inexistente` | hábito (do registro), bloco (da sessão) ou meta (da tarefa) que não existe ou é de outra pessoa |
+| 404 | `referencia_inexistente` | hábito (do registro), bloco (da sessão) ou meta (da tarefa e do hábito) que não existe ou é de outra pessoa |
 | 404 | `rota_inexistente` | rota não existe |
 | 409 | `conflito_de_id` | id já usado por outra pessoa (nunca sobrescreve). No lote, `issues` lista `blocks.N.id` ou `habits.N.id` e nada é salvo |
 | 409 | `limite_por_dia` | passaria de `MAX_HABITS_PER_DAY` hábitos ativos no mesmo dia da semana. No lote, `issues` lista `habits.N.weekdays` e nada é salvo |
 | 409 | `limite_de_metas` | passaria de `GOALS.maxActive` metas ativas (concluídas não contam) |
+| 404 | `meta_inexistente` | `POST /api/goals/:id/chest` numa meta que não existe ou é de outra pessoa |
+| 409 | `meta_nao_concluida` | abrir o baú de uma meta que não está concluída |
+| 409 | `bau_ja_aberto` | o baú dessa meta já foi aberto |
 | 409 | `limite_de_subtarefas` | passaria de `TASKS.maxSubtasks` subtarefas na tarefa |
 | 404 | `item_inexistente` | compra ou mudança de lugar de um item que não está no catálogo da rota (`HOUSE`, `ROOM_DECOR` ou, na ilha antiga, `ISLAND`) |
 | 400 | `preco_divergente` | compra com `cost` diferente do preço do catálogo |
@@ -71,8 +74,8 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `PUT /api/blocks/:id` | `RoutineBlock` | `{ block }` | 3 |
 | `DELETE /api/blocks/:id` | | `{ deleted }` | 3 |
 | `GET /api/habits` | | `{ habits: Habit[] }` | 3 |
-| `PUT /api/habits` (lote) | `{ habits: Habit[] }`, 1 a 50 | `{ habits }` | 4 com 1 ou com 50 |
-| `PUT /api/habits/:id` | `Habit` | `{ habit }` | 4 |
+| `PUT /api/habits` (lote) | `{ habits: Habit[] }`, 1 a 50 | `{ habits }` | 4 com 1 ou com 50 (5 quando algum traz meta) |
+| `PUT /api/habits/:id` | `Habit` (`goalId` pode ser `null`) | `{ habit }` | 4 (5 quando traz meta) |
 | `DELETE /api/habits/:id` | | `{ deleted }` (os registros do hábito saem junto) | 3 |
 | `GET /api/habit-logs?from&to` | | `{ habitLogs: HabitLog[] }` | 3 |
 | `PUT /api/habit-logs/:habitId/:date` | `HabitLog` | `{ habitLog }` | 4 |
@@ -86,9 +89,10 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `PUT /api/proposals/:id` | `WeeklyProposal` | `{ proposal }` | 4 |
 | `POST /api/proposals/generate` | `{ date? }` (qualquer dia da semana) | `{ outcome, proposal? }` | 8 sem criar, 9 criando |
 | `POST /api/proposals/:id/decision` | `{ action: 'aceitar' \| 'editar' \| 'negar' \| 'desfazer', change? }` | `{ proposal, blocks }` | 6 aplicando blocos, 5 ao negar, 4 repetindo |
-| `GET /api/goals` | | `{ goals: Goal[] }` (mais antiga primeiro) | 3 |
+| `GET /api/goals` | | `{ goals: Goal[], chests: GoalChest[] }` (mais antiga primeiro) | 4 |
 | `PUT /api/goals/:id` | `Goal` (marcos dentro) | `{ goal }` | 4 |
-| `DELETE /api/goals/:id` | | `{ deleted }` | 3 |
+| `DELETE /api/goals/:id` | | `{ deleted }` (o baú sai junto; hábitos e tarefas ficam sem a meta) | 3 |
+| `POST /api/goals/:id/chest` | (sem corpo) | `{ chest: GoalChest }` | 4 |
 | `GET /api/tasks` | | `{ tasks: Task[], subtasks: TaskSubtask[] }` | 4 |
 | `PUT /api/tasks/:id` | `Task` | `{ task }` | 7 criando, 6 mudando coluna, prioridade ou prazo (5 sem mudança neles; 1 a mais ao trocar a meta) |
 | `DELETE /api/tasks/:id` | | `{ deleted }` (subtarefas, comentários e histórico saem junto) | 4 |
@@ -97,21 +101,21 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `POST /api/tasks/:id/comments` | `TaskComment` | `{ comment }` | 6 criando, 5 repetindo |
 | `GET /api/tasks/:id/activity` | | `{ events: TaskEvent[], comments: TaskComment[] }` | 5 |
 | `GET /api/island/purchases` | | `{ purchases: IslandPurchase[] }` (mais antiga primeiro) | 3 |
-| `PUT /api/island/purchases/:item` | `IslandPurchase` | `{ purchase }` | 11 comprando, 10 repetindo |
+| `PUT /api/island/purchases/:item` | `IslandPurchase` | `{ purchase }` | 10 comprando, 9 repetindo |
 | `GET /api/house` | | `{ purchases: Purchase[], joiaCredit: number }` | 4 |
-| `PUT /api/house/:item` | `Purchase` | `{ purchase }` | 10 comprando |
+| `PUT /api/house/:item` | `Purchase` | `{ purchase }` | 11 comprando |
 | `GET /api/room` | | `{ decor: RoomDecor[] }` (mais antiga primeiro) | 3 |
-| `PUT /api/room/:item` | `RoomDecor` | `{ decor }` | 12 comprando |
+| `PUT /api/room/:item` | `RoomDecor` | `{ decor }` | 13 comprando |
 | `PATCH /api/room/:item` | `RoomSpot` | `{ item, spot }` | 3 |
 | `GET /api/mascot` | | `{ mascot: MascotState \| null }` | 3 |
 | `GET /api/week-summary?date` | | `{ summary: WeekSummary }` | 5 |
 | `GET /api/streak` | | `{ streak: Streak }` | 5 |
 | `GET /api/stats` | | `{ stats: ProfileStats }` | 4 |
-| `GET /api/data/export` | | arquivo JSON com tudo da pessoa | 19 |
+| `GET /api/data/export` | | arquivo JSON com tudo da pessoa | 20 |
 | `DELETE /api/account` | `{ confirm: 'EXCLUIR' }` | `{ deleted: true }` e o cookie apagado | fixo (igual com 1 ou 50 registros) |
 | `GET /api/mcp/connections` | | `{ connections: McpConnection[] }` (a mais recente primeiro) | 3 |
 | `DELETE /api/mcp/connections/:clientId` | | `{ deleted }` | 6 |
-| `GET /api/sync?from&to` | | ver abaixo (inclui `goals`, `tasks`, `subtasks`, `islandPurchases`, `housePurchases`, `roomDecor`, `joiaCredit`, `streak` e `stats`) | 19 |
+| `GET /api/sync?from&to` | | ver abaixo (inclui `goals`, `goalChests`, `tasks`, `subtasks`, `islandPurchases`, `housePurchases`, `roomDecor`, `joiaCredit`, `streak` e `stats`) | 20 |
 | `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, goals, islandPurchases, mascot, tasks } }` | 13 |
 
 Já existiam e continuam: `GET /health`, `/api/auth/*`, `GET /api/me`, `PATCH /api/me/metadata`, `POST /weekly-ai`.
@@ -151,7 +155,7 @@ Rota do Better Auth. Corpo `{ name?, image? }`: nome de 1 a `ACCOUNT.nameMaxChar
 ### Exportar: `GET /api/data/export`
 
 Download (`Content-Disposition`, `Cache-Control: no-store`) com `exportVersion`, `exportedAt`, `user` (id, nome, email, foto, criação),
-`metadata`, `blocks`, `habits`, `habitLogs`, `sessions`, `restDays`, `proposals`, `goals`, `tasks`, `subtasks`, `taskComments`,
+`metadata`, `blocks`, `habits`, `habitLogs`, `sessions`, `restDays`, `proposals`, `goals`, `goalChests`, `tasks`, `subtasks`, `taskComments`,
 `taskEvents`, `lastTaskNumber`, `housePurchases`, `roomDecor`, `islandPurchases`, `joiaCredit`, `mascot` e `connections`.
 Sem recorte de datas. Nunca entram tokens, segredos, sessões de login nem contas OAuth. Tabela nova com `userId` precisa entrar
 no arquivo (`data-export.test.ts` cobra).
@@ -204,7 +208,7 @@ Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBl
   passam pelas duas rotas abaixo, que aplicam os blocos junto. A regra pura da máquina de estados está em `@pulo/core/api/proposal-state`
   e a da decisão em `@pulo/core/api/proposal-decision`.
 - **Joias**: a moeda. O saldo nunca é gravado: são as joias ganhas menos as gastas, no mínimo zero (`joiasGanhas` em
-  `@pulo/core/domain/joias`). Rendem: hábito feito, dia de descanso, marco e meta concluída (`JOIAS.por`) e o foco, com
+  `@pulo/core/domain/joias`). Rendem: hábito feito, dia de descanso, marco e baú de meta aberto (`JOIAS.por`) e o foco, com
   `floor(minutos focados / JOIAS.focusMinutesPerJoia)` por sessão encerrada (concluída ou interrompida), sem as pausas e até o planejado.
   `joiaCredit` é o ganho histórico dado pela migração a quem ganharia menos com a regra nova do foco.
 - **Casa**: `PUT /api/house/:item` compra uma parte (`HOUSE`: `cozinha`, `varanda`, `jardim`, `arvore`, `cerca`), em qualquer ordem.
@@ -218,6 +222,19 @@ Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBl
   `createdAt`) é 200 sem gravar; no quarto a resposta traz a posição gravada, que pode já ter mudado.
 - **Ilha antiga** (`/api/island`, legado da spec 12 até a tela nova): mesma mecânica com o catálogo `ISLAND`, ordem das áreas e área aberta.
   As compras dela **não gastam joias na casa nem no quarto** (o valor volta). O saldo da ilha antiga desconta as compras antigas e as novas.
+
+### Metas: `/api/goals`
+
+- `Goal` tem `icon` (emoji curto, sem espaços, até `GOALS.iconMaxChars`) e `color` (um de `ACCENT_COLORS`: `sapo`, `agua`, `foco`,
+  `descanso`, `sol`, `atencao`; nunca hex). Os dois são opcionais: omitidos no `PUT`, ficam como estão (clientes antigos não os
+  apagam). Sem valor gravado, a tela usa `GOALS.defaultIcon` e `GOALS.defaultColor`.
+- **Baú**: concluir a meta não dá joias sozinho. `POST /api/goals/:id/chest` grava o resgate `GoalChest { goalId, abertoEm, joias }`
+  (hora do servidor, `JOIAS.por.goalCompleted`) numa transação serializável, e as joias passam a contar. Um por meta: reabrir e
+  concluir de novo responde 409 `bau_ja_aberto`, e o resgate continua valendo. Apagar a meta apaga o resgate (as joias saem do saldo).
+- **Hábito atrelado**: `Habit.goalId` (no máximo uma meta). No `PUT /api/habits/:id` e no lote: omitido mantém a meta gravada,
+  `null` solta, um id atrela ou troca (meta de outra pessoa: 404 `referencia_inexistente`). Não há limite próprio.
+- **Ritmo e números** não são rotas: `ritmo`, `numerosDaMeta` e `estadoDoBau` em `@pulo/core/domain/goals`. O foco por meta soma
+  as sessões com `goalId` ou `habitId`, vínculo que a spec 19 ainda vai gravar; até lá é zero.
 
 ### Tarefas: `/api/tasks`
 
@@ -302,25 +319,25 @@ A regra é a função pura `computeStreak` do core (`@pulo/core/domain/streak`),
 
 ### `GET /api/sync?from&to`
 
-`from` e `to` obrigatórios, até 400 dias. Dezessete leituras numa transação (as estatísticas reaproveitam as da sequência), resposta:
+`from` e `to` obrigatórios, até 400 dias. Dezoito leituras numa transação (as estatísticas reaproveitam as da sequência), resposta:
 
 ```json
 {
   "user": { "id": "", "name": "", "email": "", "image": null },
   "metadata": { "version": 1, "theme": "sistema", "reduceMotion": false, "timezone": "America/Sao_Paulo", "onboarding": { "completed": false, "completedAt": null }, "profile": null },
   "blocks": [], "habits": [], "habitLogs": [], "sessions": [], "restDays": [],
-  "proposals": [], "goals": [], "tasks": [], "subtasks": [], "islandPurchases": [], "housePurchases": [], "roomDecor": [], "joiaCredit": 0, "mascot": null,
+  "proposals": [], "goals": [], "goalChests": [], "tasks": [], "subtasks": [], "islandPurchases": [], "housePurchases": [], "roomDecor": [], "joiaCredit": 0, "mascot": null,
   "streak": { "atual": 0, "recorde": 0, "semana": [{ "date": "2026-11-15", "estado": "vazio" }] }, "stats": { "habitosFeitos": 0, "minutosDeFoco": 0, "desde": 1795000000000 }, "serverTime": 1795000000000
 }
 ```
 
-Blocos, hábitos, propostas, metas, tarefas e subtarefas, compras (ilha antiga, casa e quarto) e o crédito de joias vêm inteiros; hábitos feitos e descansos, só do intervalo; sessões do intervalo mais a
+Blocos, hábitos, propostas, metas, baús abertos, tarefas e subtarefas, compras (ilha antiga, casa e quarto) e o crédito de joias vêm inteiros; hábitos feitos e descansos, só do intervalo; sessões do intervalo mais a
 em andamento. `streak` olha todo o histórico, não só o intervalo (acima; `semana` tem sempre 7 itens). `serverTime` é o relógio do servidor em ms.
 
 ### `DELETE /api/data`
 
 O `clearAll` do servidor, único jeito de zerar o progresso: apaga blocos, hábitos (e seus registros), sessões, descansos,
-propostas, metas, tarefas (com subtarefas, comentários e histórico; a numeração volta a 1), compras com joias (e posições do quarto), crédito de joias e o estado do sapo da pessoa, numa transação. Conta, login e metadados (tema, fuso, onboarding) ficam.
+propostas, metas (e baús), tarefas (com subtarefas, comentários e histórico; a numeração volta a 1), compras com joias (e posições do quarto), crédito de joias e o estado do sapo da pessoa, numa transação. Conta, login e metadados (tema, fuso, onboarding) ficam.
 
 ## Mapa para o `Repository`
 
@@ -334,6 +351,7 @@ propostas, metas, tarefas (com subtarefas, comentários e histórico; a numeraç
 | `listProposals`, `saveProposal` | `GET /api/proposals`, `PUT /api/proposals/:id` |
 | `generateProposal`, `decideProposal` (só no `RemoteRepository`) | `POST /api/proposals/generate`, `POST /api/proposals/:id/decision` |
 | `listGoals`, `saveGoal`, `deleteGoal` | `GET /api/goals`, `PUT`, `DELETE /api/goals/:id` |
+| `listGoalChests`, `saveGoalChest` | `goalChests` do sync (ou `GET /api/goals`), `POST /api/goals/:id/chest` |
 | `listTasks`, `saveTask`, `deleteTask` | `GET /api/tasks`, `PUT`, `DELETE /api/tasks/:id` |
 | `listSubtasks`, `saveSubtask`, `deleteSubtask` | `GET /api/tasks`, `PUT`, `DELETE /api/tasks/:id/subtasks/:subId` |
 | `addTaskComment`, `listTaskActivity` | `POST /api/tasks/:id/comments`, `GET /api/tasks/:id/activity` |
