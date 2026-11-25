@@ -106,10 +106,68 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `GET /api/mascot` | | `{ mascot: MascotState \| null }` | 3 |
 | `GET /api/week-summary?date` | | `{ summary: WeekSummary }` | 5 |
 | `GET /api/streak` | | `{ streak: Streak }` | 5 |
-| `GET /api/sync?from&to` | | ver abaixo (inclui `goals`, `tasks`, `subtasks`, `islandPurchases`, `housePurchases`, `roomDecor`, `joiaCredit` e `streak`) | 19 |
+| `GET /api/stats` | | `{ stats: ProfileStats }` | 4 |
+| `GET /api/data/export` | | arquivo JSON com tudo da pessoa | 19 |
+| `DELETE /api/account` | `{ confirm: 'EXCLUIR' }` | `{ deleted: true }` e o cookie apagado | fixo (igual com 1 ou 50 registros) |
+| `GET /api/mcp/connections` | | `{ connections: McpConnection[] }` (a mais recente primeiro) | 3 |
+| `DELETE /api/mcp/connections/:clientId` | | `{ deleted }` | 6 |
+| `GET /api/sync?from&to` | | ver abaixo (inclui `goals`, `tasks`, `subtasks`, `islandPurchases`, `housePurchases`, `roomDecor`, `joiaCredit`, `streak` e `stats`) | 19 |
 | `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, goals, islandPurchases, mascot, tasks } }` | 13 |
 
 Já existiam e continuam: `GET /health`, `/api/auth/*`, `GET /api/me`, `PATCH /api/me/metadata`, `POST /weekly-ai`.
+
+### Preferências: `PATCH /api/me/metadata`
+
+Além de tema, movimento, fuso, onboarding e `profile`, o `metadata` guarda as preferências (tipo `Preferences`; padrões em
+`PREFERENCES` e `FOCUS` do `decisions.ts`). Contas antigas leem os padrões; um valor guardado fora dos limites vira o padrão.
+
+| Campo | Valores | Padrão |
+| --- | --- | --- |
+| `focusMinutes` | `FOCUS.minMinutes` a `FOCUS.maxMinutes` (15 a 50) | 25 |
+| `breakMinutes` | 3 a 15 | 5 |
+| `dailyFocusGoalMinutes` | 5 a 480, ou `null` (sem meta) | `null` |
+| `eveningReminder` | `{ ligado, minutos }` (minutos desde 00:00) | desligado, 1260 |
+| `vacation` | no `PATCH` só `{ ligado }`; lido como `{ ligado, desde, periodos: [{ de, ate }] }` | desligado |
+| `sounds`, `aiEnabled` | booleano | `true` |
+| `ambientSound` | `silencio`, `lagoa` ou `chuva` | `silencio` |
+
+- **Lembrete da noite:** só a preferência é gravada. Nada é enviado ainda.
+- **Férias:** o servidor marca as datas (dia da pessoa). Ao desligar, o trecho até hoje vira um período em `periodos` (até
+  `PREFERENCES.maxVacationPeriods`). Os dias de férias contam como descanso **só na sequência** (não rendem joias nem dias de cuidado).
+- **IA desligada** (`aiEnabled: false`): `POST /api/proposals/generate` usa só a regra, sem chamar o provedor. O MCP continua funcionando.
+- A duração do foco é uma sugestão para o timer: as sessões continuam aceitando qualquer valor dentro de `FOCUS`.
+
+### Estatísticas: `GET /api/stats`
+
+`{ stats: { habitosFeitos, minutosDeFoco, desde } }`, de todo o histórico; o mesmo objeto vem em `stats` no `/api/sync`.
+`minutosDeFoco` soma as sessões encerradas (concluídas e interrompidas), sem as pausas e até o planejado, em minutos inteiros.
+`desde` é o instante (ms) em que a conta foi criada. Regra pura em `@pulo/core/domain/stats`.
+
+### Nome e foto: `POST /api/auth/update-user`
+
+Rota do Better Auth. Corpo `{ name?, image? }`: nome de 1 a `ACCOUNT.nameMaxChars` (80) letras; foto é um endereço `https`
+(até 2048) ou `null`. Qualquer outro campo é recusado com 400 `corpo_invalido`. Não há envio de arquivo.
+
+### Exportar: `GET /api/data/export`
+
+Download (`Content-Disposition`, `Cache-Control: no-store`) com `exportVersion`, `exportedAt`, `user` (id, nome, email, foto, criação),
+`metadata`, `blocks`, `habits`, `habitLogs`, `sessions`, `restDays`, `proposals`, `goals`, `tasks`, `subtasks`, `taskComments`,
+`taskEvents`, `lastTaskNumber`, `housePurchases`, `roomDecor`, `islandPurchases`, `joiaCredit`, `mascot` e `connections`.
+Sem recorte de datas. Nunca entram tokens, segredos, sessões de login nem contas OAuth. Tabela nova com `userId` precisa entrar
+no arquivo (`data-export.test.ts` cobra).
+
+### Excluir a conta: `DELETE /api/account`
+
+O corpo precisa trazer `{ "confirm": "EXCLUIR" }` (senão 400 `corpo_invalido`; a tela pede a confirmação antes). Apaga o usuário e,
+por cascata, todas as tabelas dele, inclusive login e OAuth; também os códigos de autorização em `verification`. Um cliente OAuth
+registrado por ele e usado por outra pessoa só perde o dono. A resposta apaga o cookie. Não tem volta; entrar de novo cria uma conta vazia.
+A autorização dada no Google não é revogada.
+
+### Aplicativos conectados: `/api/mcp/connections`
+
+`McpConnection`: `{ clientId, name, scopes, connectedAt, updatedAt }`, um por cliente OAuth liberado (o Claude pode registrar
+mais de um). `DELETE /:clientId` apaga consentimento, tokens e códigos daquele cliente só para a pessoa; o `/mcp` passa a
+responder 401 na hora. Idempotente (`{ deleted: 0 }`).
 
 ### Escrita em lote
 
@@ -232,6 +290,7 @@ Resposta `{ streak: { atual, recorde, semana } }` (`streakResponseSchema`). O me
 A regra é a função pura `computeStreak` do core (`@pulo/core/domain/streak`), usada também no modo demo.
 
 - Um dia conta quando tem pelo menos um hábito feito **ou** uma sessão de foco que conta como cuidado (a mesma regra da ilha).
+- Dias do modo férias valem como descanso.
 - Dia de descanso não quebra a sequência e não soma. Hoje vazio ainda não quebra: ela só zera quando um dia termina vazio.
 - `atual` são os dias feitos seguidos; `recorde` é o maior trecho de todo o histórico. Os dois são calculados, nada é gravado.
 - `semana` tem 7 itens `{ date, estado }`, de domingo a sábado (`STREAK.weekStartsOn`). `estado`: `feito`, `descanso`, `vazio`,
@@ -243,7 +302,7 @@ A regra é a função pura `computeStreak` do core (`@pulo/core/domain/streak`),
 
 ### `GET /api/sync?from&to`
 
-`from` e `to` obrigatórios, até 400 dias. Dezessete leituras numa transação, resposta:
+`from` e `to` obrigatórios, até 400 dias. Dezessete leituras numa transação (as estatísticas reaproveitam as da sequência), resposta:
 
 ```json
 {
@@ -251,7 +310,7 @@ A regra é a função pura `computeStreak` do core (`@pulo/core/domain/streak`),
   "metadata": { "version": 1, "theme": "sistema", "reduceMotion": false, "timezone": "America/Sao_Paulo", "onboarding": { "completed": false, "completedAt": null }, "profile": null },
   "blocks": [], "habits": [], "habitLogs": [], "sessions": [], "restDays": [],
   "proposals": [], "goals": [], "tasks": [], "subtasks": [], "islandPurchases": [], "housePurchases": [], "roomDecor": [], "joiaCredit": 0, "mascot": null,
-  "streak": { "atual": 0, "recorde": 0, "semana": [{ "date": "2026-11-15", "estado": "vazio" }] }, "serverTime": 1795000000000
+  "streak": { "atual": 0, "recorde": 0, "semana": [{ "date": "2026-11-15", "estado": "vazio" }] }, "stats": { "habitosFeitos": 0, "minutosDeFoco": 0, "desde": 1795000000000 }, "serverTime": 1795000000000
 }
 ```
 
@@ -285,6 +344,10 @@ propostas, metas, tarefas (com subtarefas, comentários e histórico; a numeraç
 | `getMascotState` (`saveMascotState` não existe: o servidor calcula) | `GET /api/mascot` |
 | `verSequencia` do core (`getStreak` só no `RemoteRepository`) | `GET /api/sync` e `GET /api/streak` |
 | `getUser` | `GET /api/me` e `metadata` do `GET /api/sync` |
+| `getPreferences`, `savePreferences` (só no `RemoteRepository`) | `metadata` do sync, `PATCH /api/me/metadata` |
+| `verEstatisticas` do core (`getStats` só no `RemoteRepository`) | `GET /api/sync` e `GET /api/stats` |
+| `exportData`, `deleteAccount` (só no `RemoteRepository`) | `GET /api/data/export`, `DELETE /api/account` |
+| `listConnections`, `disconnect` (só no `RemoteRepository`) | `GET`, `DELETE /api/mcp/connections` |
 | `clearAll` | `DELETE /api/data` |
 
 ## Cliente no app: `@pulo/client`
