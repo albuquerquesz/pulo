@@ -37,11 +37,12 @@ Nunca há stack trace; erro inesperado vira 500 `erro_interno` e o detalhe fica 
 | 400 | `parametro_invalido` | id ou data inválidos no caminho |
 | 400 | `id_divergente`, `data_divergente` | caminho diferente do corpo |
 | 400 | `horario_no_futuro` | instante do app no futuro |
-| 404 | `referencia_inexistente` | hábito (do registro) ou bloco (da sessão) que não existe ou é de outra pessoa |
+| 404 | `referencia_inexistente` | hábito (do registro), bloco (da sessão) ou meta (da tarefa) que não existe ou é de outra pessoa |
 | 404 | `rota_inexistente` | rota não existe |
 | 409 | `conflito_de_id` | id já usado por outra pessoa (nunca sobrescreve). No lote, `issues` lista `blocks.N.id` ou `habits.N.id` e nada é salvo |
 | 409 | `limite_por_dia` | passaria de `MAX_HABITS_PER_DAY` hábitos ativos no mesmo dia da semana. No lote, `issues` lista `habits.N.weekdays` e nada é salvo |
 | 409 | `limite_de_metas` | passaria de `GOALS.maxActive` metas ativas (concluídas não contam) |
+| 409 | `limite_de_subtarefas` | passaria de `TASKS.maxSubtasks` subtarefas na tarefa |
 | 404 | `item_inexistente` | compra ou mudança de lugar de um item que não está no catálogo da rota (`HOUSE`, `ROOM_DECOR` ou, na ilha antiga, `ISLAND`) |
 | 400 | `preco_divergente` | compra com `cost` diferente do preço do catálogo |
 | 409 | `ja_comprado` | item já comprado (inclui o `quarto` e a `lagoa`, que já vêm prontos, o mesmo item com outro corpo e dois aparelhos comprando juntos) |
@@ -52,7 +53,7 @@ Nunca há stack trace; erro inesperado vira 500 `erro_interno` e o detalhe fica 
 | 409 | `sessao_encerrada` | mudança numa sessão `concluida` ou `interrompida` |
 | 409 | `sessao_imutavel` | mudou início, duração planejada ou bloco de uma sessão em andamento |
 | 409 | `proposta_transicao_invalida`, `proposta_imutavel` | máquina de estados da proposta (abaixo) |
-| 404 | `nao_encontrado` | proposta que não existe ou é de outra pessoa (`POST /api/proposals/:id/decision`) |
+| 404 | `nao_encontrado` | proposta (`POST /api/proposals/:id/decision`) ou tarefa que não existe ou é de outra pessoa; item do quarto não comprado |
 | 409 | `semana_ja_tem_proposta` | já há outra proposta nessa semana |
 | 409 | `bloco_mudou` | aceitar, editar ou desfazer, mas um bloco da proposta não está mais no horário que a proposta espera (mexido em outro aparelho, ou apagado). Nada é gravado |
 | 409 | `horario_ocupado` | o horário de destino (ou o de volta, ao desfazer) bate em outro bloco. Nada é gravado |
@@ -88,6 +89,13 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `GET /api/goals` | | `{ goals: Goal[] }` (mais antiga primeiro) | 3 |
 | `PUT /api/goals/:id` | `Goal` (marcos dentro) | `{ goal }` | 4 |
 | `DELETE /api/goals/:id` | | `{ deleted }` | 3 |
+| `GET /api/tasks` | | `{ tasks: Task[], subtasks: TaskSubtask[] }` | 4 |
+| `PUT /api/tasks/:id` | `Task` | `{ task }` | 7 criando, 6 mudando coluna, prioridade ou prazo (5 sem mudança neles; 1 a mais ao trocar a meta) |
+| `DELETE /api/tasks/:id` | | `{ deleted }` (subtarefas, comentários e histórico saem junto) | 4 |
+| `PUT /api/tasks/:id/subtasks/:subId` | `TaskSubtask` | `{ subtask }` | 6 |
+| `DELETE /api/tasks/:id/subtasks/:subId` | | `{ deleted }` | 3 |
+| `POST /api/tasks/:id/comments` | `TaskComment` | `{ comment }` | 6 criando, 5 repetindo |
+| `GET /api/tasks/:id/activity` | | `{ events: TaskEvent[], comments: TaskComment[] }` | 5 |
 | `GET /api/island/purchases` | | `{ purchases: IslandPurchase[] }` (mais antiga primeiro) | 3 |
 | `PUT /api/island/purchases/:item` | `IslandPurchase` | `{ purchase }` | 11 comprando, 10 repetindo |
 | `GET /api/house` | | `{ purchases: Purchase[], joiaCredit: number }` | 4 |
@@ -98,8 +106,8 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `GET /api/mascot` | | `{ mascot: MascotState \| null }` | 3 |
 | `GET /api/week-summary?date` | | `{ summary: WeekSummary }` | 5 |
 | `GET /api/streak` | | `{ streak: Streak }` | 5 |
-| `GET /api/sync?from&to` | | ver abaixo (inclui `goals`, `islandPurchases`, `housePurchases`, `roomDecor`, `joiaCredit` e `streak`) | 17 |
-| `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, goals, islandPurchases, mascot } }` | 11 |
+| `GET /api/sync?from&to` | | ver abaixo (inclui `goals`, `tasks`, `subtasks`, `islandPurchases`, `housePurchases`, `roomDecor`, `joiaCredit` e `streak`) | 19 |
+| `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, goals, islandPurchases, mascot, tasks } }` | 13 |
 
 Já existiam e continuam: `GET /health`, `/api/auth/*`, `GET /api/me`, `PATCH /api/me/metadata`, `POST /weekly-ai`.
 
@@ -152,6 +160,26 @@ Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBl
   `createdAt`) é 200 sem gravar; no quarto a resposta traz a posição gravada, que pode já ter mudado.
 - **Ilha antiga** (`/api/island`, legado da spec 12 até a tela nova): mesma mecânica com o catálogo `ISLAND`, ordem das áreas e área aberta.
   As compras dela **não gastam joias na casa nem no quarto** (o valor volta). O saldo da ilha antiga desconta as compras antigas e as novas.
+
+### Tarefas: `/api/tasks`
+
+Tipos `Task`, `TaskSubtask`, `TaskComment` e `TaskEvent` de `domain/types.ts`; limites em `TASKS` (`decisions.ts`): título até 200
+caracteres (também o das subtarefas), descrição até 10 mil, comentário até 2 mil, 10 etiquetas de até 30, 50 subtarefas, 100 pomodoros.
+
+- `status`: `ideias`, `afazer`, `fazendo` ou `feito`. `completedAt` existe quando, e só quando, o status é `feito`.
+- `position` é um número fracionário: para reordenar, mande a média dos vizinhos (`positionBetween` em `@pulo/core/domain/tasks`).
+- `number` (código `PULO-n`) é do servidor: o do corpo é ignorado. É uma sequência por pessoa, que não volta quando a tarefa é
+  apagada (só `DELETE /api/data` zera). `createdAt` fica o da primeira gravação.
+- `dueDate` é um `DateKey`; "esta semana" é o domingo da semana, calculado pelo app. `goalId` precisa ser meta da pessoa;
+  apagar a meta deixa a tarefa sem ela.
+- Histórico: criar grava o evento `criada`; mudar `status`, `priority` ou `dueDate` grava um evento por campo (`status`,
+  `prioridade`, `prazo`, com `de` e `para`; ausente = sem valor). Repetir o `PUT` não grava nada. As escritas de tarefa de uma
+  pessoa são serializadas no banco (`pg_advisory_xact_lock`), então escritas simultâneas não duplicam número nem evento.
+- `PUT`, subtarefas, comentários e histórico de tarefa de outra pessoa respondem 404 `nao_encontrado`. `DELETE` segue a regra geral
+  (`{ deleted: 0 }`). Id de subtarefa ou comentário já usado: 409 `conflito_de_id`.
+- Comentário não muda: repetir o mesmo `POST` é 200 sem gravar; outro corpo com o mesmo id é 409.
+- O sync traz tarefas e subtarefas; comentários e eventos só pelo `activity` (`taskTimeline` do core junta os dois).
+- Pomodoros feitos não são gravados: serão as sessões concluídas com `taskId` (spec 19, `pomodorosDone` no core).
 
 ### `GET /api/week-summary?date=AAAA-MM-DD`
 
@@ -215,25 +243,25 @@ A regra é a função pura `computeStreak` do core (`@pulo/core/domain/streak`),
 
 ### `GET /api/sync?from&to`
 
-`from` e `to` obrigatórios, até 400 dias. Quinze leituras numa transação, resposta:
+`from` e `to` obrigatórios, até 400 dias. Dezessete leituras numa transação, resposta:
 
 ```json
 {
   "user": { "id": "", "name": "", "email": "", "image": null },
   "metadata": { "version": 1, "theme": "sistema", "reduceMotion": false, "timezone": "America/Sao_Paulo", "onboarding": { "completed": false, "completedAt": null }, "profile": null },
   "blocks": [], "habits": [], "habitLogs": [], "sessions": [], "restDays": [],
-  "proposals": [], "goals": [], "islandPurchases": [], "housePurchases": [], "roomDecor": [], "joiaCredit": 0, "mascot": null,
+  "proposals": [], "goals": [], "tasks": [], "subtasks": [], "islandPurchases": [], "housePurchases": [], "roomDecor": [], "joiaCredit": 0, "mascot": null,
   "streak": { "atual": 0, "recorde": 0, "semana": [{ "date": "2026-11-15", "estado": "vazio" }] }, "serverTime": 1795000000000
 }
 ```
 
-Blocos, hábitos, propostas, metas, compras (ilha antiga, casa e quarto) e o crédito de joias vêm inteiros; hábitos feitos e descansos, só do intervalo; sessões do intervalo mais a
+Blocos, hábitos, propostas, metas, tarefas e subtarefas, compras (ilha antiga, casa e quarto) e o crédito de joias vêm inteiros; hábitos feitos e descansos, só do intervalo; sessões do intervalo mais a
 em andamento. `streak` olha todo o histórico, não só o intervalo (acima; `semana` tem sempre 7 itens). `serverTime` é o relógio do servidor em ms.
 
 ### `DELETE /api/data`
 
 O `clearAll` do servidor, único jeito de zerar o progresso: apaga blocos, hábitos (e seus registros), sessões, descansos,
-propostas, metas, compras com joias (e posições do quarto), crédito de joias e o estado do sapo da pessoa, numa transação. Conta, login e metadados (tema, fuso, onboarding) ficam.
+propostas, metas, tarefas (com subtarefas, comentários e histórico; a numeração volta a 1), compras com joias (e posições do quarto), crédito de joias e o estado do sapo da pessoa, numa transação. Conta, login e metadados (tema, fuso, onboarding) ficam.
 
 ## Mapa para o `Repository`
 
@@ -247,6 +275,9 @@ propostas, metas, compras com joias (e posições do quarto), crédito de joias 
 | `listProposals`, `saveProposal` | `GET /api/proposals`, `PUT /api/proposals/:id` |
 | `generateProposal`, `decideProposal` (só no `RemoteRepository`) | `POST /api/proposals/generate`, `POST /api/proposals/:id/decision` |
 | `listGoals`, `saveGoal`, `deleteGoal` | `GET /api/goals`, `PUT`, `DELETE /api/goals/:id` |
+| `listTasks`, `saveTask`, `deleteTask` | `GET /api/tasks`, `PUT`, `DELETE /api/tasks/:id` |
+| `listSubtasks`, `saveSubtask`, `deleteSubtask` | `GET /api/tasks`, `PUT`, `DELETE /api/tasks/:id/subtasks/:subId` |
+| `addTaskComment`, `listTaskActivity` | `POST /api/tasks/:id/comments`, `GET /api/tasks/:id/activity` |
 | `listIslandPurchases`, `saveIslandPurchase` | `GET /api/island/purchases`, `PUT /api/island/purchases/:item` |
 | `listHousePurchases`, `saveHousePurchase` | `GET /api/house`, `PUT /api/house/:item` |
 | `listRoomDecor`, `saveRoomDecor`, `moveRoomDecor` | `GET /api/room`, `PUT`, `PATCH /api/room/:item` |
@@ -276,5 +307,7 @@ propostas, metas, compras com joias (e posições do quarto), crédito de joias 
 - **Sequência:** `getStreak()` (ou `verSequencia(repo, clock)` do core) devolve a do sync, sem rede. Depois de uma escrita em hábito,
   registro, sessão, descanso, perfil ou do `clearAll`, ou na virada do dia, espera as escritas pendentes e chama `GET /api/streak`;
   sem rede, devolve a última conhecida.
+- **Tarefas:** `saveTask` mostra o cartão na hora e preenche `number` com a resposta. Tarefa, subtarefas e comentários seguem em
+  ordem; comentários e histórico não ficam em cache. Apagar uma meta solta o vínculo no cache.
 - **Lote:** `saveBlocks(blocks)` e `saveHabits(habits)` (cache otimista, um `PUT` cada, tudo ou nada com rollback do cache). `saveBlock` e `saveHabit` continuam.
 - **Cookie:** sempre `credentials: 'include'`. O cookie da sessão é HttpOnly e do navegador: o cliente não o lê, não o guarda e não manda cabeçalho `Cookie`.

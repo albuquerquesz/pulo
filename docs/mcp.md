@@ -2,7 +2,7 @@
 
 O Pulo tem um servidor MCP em `https://pulo-api.albqvictor.workers.dev/mcp` (Streamable HTTP, sem estado).
 Uma IA conectada a ele faz o que as telas fazem, como a própria pessoa: ver o dia, marcar hábitos, mexer na rotina,
-começar e controlar focos, tirar descanso, gerar e decidir a proposta da semana, cuidar das metas e do perfil.
+começar e controlar focos, tirar descanso, gerar e decidir a proposta da semana, cuidar das metas, das tarefas e do perfil.
 
 ## Conectar
 
@@ -21,6 +21,7 @@ O endereço também aparece em Perfil, "Conectar uma IA".
 | `ver_rotina` | todos os blocos e hábitos, com ids | Semana |
 | `ver_semana` | resumo da semana e propostas | Semana |
 | `ver_metas` | metas com marcos, progresso e prazo | Metas |
+| `ver_tarefas` | quadro de tarefas por coluna, com filtro hoje ou semana | Tarefas |
 | `ver_ilha` | saldo de joias (e de onde vieram), partes da casa e decorações do quarto | Ilha |
 | `ver_perfil` | nome do sapo, dia, tema, fuso | Perfil |
 | `concluir_onboarding` | cria o sapo e o plano de exemplo | Onboarding |
@@ -31,6 +32,7 @@ O endereço também aparece em Perfil, "Conectar uma IA".
 | `dia_de_descanso`, `concluir_bloco_de_descanso` | descanso | Hoje |
 | `gerar_proposta_da_semana`, `decidir_proposta` | proposta da semana | Semana |
 | `criar_meta`, `editar_meta`, `mexer_em_marco`, `concluir_ou_reabrir_meta`, `apagar_meta` | metas | Metas |
+| `criar_tarefa`, `mover_tarefa` | cria um cartão e leva entre colunas | Tarefas |
 | `comprar_na_ilha` | constrói uma parte da casa ou compra uma decoração com joias | Ilha |
 | `mover_decoracao` | muda uma decoração de lugar, sem custo | Ilha |
 | `apagar_todos_os_dados` | o mesmo de Perfil, exige escrever `APAGAR TUDO` | Perfil |
