@@ -92,6 +92,10 @@ export const drawingColors = {
   prontaFundo: '#E9F8D9',
   prontaBorda: '#C6E6A6',
   prontaTexto: '#3F8F23',
+  /** Bolinhas das etiquetas de tarefa (spec 25). */
+  etiquetaAzul: '#5CA8FF',
+  etiquetaRosa: '#FF9DB4',
+  etiquetaCinza: '#9DB3A5',
 } as const;
 
 /** Céu noturno da lagoa (spec 04). */

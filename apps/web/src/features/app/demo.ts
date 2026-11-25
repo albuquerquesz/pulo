@@ -28,7 +28,7 @@ export interface OpcoesDoDemo {
 export async function criarSessaoDemo({ aoVivo = false }: OpcoesDoDemo = {}): Promise<SessaoDemo> {
   const parado = createDemoClock(localToMs(DIA_DO_DEMO, MINUTOS_DO_DEMO));
   const clock = aoVivo ? relogioCorrendo(parado) : parado;
-  const repo = createMemoryRepository();
+  const repo = createMemoryRepository(undefined, clock);
   await seedRepository(repo, clock);
   await completarDemo(repo, clock);
   return { repo, clock };

@@ -1,7 +1,8 @@
 import { DEFAULT_TIMEZONE, JOIAS, TASKS } from '@pulo/core/config/decisions';
 import { MINUTE_MS } from '@pulo/core/domain/clock';
-import { addDays, dateKeyOf } from '@pulo/core/domain/day';
-import type { Clock, FocusSession, Goal, GoalMilestone, Habit, Repository, RoutineBlock, TaskStatus } from '@pulo/core/domain/types';
+import { addDays, dateKeyOf, weekEndOf } from '@pulo/core/domain/day';
+import type { DemoClock } from '@pulo/core/demo';
+import type { FocusSession, Goal, GoalMilestone, Habit, Repository, RoutineBlock, Task, TaskStatus } from '@pulo/core/domain/types';
 
 /** O instante do rascunho: sábado, 21/11/2026, 14h38, dentro das quatro semanas de exemplo. */
 export const DIA_DO_DEMO = '2026-11-21';
@@ -34,17 +35,120 @@ const BLOCOS: RoutineBlock[] = [
   bloco('demo-bloco-descanso', 20, 0, 60, 'Descanso', '🛋️'),
 ];
 
-/** As tarefas do rascunho: título, coluna e se o prazo é hoje. */
-const TAREFAS: [string, TaskStatus, boolean][] = [
-  ['Resumo do capítulo 3 de Bioquímica', 'fazendo', true],
-  ['Exercícios da unidade 4', 'afazer', true],
-  ['Responder e-mail do orientador', 'afazer', true],
-  ['Marcar dentista', 'afazer', false],
-  ['Escolher próximo livro', 'ideias', false],
-  ['Montar plano de corrida de 10 km', 'ideias', false],
-  ['Revisar tarefas da semana', 'feito', true],
-  ['Entregar relatório de estágio', 'feito', false],
+interface TarefaDoDemo {
+  titulo: string;
+  coluna: TaskStatus;
+  prazo?: 'hoje' | 'semana';
+  descricao?: string;
+  alta?: boolean;
+  etiquetas: string[];
+  /** Pomodoros feitos e estimados. */
+  pomodoros?: [number, number];
+  /** Título e se está feita. */
+  subtarefas?: [string, boolean][];
+}
+
+/** As tarefas do rascunho. */
+const TAREFAS: TarefaDoDemo[] = [
+  {
+    titulo: 'Resumo do capítulo 3 de Bioquímica',
+    coluna: 'fazendo',
+    prazo: 'hoje',
+    descricao: 'Focar em metabolismo de carboidratos. Usar o PDF da aula de terça e os slides do professor.',
+    alta: true,
+    etiquetas: ['Faculdade'],
+    pomodoros: [1, 3],
+    subtarefas: [
+      ['Ler seção 3.1', true],
+      ['Ler seção 3.2', true],
+      ['Mapa mental', false],
+      ['Fichamento', false],
+      ['Revisar com flashcards', false],
+    ],
+  },
+  {
+    titulo: 'Exercícios da unidade 4',
+    coluna: 'afazer',
+    prazo: 'hoje',
+    etiquetas: ['🎓 Estudar inglês'],
+    pomodoros: [0, 2],
+    subtarefas: [
+      ['Listening', false],
+      ['Grammar', false],
+    ],
+  },
+  { titulo: 'Responder e-mail do orientador', coluna: 'afazer', prazo: 'hoje', alta: true, etiquetas: ['Faculdade'], pomodoros: [0, 1] },
+  { titulo: 'Marcar dentista', coluna: 'afazer', prazo: 'semana', etiquetas: ['Pessoal'] },
+  {
+    titulo: 'Escolher próximo livro',
+    coluna: 'ideias',
+    etiquetas: ['📚 Ler 4 livros'],
+    subtarefas: [
+      ['Pedir indicações', false],
+      ['Ver lista da biblioteca', false],
+    ],
+  },
+  { titulo: 'Montar plano de corrida de 10 km', coluna: 'ideias', etiquetas: ['Saúde'], pomodoros: [0, 1] },
+  { titulo: 'Revisar tarefas da semana', coluna: 'feito', prazo: 'hoje', etiquetas: ['Rotina'], pomodoros: [1, 1] },
+  {
+    titulo: 'Entregar relatório de estágio',
+    coluna: 'feito',
+    prazo: 'semana',
+    etiquetas: ['Faculdade'],
+    pomodoros: [3, 3],
+    subtarefas: [
+      ['Introdução', true],
+      ['Atividades', true],
+      ['Conclusão', true],
+    ],
+  },
 ];
+
+/** Os pomodoros de exemplo são curtos: contam na tarefa sem mexer no saldo de joias do rascunho. */
+const MINUTOS_DO_POMODORO_DE_EXEMPLO = 1;
+
+/** Grava as tarefas como criadas há três dias e movidas ontem, para a atividade ter história. */
+async function criarTarefas(repo: Repository, clock: DemoClock): Promise<void> {
+  const hoje = dateKeyOf(clock.now(), DEFAULT_TIMEZONE);
+  for (const [i, t] of TAREFAS.entries()) {
+    const id = `demo-tarefa-${i + 1}`;
+    const base: Task = {
+      id,
+      title: t.titulo,
+      status: 'ideias',
+      position: (i + 1) * TASKS.positionStep,
+      priority: t.alta ? 'alta' : 'normal',
+      tags: t.etiquetas,
+      pomodorosEstimated: t.pomodoros?.[1] ?? 0,
+      createdAt: clock.now() - 3 * DIA_MS,
+      ...(t.descricao ? { description: t.descricao } : {}),
+      ...(t.prazo ? { dueDate: t.prazo === 'hoje' ? hoje : weekEndOf(hoje) } : {}),
+    };
+    clock.advanceDays(-3);
+    await repo.saveTask(base);
+    clock.advanceDays(2);
+    if (t.coluna !== 'ideias') {
+      await repo.saveTask({ ...base, status: t.coluna, ...(t.coluna === 'feito' ? { completedAt: clock.now() } : {}) });
+    }
+    clock.advanceDays(1);
+
+    for (const [j, [titulo, feita]] of (t.subtarefas ?? []).entries()) {
+      await repo.saveSubtask({ id: `${id}-sub-${j + 1}`, taskId: id, title: titulo, done: feita, position: (j + 1) * TASKS.positionStep });
+    }
+    for (let j = 0; j < (t.pomodoros?.[0] ?? 0); j += 1) {
+      const startedAt = clock.now() - 2 * DIA_MS - (j + 1) * 60 * MINUTE_MS;
+      await repo.saveSession({
+        id: `${id}-pomodoro-${j + 1}`,
+        taskId: id,
+        startedAt,
+        endedAt: startedAt + MINUTOS_DO_POMODORO_DE_EXEMPLO * MINUTE_MS,
+        plannedMinutes: MINUTOS_DO_POMODORO_DE_EXEMPLO,
+        state: 'concluida',
+        pausedMs: 0,
+      });
+    }
+  }
+}
 
 function marcos(meta: string, total: number, feitos: number, quando: number): GoalMilestone[] {
   return Array.from({ length: total }, (_, i) => ({
@@ -59,7 +163,7 @@ function sessaoConcluida(id: string, blockId: string, startedAt: number): FocusS
 }
 
 /** O que o rascunho mostra além das quatro semanas de exemplo: um dia em andamento, tarefas e três metas. Tudo inventado. */
-export async function completarDemo(repo: Repository, clock: Clock): Promise<void> {
+export async function completarDemo(repo: Repository, clock: DemoClock): Promise<void> {
   const agora = clock.now();
   const hoje = dateKeyOf(agora, DEFAULT_TIMEZONE);
   for (const h of HABITOS) await repo.saveHabit(h);
@@ -84,20 +188,7 @@ export async function completarDemo(repo: Repository, clock: Clock): Promise<voi
     habitId: 'demo-habito-ingles',
   });
 
-  for (const [i, [title, status, deHoje]] of TAREFAS.entries()) {
-    await repo.saveTask({
-      id: `demo-tarefa-${i + 1}`,
-      title,
-      status,
-      position: (i + 1) * TASKS.positionStep,
-      priority: 'normal',
-      tags: [],
-      pomodorosEstimated: 0,
-      createdAt: agora - 3 * DIA_MS,
-      ...(deHoje ? { dueDate: hoje } : {}),
-      ...(status === 'feito' ? { completedAt: agora - 60 * MINUTE_MS } : {}),
-    });
-  }
+  await criarTarefas(repo, clock);
 
   const createdAt = agora - 30 * DIA_MS;
   const feitoEm = agora - 3 * DIA_MS;

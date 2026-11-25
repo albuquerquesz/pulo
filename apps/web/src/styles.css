@@ -56,6 +56,9 @@
   --pulo-pronta-fundo: #e9f8d9;
   --pulo-pronta-borda: #c6e6a6;
   --pulo-pronta-texto: #3f8f23;
+  --pulo-etiqueta-azul: #5ca8ff;
+  --pulo-etiqueta-rosa: #ff9db4;
+  --pulo-etiqueta-cinza: #9db3a5;
   color-scheme: light;
 }
 
@@ -126,6 +129,9 @@
   --color-pronta-fundo: var(--pulo-pronta-fundo);
   --color-pronta-borda: var(--pulo-pronta-borda);
   --color-pronta-texto: var(--pulo-pronta-texto);
+  --color-etiqueta-azul: var(--pulo-etiqueta-azul);
+  --color-etiqueta-rosa: var(--pulo-etiqueta-rosa);
+  --color-etiqueta-cinza: var(--pulo-etiqueta-cinza);
 
   --font-sans: 'Nunito', ui-rounded, system-ui, sans-serif;
 

@@ -1,7 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
 
-import { EmBreve } from '@/features/casca/EmBreve';
+import { TarefasScreen } from '@/features/tarefas/TarefasScreen';
 
-export const Route = createFileRoute('/_abas/tarefas')({
-  component: () => <EmBreve titulo="Tarefas" texto="Seu quadro de tarefas chega em breve." />,
-});
+export const Route = createFileRoute('/_abas/tarefas')({ component: TarefasScreen });
