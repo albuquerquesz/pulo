@@ -83,16 +83,21 @@ export interface EstadoDaCasa {
   decoracoes: DecoracaoNaLoja[];
 }
 
+/** As partes com o estado de cada uma: a de graça já vem pronta. */
+export function partesDaCasa(casa: readonly Purchase[]): ParteNaCasa[] {
+  const compradas = new Set(casa.map((c) => c.item));
+  return PARTES.map((p) => {
+    const custo = HOUSE.partCost[p.id];
+    return { ...p, custo, construida: custo === 0 || compradas.has(p.id) };
+  });
+}
+
 /** A casa e o quarto, a partir dos registros e das compras. Função pura. */
 export function estadoDaCasa(fontes: FontesDeJoias, casa: readonly Purchase[], quarto: readonly RoomDecor[]): EstadoDaCasa {
   const ganhas = joiasGanhas(fontes);
   const gastas = joiasGastas(casa) + joiasGastas(quarto);
   const saldo = saldoDeJoias(ganhas.total, gastas);
-  const compradas = new Set(casa.map((c) => c.item));
-  const partes = PARTES.map((p) => {
-    const custo = HOUSE.partCost[p.id];
-    return { ...p, custo, construida: custo === 0 || compradas.has(p.id) };
-  });
+  const partes = partesDaCasa(casa);
   const construidas = partes.filter((p) => p.construida).length;
   const [barata] = partes.filter((p) => !p.construida).sort((a, b) => a.custo - b.custo);
   let proxima: ProximaParte | null = null;
