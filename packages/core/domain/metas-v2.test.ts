@@ -67,8 +67,8 @@ describe('números da meta', () => {
       meta(),
       {
         habits: [
-          { id: 'a', title: 'a', weekdays: [0], active: true, goalId: 'm' },
-          { id: 'b', title: 'b', weekdays: [0], active: true },
+          { id: 'a', title: 'a', weekdays: [0], state: 'ativo', goalId: 'm' },
+          { id: 'b', title: 'b', weekdays: [0], state: 'ativo' },
         ],
         habitLogs: [
           { habitId: 'a', date: '2026-11-02', doneAt: 1 },

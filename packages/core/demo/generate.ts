@@ -69,8 +69,8 @@ export function generateDemoData(seed: number = DEMO_DEFAULT_SEED, createdAt = 0
   blocks.push({ id: 'demo-bloco-descanso-5', weekday: 5, startMinutes: 10 * 60, durationMinutes: 30, kind: 'descanso', title: 'Descanso' });
 
   const habits: Habit[] = [
-    { id: 'demo-habito-agua', title: 'Beber água', weekdays: [0, 1, 2, 3, 4, 5, 6], active: true },
-    { id: 'demo-habito-alongar', title: 'Alongar', weekdays: [0, 2, 4], active: true },
+    { id: 'demo-habito-agua', title: 'Beber água', weekdays: [0, 1, 2, 3, 4, 5, 6], state: 'ativo' },
+    { id: 'demo-habito-alongar', title: 'Alongar', weekdays: [0, 2, 4], state: 'ativo' },
   ];
 
   const sessions: FocusSession[] = [];

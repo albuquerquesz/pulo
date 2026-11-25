@@ -40,7 +40,7 @@ describe('hábitos', () => {
     if (!h.ok) throw new Error('x');
     expect(habitsForDate([h.value], '2026-11-09')).toHaveLength(1); // segunda
     expect(habitsForDate([h.value], '2026-11-10')).toHaveLength(0);
-    const edited = await editarHabito(repo, h.value.id, { active: false });
-    expect(edited.ok && edited.value.active).toBe(false);
+    const edited = await editarHabito(repo, h.value.id, { state: 'pausado' });
+    expect(edited.ok && edited.value.state).toBe('pausado');
   });
 });

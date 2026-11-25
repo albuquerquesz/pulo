@@ -46,15 +46,30 @@ export interface RoutineBlock {
   durationMinutes: number;
   kind: 'foco' | 'descanso';
   title?: string;
+  /** Emoji curto da Linha do dia (spec 17). */
+  icon?: string;
 }
+
+/** `pausado` sai do Hoje e volta depois; `arquivado` some das listas. Os dois guardam o histórico (spec 17). */
+export type HabitState = 'ativo' | 'pausado' | 'arquivado';
 
 export interface Habit {
   id: EntityId;
   title: string;
   weekdays: Weekday[];
-  active: boolean;
+  state: HabitState;
   /** Meta que o hábito empurra (spec 16); no máximo uma. */
   goalId?: EntityId;
+  /** Emoji curto. Ausente: a tela usa `HABITS.defaultIcon`. */
+  icon?: string;
+  /** Ausente: a tela usa `HABITS.defaultColor`. */
+  color?: AccentColor;
+  /** Período do dia, que agrupa a lista. */
+  period?: Period;
+  /** Horário do lembrete, em minutos desde 00:00. Só a preferência: a entrega não existe ainda. */
+  reminderMinutes?: number;
+  /** Ausente é desligado. Só vale com `reminderMinutes`. */
+  reminderOn?: boolean;
 }
 
 export interface HabitLog {
@@ -303,6 +318,29 @@ export interface Streak {
   recorde: number;
   /** Os 7 dias da semana corrente, na ordem (veja `STREAK.weekStartsOn`). */
   semana: StreakDay[];
+}
+
+// ---------- Estatísticas do hábito (spec 17) ----------
+
+/** `parcial` fica reservado para hábitos com quantidade (fora do MVP) e não é produzido. */
+export type HabitDayState = 'feito' | 'parcial' | 'descanso' | 'vazio' | 'fora' | 'futuro';
+
+export interface HabitDay {
+  date: DateKey;
+  estado: HabitDayState;
+}
+
+/** Calculadas a partir dos registros, nunca gravadas. */
+export interface HabitStats {
+  /** Dias feitos seguidos até hoje (descanso e dia fora da frequência não quebram nem somam). */
+  sequencia: number;
+  recorde: number;
+  /** De 0 a 1: dias da frequência cumpridos. `null` sem nenhum dia que conte ainda. */
+  taxa: number | null;
+  /** Vezes feito, em todo o histórico até hoje. */
+  total: number;
+  /** Semanas (`HABITS.statsWeeks`, da mais antiga à corrente), cada uma com 7 dias. */
+  calendario: HabitDay[][];
 }
 
 // ---------- Conquistas (spec 14) ----------

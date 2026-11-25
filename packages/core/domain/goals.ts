@@ -119,7 +119,7 @@ export interface GoalRecords {
 }
 
 export interface GoalNumbers {
-  /** Hábitos atrelados à meta. */
+  /** Hábitos atrelados à meta que aparecem na lista: os arquivados ficam de fora, mas o que foi feito neles continua somando. */
   habitos: Habit[];
   /** Vezes que os hábitos atrelados foram feitos, em todo o histórico recebido. */
   habitosFeitos: number;
@@ -131,13 +131,13 @@ export interface GoalNumbers {
 
 /** Os números da meta, a partir dos registros. Função pura. */
 export function numerosDaMeta(meta: Goal, registros: GoalRecords, hoje: DateKey): GoalNumbers {
-  const habitos = registros.habits.filter((h) => h.goalId === meta.id);
-  const ids = new Set(habitos.map((h) => h.id));
+  const atrelados = registros.habits.filter((h) => h.goalId === meta.id);
+  const ids = new Set(atrelados.map((h) => h.id));
   // O vínculo direto vence: sessão ligada a outra meta não conta aqui pelo hábito.
   const daMeta = (s: LinkedSession) => (s.goalId !== undefined ? s.goalId === meta.id : s.habitId !== undefined && ids.has(s.habitId));
   const ms = registros.sessions.filter(daMeta).reduce((total, s) => total + focusedMs(s), 0);
   return {
-    habitos,
+    habitos: atrelados.filter((h) => h.state !== 'arquivado'),
     habitosFeitos: registros.habitLogs.filter((log) => ids.has(log.habitId)).length,
     minutosDeFoco: Math.floor(ms / MINUTE_MS),
     diasRestantes: daysUntilTarget(meta, hoje),
