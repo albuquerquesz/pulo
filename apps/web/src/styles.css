@@ -53,6 +53,9 @@
   --pulo-lima-forte: #d3e36b;
   --pulo-bege: #efeacb;
   --pulo-bege-borda: #d9d2a8;
+  --pulo-pronta-fundo: #e9f8d9;
+  --pulo-pronta-borda: #c6e6a6;
+  --pulo-pronta-texto: #3f8f23;
   color-scheme: light;
 }
 
@@ -120,6 +123,9 @@
   --color-lima-forte: var(--pulo-lima-forte);
   --color-bege: var(--pulo-bege);
   --color-bege-borda: var(--pulo-bege-borda);
+  --color-pronta-fundo: var(--pulo-pronta-fundo);
+  --color-pronta-borda: var(--pulo-pronta-borda);
+  --color-pronta-texto: var(--pulo-pronta-texto);
 
   --font-sans: 'Nunito', ui-rounded, system-ui, sans-serif;
 
@@ -286,6 +292,16 @@ body {
 }
 .parte-da-casa:not(.feita) :is(polygon, circle, path) {
   stroke-dasharray: 8 7;
+}
+/* A parte recém comprada cai do alto. */
+.parte-da-casa.nova {
+  animation: constroi 0.6s ease-out;
+}
+@keyframes constroi {
+  from {
+    opacity: 0.2;
+    transform: translateY(-30px);
+  }
 }
 
 /* Quarto da Casa (spec 23): sapo, lugares da decoração e o +1 do foco. */
