@@ -76,6 +76,8 @@ export const drawingColors = {
   cancelarBorda: '#D0644F',
   numeroFoco: '#FF9B7A',
   numeroJoia: '#C29BFF',
+  /** Ponta quente da barra da sequência. */
+  solQuente: '#FFB347',
 } as const;
 
 /** Céu noturno da lagoa (spec 04). */
