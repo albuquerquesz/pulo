@@ -3,13 +3,13 @@ import { type AppEnv, type RouteDeps, requireSession } from '../http';
 
 /**
  * `DELETE /api/data`: o `clearAll` do servidor, único jeito de zerar o progresso. Apaga tudo do domínio da pessoa
- * (rotina, hábitos e registros, sessões, descansos, propostas, metas, compras com joias, crédito de joias e o sapo). A conta, o login e os
- * metadados (tema, fuso, onboarding) ficam. As posições do quarto saem com as compras (cascade). Nove deletes numa transação.
+ * (rotina, hábitos e registros, sessões, descansos, propostas, metas, tarefas (com subtarefas, comentários e histórico), compras com joias, crédito de joias e o sapo). A conta, o login e os
+ * metadados (tema, fuso, onboarding) ficam. As posições do quarto saem com as compras (cascade). Onze deletes numa transação.
  */
 export function dataRoutes({ auth, db }: RouteDeps) {
   return new Hono<AppEnv>().use(requireSession(auth)).delete('/', async (c) => {
     const where = { userId: c.var.user.id };
-    const [sessions, blocks, habits, restDays, proposals, goals, islandPurchases, mascot] = await db.$transaction([
+    const [sessions, blocks, habits, restDays, proposals, goals, islandPurchases, mascot, , tasks] = await db.$transaction([
       db.focusSession.deleteMany({ where }),
       db.routineBlock.deleteMany({ where }),
       // Os registros de hábito saem junto (cascade).
@@ -20,6 +20,9 @@ export function dataRoutes({ auth, db }: RouteDeps) {
       db.islandPurchase.deleteMany({ where }),
       db.mascotState.deleteMany({ where }),
       db.joiaCredit.deleteMany({ where }),
+      db.taskCounter.deleteMany({ where }),
+      // Subtarefas, comentários e eventos saem junto (cascade).
+      db.task.deleteMany({ where }),
     ]);
     return c.json({
       deleted: {
@@ -31,6 +34,7 @@ export function dataRoutes({ auth, db }: RouteDeps) {
         goals: goals.count,
         islandPurchases: islandPurchases.count,
         mascot: mascot.count,
+        tasks: tasks.count,
       },
     });
   });

@@ -118,12 +118,21 @@ describe('servidor MCP', () => {
 
     const lista = await (await rpc(token, 'tools/list')).json();
     const nomes = lista.result.tools.map((t: { name: string }) => t.name);
-    expect(nomes).toEqual(expect.arrayContaining(['ver_hoje', 'ver_sequencia', 'criar_habito', 'marcar_habito', 'comecar_foco', 'criar_meta', 'decidir_proposta', 'ver_ilha', 'comprar_na_ilha', 'mover_decoracao']));
+    expect(nomes).toEqual(expect.arrayContaining(['ver_hoje', 'ver_sequencia', 'criar_habito', 'marcar_habito', 'comecar_foco', 'criar_meta', 'decidir_proposta', 'ver_ilha', 'comprar_na_ilha', 'mover_decoracao', 'ver_tarefas', 'criar_tarefa', 'mover_tarefa']));
 
     // Conta nova: precisa criar o sapo primeiro, como no onboarding.
     expect((await ferramenta(token, 'ver_hoje')).erro).toBe(true);
     const onboarding = await ferramenta(token, 'concluir_onboarding', { nomeDoSapo: 'Juca', inicioDoDia: 6, fimDoDia: 23 });
     expect(onboarding.dados).toMatchObject({ criado: true, habitos: 2 });
+
+    // Tarefas: cria, move para feito e lista por coluna, só na conta da pessoa do token.
+    const nova = await ferramenta(token, 'criar_tarefa', { titulo: 'Estudar', prioridade: 'alta', etiquetas: ['Faculdade'] });
+    expect(nova.dados).toMatchObject({ codigo: 'PULO-1', coluna: 'afazer', prioridade: 'alta' });
+    const movida = await ferramenta(token, 'mover_tarefa', { id: nova.dados.id, coluna: 'feito' });
+    expect(movida.dados).toMatchObject({ codigo: 'PULO-1', coluna: 'feito' });
+    expect((await ferramenta(token, 'ver_tarefas')).dados).toMatchObject({ afazer: [], feito: [{ id: nova.dados.id }] });
+    expect((await (await outra.call('GET', '/api/tasks')).json()).tasks).toEqual([]);
+    expect(await ferramenta(token, 'mover_tarefa', { id: 'nao-existe', coluna: 'feito' })).toMatchObject({ erro: true });
 
     // Ilha: conta nova não tem joias, então a compra é recusada com a mensagem da tela.
     const mapa = await ferramenta(token, 'ver_ilha');

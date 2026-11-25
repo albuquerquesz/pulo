@@ -9,6 +9,8 @@ import {
   restDayMapper,
   roomPlacementMapper,
   routineBlockMapper,
+  taskMapper,
+  taskSubtaskMapper,
   weeklyProposalMapper,
 } from '@pulo/db';
 import { Hono } from 'hono';
@@ -25,16 +27,18 @@ import {
   restDaySelect,
   roomDecorSelect,
   sessionSelect,
+  taskSelect,
+  taskSubtaskSelect,
 } from '../selects';
 
-/** Tudo o que o app precisa para abrir: `/api/sync`. Quinze leituras fixas numa transação, qualquer volume de dados. */
+/** Tudo o que o app precisa para abrir: `/api/sync`. Dezessete leituras fixas numa transação, qualquer volume de dados. */
 export function syncRoutes({ auth, db, now }: RouteDeps) {
   return new Hono<AppEnv>().use(requireSession(auth)).get('/', queryParams(syncQuerySchema), async (c) => {
     const { id: userId, name, email, image, metadata } = c.var.user;
     const range = c.req.valid('query');
     const date = dateFilter(range);
 
-    const [blocks, habits, habitLogs, sessions, restDays, proposals, goals, islandPurchases, housePurchases, roomDecor, joiaCredit, mascot, habitDays, allSessions, allRestDays] =
+    const [blocks, habits, habitLogs, sessions, restDays, proposals, goals, tasks, subtasks, islandPurchases, housePurchases, roomDecor, joiaCredit, mascot, habitDays, allSessions, allRestDays] =
       await db.$transaction([
       db.routineBlock.findMany({
         where: { userId },
@@ -51,6 +55,8 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
       db.restDay.findMany({ where: { userId, date }, select: restDaySelect, orderBy: { date: 'asc' } }),
       db.weeklyProposal.findMany({ where: { userId }, select: proposalSelect, orderBy: { weekStart: 'desc' } }),
       db.goal.findMany({ where: { userId }, select: goalSelect, orderBy: { createdAt: 'asc' } }),
+      db.task.findMany({ where: { userId }, select: taskSelect, orderBy: { number: 'asc' } }),
+      db.taskSubtask.findMany({ where: { userId }, select: taskSubtaskSelect, orderBy: [{ position: 'asc' }, { id: 'asc' }] }),
       db.islandPurchase.findMany({ where: { userId, kind: 'antiga' }, select: islandPurchaseSelect, orderBy: { createdAt: 'asc' } }),
       db.islandPurchase.findMany({ where: { userId, kind: 'casa' }, select: islandPurchaseSelect, orderBy: { createdAt: 'asc' } }),
       db.islandPurchase.findMany({
@@ -75,6 +81,8 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
       restDays: restDays.map(restDayMapper.toDomain),
       proposals: proposals.map(weeklyProposalMapper.toDomain),
       goals: goals.map(goalMapper.toDomain),
+      tasks: tasks.map(taskMapper.toDomain),
+      subtasks: subtasks.map(taskSubtaskMapper.toDomain),
       islandPurchases: islandPurchases.map(islandPurchaseMapper.toDomain),
       housePurchases: housePurchases.map(islandPurchaseMapper.toDomain),
       roomDecor: roomDecor.map(roomPlacementMapper.toDomain),
