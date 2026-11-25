@@ -6,10 +6,13 @@ import {
   type ProposalDecisionResponse,
   generateProposalResponseSchema,
   proposalDecisionResponseSchema,
+  streakResponseSchema,
 } from '@pulo/core/api/schemas';
+import { DEFAULT_TIMEZONE } from '@pulo/core/config/decisions';
 import type { BatchWrites } from '@pulo/core/data/batch';
 import { systemClock } from '@pulo/core/domain/clock';
-import { inRange } from '@pulo/core/domain/day';
+import { dateKeyOf, inRange } from '@pulo/core/domain/day';
+import type { StreakSource } from '@pulo/core/domain/streak';
 import type {
   Clock,
   DateKey,
@@ -24,6 +27,7 @@ import type {
   Repository,
   RestDay,
   RoutineBlock,
+  Streak,
   User,
   WeeklyProposal,
 } from '@pulo/core/domain/types';
@@ -40,6 +44,7 @@ import {
   cloneProposal,
   cloneRestDay,
   cloneSession,
+  cloneStreak,
 } from './clone';
 import { Collection } from './collection';
 import { MENSAGENS_DA_API, RemoteError } from './errors';
@@ -67,7 +72,7 @@ export interface Account {
  * Escritas atualizam o cache na hora e vão ao servidor com o `PUT` ou `DELETE` da rota; se falharem, o cache volta
  * ao que era e o erro (`RemoteError`, com texto em português) sobe para a tela.
  */
-export interface RemoteRepository extends Repository, BatchWrites {
+export interface RemoteRepository extends Repository, BatchWrites, StreakSource {
   readonly account: Account;
   /**
    * `POST /api/proposals/generate`: o servidor lê os dados, aplica as regras, consulta a IA (se houver) e guarda a proposta.
@@ -80,6 +85,11 @@ export interface RemoteRepository extends Repository, BatchWrites {
    * Troca no cache a proposta e os blocos pelo que o servidor devolveu. Se o servidor recusar (ex.: `bloco_mudou`), o cache é relido.
    */
   decideProposal(id: EntityId, decision: ProposalDecisionBody): Promise<ProposalDecisionResponse>;
+  /**
+   * A sequência calculada pelo servidor (todo o histórico). Vem no sync; depois de uma escrita que pode mudá-la
+   * (ou da virada do dia), espera as escritas pendentes e chama `GET /api/streak`. Se a rede falhar, devolve a última.
+   */
+  getStreak(): Promise<Streak>;
   /** Lê tudo de novo do servidor e troca o cache (ex.: ao voltar de um tempo sem internet). */
   reload(): Promise<void>;
 }
@@ -93,6 +103,8 @@ export async function createRemoteRepository(options: RemoteRepositoryOptions): 
 
 const compareBlocks = (a: RoutineBlock, b: RoutineBlock) => a.weekday - b.weekday || a.startMinutes - b.startMinutes;
 const logKey = (habitId: EntityId, date: DateKey) => `${habitId}|${date}`;
+/** Chaves das escritas que podem mudar a sequência: hábitos e registros, sessões, descansos, perfil e apagar tudo. */
+const STREAK_LOCKS = /^(habit|log|session|rest):|^(user|all)$/;
 
 class ApiRepository implements RemoteRepository {
   private readonly client: ApiClient;
@@ -103,6 +115,11 @@ class ApiRepository implements RemoteRepository {
   private accountValue: Account = { id: '', name: '', email: '', image: null };
   private metadata: UserMetadata | null = null;
   private mascot: MascotState | null = null;
+  private streak: Streak | null = null;
+  /** Dia (do app) em que a sequência guardada foi lida; `null` quando uma escrita a envelheceu. */
+  private streakDay: DateKey | null = null;
+  /** Conta as escritas que podem mudar a sequência, para não dar por nova uma leitura que cruzou com elas. */
+  private streakVersion = 0;
 
   private readonly blocks = new Collection<RoutineBlock>((b) => b.id, cloneBlock);
   private readonly habits = new Collection<Habit>((h) => h.id, cloneHabit);
@@ -133,6 +150,8 @@ class ApiRepository implements RemoteRepository {
     this.accountValue = { id: data.user.id, name: data.user.name, email: data.user.email, image: data.user.image };
     this.metadata = data.metadata;
     this.mascot = data.mascot;
+    this.streak = data.streak;
+    this.streakDay = this.today();
     this.blocks.replaceAll(data.blocks);
     this.habits.replaceAll(data.habits);
     this.habitLogs.replaceAll(data.habitLogs);
@@ -147,10 +166,10 @@ class ApiRepository implements RemoteRepository {
 
   private serial(lock: string, task: () => Promise<void>): Promise<void> {
     const run = (this.locks.get(lock) ?? Promise.resolve()).then(task);
-    const settled = run.then(
-      () => undefined,
-      () => undefined,
-    );
+    const settle = () => {
+      if (STREAK_LOCKS.test(lock)) this.expireStreak();
+    };
+    const settled = run.then(settle, settle);
     this.locks.set(lock, settled);
     void settled.then(() => {
       if (this.locks.get(lock) === settled) this.locks.delete(lock);
@@ -469,6 +488,32 @@ class ApiRepository implements RemoteRepository {
   /** O servidor é quem calcula o sapo (ao encerrar sessão e ao mexer em descanso). Aqui só atualiza o cache da sessão. */
   async saveMascotState(state: MascotState): Promise<void> {
     this.mascot = cloneMascot(state);
+  }
+
+  // ---------- Sequência ----------
+
+  private today(): DateKey {
+    return dateKeyOf(this.clock.now(), this.metadata?.timezone ?? DEFAULT_TIMEZONE);
+  }
+
+  private expireStreak(): void {
+    this.streakVersion += 1;
+    this.streakDay = null;
+  }
+
+  async getStreak(): Promise<Streak> {
+    await Promise.all(this.locks.values());
+    const day = this.today();
+    if (this.streak && this.streakDay === day) return cloneStreak(this.streak);
+    const version = this.streakVersion;
+    try {
+      const raw = await readJson(await this.client.api.streak.$get());
+      this.streak = streakResponseSchema.parse(raw).streak;
+      if (version === this.streakVersion) this.streakDay = day;
+    } catch (error) {
+      if (!this.streak) throw error;
+    }
+    return cloneStreak(this.streak);
   }
 
   // ---------- Apagar tudo ----------

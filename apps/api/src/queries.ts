@@ -1,6 +1,8 @@
 import type { DateRangeQuery } from '@pulo/core/api/schemas';
 import { addDays, startOfLogicalDay, weekEndOf } from '@pulo/core/domain/day';
-import type { MascotState, WeekSummary } from '@pulo/core/domain/types';
+import { computeStreak } from '@pulo/core/domain/streak';
+import type { UserMetadata } from '@pulo/core/domain/user-metadata';
+import type { MascotState, Streak, WeekSummary } from '@pulo/core/domain/types';
 import { computeMascotState } from '@pulo/core/domain/phase';
 import { buildWeekSummary } from '@pulo/core/domain/week-summary';
 import { type Db, type Prisma, dateKeyToDate, focusSessionMapper, habitLogMapper, mascotStateMapper, restDayMapper } from '@pulo/db';
@@ -87,5 +89,34 @@ export function summaryFromRows(weekStart: string, timeZone: string, rows: WeekS
     sessions: rows.sessions.map(focusSessionMapper.toDomain),
     restDays: rows.restDays.map(restDayMapper.toDomain),
     habitLogs: rows.habitLogs.map(habitLogMapper.toDomain),
+  });
+}
+
+/**
+ * As três leituras da sequência, para entrar numa `db.$transaction([...])`. Todo o histórico (o recorde é calculado, nunca
+ * gravado), mas os hábitos feitos já vêm agrupados em uma linha por dia.
+ */
+export function streakReads(db: Db, userId: string) {
+  return [
+    db.habitLog.groupBy({ by: ['date'], where: { userId }, orderBy: { date: 'asc' } }),
+    db.focusSession.findMany({ where: { userId, state: { not: 'em_andamento' } }, select: sessionSelect }),
+    db.restDay.findMany({ where: { userId }, select: restDaySelect }),
+  ] as const;
+}
+
+type StreakRows = {
+  habitDays: { date: Date }[];
+  sessions: Parameters<typeof focusSessionMapper.toDomain>[0][];
+  restDays: Parameters<typeof restDayMapper.toDomain>[0][];
+};
+
+export function streakFromRows(metadata: UserMetadata, now: number, rows: StreakRows): Streak {
+  return computeStreak({
+    habitLogs: rows.habitDays.map(restDayMapper.toDomain),
+    sessions: rows.sessions.map(focusSessionMapper.toDomain),
+    restDays: rows.restDays.map(restDayMapper.toDomain),
+    timeZone: metadata.timezone,
+    dayStartMinutes: metadata.profile?.dayStartMinutes,
+    now,
   });
 }

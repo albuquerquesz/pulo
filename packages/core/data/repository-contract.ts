@@ -1,5 +1,7 @@
 // Suíte de contrato do `Repository`, reutilizável por qualquer implementação (memória, armazenamento,
 // cliente remoto). Usa `describe`, `it` e `expect` globais: roda no Jest do core e no Vitest (`globals: true`).
+import { dateKeyOf, addDays } from '../domain/day';
+import { verSequencia } from '../domain/streak';
 import { endedSession, sp } from '../domain/test-utils';
 import type { Repository, User } from '../domain/types';
 
@@ -16,6 +18,8 @@ export interface ContractOptions {
    * (`saveMascotState` só atualiza o cache). Pula a checagem de ida e volta.
    */
   mascotIsServerDerived?: boolean;
+  /** "Agora" para as regras que dependem do dia. No remoto, o mesmo instante do relógio do servidor. */
+  now?: number;
 }
 
 const baseUser: User = {
@@ -132,6 +136,28 @@ export function defineRepositoryContract(
         await r.saveMascotState({ phase: 2, careDays: 4, updatedAt: 9 });
         expect(await r.getMascotState()).toEqual({ phase: 2, careDays: 4, updatedAt: 9 });
       }
+    });
+
+    it('sequência: hábito e descanso contam, desfazer recalcula', async () => {
+      const { r, user } = await subject();
+      await r.saveUser(user);
+      const now = options.now ?? sp(2026, 11, 18);
+      const today = dateKeyOf(now, user.timezone);
+      const clock = { now: () => now };
+      expect(await verSequencia(r, clock)).toMatchObject({ atual: 0, recorde: 0 });
+      const h = uid('h');
+      await r.saveHabit({ id: h, title: 'x', weekdays: [0], active: true });
+      await r.saveHabitLog({ habitId: h, date: addDays(today, -2), doneAt: 1 });
+      await r.saveRestDay({ date: addDays(today, -1) });
+      await r.saveHabitLog({ habitId: h, date: today, doneAt: 2 });
+      const streak = await verSequencia(r, clock);
+      expect(streak).toMatchObject({ atual: 2, recorde: 2 });
+      expect(streak.semana).toHaveLength(7);
+      expect(streak.semana).toContainEqual({ date: today, estado: 'feito' });
+      await r.deleteHabitLog(h, today);
+      expect(await verSequencia(r, clock)).toMatchObject({ atual: 1, recorde: 1 });
+      await r.clearAll();
+      expect(await verSequencia(r, clock)).toMatchObject({ atual: 0, recorde: 0 });
     });
 
     it('metas: salvar com marcos, atualizar por id e apagar', async () => {

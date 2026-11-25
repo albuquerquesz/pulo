@@ -71,6 +71,7 @@ describe('/api/sync', () => {
       goals: [],
       islandPurchases: [],
       mascot: null,
+      streak: { atual: 0, recorde: 0 },
       serverTime: TEST_NOW,
     });
   });
@@ -91,6 +92,9 @@ describe('/api/sync', () => {
     const outside = await (await me.call('GET', '/api/sync?from=2026-03-01&to=2026-03-31')).json();
     expect(outside).toMatchObject({ habitLogs: [], restDays: [] });
     expect(outside.sessions).toHaveLength(1);
+    // A sequência olha todo o histórico, não só o intervalo: hábito em 16, descanso em 17.
+    expect(outside.streak).toEqual(body.streak);
+    expect(body.streak).toMatchObject({ recorde: 1 });
     expect(outside.blocks).toHaveLength(1);
     expect(outside.islandPurchases).toHaveLength(1);
   });
@@ -111,7 +115,7 @@ describe('/api/sync', () => {
     await seed(big, 50);
     const one = await queriesOf(database, small, 'GET', `/api/sync${RANGE}`);
     expect(await queriesOf(database, big, 'GET', `/api/sync${RANGE}`)).toBe(one);
-    // 2 de sessão + 9 leituras numa transação.
-    expect(one).toBe(11);
+    // 2 de sessão + 12 leituras numa transação.
+    expect(one).toBe(14);
   });
 });
