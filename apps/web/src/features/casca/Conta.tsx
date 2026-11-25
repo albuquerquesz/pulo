@@ -1,5 +1,7 @@
 import { Link } from '@tanstack/react-router';
 
+import { Avatar } from '@/ui';
+
 import type { ContaNaTela } from './logic';
 
 type ContaProps = { conta: ContaNaTela; noPerfil: boolean; className?: string };
@@ -8,9 +10,7 @@ type ContaProps = { conta: ContaNaTela; noPerfil: boolean; className?: string };
 export function Conta({ conta, noPerfil, className = '' }: ContaProps) {
   return (
     <div role="group" aria-label="Seu perfil" className={`flex items-center gap-3 ${className}`}>
-      <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-sapo text-[17px] font-extrabold text-ink-sobre-acao">
-        {conta.nome.trim().charAt(0).toUpperCase()}
-      </span>
+      <Avatar nome={conta.nome} foto={conta.foto} className="size-10 text-[17px]" />
       <div className="flex min-w-0 flex-1 flex-col">
         <b className="truncate">{conta.nome}</b>
         <small className="truncate text-xs text-muted">{conta.email}</small>

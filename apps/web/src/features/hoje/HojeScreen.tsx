@@ -4,7 +4,7 @@ import { MINUTE_MS } from '@pulo/core/domain/clock';
 import { criarPlanoInicial } from '@pulo/core/domain/routine';
 import { Botao, EstadoVazio } from '@/ui';
 
-import { PESSOA_DO_DEMO, Tela, useApp, useCarregar } from '../app';
+import { Tela, useApp, useCarregar } from '../app';
 import { contaNaTela } from '../casca/logic';
 import { EstaSemana } from './EstaSemana';
 import { HabitosDeHoje } from './HabitosDeHoje';
@@ -17,10 +17,10 @@ import { Topo } from './Topo';
 export const TEXTO_DE_ERRO = 'A lagoa ficou sem sinal. Seus dados estão salvos aqui.';
 
 export function HojeScreen() {
-  const { repo, clock, user, pessoa, demo, refresh } = useApp();
+  const { repo, clock, user, conta, refresh } = useApp();
   const { estado, recarregar } = useCarregar(async () => {
     if (!user) throw new Error('sem usuário');
-    return carregarHoje(repo, clock, user, contaNaTela(pessoa, demo ? PESSOA_DO_DEMO : null, user).nome);
+    return carregarHoje(repo, clock, user, contaNaTela(conta, user).nome);
   });
 
   // A saudação e o ponto da hora atual andam com o relógio.
