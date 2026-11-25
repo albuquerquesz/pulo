@@ -76,7 +76,7 @@ const habito = (extra: Partial<Habit> = {}): Habit => ({ id: uuid(), title: 'Ler
  */
 async function joiasForaDaJanela(me: TestUser) {
   await database.db.restDay.createMany({
-    data: Array.from({ length: 50 }, (_, i) => ({ userId: me.id, date: new Date(Date.UTC(2024, 0, 1 + i)) })),
+    data: Array.from({ length: 150 }, (_, i) => ({ userId: me.id, date: new Date(Date.UTC(2024, 0, 1 + i)) })),
   });
 }
 
