@@ -7,7 +7,7 @@ import { verSequencia } from '@pulo/core/domain/streak';
 import { comprarNaIlha } from '@pulo/core/domain/ilha';
 import { criarPlanoInicial } from '@pulo/core/domain/routine';
 import { defineRepositoryContract } from '@pulo/core/data/repository-contract';
-import type { Habit, RoutineBlock, User } from '@pulo/core/domain/types';
+import type { Habit, RoutineBlock, Task, User } from '@pulo/core/domain/types';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
 import { type FetchLike, MENSAGENS_DA_API, RemoteError, createRemoteRepository } from './index';
 
@@ -397,3 +397,62 @@ describe('RemoteRepository: erros e rollback', () => {
     expect(calls).toEqual(['GET /api/sync']);
   });
 });
+
+describe('RemoteRepository: tarefas', () => {
+  const tarefa = (extra: Partial<Task> = {}): Task => ({
+    id: uuid(), title: 'Estudar', status: 'afazer', position: 1, priority: 'normal', tags: [], pomodorosEstimated: 1, createdAt: TEST_NOW - 1, ...extra,
+  });
+
+  it('o código chega com a resposta, a subtarefa espera a tarefa e outro aparelho vê tudo', async () => {
+    const me = await h.newUser();
+    const repo = await open(me);
+    const nova = tarefa();
+    const sub = { id: uuid(), taskId: nova.id, title: 'passo', done: false, position: 1 };
+    const meta = { id: uuid(), title: 'm', state: 'ativa' as const, milestones: [], createdAt: 1 };
+    // Tudo disparado junto, como a tela faria.
+    await Promise.all([repo.saveGoal(meta), repo.saveTask({ ...nova, goalId: meta.id }), repo.saveSubtask(sub)]);
+    expect(await repo.listTasks()).toEqual([{ ...nova, goalId: meta.id, number: 1 }]);
+    await repo.addTaskComment({ id: uuid(), taskId: nova.id, body: 'anotado', createdAt: TEST_NOW - 1 });
+    expect((await repo.listTaskActivity(nova.id)).comments).toHaveLength(1);
+
+    const outro = await open(me);
+    expect(await outro.listTasks()).toEqual(await repo.listTasks());
+    expect(await outro.listSubtasks()).toEqual([sub]);
+  });
+
+  it('desfaz a escrita otimista quando o servidor recusa', async () => {
+    const me = await h.newUser();
+    let quebrado = false;
+    const repo = await open(me, (request) =>
+      quebrado && request.method !== 'GET' ? Promise.reject(new TypeError('sem rede')) : h.app.fetch(request),
+    );
+    const nova = tarefa();
+    const sub = { id: uuid(), taskId: nova.id, title: 'passo', done: false, position: 1 };
+    await repo.saveTask(nova);
+    await repo.saveSubtask(sub);
+    const antes = await repo.listTasks();
+    quebrado = true;
+
+    const movendo = repo.saveTask({ ...antes[0], status: 'fazendo' });
+    expect((await repo.listTasks())[0].status).toBe('fazendo');
+    await expect(movendo).rejects.toBeInstanceOf(RemoteError);
+    expect(await repo.listTasks()).toEqual(antes);
+    await expect(repo.deleteTask(nova.id)).rejects.toBeInstanceOf(RemoteError);
+    expect(await repo.listTasks()).toEqual(antes);
+    expect(await repo.listSubtasks()).toEqual([sub]);
+    await expect(repo.saveTask(tarefa())).rejects.toBeInstanceOf(RemoteError);
+    expect(await repo.listTasks()).toEqual(antes);
+  });
+
+  it('conflito: id de outra pessoa e meta apagada em outro aparelho sobem o erro e o cache volta', async () => {
+    const dona = await h.newUser();
+    const intrusa = await h.newUser();
+    const alheia = tarefa();
+    await (await open(dona)).saveTask(alheia);
+    const repo = await open(intrusa);
+    await expect(repo.saveTask(alheia)).rejects.toMatchObject({ code: 'nao_encontrado' });
+    await expect(repo.saveTask(tarefa({ goalId: uuid() }))).rejects.toMatchObject({ code: 'referencia_inexistente' });
+    expect(await repo.listTasks()).toEqual([]);
+  });
+});
+

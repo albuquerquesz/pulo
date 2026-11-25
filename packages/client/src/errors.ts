@@ -20,6 +20,7 @@ export const MENSAGENS_DA_API = {
   conflito_de_id: 'Algo saiu errado ao salvar. Tente de novo.',
   limite_por_dia: 'Um dia comporta poucos hábitos. Que tal deixar um para outro dia?',
   limite_de_metas: 'Já tem metas ativas demais. Conclua ou apague uma para abrir espaço.',
+  limite_de_subtarefas: 'Essa tarefa já tem passos demais. Junte alguns ou crie outra tarefa.',
   item_inexistente: 'Esse item não existe na ilha. Atualize o app e dê uma olhada de novo.',
   preco_divergente: 'O preço desse item mudou. Atualize a ilha para ver o valor de agora.',
   ja_comprado: 'Isso já é seu. Pode aproveitar.',

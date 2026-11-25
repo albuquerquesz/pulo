@@ -119,6 +119,25 @@ export function repositorioInterno(api: ClienteInterno): Repository {
     },
     getJoiaCredit: async () => (await lerJson(await api.api.house.$get())).joiaCredit,
 
+    listTasks: async () => (await lerJson(await api.api.tasks.$get())).tasks,
+    saveTask: async (task) => {
+      await lerJson(await api.api.tasks[':id'].$put({ param: { id: task.id }, json: task }));
+    },
+    deleteTask: async (id) => {
+      await lerJson(await api.api.tasks[':id'].$delete({ param: { id } }));
+    },
+    listSubtasks: async () => (await lerJson(await api.api.tasks.$get())).subtasks,
+    saveSubtask: async (subtask) => {
+      await lerJson(await api.api.tasks[':id'].subtasks[':subId'].$put({ param: { id: subtask.taskId, subId: subtask.id }, json: subtask }));
+    },
+    deleteSubtask: async (taskId, subId) => {
+      await lerJson(await api.api.tasks[':id'].subtasks[':subId'].$delete({ param: { id: taskId, subId } }));
+    },
+    addTaskComment: async (comment) => {
+      await lerJson(await api.api.tasks[':id'].comments.$post({ param: { id: comment.taskId }, json: comment }));
+    },
+    listTaskActivity: async (id) => lerJson(await api.api.tasks[':id'].activity.$get({ param: { id } })),
+
     getMascotState: async () => (await lerJson(await api.api.mascot.$get())).mascot,
     // O servidor calcula o sapo ao gravar sessões e descansos.
     saveMascotState: async () => undefined,

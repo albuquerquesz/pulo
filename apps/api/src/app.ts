@@ -21,6 +21,7 @@ import { restDayRoutes } from './routes/rest-days';
 import { sessionRoutes } from './routes/sessions';
 import { streakRoutes } from './routes/streak';
 import { syncRoutes } from './routes/sync';
+import { taskRoutes } from './routes/tasks';
 import { weekSummaryRoutes } from './routes/week-summary';
 import { resolveWebConfig } from './web-config';
 import { type AiEnv, type ProviderAdapter, aiClientFromEnv, createProviderFromEnv, handleWeeklyAi, providerAsClient } from './weekly-ai';
@@ -83,6 +84,7 @@ export function createApp(env: ApiEnv, db: Db, now = Date.now, options: AppOptio
     .route('/api/rest-days', restDayRoutes(deps))
     .route('/api/proposals', proposalRoutes(deps))
     .route('/api/goals', goalRoutes(deps))
+    .route('/api/tasks', taskRoutes(deps))
     .route('/api/island', islandRoutes(deps))
     .route('/api/house', houseRoutes(deps))
     .route('/api/room', roomRoutes(deps))

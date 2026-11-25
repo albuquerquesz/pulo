@@ -7,6 +7,7 @@ import {
   GOALS,
   MAX_HABITS_PER_DAY,
   ROOM_GRID,
+  TASKS,
   WEEKLY_AI,
 } from '../config/decisions';
 import { addDays, isDateKey, weekdayOf } from '../domain/day';
@@ -28,6 +29,10 @@ import type {
   RestDay,
   RoutineBlock,
   Streak,
+  Task,
+  TaskComment,
+  TaskEvent,
+  TaskSubtask,
   Weekday,
   WeeklyProposal,
 } from '../domain/types';
@@ -290,6 +295,62 @@ export const goalSchema = z
     if (new Set(goal.milestones.map((m) => m.id)).size !== goal.milestones.length) issue('milestones', 'id de marco repetido');
   }) satisfies z.ZodType<Goal, unknown>;
 
+const positionSchema = z.number();
+const taskTitleSchema = z.string().trim().min(1).max(TASKS.titleMaxChars);
+
+export const taskStatusSchema = z.enum(['ideias', 'afazer', 'fazendo', 'feito']);
+export const taskPrioritySchema = z.enum(['normal', 'alta']);
+
+export const taskSchema = z
+  .object({
+    id: idSchema,
+    /** Só o servidor atribui; o que vier no corpo é ignorado. */
+    number: z.number().int().min(1).optional(),
+    title: taskTitleSchema,
+    description: z.string().min(1).max(TASKS.descriptionMaxChars).optional(),
+    status: taskStatusSchema,
+    position: positionSchema,
+    priority: taskPrioritySchema,
+    dueDate: dateKeySchema.optional(),
+    tags: z.array(z.string().trim().min(1).max(TASKS.tagMaxChars)).max(TASKS.maxTags),
+    goalId: idSchema.optional(),
+    pomodorosEstimated: z.number().int().min(0).max(TASKS.maxPomodorosEstimated),
+    createdAt: msSchema,
+    completedAt: msSchema.optional(),
+  })
+  .superRefine((task, ctx) => {
+    const issue = (path: string, message: string) => ctx.addIssue({ code: 'custom', path: [path], message });
+    if (task.status !== 'feito' && task.completedAt !== undefined) issue('completedAt', 'tarefa aberta não tem completedAt');
+    if (task.status === 'feito' && task.completedAt === undefined) issue('completedAt', 'tarefa feita precisa de completedAt');
+    if (new Set(task.tags).size !== task.tags.length) issue('tags', 'etiqueta repetida');
+  }) satisfies z.ZodType<Task, unknown>;
+
+export const taskSubtaskSchema = z.object({
+  id: idSchema,
+  taskId: idSchema,
+  title: taskTitleSchema,
+  done: z.boolean(),
+  position: positionSchema,
+}) satisfies z.ZodType<TaskSubtask, unknown>;
+
+export const taskCommentSchema = z.object({
+  id: idSchema,
+  taskId: idSchema,
+  body: z.string().trim().min(1).max(TASKS.commentMaxChars),
+  createdAt: msSchema,
+}) satisfies z.ZodType<TaskComment, unknown>;
+
+export const taskEventSchema = z.object({
+  id: idSchema,
+  taskId: idSchema,
+  kind: z.enum(['criada', 'status', 'prioridade', 'prazo']),
+  de: z.string().optional(),
+  para: z.string().optional(),
+  createdAt: msSchema,
+}) satisfies z.ZodType<TaskEvent, unknown>;
+
+export const subtaskParamSchema = z.object({ id: idSchema, subId: idSchema });
+
 /** Compra com joias (ilha antiga ou casa). `item` é um id de catálogo; o preço e o saldo quem confere é o servidor. */
 export const islandPurchaseSchema = z.object({
   item: idSchema,
@@ -366,6 +427,7 @@ export const API_ERROR_CODES = [
   'conflito_de_id',
   'limite_por_dia',
   'limite_de_metas',
+  'limite_de_subtarefas',
   'item_inexistente',
   'preco_divergente',
   'ja_comprado',

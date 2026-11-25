@@ -7,6 +7,8 @@ import {
   generateProposalResponseSchema,
   proposalDecisionResponseSchema,
   streakResponseSchema,
+  taskCommentSchema,
+  taskEventSchema,
 } from '@pulo/core/api/schemas';
 import { DEFAULT_TIMEZONE } from '@pulo/core/config/decisions';
 import type { BatchWrites } from '@pulo/core/data/batch';
@@ -31,11 +33,15 @@ import type {
   RestDay,
   RoutineBlock,
   Streak,
+  Task,
+  TaskActivity,
+  TaskComment,
+  TaskSubtask,
   User,
   WeeklyProposal,
 } from '@pulo/core/domain/types';
 import { type UserMetadata, applyUserMetadataPatch, metadataPatchFromUser, userFromMetadata } from '@pulo/core/domain/user-metadata';
-import type { z } from 'zod';
+import { z } from 'zod';
 import { type ApiClient, type ApiOptions, createApiClient, readJson } from './api';
 import {
   cloneBlock,
@@ -49,6 +55,8 @@ import {
   cloneRestDay,
   cloneSession,
   cloneStreak,
+  cloneSubtask,
+  cloneTask,
 } from './clone';
 import { Collection } from './collection';
 import { MENSAGENS_DA_API, RemoteError } from './errors';
@@ -106,6 +114,7 @@ export async function createRemoteRepository(options: RemoteRepositoryOptions): 
 }
 
 const compareBlocks = (a: RoutineBlock, b: RoutineBlock) => a.weekday - b.weekday || a.startMinutes - b.startMinutes;
+const taskActivitySchema = z.object({ events: z.array(taskEventSchema), comments: z.array(taskCommentSchema) });
 const logKey = (habitId: EntityId, date: DateKey) => `${habitId}|${date}`;
 /** Chaves das escritas que podem mudar a sequência: hábitos e registros, sessões, descansos, perfil e apagar tudo. */
 const STREAK_LOCKS = /^(habit|log|session|rest):|^(user|all)$/;
@@ -138,6 +147,9 @@ class ApiRepository implements RemoteRepository {
   private readonly housePurchases = new Collection<Purchase>((p) => p.item, cloneIslandPurchase);
   private readonly roomDecor = new Collection<RoomDecor>((d) => d.item, cloneRoomDecor);
 
+  private readonly tasks = new Collection<Task>((t) => t.id, cloneTask);
+  private readonly subtasks = new Collection<TaskSubtask>((s) => s.id, cloneSubtask);
+
   /** Uma escrita por chave de cada vez, na ordem em que foram pedidas (escritas em chaves diferentes seguem em paralelo). */
   private readonly locks = new Map<string, Promise<void>>();
 
@@ -167,6 +179,8 @@ class ApiRepository implements RemoteRepository {
     this.restDays.replaceAll(data.restDays);
     this.proposals.replaceAll(data.proposals);
     this.goals.replaceAll(data.goals);
+    this.tasks.replaceAll(data.tasks);
+    this.subtasks.replaceAll(data.subtasks);
     this.islandPurchases.replaceAll(data.islandPurchases);
     this.housePurchases.replaceAll(data.housePurchases);
     this.roomDecor.replaceAll(data.roomDecor);
@@ -471,9 +485,108 @@ class ApiRepository implements RemoteRepository {
   }
 
   deleteGoal(id: EntityId): Promise<void> {
-    return this.write(this.goals, `goal:${id}`, id, null, async () => {
-      await readJson(await this.client.api.goals[':id'].$delete({ param: { id } }));
+    // O servidor solta o vínculo das tarefas; o cache faz o mesmo e devolve se der erro.
+    const linked = this.tasks.raw().filter((task) => task.goalId === id);
+    const unlinked = linked.map(({ goalId: _goalId, ...task }) => this.tasks.put(task));
+    return this.write(
+      this.goals,
+      `goal:${id}`,
+      id,
+      null,
+      async () => {
+        await readJson(await this.client.api.goals[':id'].$delete({ param: { id } }));
+      },
+      () => {
+        linked.forEach((task, i) => {
+          if (this.tasks.peek(task.id) === unlinked[i]) this.tasks.restore(task.id, task);
+        });
+      },
+    );
+  }
+
+  // ---------- Tarefas ----------
+
+  async listTasks(): Promise<Task[]> {
+    return this.tasks.values().sort((a, b) => a.createdAt - b.createdAt);
+  }
+
+  /**
+   * Numa tarefa nova o cartão aparece na hora sem número; o código chega com a resposta.
+   * As escritas de uma tarefa (ela, subtarefas e comentários) seguem em ordem.
+   */
+  saveTask(task: Task): Promise<void> {
+    const { id, goalId } = task;
+    const previous = this.tasks.peek(id);
+    const next: Task = previous ? { ...task, number: previous.number, createdAt: previous.createdAt } : task;
+    let stored: Task | undefined;
+    const done = this.write(this.tasks, `task:${id}`, id, next, async () => {
+      // A meta pode estar sendo criada agora: espera a escrita dela.
+      if (goalId !== undefined) await this.locks.get(`goal:${goalId}`);
+      const { task: saved } = await readJson(await this.client.api.tasks[':id'].$put({ param: { id }, json: task }));
+      // Muda as instâncias guardadas no lugar: o rollback compara identidade.
+      const server = { number: saved.number, createdAt: saved.createdAt };
+      // A minha cópia (a que um rollback posterior devolve) e a atual.
+      for (const cached of [stored, this.tasks.peek(id)]) {
+        if (cached) Object.assign(cached, server);
+      }
     });
+    // `write` já guardou a cópia otimista antes de devolver a promessa.
+    stored = this.tasks.peek(id);
+    return done;
+  }
+
+  deleteTask(id: EntityId): Promise<void> {
+    const own = this.subtasks.raw().filter((subtask) => subtask.taskId === id);
+    for (const subtask of own) this.subtasks.remove(subtask.id);
+    return this.write(
+      this.tasks,
+      `task:${id}`,
+      id,
+      null,
+      async () => {
+        await readJson(await this.client.api.tasks[':id'].$delete({ param: { id } }));
+      },
+      () => {
+        for (const subtask of own) this.subtasks.restore(subtask.id, subtask);
+      },
+    );
+  }
+
+  async listSubtasks(): Promise<TaskSubtask[]> {
+    return this.subtasks.values().sort((a, b) => a.position - b.position);
+  }
+
+  saveSubtask(subtask: TaskSubtask): Promise<void> {
+    const { id, taskId } = subtask;
+    return this.write(this.subtasks, `task:${taskId}`, id, subtask, async () => {
+      await readJson(await this.client.api.tasks[':id'].subtasks[':subId'].$put({ param: { id: taskId, subId: id }, json: subtask }));
+    });
+  }
+
+  deleteSubtask(taskId: EntityId, id: EntityId): Promise<void> {
+    return this.write(this.subtasks, `task:${taskId}`, id, null, async () => {
+      await readJson(await this.client.api.tasks[':id'].subtasks[':subId'].$delete({ param: { id: taskId, subId: id } }));
+    });
+  }
+
+  /** Comentários e histórico não ficam em cache: são lidos quando a gaveta abre. */
+  addTaskComment(comment: TaskComment): Promise<void> {
+    const { taskId } = comment;
+    return this.serial(`task:${taskId}`, () =>
+      this.withRetry(async () => {
+        await readJson(await this.client.api.tasks[':id'].comments.$post({ param: { id: taskId }, json: comment }));
+      }),
+    );
+  }
+
+  /** `GET /api/tasks/:id/activity`, depois das escritas pendentes da tarefa. */
+  async listTaskActivity(id: EntityId): Promise<TaskActivity> {
+    await this.locks.get(`task:${id}`);
+    return this.callAndParse(
+      `activity:${id}`,
+      async () => await this.client.api.tasks[':id'].activity.$get({ param: { id } }),
+      taskActivitySchema,
+    );
   }
 
   // ---------- Ilha ----------
@@ -571,7 +684,7 @@ class ApiRepository implements RemoteRepository {
     await this.serial('all', () =>
       this.withRetry(async () => {
         await readJson(await this.client.api.data.$delete());
-        const collections = [this.blocks, this.habits, this.habitLogs, this.sessions, this.restDays, this.proposals, this.goals, this.islandPurchases, this.housePurchases, this.roomDecor];
+        const collections = [this.blocks, this.habits, this.habitLogs, this.sessions, this.restDays, this.proposals, this.goals, this.tasks, this.subtasks, this.islandPurchases, this.housePurchases, this.roomDecor];
         for (const collection of collections) {
           collection.clear();
         }

@@ -76,6 +76,22 @@ export const GOALS = {
 } as const;
 
 /**
+ * Tarefas em quadro (spec 20). Proposta.
+ * `codePrefix` forma o código curto (`PULO-n`). `positionStep` é a folga entre cartões novos numa coluna.
+ */
+export const TASKS = {
+  codePrefix: 'PULO',
+  titleMaxChars: 200,
+  descriptionMaxChars: 10_000,
+  commentMaxChars: 2_000,
+  tagMaxChars: 30,
+  maxTags: 10,
+  maxSubtasks: 50,
+  maxPomodorosEstimated: 100,
+  positionStep: 1024,
+} as const;
+
+/**
  * Joias (spec 18): a moeda do jogo. Ganhas com cuidado e foco, gastas na casa e no quarto.
  * O saldo é calculado a partir dos registros, nunca gravado. Proposta.
  */

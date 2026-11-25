@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { DEFAULT_DAY_END_HOUR, DEFAULT_DAY_START_HOUR, DEFAULT_TIMEZONE, FOCUS, ROOM_GRID } from '@pulo/core/config/decisions';
+import { DEFAULT_DAY_END_HOUR, DEFAULT_DAY_START_HOUR, DEFAULT_TIMEZONE, FOCUS, ROOM_GRID, TASKS } from '@pulo/core/config/decisions';
 import { dateKeyOf, weekdayOf, weekStartOf } from '@pulo/core/domain/day';
 import { concluirFoco, iniciarFoco, interromperFoco, pausarFoco, retomarFoco } from '@pulo/core/domain/foco';
 import {
@@ -34,7 +34,8 @@ import {
   registrarDescanso,
   removerBloco,
 } from '@pulo/core/domain/routine';
-import type { Clock, DateKey, Goal, Habit, Repository, RoutineBlock, User, Weekday } from '@pulo/core/domain/types';
+import { TASK_COLUMNS, columnTasks, criarTarefa, matchesDueFilter, moverTarefa, positionAt, subtaskProgress, taskCode } from '@pulo/core/domain/tasks';
+import type { Clock, DateKey, Goal, Habit, Repository, RoutineBlock, Task, TaskSubtask, User, Weekday } from '@pulo/core/domain/types';
 import { type ProposalDecisionBody, generateProposalResponseSchema } from '@pulo/core/api/schemas';
 import { z } from 'zod';
 import { ErroDaApi, type ClienteInterno, lerJson } from './repositorio';
@@ -89,6 +90,25 @@ const meta = (g: Goal, hoje: DateKey) => ({
   progresso: goalProgress(g),
   marcos: g.milestones.map((m) => ({ id: m.id, titulo: m.title, feito: m.doneAt !== undefined })),
 });
+
+const tarefa = (t: Task, subtarefas: readonly TaskSubtask[]) => {
+  const progresso = subtaskProgress(subtarefas, t.id);
+  return {
+    id: t.id,
+    codigo: taskCode(t),
+    titulo: t.title,
+    coluna: t.status,
+    prioridade: t.priority,
+    ...(t.description ? { descricao: t.description } : {}),
+    ...(t.dueDate ? { prazo: t.dueDate } : {}),
+    ...(t.tags.length > 0 ? { etiquetas: t.tags } : {}),
+    ...(t.goalId ? { metaId: t.goalId } : {}),
+    pomodorosEstimados: t.pomodorosEstimated,
+    ...(progresso.total > 0 ? { subtarefas: { feitas: progresso.done, total: progresso.total } } : {}),
+  };
+};
+
+const colunaSchema = z.enum(TASK_COLUMNS).describe('Coluna do quadro');
 
 const ilha = (e: EstadoDaCasa) => ({
   saldo: e.saldo,
@@ -699,6 +719,73 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
       }),
   );
 
+  // ---------- Tarefas ----------
+
+  server.registerTool(
+    'ver_tarefas',
+    {
+      title: 'Ver as tarefas',
+      description: 'O quadro de tarefas por coluna (ideias, afazer, fazendo, feito), na ordem de cima para baixo, com código, prioridade, prazo e subtarefas.',
+      inputSchema: { filtro: z.enum(['hoje', 'semana']).optional().describe('Só as com prazo para hoje ou para esta semana (vencidas entram)') },
+      annotations: LEITURA,
+    },
+    ({ filtro }) =>
+      protegido(async () => {
+        const user = await pessoa(repo);
+        const hoje = hojeDe(user, clock);
+        const [todas, subtarefas] = await Promise.all([repo.listTasks(), repo.listSubtasks()]);
+        const visiveis = filtro ? todas.filter((t) => matchesDueFilter(t, filtro, hoje)) : todas;
+        return resposta(Object.fromEntries(TASK_COLUMNS.map((coluna) => [coluna, columnTasks(visiveis, coluna).map((t) => tarefa(t, subtarefas))])));
+      }),
+  );
+
+  server.registerTool(
+    'criar_tarefa',
+    {
+      title: 'Criar tarefa',
+      description: 'Cria uma tarefa no quadro. Padrão: no fim da coluna "afazer".',
+      inputSchema: {
+        titulo: z.string().min(1).max(TASKS.titleMaxChars),
+        coluna: colunaSchema.optional(),
+        descricao: z.string().max(TASKS.descriptionMaxChars).optional(),
+        prioridade: z.enum(['normal', 'alta']).optional(),
+        prazo: dataSchema.optional(),
+        etiquetas: z.array(z.string().min(1).max(TASKS.tagMaxChars)).max(TASKS.maxTags).optional(),
+        metaId: idSchema.optional().describe('Meta que a tarefa empurra (veja ver_metas)'),
+        pomodoros: z.number().int().min(0).max(TASKS.maxPomodorosEstimated).optional().describe('Quantos pomodoros deve levar'),
+      },
+      annotations: ESCRITA,
+    },
+    ({ titulo, coluna, descricao, prioridade, prazo, etiquetas, metaId, pomodoros }) =>
+      protegido(async () => {
+        await pessoa(repo);
+        const r = await criarTarefa(
+          repo,
+          { title: titulo, status: coluna, description: descricao, priority: prioridade, dueDate: prazo, tags: etiquetas, goalId: metaId, pomodorosEstimated: pomodoros },
+          clock.now(),
+        );
+        return deCaso(r, () => r.ok && tarefa(r.value, []));
+      }),
+  );
+
+  server.registerTool(
+    'mover_tarefa',
+    {
+      title: 'Mover tarefa',
+      description: 'Leva uma tarefa para outra coluna (feito conclui) ou muda a altura dela. Padrão: fim da coluna.',
+      inputSchema: { id: idSchema, coluna: colunaSchema, noTopo: z.boolean().optional().describe('Põe no topo da coluna') },
+      annotations: ESCRITA,
+    },
+    ({ id, coluna, noTopo }) =>
+      protegido(async () => {
+        await pessoa(repo);
+        const outras = columnTasks(await repo.listTasks(), coluna).filter((t) => t.id !== id);
+        const r = await moverTarefa(repo, id, coluna, clock.now(), noTopo ? positionAt(outras, 'topo') : undefined);
+        const subtarefas = await repo.listSubtasks();
+        return deCaso(r, () => r.ok && tarefa(r.value, subtarefas));
+      }),
+  );
+
   // ---------- Ilha ----------
 
   server.registerTool(
@@ -764,7 +851,7 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     {
       title: 'Apagar todos os dados',
       description:
-        'Apaga sapo, rotina, hábitos, focos, descansos, propostas, metas, casa e quarto da conta, em todos os aparelhos. Não dá para desfazer. Só use se a pessoa pediu explicitamente.',
+        'Apaga sapo, rotina, hábitos, focos, descansos, propostas, metas, tarefas, casa e quarto da conta, em todos os aparelhos. Não dá para desfazer. Só use se a pessoa pediu explicitamente.',
       inputSchema: { confirmacao: z.literal('APAGAR TUDO').describe('Escreva exatamente APAGAR TUDO') },
       annotations: DESTRUTIVA,
     },

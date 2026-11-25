@@ -16,6 +16,12 @@ erDiagram
   user ||--o{ rest_day : tem
   user ||--o{ weekly_proposal : tem
   user ||--o{ goal : tem
+  user ||--o{ task : tem
+  user ||--o| task_counter : tem
+  task ||--o{ task_subtask : "tem"
+  task ||--o{ task_comment : "tem"
+  task ||--o{ task_event : "registra"
+  goal |o--o{ task : "empurrada por"
   user ||--o{ island_purchase : tem
   user ||--o| joia_credit : tem
   island_purchase ||--o| room_placement : posiciona
@@ -88,6 +94,51 @@ erDiagram
     timestamptz createdAt
     timestamptz completedAt
   }
+  task {
+    text id PK
+    text userId FK
+    int number "unico por pessoa"
+    text title
+    text description
+    task_status status
+    float position "ordem na coluna"
+    task_priority priority
+    date dueDate
+    text_array tags
+    text goalId FK "SET NULL"
+    smallint pomodorosEstimated
+    timestamptz createdAt
+    timestamptz completedAt
+  }
+  task_subtask {
+    text id PK
+    text userId
+    text taskId FK
+    text title
+    boolean done
+    float position
+  }
+  task_comment {
+    text id PK
+    text userId
+    text taskId FK
+    text body
+    timestamptz createdAt
+  }
+  task_event {
+    text id PK
+    text userId
+    text taskId FK
+    task_event_kind kind
+    text de
+    text para
+    timestamptz createdAt
+    serial seq "desempata a ordem"
+  }
+  task_counter {
+    text userId PK
+    int last "ultimo numero dado"
+  }
   island_purchase {
     text userId PK
     text item PK "id de catálogo"
@@ -133,6 +184,9 @@ Regras que o banco garante (migração `restricoes`, em SQL):
   `room_placement` guarda a posição de cada decoração (sai junto com a compra); `joia_credit` recebe, uma vez, a diferença de quem
   ganharia menos com a regra nova do foco. Nenhuma compra é apagada. Foco encerrado pela API antiga depois da migração e antes do
   deploy novo não entra no crédito.
+- migração `tarefas` (só tipos e tabelas novas): `task` feita se, e somente se, tem `completedAt`; `(userId, number)` único;
+  subtarefa, comentário e evento só apontam para tarefa da mesma pessoa (chave composta `taskId, userId`) e saem junto com ela.
+  `task_counter` só cresce, então o número de uma tarefa apagada não volta. Que a meta da tarefa é da pessoa quem confere é a API.
 
 Convenções de tipo: `DateKey` do domínio ('AAAA-MM-DD', o dia lógico) é `date`; instantes (ms) são `timestamptz`;
 os enums do Prisma têm os mesmos valores das uniões de `packages/core/domain/types.ts`.

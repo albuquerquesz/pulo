@@ -12,9 +12,17 @@ import type {
   Repository,
   RestDay,
   RoutineBlock,
+  Clock,
+  Task,
+  TaskComment,
+  TaskEvent,
+  TaskSubtask,
   User,
   WeeklyProposal,
 } from '../domain/types';
+import { systemClock } from '../domain/clock';
+import { newId } from '../domain/ids';
+import { taskChanges } from '../domain/tasks';
 
 /** Formato persistido. Versionado para migrações futuras. */
 export interface Database {
@@ -31,6 +39,12 @@ export interface Database {
   housePurchases: Purchase[];
   roomDecor: RoomDecor[];
   joiaCredit: number;
+  tasks: Task[];
+  subtasks: TaskSubtask[];
+  taskComments: TaskComment[];
+  taskEvents: TaskEvent[];
+  /** Último número de tarefa dado (nunca volta, mesmo apagando). */
+  taskCounter: number;
   mascot: MascotState | null;
 }
 
@@ -49,6 +63,11 @@ export function emptyDatabase(): Database {
     housePurchases: [],
     roomDecor: [],
     joiaCredit: 0,
+    tasks: [],
+    subtasks: [],
+    taskComments: [],
+    taskEvents: [],
+    taskCounter: 0,
     mascot: null,
   };
 }
@@ -71,8 +90,13 @@ function upsert<T>(list: T[], item: T, same: (a: T) => boolean): void {
   else list.push(item);
 }
 
+function requireTask(db: Database, taskId: string): void {
+  if (!db.tasks.some((task) => task.id === taskId)) throw new Error(`Tarefa ${taskId} não existe.`);
+}
+
 /** Implementação única do contrato Repository sobre qualquer DatabaseStore. Escritas são serializadas. */
-export function createRepository(store: DatabaseStore): Repository {
+/** `clock` marca os eventos do histórico das tarefas. */
+export function createRepository(store: DatabaseStore, clock: Clock = systemClock): Repository {
   let queue: Promise<unknown> = Promise.resolve();
 
   function write<T>(fn: (db: Database) => T): Promise<T> {
@@ -132,7 +156,57 @@ export function createRepository(store: DatabaseStore): Repository {
 
     listGoals: () => read((db) => db.goals),
     saveGoal: (goal) => write((db) => upsert(db.goals, clone(goal), (g) => g.id === goal.id)),
-    deleteGoal: (id) => write((db) => void (db.goals = db.goals.filter((g) => g.id !== id))),
+    deleteGoal: (id) =>
+      write((db) => {
+        db.goals = db.goals.filter((g) => g.id !== id);
+        // A tarefa fica, sem a meta.
+        db.tasks = db.tasks.map((task) => {
+          if (task.goalId !== id) return task;
+          const { goalId: _goalId, ...rest } = task;
+          return rest;
+        });
+      }),
+
+    listTasks: () => read((db) => db.tasks),
+    saveTask: (task) =>
+      write((db) => {
+        const previous = db.tasks.find((t) => t.id === task.id);
+        const number = previous?.number ?? (db.taskCounter += 1);
+        const createdAt = previous?.createdAt ?? task.createdAt;
+        upsert(db.tasks, { ...clone(task), number, createdAt }, (t) => t.id === task.id);
+        const at = clock.now();
+        for (const change of taskChanges(previous, task)) {
+          db.taskEvents.push({ id: newId(at, 'evento'), taskId: task.id, ...change, createdAt: at });
+        }
+      }),
+    deleteTask: (id) =>
+      write((db) => {
+        db.tasks = db.tasks.filter((t) => t.id !== id);
+        db.subtasks = db.subtasks.filter((s) => s.taskId !== id);
+        db.taskComments = db.taskComments.filter((c) => c.taskId !== id);
+        db.taskEvents = db.taskEvents.filter((e) => e.taskId !== id);
+      }),
+    listSubtasks: () => read((db) => db.subtasks),
+    saveSubtask: (subtask) =>
+      write((db) => {
+        requireTask(db, subtask.taskId);
+        upsert(db.subtasks, clone(subtask), (s) => s.id === subtask.id);
+      }),
+    deleteSubtask: (taskId, id) =>
+      write((db) => void (db.subtasks = db.subtasks.filter((s) => !(s.taskId === taskId && s.id === id)))),
+    addTaskComment: (comment) =>
+      write((db) => {
+        requireTask(db, comment.taskId);
+        if (!db.taskComments.some((c) => c.id === comment.id)) db.taskComments.push(clone(comment));
+      }),
+    listTaskActivity: (taskId) =>
+      read((db) => {
+        requireTask(db, taskId);
+        return {
+          events: db.taskEvents.filter((e) => e.taskId === taskId),
+          comments: db.taskComments.filter((c) => c.taskId === taskId).sort((a, b) => a.createdAt - b.createdAt),
+        };
+      }),
 
     listIslandPurchases: () => read((db) => db.islandPurchases),
     saveIslandPurchase: (purchase) => write((db) => upsert(db.islandPurchases, clone(purchase), (p) => p.item === purchase.item)),

@@ -31,6 +31,11 @@ async function seed(user: TestUser, extra = 0) {
   });
   await database.db.mascotState.create({ data: { userId, phase: 2, careDays: 4, updatedAt: new Date(TEST_NOW) } });
   await database.db.islandPurchase.create({ data: { userId, item: 'banco', cost: 8, createdAt: new Date(TEST_NOW) } });
+  const tasks = Array.from({ length: 1 + extra }, (_, i) => ({ id: `${userId}-t${i}`.slice(-60), number: i + 1 }));
+  await database.db.task.createMany({
+    data: tasks.map((t) => ({ ...t, userId, title: 't', status: 'afazer' as const, position: t.number, priority: 'normal' as const, tags: [], pomodorosEstimated: 0, createdAt: new Date(TEST_NOW) })),
+  });
+  await database.db.taskSubtask.createMany({ data: tasks.map((t) => ({ userId, taskId: t.id, title: 's', done: false, position: 1 })) });
   await database.db.focusSession.createMany({
     data: Array.from({ length: extra }, (_, i) => ({
       userId,
@@ -69,6 +74,8 @@ describe('/api/sync', () => {
       restDays: [],
       proposals: [],
       goals: [],
+      tasks: [],
+      subtasks: [],
       islandPurchases: [],
       mascot: null,
       streak: { atual: 0, recorde: 0 },
@@ -115,7 +122,7 @@ describe('/api/sync', () => {
     await seed(big, 50);
     const one = await queriesOf(database, small, 'GET', `/api/sync${RANGE}`);
     expect(await queriesOf(database, big, 'GET', `/api/sync${RANGE}`)).toBe(one);
-    // 2 de sessão + 15 leituras numa transação.
-    expect(one).toBe(17);
+    // 2 de sessão + 17 leituras numa transação.
+    expect(one).toBe(19);
   });
 });

@@ -10,6 +10,9 @@ import type {
   Repository,
   RestDay,
   RoutineBlock,
+  Task,
+  TaskComment,
+  TaskSubtask,
   User,
   WeeklyProposal,
 } from '../domain/types';
@@ -28,6 +31,9 @@ export function createFakeRepository(): Repository {
   const compras = new Map<string, IslandPurchase>();
   const casa = new Map<string, Purchase>();
   const quarto = new Map<string, RoomDecor>();
+  const tasks = new Map<string, Task>();
+  const subtasks = new Map<string, TaskSubtask>();
+  const comments = new Map<string, TaskComment>();
   const inRange = (d: string, r?: { from: string; to: string }) => !r || (d >= r.from && d <= r.to);
   return {
     getUser: async () => user,
@@ -65,6 +71,14 @@ export function createFakeRepository(): Repository {
       if (atual) quarto.set(item, { ...atual, ...spot });
     },
     getJoiaCredit: async () => 0,
+    listTasks: async () => [...tasks.values()],
+    saveTask: async (t) => void tasks.set(t.id, t),
+    deleteTask: async (id) => void tasks.delete(id),
+    listSubtasks: async () => [...subtasks.values()],
+    saveSubtask: async (s) => void subtasks.set(s.id, s),
+    deleteSubtask: async (_taskId, id) => void subtasks.delete(id),
+    addTaskComment: async (c) => void comments.set(c.id, c),
+    listTaskActivity: async (taskId) => ({ events: [], comments: [...comments.values()].filter((c) => c.taskId === taskId) }),
     getMascotState: async () => mascot,
     saveMascotState: async (m) => void (mascot = m),
     clearAll: async () => {
@@ -80,6 +94,9 @@ export function createFakeRepository(): Repository {
       compras.clear();
       casa.clear();
       quarto.clear();
+      tasks.clear();
+      subtasks.clear();
+      comments.clear();
     },
   };
 }
