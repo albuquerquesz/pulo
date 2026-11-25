@@ -78,6 +78,16 @@ export const drawingColors = {
   numeroJoia: '#C29BFF',
   /** Ponta quente da barra da sequência. */
   solQuente: '#FFB347',
+  /** Caixa do timer e mostradores (spec 23). */
+  timerVerde: '#6FCB55',
+  timerVerdeBorda: '#4FA83C',
+  timerOuro: '#E9B85A',
+  timerTrilho: '#2F5E2A',
+  madeiraEscura: '#A86F43',
+  /** Escolhido e botões da loja do quarto. */
+  limaForte: '#D3E36B',
+  bege: '#EFEACB',
+  begeBorda: '#D9D2A8',
 } as const;
 
 /** Céu noturno da lagoa (spec 04). */

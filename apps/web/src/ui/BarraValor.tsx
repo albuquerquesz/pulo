@@ -14,7 +14,7 @@ export type BarraValorProps = {
 /** Barra branca de contorno grosso do topo da Casa e da Ilha (`.vbar`). */
 export function BarraValor({ icone, valor, rotulo, onMais, rotuloMais = 'Ganhar mais' }: BarraValorProps) {
   return (
-    <div className="relative flex h-11 min-w-[200px] items-center rounded-full border-4 border-contorno bg-white pr-[50px] pl-16 shadow-[0_4px_0_rgba(59,42,47,0.25)]">
+    <div className="relative flex h-11 min-w-[112px] md:min-w-[200px] items-center rounded-full border-4 border-contorno bg-white pr-[50px] pl-16 shadow-[0_4px_0_rgba(59,42,47,0.25)]">
       <span aria-hidden="true" className="contorno-grosso absolute top-1/2 -left-[22px] grid size-[62px] -translate-y-1/2 -rotate-8 place-items-center">
         {icone}
       </span>

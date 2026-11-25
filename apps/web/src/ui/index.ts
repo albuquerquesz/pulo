@@ -29,3 +29,6 @@ export type { PlacaProps } from './Placa';
 export { Nuvens } from './Nuvens';
 export { Modal } from './Modal';
 export type { ModalProps } from './Modal';
+export { useCamera } from './useCamera';
+export { pontoNaCena } from './camera';
+export type { Camera, LimitesDaCamera, Ponto } from './camera';
