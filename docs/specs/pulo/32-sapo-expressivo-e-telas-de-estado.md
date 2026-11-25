@@ -1,6 +1,6 @@
 # Spec 32: Sapo expressivo e telas de estado
 
-Status: a fazer. Origem: anotação do Victor de 25/11/2026 na tela "Sem sinal por aqui" ("procura referências melhores para as telas de erro; adicionar expressões diferentes para o sapo, como o Duo funciona; o mascote deve funcionar de forma parecida e animada"). Web. Depende das specs 03 (sapo) e 21 (casca).
+Status: feito. Origem: anotação do Victor de 25/11/2026 na tela "Sem sinal por aqui" ("procura referências melhores para as telas de erro; adicionar expressões diferentes para o sapo, como o Duo funciona; o mascote deve funcionar de forma parecida e animada"). Web. Depende das specs 03 (sapo) e 21 (casca).
 
 ## Problem Statement
 
