@@ -10,6 +10,7 @@ export {
   mascotStateMapper,
   proposalChangesSchema,
   restDayMapper,
+  roomPlacementMapper,
   routineBlockMapper,
   toPhase,
   toWeekday,

@@ -6,6 +6,9 @@ import type {
   Habit,
   HabitLog,
   IslandPurchase,
+  RoomDecor,
+  RoomRotation,
+  RoomSpot,
   MascotState,
   Phase,
   ProposalChange,
@@ -246,11 +249,31 @@ export const goalMapper = {
 // ---------- IslandPurchase ----------
 
 export const islandPurchaseMapper = {
-  toDomain(row: Omit<IslandPurchaseRow, 'userId'>): IslandPurchase {
+  toDomain(row: Omit<IslandPurchaseRow, 'userId' | 'kind'>): IslandPurchase {
     return { item: row.item, cost: row.cost, createdAt: dateToMs(row.createdAt) };
   },
   fromDomain(userId: string, purchase: IslandPurchase): Prisma.IslandPurchaseUncheckedCreateInput {
     return { userId, item: purchase.item, cost: purchase.cost, createdAt: msToDate(purchase.createdAt) };
+  },
+};
+
+// ---------- Quarto ----------
+
+function toRotation(value: number): RoomRotation {
+  if (value === 0 || value === 90 || value === 180 || value === 270) return value;
+  throw new RangeError(`Giro fora do domínio: ${value}`);
+}
+
+type RoomDecorRow = Omit<IslandPurchaseRow, 'userId' | 'kind'> & { placement: { x: number; y: number; rotation: number } | null };
+
+export const roomPlacementMapper = {
+  toSpot(row: { x: number; y: number; rotation: number }): RoomSpot {
+    return { x: row.x, y: row.y, rotation: toRotation(row.rotation) };
+  },
+  /** A compra de uma decoração junto com a posição. Sem posição o dado está quebrado. */
+  toDomain(row: RoomDecorRow): RoomDecor {
+    if (!row.placement) throw new RangeError(`Decoração sem posição: ${row.item}`);
+    return { ...islandPurchaseMapper.toDomain(row), ...roomPlacementMapper.toSpot(row.placement) };
   },
 };
 
