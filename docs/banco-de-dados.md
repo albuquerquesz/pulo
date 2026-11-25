@@ -17,6 +17,8 @@ erDiagram
   user ||--o{ weekly_proposal : tem
   user ||--o{ goal : tem
   user ||--o{ island_purchase : tem
+  user ||--o| joia_credit : tem
+  island_purchase ||--o| room_placement : posiciona
   user ||--o| mascot_state : tem
   habit ||--o{ habit_log : registra
   routine_block |o--o{ focus_session : "ocorre em"
@@ -88,9 +90,21 @@ erDiagram
   }
   island_purchase {
     text userId PK
-    text item PK "id do catálogo ISLAND"
-    int cost "moscas, 0 ou mais"
+    text item PK "id de catálogo"
+    purchase_kind kind "casa, decoracao ou antiga"
+    int cost "joias, 0 ou mais"
     timestamptz createdAt
+  }
+  room_placement {
+    text userId PK
+    text item PK
+    smallint x
+    smallint y
+    smallint rotation "0, 90, 180 ou 270"
+  }
+  joia_credit {
+    text userId PK
+    int amount "maior que 0"
   }
   mascot_state {
     text userId PK
@@ -113,8 +127,12 @@ Regras que o banco garante (migração `restricoes`, em SQL):
 - `goal` concluída se, e somente se, tem `completedAt`; `milestones` é sempre um array JSON (migração `metas`).
   O limite de metas ativas (`GOALS.maxActive`) é da API, numa transação serializável.
 - uma `island_purchase` por pessoa e item (chave primária `userId, item`) e `cost` nunca negativo (migração `ilha`).
-  A compra é imutável e o saldo de moscas não é gravado: sai dos hábitos feitos, sessões, descansos e metas.
-  O preço, a ordem das áreas e o saldo são conferidos pela API (`validarCompra` do core), numa transação serializável.
+  A compra é imutável e o saldo de joias não é gravado: sai dos hábitos feitos, sessões, descansos, metas e do `joia_credit`.
+  O preço e o saldo são conferidos pela API (core), numa transação serializável.
+- migração `joias_casa`: `kind` separa a casa, o quarto e a ilha antiga (`antiga`, o padrão, que não gasta joias na casa nem no quarto);
+  `room_placement` guarda a posição de cada decoração (sai junto com a compra); `joia_credit` recebe, uma vez, a diferença de quem
+  ganharia menos com a regra nova do foco. Nenhuma compra é apagada. Foco encerrado pela API antiga depois da migração e antes do
+  deploy novo não entra no crédito.
 
 Convenções de tipo: `DateKey` do domínio ('AAAA-MM-DD', o dia lógico) é `date`; instantes (ms) são `timestamptz`;
 os enums do Prisma têm os mesmos valores das uniões de `packages/core/domain/types.ts`.

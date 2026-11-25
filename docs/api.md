@@ -42,12 +42,12 @@ Nunca há stack trace; erro inesperado vira 500 `erro_interno` e o detalhe fica 
 | 409 | `conflito_de_id` | id já usado por outra pessoa (nunca sobrescreve). No lote, `issues` lista `blocks.N.id` ou `habits.N.id` e nada é salvo |
 | 409 | `limite_por_dia` | passaria de `MAX_HABITS_PER_DAY` hábitos ativos no mesmo dia da semana. No lote, `issues` lista `habits.N.weekdays` e nada é salvo |
 | 409 | `limite_de_metas` | passaria de `GOALS.maxActive` metas ativas (concluídas não contam) |
-| 404 | `item_inexistente` | compra na ilha de um item que não está no catálogo `ISLAND` |
-| 400 | `preco_divergente` | compra na ilha com `cost` diferente do preço do catálogo |
-| 409 | `ja_comprado` | área já aberta ou enfeite já comprado (inclui a `lagoa`, que já vem aberta, e o mesmo item com outro corpo) |
-| 409 | `fora_de_ordem` | área que não é a próxima do mapa |
-| 409 | `area_fechada` | enfeite de uma área que ainda não foi aberta |
-| 409 | `moscas_insuficientes` | o saldo de moscas não paga o item. A mensagem diz quantas faltam |
+| 404 | `item_inexistente` | compra ou mudança de lugar de um item que não está no catálogo da rota (`HOUSE`, `ROOM_DECOR` ou, na ilha antiga, `ISLAND`) |
+| 400 | `preco_divergente` | compra com `cost` diferente do preço do catálogo |
+| 409 | `ja_comprado` | item já comprado (inclui o `quarto` e a `lagoa`, que já vêm prontos, o mesmo item com outro corpo e dois aparelhos comprando juntos) |
+| 409 | `fora_de_ordem` | só na ilha antiga: área que não é a próxima do mapa |
+| 409 | `area_fechada` | só na ilha antiga: enfeite de uma área que ainda não foi aberta |
+| 409 | `joias_insuficientes` | o saldo de joias não paga o item. A mensagem diz quantas faltam |
 | 409 | `sessao_em_andamento` | já existe outra sessão em andamento (índice único parcial no banco) |
 | 409 | `sessao_encerrada` | mudança numa sessão `concluida` ou `interrompida` |
 | 409 | `sessao_imutavel` | mudou início, duração planejada ou bloco de uma sessão em andamento |
@@ -89,12 +89,17 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `PUT /api/goals/:id` | `Goal` (marcos dentro) | `{ goal }` | 4 |
 | `DELETE /api/goals/:id` | | `{ deleted }` | 3 |
 | `GET /api/island/purchases` | | `{ purchases: IslandPurchase[] }` (mais antiga primeiro) | 3 |
-| `PUT /api/island/purchases/:item` | `IslandPurchase` | `{ purchase }` | 8 comprando, 7 repetindo |
+| `PUT /api/island/purchases/:item` | `IslandPurchase` | `{ purchase }` | 11 comprando, 10 repetindo |
+| `GET /api/house` | | `{ purchases: Purchase[], joiaCredit: number }` | 4 |
+| `PUT /api/house/:item` | `Purchase` | `{ purchase }` | 10 comprando |
+| `GET /api/room` | | `{ decor: RoomDecor[] }` (mais antiga primeiro) | 3 |
+| `PUT /api/room/:item` | `RoomDecor` | `{ decor }` | 12 comprando |
+| `PATCH /api/room/:item` | `RoomSpot` | `{ item, spot }` | 3 |
 | `GET /api/mascot` | | `{ mascot: MascotState \| null }` | 3 |
 | `GET /api/week-summary?date` | | `{ summary: WeekSummary }` | 5 |
 | `GET /api/streak` | | `{ streak: Streak }` | 5 |
-| `GET /api/sync?from&to` | | ver abaixo (inclui `goals`, `islandPurchases` e `streak`) | 14 |
-| `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, goals, islandPurchases, mascot } }` | 10 |
+| `GET /api/sync?from&to` | | ver abaixo (inclui `goals`, `islandPurchases`, `housePurchases`, `roomDecor`, `joiaCredit` e `streak`) | 17 |
+| `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, goals, islandPurchases, mascot } }` | 11 |
 
 Já existiam e continuam: `GET /health`, `/api/auth/*`, `GET /api/me`, `PATCH /api/me/metadata`, `POST /weekly-ai`.
 
@@ -132,12 +137,21 @@ Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBl
   `PUT /api/proposals/:id` só grava a proposta (usado pelo `saveProposal` do `Repository`) e NÃO mexe nos blocos. No app da conta, gerar e decidir
   passam pelas duas rotas abaixo, que aplicam os blocos junto. A regra pura da máquina de estados está em `@pulo/core/api/proposal-state`
   e a da decisão em `@pulo/core/api/proposal-decision`.
-- **Ilha**: compras de áreas e enfeites com moscas (`IslandPurchase`, uma por item e pessoa), imutáveis: não há `DELETE`,
-  só `DELETE /api/data` apaga. O saldo nunca é gravado. No `PUT`, o item do caminho precisa ser igual ao do corpo (`id_divergente`)
-  e `cost` igual ao preço de `ISLAND` (`preco_divergente`, ou `item_inexistente` se o item não existe). Depois, numa transação serializável,
-  o servidor lê todos os hábitos feitos, sessões, descansos, metas e compras da pessoa, monta `estadoDaIlha` e roda `validarCompra` do core
-  (`@pulo/core/domain/ilha`): fora da regra é 409 com o código e a mensagem do core. Duas compras ao mesmo tempo não gastam o mesmo saldo
-  (a perdedora recebe 409 `conflito_concorrente`). Repetir exatamente a mesma compra é 200 sem gravar de novo (retry seguro).
+- **Joias**: a moeda. O saldo nunca é gravado: são as joias ganhas menos as gastas, no mínimo zero (`joiasGanhas` em
+  `@pulo/core/domain/joias`). Rendem: hábito feito, dia de descanso, marco e meta concluída (`JOIAS.por`) e o foco, com
+  `floor(minutos focados / JOIAS.focusMinutesPerJoia)` por sessão encerrada (concluída ou interrompida), sem as pausas e até o planejado.
+  `joiaCredit` é o ganho histórico dado pela migração a quem ganharia menos com a regra nova do foco.
+- **Casa**: `PUT /api/house/:item` compra uma parte (`HOUSE`: `cozinha`, `varanda`, `jardim`, `arvore`, `cerca`), em qualquer ordem.
+  O `quarto` já vem pronto. Compras são imutáveis: só `DELETE /api/data` apaga.
+- **Quarto**: `PUT /api/room/:item` compra uma decoração (`ROOM_DECOR`) já com a posição: `x` e `y` dentro de `ROOM_GRID` e
+  `rotation` 0, 90, 180 ou 270. `PATCH /api/room/:item` muda só a posição, de graça (item não comprado: 404 `nao_encontrado`).
+  Mais de um item pode ocupar o mesmo ponto.
+- **Compra (casa e quarto)**: o caminho precisa ser igual ao `item` do corpo (`id_divergente`) e `cost` igual ao catálogo. Numa transação
+  serializável o servidor lê as fontes de joias e as compras e valida com o core (`@pulo/core/domain/casa`). Duas compras ao mesmo tempo
+  não gastam o mesmo saldo (a perdedora recebe 409 `conflito_concorrente` ou `ja_comprado`). Repetir a mesma compra (item, `cost` e
+  `createdAt`) é 200 sem gravar; no quarto a resposta traz a posição gravada, que pode já ter mudado.
+- **Ilha antiga** (`/api/island`, legado da spec 12 até a tela nova): mesma mecânica com o catálogo `ISLAND`, ordem das áreas e área aberta.
+  As compras dela **não gastam joias na casa nem no quarto** (o valor volta). O saldo da ilha antiga desconta as compras antigas e as novas.
 
 ### `GET /api/week-summary?date=AAAA-MM-DD`
 
@@ -201,25 +215,25 @@ A regra é a função pura `computeStreak` do core (`@pulo/core/domain/streak`),
 
 ### `GET /api/sync?from&to`
 
-`from` e `to` obrigatórios, até 400 dias. Doze leituras numa transação, resposta:
+`from` e `to` obrigatórios, até 400 dias. Quinze leituras numa transação, resposta:
 
 ```json
 {
   "user": { "id": "", "name": "", "email": "", "image": null },
   "metadata": { "version": 1, "theme": "sistema", "reduceMotion": false, "timezone": "America/Sao_Paulo", "onboarding": { "completed": false, "completedAt": null }, "profile": null },
   "blocks": [], "habits": [], "habitLogs": [], "sessions": [], "restDays": [],
-  "proposals": [], "goals": [], "islandPurchases": [], "mascot": null,
+  "proposals": [], "goals": [], "islandPurchases": [], "housePurchases": [], "roomDecor": [], "joiaCredit": 0, "mascot": null,
   "streak": { "atual": 0, "recorde": 0, "semana": [{ "date": "2026-11-15", "estado": "vazio" }] }, "serverTime": 1795000000000
 }
 ```
 
-Blocos, hábitos, propostas, metas e compras da ilha vêm inteiros; hábitos feitos e descansos, só do intervalo; sessões do intervalo mais a
+Blocos, hábitos, propostas, metas, compras (ilha antiga, casa e quarto) e o crédito de joias vêm inteiros; hábitos feitos e descansos, só do intervalo; sessões do intervalo mais a
 em andamento. `streak` olha todo o histórico, não só o intervalo (acima; `semana` tem sempre 7 itens). `serverTime` é o relógio do servidor em ms.
 
 ### `DELETE /api/data`
 
 O `clearAll` do servidor, único jeito de zerar o progresso: apaga blocos, hábitos (e seus registros), sessões, descansos,
-propostas, metas, compras da ilha e o estado do sapo da pessoa, numa transação. Conta, login e metadados (tema, fuso, onboarding) ficam.
+propostas, metas, compras com joias (e posições do quarto), crédito de joias e o estado do sapo da pessoa, numa transação. Conta, login e metadados (tema, fuso, onboarding) ficam.
 
 ## Mapa para o `Repository`
 
@@ -234,6 +248,9 @@ propostas, metas, compras da ilha e o estado do sapo da pessoa, numa transação
 | `generateProposal`, `decideProposal` (só no `RemoteRepository`) | `POST /api/proposals/generate`, `POST /api/proposals/:id/decision` |
 | `listGoals`, `saveGoal`, `deleteGoal` | `GET /api/goals`, `PUT`, `DELETE /api/goals/:id` |
 | `listIslandPurchases`, `saveIslandPurchase` | `GET /api/island/purchases`, `PUT /api/island/purchases/:item` |
+| `listHousePurchases`, `saveHousePurchase` | `GET /api/house`, `PUT /api/house/:item` |
+| `listRoomDecor`, `saveRoomDecor`, `moveRoomDecor` | `GET /api/room`, `PUT`, `PATCH /api/room/:item` |
+| `getJoiaCredit` | `joiaCredit` do `GET /api/sync` (ou de `GET /api/house`) |
 | `getMascotState` (`saveMascotState` não existe: o servidor calcula) | `GET /api/mascot` |
 | `verSequencia` do core (`getStreak` só no `RemoteRepository`) | `GET /api/sync` e `GET /api/streak` |
 | `getUser` | `GET /api/me` e `metadata` do `GET /api/sync` |

@@ -21,7 +21,7 @@ O endereço também aparece em Perfil, "Conectar uma IA".
 | `ver_rotina` | todos os blocos e hábitos, com ids | Semana |
 | `ver_semana` | resumo da semana e propostas | Semana |
 | `ver_metas` | metas com marcos, progresso e prazo | Metas |
-| `ver_ilha` | saldo de moscas (e de onde vieram), áreas e enfeites com preço | Ilha |
+| `ver_ilha` | saldo de joias (e de onde vieram), partes da casa e decorações do quarto | Ilha |
 | `ver_perfil` | nome do sapo, dia, tema, fuso | Perfil |
 | `concluir_onboarding` | cria o sapo e o plano de exemplo | Onboarding |
 | `atualizar_perfil` | nome do sapo, início e fim do dia, tema, reduzir movimento | Perfil |
@@ -31,7 +31,8 @@ O endereço também aparece em Perfil, "Conectar uma IA".
 | `dia_de_descanso`, `concluir_bloco_de_descanso` | descanso | Hoje |
 | `gerar_proposta_da_semana`, `decidir_proposta` | proposta da semana | Semana |
 | `criar_meta`, `editar_meta`, `mexer_em_marco`, `concluir_ou_reabrir_meta`, `apagar_meta` | metas | Metas |
-| `comprar_na_ilha` | abre a próxima área ou compra um enfeite com moscas | Ilha |
+| `comprar_na_ilha` | constrói uma parte da casa ou compra uma decoração com joias | Ilha |
+| `mover_decoracao` | muda uma decoração de lugar, sem custo | Ilha |
 | `apagar_todos_os_dados` | o mesmo de Perfil, exige escrever `APAGAR TUDO` | Perfil |
 
 ## Como funciona
