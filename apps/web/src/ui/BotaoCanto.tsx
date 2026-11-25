@@ -8,10 +8,12 @@ export type BotaoCantoProps = {
   /** Texto curto embaixo do quadrado. */
   legenda?: string;
   onPress?: () => void;
+  /** Quadrado menor, como o de tela cheia (`.expandir`). */
+  pequeno?: boolean;
 };
 
 /** Botão quadrado de contorno grosso dos cantos das cenas (`.bt-canto`). */
-export function BotaoCanto({ icone, rotulo, legenda, onPress }: BotaoCantoProps) {
+export function BotaoCanto({ icone, rotulo, legenda, onPress, pequeno = false }: BotaoCantoProps) {
   return (
     <button
       type="button"
@@ -22,7 +24,7 @@ export function BotaoCanto({ icone, rotulo, legenda, onPress }: BotaoCantoProps)
     >
       <span
         aria-hidden="true"
-        className="grid size-16 place-items-center rounded-[20px] border-4 border-contorno bg-white text-[30px] shadow-[inset_0_-5px_0_var(--pulo-sombra-branca)] group-hover:-translate-y-0.5"
+        className={`grid ${pequeno ? 'size-[52px] rounded-2xl' : 'size-16 rounded-[20px]'} place-items-center border-4 border-contorno bg-white text-[30px] shadow-[inset_0_-5px_0_var(--pulo-sombra-branca)] group-hover:-translate-y-0.5`}
       >
         {icone}
       </span>

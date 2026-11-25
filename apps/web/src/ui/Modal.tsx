@@ -7,10 +7,14 @@ export type ModalProps = {
   /** Nome do diálogo para leitores de tela. */
   rotulo: string;
   children: ReactNode;
+  /** Fica abaixo da moldura, fora da folha (o Cancelar da loja). */
+  rodape?: ReactNode;
+  /** Cobre só o pai (que precisa de `relative`), como na cena do quarto; sem isto, a tela toda. */
+  contido?: boolean;
 };
 
 /** Diálogo com moldura de madeira (`.dm-moldura` e `.dm-folha`). */
-export function Modal({ aberto, onFechar, rotulo, children }: ModalProps) {
+export function Modal({ aberto, onFechar, rotulo, children, rodape, contido = false }: ModalProps) {
   const folha = useRef<HTMLDivElement>(null);
   const fechar = useRef(onFechar);
   useEffect(() => {
@@ -33,20 +37,21 @@ export function Modal({ aberto, onFechar, rotulo, children }: ModalProps) {
 
   if (!aberto) return null;
   return (
-    <div className="fixed inset-0 z-30 grid place-items-center p-4">
+    <div className={`${contido ? 'absolute' : 'fixed'} inset-0 z-30 flex flex-col items-center justify-center gap-[18px] p-4`}>
       <div data-testid="fundo-do-modal" aria-hidden="true" onClick={onFechar} className="absolute inset-0 bg-[rgba(36,28,32,0.55)]" />
-      <div className="relative w-full max-w-[560px] rounded-[26px] border-4 border-contorno bg-madeira-clara p-3.5 shadow-[0_12px_0_rgba(59,42,47,0.3)]">
+      <div className="relative w-full max-w-[560px] rounded-[26px] border-4 border-contorno bg-madeira-clara p-2 md:p-3.5 shadow-[0_12px_0_rgba(59,42,47,0.3)]">
         <div
           ref={folha}
           role="dialog"
           aria-modal="true"
           aria-label={rotulo}
           tabIndex={-1}
-          className="flex max-h-[calc(100dvh-8rem)] flex-col items-center gap-5 overflow-auto rounded-2xl border-4 border-contorno bg-folha px-[22px] pt-6 pb-5 text-contorno"
+          className={`flex ${rodape ? 'max-h-[calc(100dvh-16rem)]' : 'max-h-[calc(100dvh-8rem)]'} flex-col items-center gap-5 overflow-auto rounded-2xl border-4 border-contorno bg-folha px-3 pt-4 pb-4 text-contorno md:px-[22px] md:pt-6 md:pb-5`}
         >
           {children}
         </div>
       </div>
+      {rodape ? <div className="relative">{rodape}</div> : null}
     </div>
   );
 }

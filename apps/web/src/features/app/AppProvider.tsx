@@ -180,7 +180,7 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
         setPessoa(quem);
         const origem = escolherOrigem({ demo, temSessao: quem !== null });
         if (origem === 'demo') {
-          const s = await criarSessaoDemo();
+          const s = await criarSessaoDemo({ aoVivo: true });
           setAtivo({ repo: s.repo, clock: s.clock, demoClock: s.clock, propostas: criarFonteDeProposta(origem, { repo: s.repo, clock: s.clock, ia: aiClient, avisos: SEM_AVISOS }) });
           setUser(await s.repo.getUser());
           setFase('pronto');
