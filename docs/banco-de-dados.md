@@ -19,7 +19,6 @@ erDiagram
   goal |o--o{ habit : "atrelada a"
   goal ||--o| goal_chest : "baú aberto"
   user ||--o{ task : tem
-  user ||--o| task_counter : tem
   task ||--o{ task_subtask : "tem"
   task ||--o{ task_comment : "tem"
   task ||--o{ task_event : "registra"
@@ -121,7 +120,6 @@ erDiagram
   task {
     text id PK
     text userId FK
-    int number "unico por pessoa"
     text title
     text description
     task_status status
@@ -158,10 +156,6 @@ erDiagram
     text para
     timestamptz createdAt
     serial seq "desempata a ordem"
-  }
-  task_counter {
-    text userId PK
-    int last "ultimo numero dado"
   }
   island_purchase {
     text userId PK
@@ -213,9 +207,11 @@ Regras que o banco garante (migração `restricoes`, em SQL):
   `room_placement` guarda a posição de cada decoração (sai junto com a compra); `joia_credit` recebe, uma vez, a diferença de quem
   ganharia menos com a regra nova do foco. Nenhuma compra é apagada. Foco encerrado pela API antiga depois da migração e antes do
   deploy novo não entra no crédito.
-- migração `tarefas` (só tipos e tabelas novas): `task` feita se, e somente se, tem `completedAt`; `(userId, number)` único;
+- migração `tarefas` (só tipos e tabelas novas): `task` feita se, e somente se, tem `completedAt`;
   subtarefa, comentário e evento só apontam para tarefa da mesma pessoa (chave composta `taskId, userId`) e saem junto com ela.
-  `task_counter` só cresce, então o número de uma tarefa apagada não volta. Que a meta da tarefa é da pessoa quem confere é a API.
+  Que a meta da tarefa é da pessoa quem confere é a API.
+- migração `tarefas_sem_numero`: apaga a coluna `number` de `task` (com o índice único) e a tabela `task_counter`. A tarefa é
+  identificada só pelo `id`.
 - migração `metas_v2`: `goal` ganha `icon` e `color` (nulos nas que já existiam), `habit` ganha `goalId` (apagar a meta solta o
   hábito; que a meta é da pessoa quem confere é a API) e `goal_chest` guarda um resgate por meta (sai junto com ela). A migração
   cria, uma vez, o resgate já aberto das metas que estavam concluídas, com as 10 joias que elas já valiam.

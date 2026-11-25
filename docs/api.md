@@ -95,7 +95,7 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `DELETE /api/goals/:id` | | `{ deleted }` (o baú sai junto; hábitos e tarefas ficam sem a meta) | 3 |
 | `POST /api/goals/:id/chest` | (sem corpo) | `{ chest: GoalChest }` | 4 |
 | `GET /api/tasks` | | `{ tasks: Task[], subtasks: TaskSubtask[], pomodoros }` | 5 |
-| `PUT /api/tasks/:id` | `Task` | `{ task }` | 7 criando, 6 mudando coluna, prioridade ou prazo (5 sem mudança neles; 1 a mais ao trocar a meta) |
+| `PUT /api/tasks/:id` | `Task` | `{ task }` | 6 criando ou mudando coluna, prioridade ou prazo (5 sem mudança neles; 1 a mais ao trocar a meta) |
 | `DELETE /api/tasks/:id` | | `{ deleted }` (subtarefas, comentários e histórico saem junto) | 4 |
 | `PUT /api/tasks/:id/subtasks/:subId` | `TaskSubtask` | `{ subtask }` | 6 |
 | `DELETE /api/tasks/:id/subtasks/:subId` | | `{ deleted }` | 3 |
@@ -113,12 +113,12 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `GET /api/streak` | | `{ streak: Streak }` | 5 |
 | `GET /api/stats` | | `{ stats: ProfileStats }` | 4 |
 | `GET /api/achievements` | | `{ achievements: Achievement[] }` | 7 |
-| `GET /api/data/export` | | arquivo JSON com tudo da pessoa | 21 |
+| `GET /api/data/export` | | arquivo JSON com tudo da pessoa | 20 |
 | `DELETE /api/account` | `{ confirm: 'EXCLUIR' }` | `{ deleted: true }` e o cookie apagado | fixo (igual com 1 ou 50 registros) |
 | `GET /api/mcp/connections` | | `{ connections: McpConnection[] }` (a mais recente primeiro) | 3 |
 | `DELETE /api/mcp/connections/:clientId` | | `{ deleted }` | 6 |
 | `GET /api/sync?from&to` | | ver abaixo (inclui `goals`, `goalChests`, `tasks`, `subtasks`, `islandPurchases`, `housePurchases`, `roomDecor`, `joiaCredit`, `streak`, `stats` e `achievements`) | 21 |
-| `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, goals, islandPurchases, mascot, tasks, achievements } }` | 14 |
+| `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, goals, islandPurchases, mascot, tasks, achievements } }` | 13 |
 
 Já existiam e continuam: `GET /health`, `/api/auth/*`, `GET /api/me`, `PATCH /api/me/metadata`, `POST /weekly-ai`.
 
@@ -158,7 +158,7 @@ Rota do Better Auth. Corpo `{ name?, image? }`: nome de 1 a `ACCOUNT.nameMaxChar
 
 Download (`Content-Disposition`, `Cache-Control: no-store`) com `exportVersion`, `exportedAt`, `user` (id, nome, email, foto, criação),
 `metadata`, `blocks`, `habits`, `habitLogs`, `sessions`, `restDays`, `proposals`, `goals`, `goalChests`, `tasks`, `subtasks`, `taskComments`,
-`taskEvents`, `lastTaskNumber`, `housePurchases`, `roomDecor`, `islandPurchases`, `joiaCredit`, `mascot`, `achievements` (id e data) e `connections`.
+`taskEvents`, `housePurchases`, `roomDecor`, `islandPurchases`, `joiaCredit`, `mascot`, `achievements` (id e data) e `connections`.
 Sem recorte de datas. Nunca entram tokens, segredos, sessões de login nem contas OAuth. Tabela nova com `userId` precisa entrar
 no arquivo (`data-export.test.ts` cobra).
 
@@ -271,13 +271,12 @@ caracteres (também o das subtarefas), descrição até 10 mil, comentário até
 
 - `status`: `ideias`, `afazer`, `fazendo` ou `feito`. `completedAt` existe quando, e só quando, o status é `feito`.
 - `position` é um número fracionário: para reordenar, mande a média dos vizinhos (`positionBetween` em `@pulo/core/domain/tasks`).
-- `number` (código `PULO-n`) é do servidor: o do corpo é ignorado. É uma sequência por pessoa, que não volta quando a tarefa é
-  apagada (só `DELETE /api/data` zera). `createdAt` fica o da primeira gravação.
+- A tarefa é identificada pelo `id`. `createdAt` fica o da primeira gravação, e as listas vêm por `createdAt` e depois `id`.
 - `dueDate` é um `DateKey`; "esta semana" é o domingo da semana, calculado pelo app. `goalId` precisa ser meta da pessoa;
   apagar a meta deixa a tarefa sem ela.
 - Histórico: criar grava o evento `criada`; mudar `status`, `priority` ou `dueDate` grava um evento por campo (`status`,
   `prioridade`, `prazo`, com `de` e `para`; ausente = sem valor). Repetir o `PUT` não grava nada. As escritas de tarefa de uma
-  pessoa são serializadas no banco (`pg_advisory_xact_lock`), então escritas simultâneas não duplicam número nem evento.
+  pessoa são serializadas no banco (`pg_advisory_xact_lock`), então escritas simultâneas não duplicam evento nem passam do limite de subtarefas.
 - `PUT`, subtarefas, comentários e histórico de tarefa de outra pessoa respondem 404 `nao_encontrado`. `DELETE` segue a regra geral
   (`{ deleted: 0 }`). Id de subtarefa ou comentário já usado: 409 `conflito_de_id`.
 - Comentário não muda: repetir o mesmo `POST` é 200 sem gravar; outro corpo com o mesmo id é 409.
@@ -396,7 +395,7 @@ em andamento. `streak` olha todo o histórico, não só o intervalo (acima; `sem
 ### `DELETE /api/data`
 
 O `clearAll` do servidor, único jeito de zerar o progresso: apaga blocos, hábitos (e seus registros), sessões, descansos,
-propostas, metas (e baús), tarefas (com subtarefas, comentários e histórico; a numeração volta a 1), compras com joias (e posições do quarto), crédito de joias, conquistas e o estado do sapo da pessoa, numa transação. Conta, login e metadados (tema, fuso, onboarding) ficam.
+propostas, metas (e baús), tarefas (com subtarefas, comentários e histórico), compras com joias (e posições do quarto), crédito de joias, conquistas e o estado do sapo da pessoa, numa transação. Conta, login e metadados (tema, fuso, onboarding) ficam.
 
 ## Mapa para o `Repository`
 
@@ -456,7 +455,7 @@ propostas, metas (e baús), tarefas (com subtarefas, comentários e histórico; 
 - **Foco:** `saveSession` espera a escrita do alvo, manda `null` no que saiu de uma sessão aberta e guarda a sessão como o
   servidor devolveu. Apagar hábito, meta ou tarefa solta o vínculo no cache. `getPomodoros()` (ou `verPomodoros(repo)` do core)
   devolve os do sync, somados aos focos concluídos depois, sem rede.
-- **Tarefas:** `saveTask` mostra o cartão na hora e preenche `number` com a resposta. Tarefa, subtarefas e comentários seguem em
+- **Tarefas:** `saveTask` mostra o cartão na hora. Tarefa, subtarefas e comentários seguem em
   ordem; comentários e histórico não ficam em cache. Apagar uma meta solta o vínculo no cache.
 - **Lote:** `saveBlocks(blocks)` e `saveHabits(habits)` (cache otimista, um `PUT` cada, tudo ou nada com rollback do cache). `saveBlock` e `saveHabit` continuam.
 - **Hábitos:** o cache guarda `state` (sem o `active` antigo). Um campo opcional que sai do hábito ou do bloco vai como `null`.
