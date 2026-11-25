@@ -1,55 +1,105 @@
-import { GOALS } from '@pulo/core/config/decisions';
-import { dateKeyOf } from '@pulo/core/domain/day';
-import { daysUntilTarget, sortGoals } from '@pulo/core/domain/goals';
-import type { Clock, DateKey, Goal, Repository, User } from '@pulo/core/domain/types';
+import { DEFAULT_TIMEZONE, GOALS } from '@pulo/core/config/decisions';
+import { dateKeyOf, diffDays, weekDates, weekStartOf } from '@pulo/core/domain/day';
+import { sortGoals, type GoalPace, type PaceState } from '@pulo/core/domain/goals';
+import type { Clock, DateKey, EntityId, FocusSession, Goal, GoalChest, Habit, HabitLog, Repository, User } from '@pulo/core/domain/types';
 
 export interface DadosMetas {
   hoje: DateKey;
+  /** Prazo mais perto antes. */
   ativas: Goal[];
+  /** A concluída mais recente antes. */
   concluidas: Goal[];
   /** Ainda cabe uma meta ativa nova. */
   cabeMais: boolean;
+  baus: GoalChest[];
+  habitos: Habit[];
+  registros: HabitLog[];
+  sessoes: FocusSession[];
 }
 
 export async function carregarMetas(repo: Repository, clock: Clock, user: User): Promise<DadosMetas> {
-  const metas = sortGoals(await repo.listGoals());
+  const [todas, baus, habitos, registros, sessoes] = await Promise.all([
+    repo.listGoals(),
+    repo.listGoalChests(),
+    repo.listHabits(),
+    repo.listHabitLogs(),
+    repo.listSessions(),
+  ]);
+  const metas = sortGoals(todas);
   const ativas = metas.filter((m) => m.state === 'ativa');
   return {
-    hoje: dateKeyOf(clock.now(), user.timezone),
+    hoje: dateKeyOf(clock.now(), user.timezone || DEFAULT_TIMEZONE),
     ativas,
     concluidas: metas.filter((m) => m.state === 'concluida'),
     cabeMais: ativas.length < GOALS.maxActive,
+    baus,
+    habitos,
+    registros,
+    sessoes,
   };
 }
 
-const DATA_LONGA = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
-const MES_E_ANO = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+/** Segunda a domingo da semana de hoje: se o hábito foi feito em cada dia. */
+export function semanaDoHabito(habitoId: EntityId, registros: readonly HabitLog[], hoje: DateKey): boolean[] {
+  const feitos = new Set(registros.filter((r) => r.habitId === habitoId).map((r) => r.date));
+  return weekDates(weekStartOf(hoje)).map((dia) => feitos.has(dia));
+}
+
+/** Os hábitos que dá para atrelar: os sem meta que não estão arquivados. */
+export function habitosSoltos(habitos: readonly Habit[]): Habit[] {
+  return habitos.filter((h) => !h.goalId && h.state !== 'arquivado');
+}
+
+/** Onde a linha de ritmo fica na barra, em porcentagem. Sem data alvo ou concluída, não há linha. */
+export function posicaoDoRitmo(pace: GoalPace): number | undefined {
+  if (pace.estado === 'concluida' || pace.estado === 'sem-data') return undefined;
+  return Math.round(pace.esperado * 100);
+}
+
+export interface Selo {
+  texto: string;
+  tom: 'bom' | 'atras';
+}
+
+const SELOS: Record<PaceState, Selo | null> = {
+  'no-ritmo': { texto: 'No ritmo', tom: 'bom' },
+  atras: { texto: 'Um pouco atrás', tom: 'atras' },
+  concluida: { texto: 'Concluída', tom: 'bom' },
+  'sem-data': null,
+};
+
+export const seloDoRitmo = (estado: PaceState): Selo | null => SELOS[estado];
+
+const DIA_E_MES = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+const DIA_MES_E_ANO = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const DIA_E_MES_CURTO = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+
+const DIAS_DO_ANO = 365;
 
 const comoData = (key: DateKey) => new Date(`${key}T00:00:00Z`);
 
-/** "1 de junho de 2027". */
-export function dataPorExtenso(key: DateKey): string {
-  return DATA_LONGA.format(comoData(key));
+/** "30 de junho". O ano só entra quando a data está a um ano ou mais de hoje. */
+function dataPorExtenso(key: DateKey, hoje: DateKey): string {
+  const longe = Math.abs(diffDays(key, hoje)) >= DIAS_DO_ANO;
+  return (longe ? DIA_MES_E_ANO : DIA_E_MES).format(comoData(key));
 }
 
-/** "junho de 2027". */
-export function mesEAno(key: DateKey): string {
-  return MES_E_ANO.format(comoData(key));
+/** "12 set". */
+export function dataCurta(instante: number, timeZone: string): string {
+  return DIA_E_MES_CURTO.format(comoData(dateKeyOf(instante, timeZone))).replace(' de ', ' ').replace('.', '');
 }
 
-const plural = (n: number, um: string, varios: string) => (n === 1 ? `1 ${um}` : `${n} ${varios}`);
-const falta = (n: number, um: string, varios: string) => `${n === 1 ? 'Falta' : 'Faltam'} ${plural(n, um, varios)}`;
+/** A etiqueta de data do cabeçalho: o prazo, ou quando foi concluída. */
+export function textoDaData(meta: Goal, hoje: DateKey, timeZone: string): string {
+  if (meta.state === 'concluida') {
+    return meta.completedAt ? `concluída em ${dataPorExtenso(dateKeyOf(meta.completedAt, timeZone), hoje)}` : 'concluída';
+  }
+  return meta.targetDate ? `até ${dataPorExtenso(meta.targetDate, hoje)}` : 'sem data';
+}
 
-/** Quanto falta, na escala que faz sentido para uma meta longa (dias, meses ou anos). */
-export function textoDoPrazo(meta: Goal, hoje: DateKey): string | null {
-  const dias = daysUntilTarget(meta, hoje);
-  if (dias === null) return null;
-  if (dias < 0) return `O prazo passou há ${plural(-dias, 'dia', 'dias')}`;
-  if (dias === 0) return 'O prazo é hoje';
-  if (dias <= 60) return falta(dias, 'dia', 'dias');
-  const meses = Math.round(dias / 30.44);
-  if (meses < 24) return falta(meses, 'mês', 'meses');
-  return falta(Math.round(dias / 365.25), 'ano', 'anos');
+/** Um traço quando não há o que contar: sem data, no dia, vencida ou concluída. */
+export function textoDosDias(meta: Goal, dias: number | null): string {
+  return meta.state === 'concluida' || dias === null || dias <= 0 ? '—' : String(dias);
 }
 
 /** Linhas do campo de marcos: uma por marco, sem as vazias. */
@@ -62,7 +112,7 @@ export function marcosDoTexto(texto: string): string[] {
 
 export interface BuscaDeMetas {
   /** A meta que abre junto com a tela (o "Ver meta" do hábito). */
-  meta?: string;
+  meta?: EntityId;
 }
 
 export function lerBuscaDeMetas(busca: Record<string, unknown>): BuscaDeMetas {
