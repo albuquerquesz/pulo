@@ -156,6 +156,26 @@ export interface MascotState {
   updatedAt: number;
 }
 
+// ---------- Sequência ----------
+
+/** `hoje` é o dia de hoje ainda vazio; com algo feito ou descanso marcado, ele aparece como tal. */
+export type StreakDayState = 'feito' | 'descanso' | 'vazio' | 'hoje' | 'futuro';
+
+export interface StreakDay {
+  date: DateKey;
+  estado: StreakDayState;
+}
+
+/** Sequência com foguinho. Calculada a partir dos registros, nunca gravada. */
+export interface Streak {
+  /** Dias feitos seguidos até hoje (descanso não quebra nem soma). */
+  atual: number;
+  /** Maior sequência de todo o histórico. */
+  recorde: number;
+  /** Os 7 dias da semana corrente, na ordem (veja `STREAK.weekStartsOn`). */
+  semana: StreakDay[];
+}
+
 // ---------- Resumo da semana (entrada da IA e das telas) ----------
 // Não contém títulos, nomes nem texto livre.
 

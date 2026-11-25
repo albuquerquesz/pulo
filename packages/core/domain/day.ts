@@ -1,7 +1,8 @@
 import { DAY_ROLLOVER_HOUR, PERIODS } from '../config/decisions';
 import type { DateKey, Period, Weekday } from './types';
 
-const HOUR_MS = 3_600_000;
+const MINUTE_MS = 60_000;
+const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 
 const formatters = new Map<string, Intl.DateTimeFormat>();
@@ -50,9 +51,10 @@ export function toDateKey(year: number, month: number, day: number): DateKey {
 /**
  * Dia LÓGICO de um instante: o dia vira às DAY_ROLLOVER_HOUR no fuso do usuário.
  * Às 03:30 ainda é o dia anterior. (Fusos sem horário de verão: o fuso padrão não tem.)
+ * `rolloverMinutes` troca a hora da virada (a sequência usa o começo do dia da pessoa).
  */
-export function dateKeyOf(ts: number, timeZone: string): DateKey {
-  const p = localParts(ts - DAY_ROLLOVER_HOUR * HOUR_MS, timeZone);
+export function dateKeyOf(ts: number, timeZone: string, rolloverMinutes: number = DAY_ROLLOVER_HOUR * 60): DateKey {
+  const p = localParts(ts - rolloverMinutes * MINUTE_MS, timeZone);
   return toDateKey(p.year, p.month, p.day);
 }
 

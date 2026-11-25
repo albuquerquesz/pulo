@@ -23,6 +23,7 @@ import type {
   ProposalChange,
   RestDay,
   RoutineBlock,
+  Streak,
   Weekday,
   WeeklyProposal,
 } from '../domain/types';
@@ -249,6 +250,17 @@ export const mascotStateSchema = z.object({
   careDays: z.number().int().min(0),
   updatedAt: msSchema,
 }) satisfies z.ZodType<MascotState, unknown>;
+
+export const streakSchema = z.object({
+  atual: z.number().int().min(0),
+  recorde: z.number().int().min(0),
+  semana: z
+    .array(z.object({ date: dateKeySchema, estado: z.enum(['feito', 'descanso', 'vazio', 'hoje', 'futuro']) }))
+    .length(7),
+}) satisfies z.ZodType<Streak, unknown>;
+
+/** Resposta de `GET /api/streak`. */
+export const streakResponseSchema = z.object({ streak: streakSchema });
 
 export const goalMilestoneSchema = z.object({
   id: idSchema,

@@ -19,6 +19,14 @@ export const INTERRUPTED_SESSION_MIN_RATIO = 0.5;
 /** O dia lógico vira às 4h no fuso do usuário. Proposta. */
 export const DAY_ROLLOVER_HOUR = 4;
 
+/**
+ * Sequência com foguinho (spec 13). A semana mostrada vai de domingo a sábado, como as letras D S T Q Q S S
+ * (0 = segunda ... 6 = domingo). A virada do dia é o começo do dia da pessoa; sem perfil, `DAY_ROLLOVER_HOUR`. Proposta.
+ */
+export const STREAK = {
+  weekStartsOn: 6,
+} as const;
+
 /** Períodos do dia, em horas locais [início, fim). Proposta. */
 export const PERIODS = {
   manha: { startHour: 5, endHour: 12 },
