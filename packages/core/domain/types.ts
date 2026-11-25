@@ -267,8 +267,6 @@ export type TaskPriority = 'normal' | 'alta';
 /** Cartão do quadro. `completedAt` existe quando, e só quando, o status é `feito`. */
 export interface Task {
   id: EntityId;
-  /** Sequência por pessoa, que gera o código `PULO-n`. Quem atribui é o repositório na primeira gravação; nunca muda nem é reusado. */
-  number?: number;
   title: string;
   description?: string;
   status: TaskStatus;

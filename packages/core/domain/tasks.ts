@@ -19,11 +19,6 @@ import type {
 /** Colunas do quadro, da esquerda para a direita. Fixas nesta versão. */
 export const TASK_COLUMNS = ['ideias', 'afazer', 'fazendo', 'feito'] as const satisfies readonly TaskStatus[];
 
-/** Código curto da tarefa; `null` enquanto o repositório não deu o número. */
-export function taskCode(task: Pick<Task, 'number'>): string | null {
-  return task.number === undefined ? null : `${TASKS.codePrefix}-${task.number}`;
-}
-
 // ---------- Ordem ----------
 
 type Ordenavel = { position: number; id: EntityId };
@@ -160,7 +155,7 @@ function withStatus(task: Task, status: TaskStatus, now: number): Task {
   return status === 'feito' ? { ...rest, status, completedAt: completedAt ?? now } : { ...rest, status };
 }
 
-/** Devolve a tarefa como ficou guardada (com o número). */
+/** Devolve a tarefa como ficou guardada. */
 async function saveAndRead(repo: Repository, task: Task): Promise<TaskResult> {
   await repo.saveTask(task);
   const saved = (await repo.listTasks()).find((item) => item.id === task.id);

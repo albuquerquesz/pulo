@@ -98,10 +98,9 @@ export const GOALS = {
 
 /**
  * Tarefas em quadro (spec 20). Proposta.
- * `codePrefix` forma o código curto (`PULO-n`). `positionStep` é a folga entre cartões novos numa coluna.
+ * `positionStep` é a folga entre cartões novos numa coluna.
  */
 export const TASKS = {
-  codePrefix: 'PULO',
   titleMaxChars: 200,
   descriptionMaxChars: 10_000,
   commentMaxChars: 2_000,

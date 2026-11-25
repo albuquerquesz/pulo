@@ -12,7 +12,6 @@ import {
   positionBetween,
   subtaskProgress,
   taskChanges,
-  taskCode,
   taskTimeline,
   todayTasks,
 } from './tasks';
@@ -41,9 +40,7 @@ describe('schema da tarefa', () => {
 });
 
 describe('regras do quadro', () => {
-  it('código, posições, filtros, hoje e progresso', () => {
-    expect(taskCode({ number: 7 })).toBe(`${TASKS.codePrefix}-7`);
-    expect(taskCode({})).toBeNull();
+  it('posições, filtros, hoje e progresso', () => {
     expect(positionBetween(undefined, undefined)).toBe(TASKS.positionStep);
     expect(positionBetween(1, 2)).toBe(1.5);
     expect(columnTasks([task('b', { position: 2 }), task('a'), task('c', { status: 'feito' })], 'afazer').map((t) => t.id)).toEqual(['a', 'b']);
@@ -109,7 +106,7 @@ describe('casos de uso', () => {
     const a = await criarTarefa(repo, { title: ' A ', tags: ['x', 'x', ' '] }, 1000);
     const b = await criarTarefa(repo, { title: 'B' }, 1001, 'topo');
     if (!a.ok || !b.ok) throw new Error('criação falhou');
-    expect(a.value).toMatchObject({ title: 'A', number: 1, tags: ['x'], status: 'afazer' });
+    expect(a.value).toMatchObject({ title: 'A', tags: ['x'], status: 'afazer' });
     expect(columnTasks(await repo.listTasks(), 'afazer').map((t) => t.title)).toEqual(['B', 'A']);
 
     const done = await moverTarefa(repo, a.value.id, 'feito', 2000);

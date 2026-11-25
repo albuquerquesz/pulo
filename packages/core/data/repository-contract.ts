@@ -228,20 +228,20 @@ export function defineRepositoryContract(
       expect(await r.listHabits()).toEqual([habit]);
     });
 
-    it('tarefas: criar numera em sequência, mover grava um evento só e apagar leva tudo junto', async () => {
+    it('tarefas: criar guarda, mover grava um evento só e apagar leva tudo junto', async () => {
       const { r } = await subject();
       const first = uid('t');
       const second = uid('t');
       await r.saveTask(task(first));
       await r.saveTask(task(second, { position: 2, tags: ['Faculdade'] }));
       const created = await r.listTasks();
-      expect(created.map((t) => t.number).sort()).toEqual([1, 2]);
+      expect(created.map((t) => t.id).sort()).toEqual([first, second].sort());
 
       const moved = task(first, { status: 'fazendo', createdAt: 99 });
       await r.saveTask(moved);
       await r.saveTask(moved);
       const saved = (await r.listTasks()).find((t) => t.id === first);
-      expect(saved).toEqual({ ...moved, number: 1, createdAt: 1 });
+      expect(saved).toEqual({ ...moved, createdAt: 1 });
       const activity = await r.listTaskActivity(first);
       expect(activity.events.map((e) => [e.kind, e.de, e.para])).toEqual([
         ['criada', undefined, 'afazer'],
@@ -264,10 +264,6 @@ export function defineRepositoryContract(
       expect((await r.listTasks()).map((t) => t.id)).toEqual([second]);
       expect(await r.listSubtasks()).toEqual([]);
       await expect(r.listTaskActivity(first)).rejects.toThrow();
-      // O número apagado não volta.
-      const third = uid('t');
-      await r.saveTask(task(third));
-      expect((await r.listTasks()).find((t) => t.id === third)?.number).toBe(3);
     });
 
     it('tarefas: subtarefa e comentário exigem a tarefa, e apagar a meta solta o vínculo', async () => {
