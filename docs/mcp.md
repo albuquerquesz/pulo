@@ -22,7 +22,7 @@ O endereço também aparece em Perfil, "Conectar uma IA".
 | `ver_semana` | resumo da semana e propostas | Semana |
 | `ver_metas` | metas com marcos, progresso e prazo | Metas |
 | `ver_tarefas` | quadro de tarefas por coluna, com filtro hoje ou semana e os pomodoros feitos; cada tarefa vem com o `id` | Tarefas |
-| `ver_ilha` | saldo de joias (e de onde vieram), partes da casa e decorações do quarto | Ilha |
+| `ver_ilha` | saldo de joias (e de onde vieram), partes e cômodos da casa e decorações | Ilha |
 | `ver_gelo` | gelos guardados, o máximo, dias protegidos e os ainda não vistos (não compra) | Perfil |
 | `ver_metricas` | descanso, gelo, ritmo dos últimos 30 dias e o que foi concluído | Perfil |
 | `ver_perfil` | nome do sapo, dia, tema, fuso e preferências | Perfil |
@@ -35,8 +35,8 @@ O endereço também aparece em Perfil, "Conectar uma IA".
 | `gerar_proposta_da_semana`, `decidir_proposta` | proposta da semana | Semana |
 | `criar_meta`, `editar_meta`, `mexer_em_marco`, `concluir_ou_reabrir_meta`, `apagar_meta` | metas | Metas |
 | `criar_tarefa`, `mover_tarefa` | cria um cartão e leva entre colunas (pelo `id`) | Tarefas |
-| `comprar_na_ilha` | constrói uma parte da casa ou compra uma decoração com joias | Ilha |
-| `mover_decoracao` | muda uma decoração de lugar, sem custo | Ilha |
+| `comprar_na_ilha` | constrói uma parte da casa ou compra uma decoração (num cômodo) com joias | Ilha |
+| `mover_decoracao` | muda uma decoração de lugar ou de cômodo, sem custo | Ilha |
 | `apagar_todos_os_dados` | o mesmo de Perfil, exige escrever `APAGAR TUDO` | Perfil |
 
 ## Como funciona

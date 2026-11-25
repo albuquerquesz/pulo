@@ -1,6 +1,6 @@
 # Spec 31: Mansão do sapo, a casa grande com cômodos e detalhes
 
-Status: a fazer. Origem: pedido do Victor de 25/11/2026 ("aumentar a estrutura da casa, comprar mais partes; no Focus Friend é basicamente uma mansão, com muito mais detalhes do que a nossa ilha"). Backend e web. Depende das specs 18, 23 e 24.
+Status: feito. Origem: pedido do Victor de 25/11/2026 ("aumentar a estrutura da casa, comprar mais partes; no Focus Friend é basicamente uma mansão, com muito mais detalhes do que a nossa ilha"). Backend e web. Depende das specs 18, 23 e 24.
 
 ## Problem Statement
 

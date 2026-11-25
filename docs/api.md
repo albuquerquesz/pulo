@@ -52,6 +52,8 @@ Nunca há stack trace; erro inesperado vira 500 `erro_interno` e o detalhe fica 
 | 409 | `ja_comprado` | item já comprado (inclui o `quarto` e a `lagoa`, que já vêm prontos, o mesmo item com outro corpo e dois aparelhos comprando juntos) |
 | 409 | `fora_de_ordem` | só na ilha antiga: área que não é a próxima do mapa |
 | 409 | `area_fechada` | só na ilha antiga: enfeite de uma área que ainda não foi aberta |
+| 409 | `falta_requisito` | parte da casa que pede outra antes; `requer` traz o id que falta |
+| 400 | `comodo_nao_comprado` | decorar (ou mudar um item para) um cômodo que a pessoa não construiu |
 | 409 | `joias_insuficientes` | o saldo de joias não paga o item. A mensagem diz quantas faltam |
 | 409 | `gelo_no_maximo` | já há `GELO.maxGuardados` gelos guardados |
 | 400 | `descanso_so_hoje` | marcar ou desmarcar descanso em um dia que não é o de hoje |
@@ -252,11 +254,17 @@ Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBl
   `@pulo/core/domain/joias`). Rendem: hábito feito, dia de descanso, marco e baú de meta aberto (`JOIAS.por`) e o foco, com
   `floor(minutos focados / JOIAS.focusMinutesPerJoia)` por sessão encerrada (concluída ou interrompida), sem as pausas e até o planejado.
   `joiaCredit` é o ganho histórico dado pela migração a quem ganharia menos com a regra nova do foco.
-- **Casa**: `PUT /api/house/:item` compra uma parte (`HOUSE`: `cozinha`, `varanda`, `jardim`, `arvore`, `cerca`), em qualquer ordem.
-  O `quarto` já vem pronto. Compras são imutáveis: só `DELETE /api/data` apaga.
+- **Casa** (spec 31): `PUT /api/house/:item` compra uma das partes de `HOUSE.parts` (`decisions.ts`): 24 partes nas camadas
+  `comodo`, `estrutura` e `exterior`. Parte com `requer` pede essa outra antes: sem ela, 409 `falta_requisito` com o id em `requer`.
+  O `quarto` já vem pronto. Compras são imutáveis: só `DELETE /api/data` apaga. Regras puras em `@pulo/core/domain/casa`
+  (`podeComprar`, `progressoPorCamada`).
 - **Quarto**: `PUT /api/room/:item` compra uma decoração (`ROOM_DECOR`) já com a posição: `x` e `y` dentro de `ROOM_GRID` e
   `rotation` 0, 90, 180 ou 270. `PATCH /api/room/:item` muda só a posição, de graça (item não comprado: 404 `nao_encontrado`).
   Mais de um item pode ocupar o mesmo ponto.
+- **Cômodos** (spec 31): cada item fica num cômodo (`comodo`: o id de uma parte de camada `comodo`) e continua sendo comprado uma
+  vez só. No `PUT`, `comodo` ausente é o `quarto`; no `PATCH`, ausente mantém o atual. Repetir o `PUT` da mesma compra com outro
+  `comodo` muda o item de cômodo sem cobrar. Cômodo que a pessoa não tem: 400 `comodo_nao_comprado`; id desconhecido: 400
+  `corpo_invalido`. As leituras (`GET /api/room`, sync e exportação) sempre trazem `comodo`.
 - **Compra (casa e quarto)**: o caminho precisa ser igual ao `item` do corpo (`id_divergente`) e `cost` igual ao catálogo. Numa transação
   serializável o servidor lê as fontes de joias e as compras e valida com o core (`@pulo/core/domain/casa`). Duas compras ao mesmo tempo
   não gastam o mesmo saldo (a perdedora recebe 409 `conflito_concorrente` ou `ja_comprado`). Repetir a mesma compra (item, `cost` e
@@ -401,7 +409,9 @@ catálogo inteiro, na mesma ordem. A secreta não conquistada vem sem `nome` e `
 | `foco-profundo` | uma sessão encerrada com esses minutos focados (sem pausas) | 50 |
 | `descanso-sabido` | dias de descanso marcados (férias não contam) | 4 |
 | `mes-de-fogo` | dias seguidos | 30 |
-| `casa-inteira` | partes da casa prontas (o quarto já conta) | 6 |
+| `dois-andares` | comprou o Segundo andar | 1 |
+| `cinco-comodos` | cômodos prontos (o quarto já conta) | 5 |
+| `casa-inteira` | partes da casa prontas (o quarto já conta) | 24 |
 | `gelo-na-hora` | gelos já usados | 1 |
 | `segredo` | regra ainda não escolhida: ninguém recebe | 1 |
 

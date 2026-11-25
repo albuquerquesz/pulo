@@ -42,7 +42,7 @@ Prazo: entrega em **30/11/2026 às 23h59**. Estimativa de esforço (minha, não 
 | [28](28-web-perfil.md) | Web: Perfil completo | Telas do rascunho | M | 21 | a fazer |
 | [29](29-gelo-descanso-e-metricas.md) | Gelo, regras do descanso e métricas do Perfil | Conversa 25/11 | M | 13, 14, 15, 18 | feito |
 | [30](30-web-gelo-descanso-e-metricas.md) | Web: gelo, descanso, cartão Seu mês e métricas no Perfil | Conversa 25/11 | M | 22, 28, 29 | feito |
-| [31](31-mansao-do-sapo.md) | Mansão do sapo: 24 partes, pré requisitos, cômodos decoráveis e ilha detalhada | Conversa 25/11 | L | 18, 23, 24 | a fazer |
+| [31](31-mansao-do-sapo.md) | Mansão do sapo: 24 partes, pré requisitos, cômodos decoráveis e ilha detalhada | Conversa 25/11 | L | 18, 23, 24 | feito |
 
 ## Como as specs se ligam
 
