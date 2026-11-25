@@ -106,6 +106,19 @@ export function repositorioInterno(api: ClienteInterno): Repository {
       await lerJson(await api.api.island.purchases[':item'].$put({ param: { item: purchase.item }, json: purchase }));
     },
 
+    listHousePurchases: async () => (await lerJson(await api.api.house.$get())).purchases,
+    saveHousePurchase: async (purchase) => {
+      await lerJson(await api.api.house[':item'].$put({ param: { item: purchase.item }, json: purchase }));
+    },
+    listRoomDecor: async () => (await lerJson(await api.api.room.$get())).decor,
+    saveRoomDecor: async (decor) => {
+      await lerJson(await api.api.room[':item'].$put({ param: { item: decor.item }, json: decor }));
+    },
+    moveRoomDecor: async (item, spot) => {
+      await lerJson(await api.api.room[':item'].$patch({ param: { item }, json: spot }));
+    },
+    getJoiaCredit: async () => (await lerJson(await api.api.house.$get())).joiaCredit,
+
     getMascotState: async () => (await lerJson(await api.api.mascot.$get())).mascot,
     // O servidor calcula o sapo ao gravar sessões e descansos.
     saveMascotState: async () => undefined,

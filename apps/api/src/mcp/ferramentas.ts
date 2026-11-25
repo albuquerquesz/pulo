@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { DEFAULT_DAY_END_HOUR, DEFAULT_DAY_START_HOUR, DEFAULT_TIMEZONE, FOCUS } from '@pulo/core/config/decisions';
+import { DEFAULT_DAY_END_HOUR, DEFAULT_DAY_START_HOUR, DEFAULT_TIMEZONE, FOCUS, ROOM_GRID } from '@pulo/core/config/decisions';
 import { dateKeyOf, weekdayOf, weekStartOf } from '@pulo/core/domain/day';
 import { concluirFoco, iniciarFoco, interromperFoco, pausarFoco, retomarFoco } from '@pulo/core/domain/foco';
 import {
@@ -16,7 +16,14 @@ import {
   removerMarco,
   sortGoals,
 } from '@pulo/core/domain/goals';
-import { type EstadoDaIlha, comprarNaIlha, verIlha } from '@pulo/core/domain/ilha';
+import {
+  type EstadoDaCasa,
+  comprarDecoracao,
+  comprarParte,
+  moverDecoracao,
+  precoDaDecoracao,
+  verCasa,
+} from '@pulo/core/domain/casa';
 import { criarHabito, desmarcarHabito, editarHabito, habitsForDate, marcarHabito, removerHabito } from '@pulo/core/domain/habits';
 import {
   blocksForWeekday,
@@ -83,19 +90,27 @@ const meta = (g: Goal, hoje: DateKey) => ({
   marcos: g.milestones.map((m) => ({ id: m.id, titulo: m.title, feito: m.doneAt !== undefined })),
 });
 
-const ilha = (e: EstadoDaIlha) => ({
+const ilha = (e: EstadoDaCasa) => ({
   saldo: e.saldo,
+  moeda: 'joias',
   ganhas: e.ganhas,
   gastas: e.gastas,
-  nivel: e.nivel,
-  areas: e.areas.map((a) => ({
-    id: a.id,
-    nome: a.nome,
-    custo: a.custo,
-    estado: a.estado,
-    enfeites: a.enfeitesNoMapa.map((en) => ({ id: en.id, nome: en.nome, custo: en.custo, comprado: en.comprado })),
-  })),
+  casa: { construidas: e.construidas, total: e.total, completa: e.completa, proxima: e.proxima, partes: e.partes },
+  quarto: {
+    grade: { colunas: ROOM_GRID.columns, linhas: ROOM_GRID.rows, giros: ROOM_GRID.rotations },
+    decoracoes: e.decoracoes.map((d) => ({
+      id: d.id,
+      nome: d.nome,
+      custo: d.custo,
+      comprado: d.posicao !== null,
+      ...(d.posicao ? { x: d.posicao.x, y: d.posicao.y, giro: d.posicao.rotation } : {}),
+    })),
+  },
 });
+
+const xSchema = z.number().int().min(0).max(ROOM_GRID.columns - 1).describe('Coluna no chão do quarto, a partir de 0');
+const ySchema = z.number().int().min(0).max(ROOM_GRID.rows - 1).describe('Linha no chão do quarto, a partir de 0');
+const giroSchema = z.union(ROOM_GRID.rotations.map((r) => z.literal(r))).describe('Giro em graus');
 
 // ---------- Respostas ----------
 
@@ -691,13 +706,13 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     {
       title: 'Ver a ilha',
       description:
-        'A ilha do sapo: saldo de moscas (e de onde vieram), áreas na ordem do mapa (aberta, próxima ou fechada) e enfeites com preço e se já foram comprados.',
+        'A casa do sapo na ilha e o quarto: saldo de joias (e de onde vieram), partes da casa (construídas e por construir, com preço) e decorações do quarto (preço e posição das compradas).',
       annotations: LEITURA,
     },
     () =>
       protegido(async () => {
         await pessoa(repo);
-        return resposta(ilha(await verIlha(repo)));
+        return resposta(ilha(await verCasa(repo)));
       }),
   );
 
@@ -706,14 +721,38 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     {
       title: 'Comprar na ilha',
       description:
-        'Gasta moscas para abrir a próxima área ou comprar um enfeite de uma área aberta. Use os ids de ver_ilha. Compras não podem ser desfeitas.',
-      inputSchema: { item: idSchema.describe('Id da área ou do enfeite, como aparece em ver_ilha') },
+        'Gasta joias para construir uma parte da casa ou comprar uma decoração do quarto. Use os ids de ver_ilha. Para decoração, x, y e giro dizem onde colocar (padrão 0). Compras não podem ser desfeitas.',
+      inputSchema: {
+        item: idSchema.describe('Id da parte ou da decoração, como aparece em ver_ilha'),
+        x: xSchema.optional(),
+        y: ySchema.optional(),
+        giro: giroSchema.optional(),
+      },
       annotations: ESCRITA,
     },
-    ({ item }) =>
+    ({ item, x = 0, y = 0, giro = 0 }) =>
       protegido(async () => {
         await pessoa(repo);
-        const r = await comprarNaIlha(repo, clock, item);
+        const r =
+          precoDaDecoracao(item) === null
+            ? await comprarParte(repo, clock, item)
+            : await comprarDecoracao(repo, clock, item, { x, y, rotation: giro });
+        return deCaso(r, () => r.ok && ilha(r.value));
+      }),
+  );
+
+  server.registerTool(
+    'mover_decoracao',
+    {
+      title: 'Mover decoração',
+      description: 'Muda de lugar uma decoração já comprada, sem custo. Use os ids de ver_ilha.',
+      inputSchema: { item: idSchema.describe('Id da decoração'), x: xSchema, y: ySchema, giro: giroSchema.optional() },
+      annotations: ESCRITA,
+    },
+    ({ item, x, y, giro = 0 }) =>
+      protegido(async () => {
+        await pessoa(repo);
+        const r = await moverDecoracao(repo, item, { x, y, rotation: giro });
         return deCaso(r, () => r.ok && ilha(r.value));
       }),
   );
@@ -725,7 +764,7 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     {
       title: 'Apagar todos os dados',
       description:
-        'Apaga sapo, rotina, hábitos, focos, descansos, propostas, metas e compras da ilha da conta, em todos os aparelhos. Não dá para desfazer. Só use se a pessoa pediu explicitamente.',
+        'Apaga sapo, rotina, hábitos, focos, descansos, propostas, metas, casa e quarto da conta, em todos os aparelhos. Não dá para desfazer. Só use se a pessoa pediu explicitamente.',
       inputSchema: { confirmacao: z.literal('APAGAR TUDO').describe('Escreva exatamente APAGAR TUDO') },
       annotations: DESTRUTIVA,
     },
