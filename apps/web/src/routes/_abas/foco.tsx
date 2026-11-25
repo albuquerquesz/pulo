@@ -1,5 +1,7 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 
-import { FocoScreen } from '@/features/foco/FocoScreen';
-
-export const Route = createFileRoute('/_abas/foco')({ component: FocoScreen });
+export const Route = createFileRoute('/_abas/foco')({
+  beforeLoad: () => {
+    throw redirect({ to: '/casa', replace: true });
+  },
+});

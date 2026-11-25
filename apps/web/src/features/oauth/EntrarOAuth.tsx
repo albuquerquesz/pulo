@@ -27,7 +27,7 @@ export function EntrarOAuth() {
   };
 
   return (
-    <Tela semBarra>
+    <Tela>
       <div className="flex justify-center pt-6">
         <Sapo fase={1} estado="pensando" tamanho={140} />
       </div>

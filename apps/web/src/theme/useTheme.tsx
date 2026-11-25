@@ -7,7 +7,7 @@ const TemaContext = createContext<Tema | null>(null);
 const CONSULTA_ESCURO = '(prefers-color-scheme: dark)';
 const CONSULTA_REDUZIR = '(prefers-reduced-motion: reduce)';
 
-function useConsultaDeMidia(consulta: string) {
+export function useConsultaDeMidia(consulta: string) {
   return useSyncExternalStore(
     (avisar) => {
       const lista = window.matchMedia(consulta);

@@ -58,6 +58,26 @@ export const darkColors: ColorTokens = {
   ...acao,
 };
 
+/** Cores próprias do rascunho (spec 21): contorno grosso, joia, madeira e números do trilho. Iguais nos dois temas. */
+export const drawingColors = {
+  contorno: '#3B2A2F',
+  joiaClara: '#EBDDFF',
+  joia: '#B583FF',
+  joiaEscura: '#7B3FE4',
+  creme: '#FFF3DA',
+  madeira: '#C98B5E',
+  madeiraClara: '#E7B07E',
+  folha: '#FBF4EE',
+  sombraBranca: '#E4DCCB',
+  lima: '#C7E36B',
+  limaClara: '#E6F6A8',
+  ceu: '#CBF1F6',
+  cancelar: '#F08A7A',
+  cancelarBorda: '#D0644F',
+  numeroFoco: '#FF9B7A',
+  numeroJoia: '#C29BFF',
+} as const;
+
 /** Céu noturno da lagoa (spec 04). */
 export const nightSky = '#243A6B';
 

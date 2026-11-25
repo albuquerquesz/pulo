@@ -34,7 +34,7 @@ export function ConsentimentoOAuth() {
 
   const nome = estado.tipo === 'pronto' ? estado.nome : 'O app';
   return (
-    <Tela semBarra>
+    <Tela>
       <div className="flex justify-center pt-6">
         <Sapo fase={1} estado="surpreso" tamanho={140} />
       </div>

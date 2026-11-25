@@ -2,33 +2,19 @@ import { useState } from 'react';
 
 import { JOIAS } from '@pulo/core/config/decisions';
 import { AREAS, comprarNaIlha, verIlha, type AreaId, type AreaNoMapa, type EstadoDaIlha } from '@pulo/core/domain/ilha';
+import { textoDeFalta } from '@pulo/core/domain/joias';
 import type { Phase } from '@pulo/core/domain/types';
 import { MapaDaIlha } from '@/mascot/ilha/MapaDaIlha';
-import { Botao, Cartao, EstadoVazio, Texto } from '@/ui';
+import { Botao, Cartao, EstadoVazio, Joia, Texto } from '@/ui';
 
 import { Secao, useApp, useCarregar } from '../app';
 
-export const TEXTO_DE_ERRO = 'A ilha ficou sem sinal. Suas moscas estão guardadas.';
-
-/** Ícone da moeda: uma mosquinha numa moeda amarela (legível nos dois temas). */
-export function Mosca({ tamanho = 18 }: { tamanho?: number }) {
-  return (
-    <svg width={tamanho} height={tamanho} viewBox="0 0 24 24" aria-hidden>
-      <circle cx={12} cy={12} r={11.5} fill="#FFD166" />
-      <circle cx={12} cy={12} r={11.5} fill="none" stroke="#E0A93A" strokeWidth={1.5} />
-      <ellipse cx={8.6} cy={9.6} rx={3.6} ry={2.3} fill="#FFFFFF" fillOpacity={0.9} transform="rotate(-25 8.6 9.6)" />
-      <ellipse cx={15.4} cy={9.6} rx={3.6} ry={2.3} fill="#FFFFFF" fillOpacity={0.9} transform="rotate(25 15.4 9.6)" />
-      <ellipse cx={12} cy={13.6} rx={3} ry={4.2} fill="#1F2A24" />
-      <circle cx={10.9} cy={10.6} r={1} fill="#E5484D" />
-      <circle cx={13.1} cy={10.6} r={1} fill="#E5484D" />
-    </svg>
-  );
-}
+export const TEXTO_DE_ERRO = 'A ilha ficou sem sinal. Suas joias estão guardadas.';
 
 function Preco({ valor }: { valor: number }) {
   return (
     <span className="inline-flex items-center gap-1 font-extrabold">
-      <Mosca tamanho={16} />
+      <Joia largura={12} altura={14} />
       {valor}
     </span>
   );
@@ -59,7 +45,7 @@ export function IlhaScreen() {
 
   if (estado.tipo !== 'ok') {
     return (
-      <main className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 pt-4 pb-28">
+      <main className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 pt-4 pb-6">
         <Texto como="h1" variante="titulo">
           Ilha
         </Texto>
@@ -98,7 +84,7 @@ export function IlhaScreen() {
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-28 md:max-w-6xl md:px-8 md:pt-8 md:pb-10">
+    <main className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-6 md:max-w-6xl md:px-8 md:pt-8 md:pb-10">
       <header className="flex items-center justify-between gap-3">
         <div className="flex flex-col">
           <Texto como="h1" variante="titulo">
@@ -110,10 +96,10 @@ export function IlhaScreen() {
         </div>
         <div
           className="flex items-center gap-2 rounded-full border-b-4 border-line bg-surface px-4 py-2"
-          aria-label={`${ilha.saldo} moscas`}
-          data-testid="saldo-de-moscas"
+          aria-label={`${ilha.saldo} joias`}
+          data-testid="saldo-de-joias"
         >
-          <Mosca tamanho={22} />
+          <Joia largura={18} altura={21} />
           <Texto como="span" variante="subtitulo">
             {ilha.saldo}
           </Texto>
@@ -128,7 +114,7 @@ export function IlhaScreen() {
         <div className="flex flex-col gap-4">
           <PainelDaArea area={area} ilha={ilha} comprando={comprando} onComprar={(item, nome, ehArea) => void comprar(item, nome, ehArea)} />
 
-          <Secao titulo="Como ganhar moscas" extra={<Texto variante="legenda" cor="muted">{ilha.ganhas.total} no total</Texto>}>
+          <Secao titulo="Como ganhar joias" extra={<Texto variante="legenda" cor="muted">{ilha.ganhas.total} no total</Texto>}>
             <Cartao>
               <ul className="flex flex-col gap-2">
                 {GANHOS.map((g) => (
@@ -184,7 +170,7 @@ function PainelDaArea({
       {area.estado === 'proxima' ? (
         <div className="flex flex-col gap-2">
           <Botao
-            titulo={`Abrir por ${area.custo} moscas`}
+            titulo={`Abrir por ${area.custo} joias`}
             desativado={ilha.saldo < area.custo}
             carregando={comprando === area.id}
             onPress={() => onComprar(area.id, area.nome, true)}
@@ -192,7 +178,7 @@ function PainelDaArea({
           />
           {ilha.saldo < area.custo ? (
             <Texto variante="legenda" cor="muted">
-              Faltam {area.custo - ilha.saldo} moscas. Cada hábito feito ajuda.
+              {textoDeFalta(area.custo - ilha.saldo)} Cada hábito feito ajuda.
             </Texto>
           ) : null}
         </div>
@@ -216,7 +202,7 @@ function PainelDaArea({
               ) : area.estado === 'aberta' ? (
                 <Botao
                   titulo="Comprar"
-                  rotulo={`Comprar ${e.nome} por ${e.custo} moscas`}
+                  rotulo={`Comprar ${e.nome} por ${e.custo} joias`}
                   largura="auto"
                   desativado={falta > 0}
                   carregando={comprando === e.id}

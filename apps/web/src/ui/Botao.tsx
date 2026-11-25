@@ -21,12 +21,12 @@ export type BotaoProps = {
 };
 
 const VARIANTE: Record<VarianteDeBotao, string> = {
-  primario: 'bg-sapo border-sapo-borda text-ink-sobre-acao',
-  foco: 'bg-foco border-foco-borda text-ink-sobre-acao',
-  fantasma: 'bg-transparent border-line border-2 text-ink',
+  primario: 'bg-sapo shadow-[inset_0_-4px_0_var(--pulo-sapo-borda)] text-ink-sobre-acao',
+  foco: 'bg-foco shadow-[inset_0_-4px_0_var(--pulo-foco-borda)] text-ink-sobre-acao',
+  fantasma: 'bg-transparent border-[1.5px] border-line shadow-[inset_0_-3px_0_var(--pulo-line)] text-ink',
 };
 
-/** Botão com borda inferior de 4 px; pressionado, afunda 3 px. Texto sempre `ink` sobre as cores de ação. */
+/** Botão do rascunho (`.btn`): sombra interna de 4 px; pressionado, afunda 3 px. Texto sempre `ink` sobre as cores de ação. */
 export function Botao({ titulo, onPress, variante = 'primario', desativado, carregando, rotulo, largura = 'cheia', className = '', testID, tipo = 'button', icone }: BotaoProps) {
   const bloqueado = !!desativado || !!carregando;
   return (
@@ -38,9 +38,9 @@ export function Botao({ titulo, onPress, variante = 'primario', desativado, carr
       aria-busy={!!carregando}
       data-testid={testID}
       className={[
-        'flex min-h-[52px] min-w-11 cursor-pointer items-center justify-center gap-2 rounded-md border-b-4',
-        icone ? 'size-[52px] px-0' : 'px-5',
-        'transition-transform duration-75 enabled:active:translate-y-[3px] enabled:active:border-b',
+        'flex min-h-12 min-w-11 cursor-pointer items-center justify-center gap-2 rounded-md py-3',
+        icone ? 'size-12 px-0' : 'px-[22px]',
+        'transition-transform duration-75 enabled:active:translate-y-[3px]',
         'disabled:cursor-not-allowed disabled:opacity-45',
         largura === 'cheia' ? 'w-full' : 'self-start',
         VARIANTE[variante],
@@ -49,7 +49,7 @@ export function Botao({ titulo, onPress, variante = 'primario', desativado, carr
     >
       {carregando ? <span aria-hidden className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" /> : null}
       {icone ?? (
-        <Texto como="span" variante="subtitulo" cor={variante === 'fantasma' ? 'ink' : 'inkSobreAcao'} linhas={1}>
+        <Texto como="span" cor={variante === 'fantasma' ? 'ink' : 'inkSobreAcao'} linhas={1} className="font-extrabold">
           {titulo}
         </Texto>
       )}

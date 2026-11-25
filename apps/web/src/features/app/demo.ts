@@ -2,6 +2,12 @@ import { createMemoryRepository } from '@/data';
 import { createDemoClock, seedRepository, type DemoClock } from '@pulo/core/demo';
 import type { Repository } from '@pulo/core/domain/types';
 
+import { completarDemo } from './demoDoRascunho';
+import type { PessoaLogada } from '../sessao/auth';
+
+/** A pessoa de exemplo que a casca mostra no demo (a do rascunho). */
+export const PESSOA_DO_DEMO: PessoaLogada = { id: 'demo-user', nome: 'Ana', email: 'ana@exemplo.com' };
+
 export interface SessaoDemo {
   repo: Repository;
   clock: DemoClock;
@@ -12,5 +18,6 @@ export async function criarSessaoDemo(): Promise<SessaoDemo> {
   const clock = createDemoClock();
   const repo = createMemoryRepository();
   await seedRepository(repo, clock);
+  await completarDemo(repo, clock);
   return { repo, clock };
 }
