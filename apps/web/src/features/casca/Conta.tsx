@@ -1,9 +1,6 @@
 import { Link } from '@tanstack/react-router';
 
-export interface ContaNaTela {
-  nome: string;
-  email: string;
-}
+import type { ContaNaTela } from './logic';
 
 type ContaProps = { conta: ContaNaTela; noPerfil: boolean; className?: string };
 

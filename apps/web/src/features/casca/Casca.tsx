@@ -5,8 +5,8 @@ import { Botao } from '@/ui';
 
 import { useApp, useCarregar } from '../app';
 import { PESSOA_DO_DEMO } from '../app/demo';
-import { Conta, type ContaNaTela } from './Conta';
-import { abaAtiva, carregarTrilho, telaDeImersao } from './logic';
+import { Conta } from './Conta';
+import { abaAtiva, carregarTrilho, contaNaTela, telaDeImersao } from './logic';
 import { Navegacao } from './Navegacao';
 import { CartaoDaCasa, CartaoDasMetas, NumerosDoDia } from './Trilho';
 
@@ -50,7 +50,7 @@ export function Casca({ caminho, children }: CascaProps) {
   const comTrilho = largo && !imersao;
   const noConteudo = !largo && noHoje;
   const dados = estado.tipo === 'ok' ? estado.dados : null;
-  const conta: ContaNaTela = pessoa ?? (demo ? PESSOA_DO_DEMO : { nome: user?.frogName ?? 'Você', email: '' });
+  const conta = contaNaTela(pessoa, demo ? PESSOA_DO_DEMO : null, user);
   const noPerfil = caminho === '/perfil';
   const falha =
     estado.tipo === 'erro' ? (
