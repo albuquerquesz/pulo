@@ -3,6 +3,7 @@
 import { createHarness, TEST_NOW, TEST_ORIGIN, type TestUser } from '@pulo/api/src/testing';
 import { DEFAULT_TIMEZONE, JOIAS, MAX_HABITS_PER_DAY } from '@pulo/core/config/decisions';
 import { dateKeyOf } from '@pulo/core/domain/day';
+import { verConquistas } from '@pulo/core/domain/achievements';
 import { verSequencia } from '@pulo/core/domain/streak';
 import { comprarNaIlha } from '@pulo/core/domain/ilha';
 import { criarPlanoInicial } from '@pulo/core/domain/routine';
@@ -179,6 +180,34 @@ describe('RemoteRepository: sequência', () => {
     await repo.saveRestDay({ date: '2026-11-10' });
     caiu = true;
     expect(await repo.getStreak()).toMatchObject({ atual: 0, recorde: 0 });
+  });
+});
+
+describe('RemoteRepository: conquistas', () => {
+  it('vêm no sync, avisam ao destravar e só voltam ao servidor depois de uma escrita que pode mudá-las', async () => {
+    const me = await h.newUser();
+    const { fetch, calls } = recordingFetch();
+    const repo = await open(me, fetch);
+    const avisos: string[][] = [];
+    const cancelar = repo.onNewAchievements((novas) => avisos.push(novas.map((item) => item.id)));
+    expect((await verConquistas(repo, clock)).filter((item) => item.conquistada)).toEqual([]);
+    expect(calls).toEqual(['GET /api/sync']);
+
+    for (const date of ['2026-11-01', '2026-11-03', '2026-11-05', '2026-11-07']) await repo.saveRestDay({ date });
+    await repo.saveRestDay({ date: '2026-11-07' });
+    expect(avisos).toEqual([['descanso-sabido']]);
+
+    const depois = await repo.getAchievements();
+    expect(depois.find((item) => item.id === 'descanso-sabido')).toMatchObject({ conquistada: true, conquistadaEm: TEST_NOW });
+    await repo.getAchievements();
+    expect(calls.filter((c) => c === 'GET /api/achievements')).toHaveLength(1);
+
+    cancelar();
+    await repo.saveSession({
+      id: uuid(), startedAt: TEST_NOW - 60 * 60_000, endedAt: TEST_NOW - 10 * 60_000, plannedMinutes: 50, state: 'concluida', pausedMs: 0,
+    });
+    expect(avisos).toHaveLength(1);
+    expect((await repo.getAchievements()).find((item) => item.id === 'foco-profundo')).toMatchObject({ conquistada: true });
   });
 });
 

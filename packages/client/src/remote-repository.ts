@@ -1,5 +1,6 @@
 import {
   type ApiErrorCode,
+  achievementsResponseSchema,
   type GenerateProposalBody,
   type GenerateProposalResponse,
   type ProposalDecisionBody,
@@ -15,11 +16,13 @@ import {
 } from '@pulo/core/api/schemas';
 import { ACCOUNT, DEFAULT_TIMEZONE } from '@pulo/core/config/decisions';
 import type { BatchWrites } from '@pulo/core/data/batch';
+import type { AchievementSource } from '@pulo/core/domain/achievements';
 import { systemClock } from '@pulo/core/domain/clock';
 import { dateKeyOf, inRange } from '@pulo/core/domain/day';
 import type { StatsSource } from '@pulo/core/domain/stats';
 import type { StreakSource } from '@pulo/core/domain/streak';
 import type {
+  Achievement,
   Clock,
   DateKey,
   DateRange,
@@ -60,6 +63,7 @@ import {
 import { z } from 'zod';
 import { type ApiClient, type ApiOptions, createApiClient, readJson } from './api';
 import {
+  cloneAchievement,
   cloneBlock,
   cloneGoal,
   cloneGoalChest,
@@ -101,7 +105,7 @@ export interface Account {
  * Escritas atualizam o cache na hora e vão ao servidor com o `PUT` ou `DELETE` da rota; se falharem, o cache volta
  * ao que era e o erro (`RemoteError`, com texto em português) sobe para a tela.
  */
-export interface RemoteRepository extends Repository, BatchWrites, StreakSource, StatsSource {
+export interface RemoteRepository extends Repository, BatchWrites, StreakSource, StatsSource, AchievementSource {
   readonly account: Account;
   /**
    * `POST /api/proposals/generate`: o servidor lê os dados, aplica as regras, consulta a IA (se houver) e guarda a proposta.
@@ -119,6 +123,13 @@ export interface RemoteRepository extends Repository, BatchWrites, StreakSource,
    * (ou da virada do dia), espera as escritas pendentes e chama `GET /api/streak`. Se a rede falhar, devolve a última.
    */
   getStreak(): Promise<Streak>;
+  /**
+   * As conquistas calculadas pelo servidor (vêm no sync). Depois de uma escrita que pode mudá-las (ou da virada do dia),
+   * chama `GET /api/achievements`. Se a rede falhar, devolve as últimas.
+   */
+  getAchievements(): Promise<Achievement[]>;
+  /** Avisa quando uma escrita destrava conquistas, para o app comemorar. Devolve a função que cancela o aviso. */
+  onNewAchievements(listener: (unlocked: Achievement[]) => void): () => void;
   /** As preferências da conta (vêm no sync). */
   getPreferences(): Promise<Preferences>;
   /** Muda só as preferências enviadas (`PATCH /api/me/metadata`), com cache otimista. */
@@ -152,6 +163,8 @@ const taskActivitySchema = z.object({ events: z.array(taskEventSchema), comments
 const logKey = (habitId: EntityId, date: DateKey) => `${habitId}|${date}`;
 /** Chaves das escritas que podem mudar a sequência: hábitos e registros, sessões, descansos, perfil e apagar tudo. */
 const STREAK_LOCKS = /^(habit|log|session|rest):|^(user|all)$/;
+/** As que mudam a sequência e as compras da casa mudam as conquistas. */
+const ACHIEVEMENT_LOCKS = /^(habit|log|session|rest|house):|^(user|all)$/;
 
 class ApiRepository implements RemoteRepository {
   private readonly client: ApiClient;
@@ -170,6 +183,11 @@ class ApiRepository implements RemoteRepository {
   private streakVersion = 0;
   private stats: ProfileStats | null = null;
   private statsStale = false;
+  private achievements: Achievement[] | null = null;
+  /** Como `streakDay` e `streakVersion`, para as conquistas. */
+  private achievementsDay: DateKey | null = null;
+  private achievementsVersion = 0;
+  private readonly achievementListeners = new Set<(unlocked: Achievement[]) => void>();
 
   private readonly blocks = new Collection<RoutineBlock>((b) => b.id, cloneBlock);
   private readonly habits = new Collection<Habit>((h) => h.id, cloneHabit);
@@ -211,6 +229,8 @@ class ApiRepository implements RemoteRepository {
     this.streakDay = this.today();
     this.stats = data.stats;
     this.statsStale = false;
+    this.achievements = data.achievements;
+    this.achievementsDay = this.today();
     this.blocks.replaceAll(data.blocks);
     this.habits.replaceAll(data.habits);
     this.habitLogs.replaceAll(data.habitLogs);
@@ -233,6 +253,7 @@ class ApiRepository implements RemoteRepository {
     const run = (this.locks.get(lock) ?? Promise.resolve()).then(task);
     const settle = () => {
       if (STREAK_LOCKS.test(lock)) this.expireStreak();
+      if (ACHIEVEMENT_LOCKS.test(lock)) this.expireAchievements();
     };
     const settled = run.then(settle, settle);
     this.locks.set(lock, settled);
@@ -310,6 +331,14 @@ class ApiRepository implements RemoteRepository {
 
   private mascotFrom(mascot: MascotState | null): void {
     if (mascot) this.mascot = cloneMascot(mascot);
+  }
+
+  /** Guarda o que a escrita destravou e avisa quem quer comemorar. */
+  private unlocked(fresh: Achievement[]): void {
+    if (fresh.length === 0) return;
+    const byId = new Map(fresh.map((item) => [item.id, item]));
+    this.achievements = this.achievements?.map((item) => byId.get(item.id) ?? item) ?? null;
+    for (const listener of this.achievementListeners) listener(fresh.map(cloneAchievement));
   }
 
   // ---------- Usuário (metadados da conta) ----------
@@ -437,7 +466,10 @@ class ApiRepository implements RemoteRepository {
   saveHabitLog(log: HabitLog): Promise<void> {
     const { habitId, date } = log;
     return this.write(this.habitLogs, `log:${logKey(habitId, date)}`, logKey(habitId, date), log, async () => {
-      await readJson(await this.client.api['habit-logs'][':habitId'][':date'].$put({ param: { habitId, date }, json: log }));
+      const { newAchievements } = await readJson(
+        await this.client.api['habit-logs'][':habitId'][':date'].$put({ param: { habitId, date }, json: log }),
+      );
+      this.unlocked(newAchievements);
     });
   }
 
@@ -455,8 +487,11 @@ class ApiRepository implements RemoteRepository {
 
   saveSession(session: FocusSession): Promise<void> {
     return this.write(this.sessions, `session:${session.id}`, session.id, session, async () => {
-      const { mascot } = await readJson(await this.client.api.sessions[':id'].$put({ param: { id: session.id }, json: session }));
+      const { mascot, newAchievements } = await readJson(
+        await this.client.api.sessions[':id'].$put({ param: { id: session.id }, json: session }),
+      );
       this.mascotFrom(mascot);
+      this.unlocked(newAchievements);
     });
   }
 
@@ -469,8 +504,9 @@ class ApiRepository implements RemoteRepository {
   saveRestDay(restDay: RestDay): Promise<void> {
     const { date } = restDay;
     return this.write(this.restDays, `rest:${date}`, date, restDay, async () => {
-      const { mascot } = await readJson(await this.client.api['rest-days'][':date'].$put({ param: { date } }));
+      const { mascot, newAchievements } = await readJson(await this.client.api['rest-days'][':date'].$put({ param: { date } }));
       this.mascotFrom(mascot);
+      this.unlocked(newAchievements);
     });
   }
 
@@ -703,7 +739,8 @@ class ApiRepository implements RemoteRepository {
   saveHousePurchase(purchase: Purchase): Promise<void> {
     const { item } = purchase;
     return this.write(this.housePurchases, `house:${item}`, item, purchase, async () => {
-      await readJson(await this.client.api.house[':item'].$put({ param: { item }, json: purchase }));
+      const { newAchievements } = await readJson(await this.client.api.house[':item'].$put({ param: { item }, json: purchase }));
+      this.unlocked(newAchievements);
     });
   }
 
@@ -768,6 +805,33 @@ class ApiRepository implements RemoteRepository {
     return cloneStreak(this.streak);
   }
 
+  // ---------- Conquistas ----------
+
+  private expireAchievements(): void {
+    this.achievementsVersion += 1;
+    this.achievementsDay = null;
+  }
+
+  async getAchievements(): Promise<Achievement[]> {
+    await Promise.all(this.locks.values());
+    const day = this.today();
+    if (this.achievements && this.achievementsDay === day) return this.achievements.map(cloneAchievement);
+    const version = this.achievementsVersion;
+    try {
+      const raw = await readJson(await this.client.api.achievements.$get());
+      this.achievements = achievementsResponseSchema.parse(raw).achievements;
+      if (version === this.achievementsVersion) this.achievementsDay = day;
+    } catch (error) {
+      if (!this.achievements) throw error;
+    }
+    return this.achievements.map(cloneAchievement);
+  }
+
+  onNewAchievements(listener: (unlocked: Achievement[]) => void): () => void {
+    this.achievementListeners.add(listener);
+    return () => void this.achievementListeners.delete(listener);
+  }
+
   // ---------- Perfil e conta ----------
 
   async getStats(): Promise<ProfileStats> {
@@ -808,6 +872,7 @@ class ApiRepository implements RemoteRepository {
       this.metadata = null;
       this.streak = null;
       this.stats = null;
+      this.achievements = null;
     });
   }
 
