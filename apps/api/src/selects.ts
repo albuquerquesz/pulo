@@ -11,9 +11,21 @@ export const blockSelect = {
   durationMinutes: true,
   kind: true,
   title: true,
+  icon: true,
 } as const satisfies Prisma.RoutineBlockSelect;
 
-export const habitSelect = { id: true, title: true, weekdays: true, active: true } as const satisfies Prisma.HabitSelect;
+export const habitSelect = {
+  id: true,
+  title: true,
+  weekdays: true,
+  state: true,
+  goalId: true,
+  icon: true,
+  color: true,
+  period: true,
+  reminderMinutes: true,
+  reminderOn: true,
+} as const satisfies Prisma.HabitSelect;
 
 export const habitLogSelect = { habitId: true, date: true, doneAt: true } as const satisfies Prisma.HabitLogSelect;
 
@@ -26,6 +38,10 @@ export const sessionSelect = {
   state: true,
   pausedMs: true,
   pausedSince: true,
+  intention: true,
+  habitId: true,
+  goalId: true,
+  taskId: true,
 } as const satisfies Prisma.FocusSessionSelect;
 
 export const restDaySelect = { date: true } as const satisfies Prisma.RestDaySelect;
@@ -53,6 +69,38 @@ export const goalSelect = {
   milestones: true,
   createdAt: true,
   completedAt: true,
+  icon: true,
+  color: true,
 } as const satisfies Prisma.GoalSelect;
 
+export const achievementSelect = { achievement: true, conquistadaEm: true } as const satisfies Prisma.AchievementSelect;
+
+export const goalChestSelect = { goalId: true, abertoEm: true, joias: true } as const satisfies Prisma.GoalChestSelect;
+
 export const islandPurchaseSelect = { item: true, cost: true, createdAt: true } as const satisfies Prisma.IslandPurchaseSelect;
+
+export const roomSpotSelect = { x: true, y: true, rotation: true } as const satisfies Prisma.RoomPlacementSelect;
+
+export const roomDecorSelect = { ...islandPurchaseSelect, placement: { select: roomSpotSelect } } as const satisfies Prisma.IslandPurchaseSelect;
+
+export const taskSelect = {
+  id: true,
+  number: true,
+  title: true,
+  description: true,
+  status: true,
+  position: true,
+  priority: true,
+  dueDate: true,
+  tags: true,
+  goalId: true,
+  pomodorosEstimated: true,
+  createdAt: true,
+  completedAt: true,
+} as const satisfies Prisma.TaskSelect;
+
+export const taskSubtaskSelect = { id: true, taskId: true, title: true, done: true, position: true } as const satisfies Prisma.TaskSubtaskSelect;
+
+export const taskCommentSelect = { id: true, taskId: true, body: true, createdAt: true } as const satisfies Prisma.TaskCommentSelect;
+
+export const taskEventSelect = { id: true, taskId: true, kind: true, de: true, para: true, createdAt: true } as const satisfies Prisma.TaskEventSelect;

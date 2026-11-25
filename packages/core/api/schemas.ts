@@ -1,15 +1,22 @@
 import { z } from 'zod';
 
 import {
+  ACCENT_COLORS,
+  ACCOUNT,
+  ACHIEVEMENTS,
   BLOCK_MAX_MINUTES,
   BLOCK_MIN_MINUTES,
   FOCUS,
   GOALS,
+  HABITS,
   MAX_HABITS_PER_DAY,
+  ROOM_GRID,
+  TASKS,
   WEEKLY_AI,
 } from '../config/decisions';
 import { addDays, isDateKey, weekdayOf } from '../domain/day';
 import type {
+  Achievement,
   BlockSlot,
   DateKey,
   FocusSession,
@@ -17,15 +24,26 @@ import type {
   GoalMilestone,
   Habit,
   HabitLog,
+  HabitStats,
   IslandPurchase,
+  RoomDecor,
+  RoomRotation,
+  RoomSpot,
   MascotState,
   Phase,
+  ProfileStats,
   ProposalChange,
   RestDay,
   RoutineBlock,
+  Streak,
+  Task,
+  TaskComment,
+  TaskEvent,
+  TaskSubtask,
   Weekday,
   WeeklyProposal,
 } from '../domain/types';
+import { linkCount } from '../domain/foco/targets';
 
 /**
  * Contrato da API REST do Pulo: os mesmos schemas validam o corpo no servidor (apps/api) e servem
@@ -89,26 +107,57 @@ const titleSchema = z.string().trim().min(1).max(API_LIMITS.titleMaxChars);
 
 // ---------- Entidades ----------
 
-export const routineBlockSchema = z
-  .object({
-    id: idSchema,
-    weekday: weekdaySchema,
-    startMinutes: z.number().int().min(0).max(MINUTES_PER_DAY - 1),
-    durationMinutes: z.number().int().min(BLOCK_MIN_MINUTES).max(BLOCK_MAX_MINUTES),
-    kind: z.enum(['foco', 'descanso']),
-    title: titleSchema.optional(),
-  })
-  .refine((block) => block.startMinutes + block.durationMinutes <= MINUTES_PER_DAY, {
-    message: 'o bloco precisa caber dentro do dia',
-    path: ['durationMinutes'],
-  }) satisfies z.ZodType<RoutineBlock, unknown>;
+/** Emoji curto de hábitos e blocos (spec 17). */
+const iconSchema = z.string().trim().min(1).max(HABITS.iconMaxChars).regex(/^\S+$/);
+
+const blockObjectSchema = z.object({
+  id: idSchema,
+  weekday: weekdaySchema,
+  startMinutes: z.number().int().min(0).max(MINUTES_PER_DAY - 1),
+  durationMinutes: z.number().int().min(BLOCK_MIN_MINUTES).max(BLOCK_MAX_MINUTES),
+  kind: z.enum(['foco', 'descanso']),
+  title: titleSchema.optional(),
+  icon: iconSchema.optional(),
+});
+
+const fitsInDay = (block: { startMinutes: number; durationMinutes: number }) => block.startMinutes + block.durationMinutes <= MINUTES_PER_DAY;
+const fitsInDayIssue = { message: 'o bloco precisa caber dentro do dia', path: ['durationMinutes'] };
+
+export const routineBlockSchema = blockObjectSchema.refine(fitsInDay, fitsInDayIssue) satisfies z.ZodType<RoutineBlock, unknown>;
+
+/** Corpo de escrita de um bloco. `icon`: ausente mantém o gravado (clientes antigos), `null` tira. */
+export const routineBlockInputSchema = blockObjectSchema.extend({ icon: iconSchema.nullable().optional() }).refine(fitsInDay, fitsInDayIssue);
+
+export const habitStateSchema = z.enum(['ativo', 'pausado', 'arquivado']);
+
+const reminderMinutesSchema = z.number().int().min(0).max(MINUTES_PER_DAY - 1);
 
 export const habitSchema = z.object({
   id: idSchema,
   title: titleSchema,
   weekdays: z.array(weekdaySchema).min(1).max(7),
-  active: z.boolean(),
+  state: habitStateSchema,
+  goalId: idSchema.optional(),
+  icon: iconSchema.optional(),
+  color: z.enum(ACCENT_COLORS).optional(),
+  period: periodSchema.optional(),
+  reminderMinutes: reminderMinutesSchema.optional(),
+  reminderOn: z.boolean().optional(),
 }) satisfies z.ZodType<Habit, unknown>;
+
+/**
+ * Corpo de escrita de um hábito. Campo opcional ausente mantém o gravado (clientes antigos) e `null` tira.
+ * `active` é o contrato antigo: sem `state`, `resolveHabitState` do core decide o estado a partir dele.
+ */
+export const habitInputSchema = habitSchema.extend({
+  state: habitStateSchema.optional(),
+  active: z.boolean().optional(),
+  goalId: idSchema.nullable().optional(),
+  icon: iconSchema.nullable().optional(),
+  color: z.enum(ACCENT_COLORS).nullable().optional(),
+  period: periodSchema.nullable().optional(),
+  reminderMinutes: reminderMinutesSchema.nullable().optional(),
+});
 
 /** Ids repetidos no mesmo lote: o servidor não consegue gravar duas versões do mesmo item de uma vez. */
 function uniqueIds(field: 'blocks' | 'habits') {
@@ -121,9 +170,9 @@ function uniqueIds(field: 'blocks' | 'habits') {
   };
 }
 
-/** Corpo de `PUT /api/blocks`: vários blocos de uma vez (tudo ou nada). Cada item segue `routineBlockSchema`. */
+/** Corpo de `PUT /api/blocks`: vários blocos de uma vez (tudo ou nada). Cada item segue `routineBlockInputSchema`. */
 export const blocksBatchSchema = z
-  .object({ blocks: z.array(routineBlockSchema).min(1).max(API_LIMITS.batchMaxBlocks) })
+  .object({ blocks: z.array(routineBlockInputSchema).min(1).max(API_LIMITS.batchMaxBlocks) })
   .superRefine(uniqueIds('blocks'));
 
 export const habitLogSchema = z.object({
@@ -132,8 +181,10 @@ export const habitLogSchema = z.object({
   doneAt: msSchema,
 }) satisfies z.ZodType<HabitLog, unknown>;
 
-export const focusSessionSchema = z
-  .object({
+/** Texto curto, sem espaços nas pontas. */
+const intentionSchema = z.string().trim().min(1).max(FOCUS.intentionMaxChars);
+
+const focusSessionFields = z.object({
     id: idSchema,
     blockId: idSchema.optional(),
     startedAt: msSchema,
@@ -142,8 +193,16 @@ export const focusSessionSchema = z
     state: z.enum(['em_andamento', 'concluida', 'interrompida']),
     pausedMs: z.number().int().min(0).max(MAX_EPOCH_MS),
     pausedSince: msSchema.optional(),
-  })
-  .superRefine((session, ctx) => {
+    intention: intentionSchema.optional(),
+    habitId: idSchema.optional(),
+    goalId: idSchema.optional(),
+    taskId: idSchema.optional(),
+  });
+
+type FocusSessionShape = Omit<FocusSession, 'intention' | 'habitId' | 'goalId' | 'taskId'> &
+  Partial<Record<'intention' | 'habitId' | 'goalId' | 'taskId', string | null>>;
+
+function checkSession(session: FocusSessionShape, ctx: z.RefinementCtx): void {
     const issue = (path: string, message: string) => ctx.addIssue({ code: 'custom', path: [path], message });
     if (session.state === 'em_andamento') {
       if (session.endedAt !== undefined) issue('endedAt', 'sessão em andamento não tem endedAt');
@@ -158,7 +217,38 @@ export const focusSessionSchema = z
     if (session.pausedSince !== undefined && session.pausedSince < session.startedAt) {
       issue('pausedSince', 'pausa antes do início');
     }
-  }) satisfies z.ZodType<FocusSession, unknown>;
+  
+    if (linkCount(session) > 1) issue('taskId', 'o foco se liga a um hábito, uma meta ou uma tarefa, só um deles');
+}
+
+export const focusSessionSchema = focusSessionFields.superRefine(checkSession) satisfies z.ZodType<FocusSession, unknown>;
+
+/**
+ * Corpo de `PUT /api/sessions/:id`. Na intenção e no vínculo, campo omitido mantém o gravado (clientes antigos não os
+ * apagam) e `null` limpa. Mandar um alvo troca o anterior.
+ */
+export const focusSessionInputSchema = focusSessionFields
+  .extend({
+    intention: intentionSchema.nullable().optional(),
+    habitId: idSchema.nullable().optional(),
+    goalId: idSchema.nullable().optional(),
+    taskId: idSchema.nullable().optional(),
+  })
+  .superRefine(checkSession);
+
+export type FocusSessionInput = z.infer<typeof focusSessionInputSchema>;
+
+export const habitStatsResponseSchema = z.object({
+  stats: z.object({
+    sequencia: z.number().int().min(0),
+    recorde: z.number().int().min(0),
+    taxa: z.number().min(0).max(1).nullable(),
+    total: z.number().int().min(0),
+    calendario: z.array(
+      z.array(z.object({ date: dateKeySchema, estado: z.enum(['feito', 'parcial', 'descanso', 'vazio', 'fora', 'futuro']) })),
+    ),
+  }),
+}) satisfies z.ZodType<{ stats: HabitStats }, unknown>;
 
 export const restDaySchema = z.object({ date: dateKeySchema }) satisfies z.ZodType<RestDay, unknown>;
 
@@ -250,6 +340,67 @@ export const mascotStateSchema = z.object({
   updatedAt: msSchema,
 }) satisfies z.ZodType<MascotState, unknown>;
 
+export const streakSchema = z.object({
+  atual: z.number().int().min(0),
+  recorde: z.number().int().min(0),
+  semana: z
+    .array(z.object({ date: dateKeySchema, estado: z.enum(['feito', 'descanso', 'vazio', 'hoje', 'futuro']) }))
+    .length(7),
+}) satisfies z.ZodType<Streak, unknown>;
+
+/** Resposta de `GET /api/streak`. */
+export const streakResponseSchema = z.object({ streak: streakSchema });
+
+export const profileStatsSchema = z.object({
+  habitosFeitos: z.number().int().min(0),
+  minutosDeFoco: z.number().int().min(0),
+  desde: msSchema,
+}) satisfies z.ZodType<ProfileStats, unknown>;
+
+/** Resposta de `GET /api/stats`. */
+export const statsResponseSchema = z.object({ stats: profileStatsSchema });
+
+export const achievementSchema = z.object({
+  id: z.enum(ACHIEVEMENTS.map((item) => item.id)),
+  nome: z.string().optional(),
+  emoji: z.string().optional(),
+  conquistada: z.boolean(),
+  conquistadaEm: msSchema.optional(),
+  progresso: z.number().int().min(0),
+  meta: z.number().int().min(1),
+}) satisfies z.ZodType<Achievement, unknown>;
+
+/** Resposta de `GET /api/achievements`. */
+export const achievementsResponseSchema = z.object({ achievements: z.array(achievementSchema) });
+
+// ---------- Conta (spec 15) ----------
+
+/** Corpo de `POST /api/auth/update-user`: só nome e foto (`image: null` tira a foto). */
+export const accountUpdateSchema = z.strictObject({
+  name: z.string().trim().min(1).max(ACCOUNT.nameMaxChars).optional(),
+  image: z.url({ protocol: /^https$/ }).max(ACCOUNT.imageUrlMaxChars).nullable().optional(),
+});
+
+/** Um aplicativo (Claude ou outro cliente MCP) com acesso à conta. */
+export const mcpConnectionSchema = z.object({
+  clientId: z.string(),
+  /** Nome que o aplicativo deu no registro; `null` se não deu. */
+  name: z.string().nullable(),
+  scopes: z.array(z.string()),
+  /** Quando a pessoa liberou o acesso pela primeira vez e pela última (ms). */
+  connectedAt: msSchema,
+  updatedAt: msSchema,
+});
+export type McpConnection = z.infer<typeof mcpConnectionSchema>;
+
+/** Resposta de `GET /api/mcp/connections` (a mais recente primeiro). */
+export const mcpConnectionsResponseSchema = z.object({ connections: z.array(mcpConnectionSchema) });
+
+export const clientIdParamSchema = z.object({ clientId: z.string().min(1).max(200) });
+
+/** Corpo de `DELETE /api/account`: a palavra de confirmação (sem ela, 400 `corpo_invalido`). */
+export const deleteAccountBodySchema = z.object({ confirm: z.literal(ACCOUNT.deleteConfirmation) });
+
 export const goalMilestoneSchema = z.object({
   id: idSchema,
   title: titleSchema,
@@ -266,6 +417,8 @@ export const goalSchema = z
     milestones: z.array(goalMilestoneSchema).max(GOALS.maxMilestones),
     createdAt: msSchema,
     completedAt: msSchema.optional(),
+    icon: z.string().trim().min(1).max(GOALS.iconMaxChars).regex(/^\S+$/).optional(),
+    color: z.enum(ACCENT_COLORS).optional(),
   })
   .superRefine((goal, ctx) => {
     const issue = (path: string, message: string) => ctx.addIssue({ code: 'custom', path: [path], message });
@@ -274,16 +427,85 @@ export const goalSchema = z
     if (new Set(goal.milestones.map((m) => m.id)).size !== goal.milestones.length) issue('milestones', 'id de marco repetido');
   }) satisfies z.ZodType<Goal, unknown>;
 
-/** Compra da ilha. `item` é um id do catálogo (`ISLAND`); o preço e a ordem quem confere é o servidor (`validarCompra`). */
+const positionSchema = z.number();
+const taskTitleSchema = z.string().trim().min(1).max(TASKS.titleMaxChars);
+
+export const taskStatusSchema = z.enum(['ideias', 'afazer', 'fazendo', 'feito']);
+export const taskPrioritySchema = z.enum(['normal', 'alta']);
+
+export const taskSchema = z
+  .object({
+    id: idSchema,
+    /** Só o servidor atribui; o que vier no corpo é ignorado. */
+    number: z.number().int().min(1).optional(),
+    title: taskTitleSchema,
+    description: z.string().min(1).max(TASKS.descriptionMaxChars).optional(),
+    status: taskStatusSchema,
+    position: positionSchema,
+    priority: taskPrioritySchema,
+    dueDate: dateKeySchema.optional(),
+    tags: z.array(z.string().trim().min(1).max(TASKS.tagMaxChars)).max(TASKS.maxTags),
+    goalId: idSchema.optional(),
+    pomodorosEstimated: z.number().int().min(0).max(TASKS.maxPomodorosEstimated),
+    createdAt: msSchema,
+    completedAt: msSchema.optional(),
+  })
+  .superRefine((task, ctx) => {
+    const issue = (path: string, message: string) => ctx.addIssue({ code: 'custom', path: [path], message });
+    if (task.status !== 'feito' && task.completedAt !== undefined) issue('completedAt', 'tarefa aberta não tem completedAt');
+    if (task.status === 'feito' && task.completedAt === undefined) issue('completedAt', 'tarefa feita precisa de completedAt');
+    if (new Set(task.tags).size !== task.tags.length) issue('tags', 'etiqueta repetida');
+  }) satisfies z.ZodType<Task, unknown>;
+
+export const taskSubtaskSchema = z.object({
+  id: idSchema,
+  taskId: idSchema,
+  title: taskTitleSchema,
+  done: z.boolean(),
+  position: positionSchema,
+}) satisfies z.ZodType<TaskSubtask, unknown>;
+
+export const taskCommentSchema = z.object({
+  id: idSchema,
+  taskId: idSchema,
+  body: z.string().trim().min(1).max(TASKS.commentMaxChars),
+  createdAt: msSchema,
+}) satisfies z.ZodType<TaskComment, unknown>;
+
+export const taskEventSchema = z.object({
+  id: idSchema,
+  taskId: idSchema,
+  kind: z.enum(['criada', 'status', 'prioridade', 'prazo']),
+  de: z.string().optional(),
+  para: z.string().optional(),
+  createdAt: msSchema,
+}) satisfies z.ZodType<TaskEvent, unknown>;
+
+export const subtaskParamSchema = z.object({ id: idSchema, subId: idSchema });
+
+/** Compra com joias (ilha antiga ou casa). `item` é um id de catálogo; o preço e o saldo quem confere é o servidor. */
 export const islandPurchaseSchema = z.object({
   item: idSchema,
   cost: z.number().int().min(0),
   createdAt: msSchema,
 }) satisfies z.ZodType<IslandPurchase, unknown>;
 
-/** Corpo de `PUT /api/habits`: vários hábitos de uma vez (tudo ou nada). Cada item segue `habitSchema`. */
+const rotationSchema = z.custom<RoomRotation>((v) => ROOM_GRID.rotations.some((r) => r === v), { message: 'giro inválido' });
+const spotShape = {
+  x: z.number().int().min(0).max(ROOM_GRID.columns - 1),
+  y: z.number().int().min(0).max(ROOM_GRID.rows - 1),
+  rotation: rotationSchema,
+};
+
+/** Corpo de `PATCH /api/room/:item`: só a posição. */
+export const roomSpotSchema = z.object(spotShape) satisfies z.ZodType<RoomSpot, unknown>;
+
+/** Corpo de `PUT /api/room/:item`: a compra com a posição inicial. */
+export const roomDecorSchema = islandPurchaseSchema.extend(spotShape) satisfies z.ZodType<RoomDecor, unknown>;
+
+/** Corpo de `PUT /api/habits`: vários hábitos de uma vez (tudo ou nada). Cada item segue `habitInputSchema`. */
 export const habitsBatchSchema = z
-  .object({ habits: z.array(habitSchema).min(1).max(API_LIMITS.batchMaxHabits) })
+  .object({ habits: z.array(habitInputSchema).min(1).max(API_LIMITS.batchMaxHabits) })
   .superRefine(uniqueIds('habits'));
 
 // ---------- Consultas ----------
@@ -337,12 +559,16 @@ export const API_ERROR_CODES = [
   'conflito_de_id',
   'limite_por_dia',
   'limite_de_metas',
+  'meta_inexistente',
+  'meta_nao_concluida',
+  'bau_ja_aberto',
+  'limite_de_subtarefas',
   'item_inexistente',
   'preco_divergente',
   'ja_comprado',
   'area_fechada',
   'fora_de_ordem',
-  'moscas_insuficientes',
+  'joias_insuficientes',
   'sessao_em_andamento',
   'sessao_encerrada',
   'sessao_imutavel',

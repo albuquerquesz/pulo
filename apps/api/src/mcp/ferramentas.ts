@@ -1,7 +1,8 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { DEFAULT_DAY_END_HOUR, DEFAULT_DAY_START_HOUR, DEFAULT_TIMEZONE, FOCUS } from '@pulo/core/config/decisions';
+import { ACCENT_COLORS, DEFAULT_DAY_END_HOUR, DEFAULT_DAY_START_HOUR, DEFAULT_TIMEZONE, FOCUS, HABITS, ROOM_GRID, TASKS } from '@pulo/core/config/decisions';
 import { dateKeyOf, weekdayOf, weekStartOf } from '@pulo/core/domain/day';
+import { preferencesFromMetadata } from '@pulo/core/domain/user-metadata';
 import { concluirFoco, iniciarFoco, interromperFoco, pausarFoco, retomarFoco } from '@pulo/core/domain/foco';
 import {
   adicionarMarco,
@@ -16,7 +17,14 @@ import {
   removerMarco,
   sortGoals,
 } from '@pulo/core/domain/goals';
-import { type EstadoDaIlha, comprarNaIlha, verIlha } from '@pulo/core/domain/ilha';
+import {
+  type EstadoDaCasa,
+  comprarDecoracao,
+  comprarParte,
+  moverDecoracao,
+  precoDaDecoracao,
+  verCasa,
+} from '@pulo/core/domain/casa';
 import { criarHabito, desmarcarHabito, editarHabito, habitsForDate, marcarHabito, removerHabito } from '@pulo/core/domain/habits';
 import {
   blocksForWeekday,
@@ -27,8 +35,9 @@ import {
   registrarDescanso,
   removerBloco,
 } from '@pulo/core/domain/routine';
-import type { Clock, DateKey, Goal, Habit, Repository, RoutineBlock, User, Weekday } from '@pulo/core/domain/types';
-import { type ProposalDecisionBody, generateProposalResponseSchema } from '@pulo/core/api/schemas';
+import { TASK_COLUMNS, columnTasks, criarTarefa, matchesDueFilter, moverTarefa, positionAt, subtaskProgress, taskCode, verPomodoros } from '@pulo/core/domain/tasks';
+import type { Clock, DateKey, Goal, Habit, Repository, RoutineBlock, Task, TaskSubtask, User, Weekday } from '@pulo/core/domain/types';
+import { type ProposalDecisionBody, generateProposalResponseSchema, habitStateSchema, periodSchema } from '@pulo/core/api/schemas';
 import { z } from 'zod';
 import { ErroDaApi, type ClienteInterno, lerJson } from './repositorio';
 
@@ -69,9 +78,41 @@ const bloco = (b: RoutineBlock) => ({
   minutos: b.durationMinutes,
   tipo: b.kind,
   ...(b.title ? { titulo: b.title } : {}),
+  ...(b.icon ? { icone: b.icon } : {}),
 });
 
-const habito = (h: Habit) => ({ id: h.id, titulo: h.title, dias: h.weekdays.map(nomeDoDia), ativo: h.active });
+const habito = (h: Habit) => ({
+  id: h.id,
+  titulo: h.title,
+  dias: h.weekdays.map(nomeDoDia),
+  estado: h.state,
+  ativo: h.state === 'ativo',
+  ...(h.goalId ? { metaId: h.goalId } : {}),
+  ...(h.icon ? { icone: h.icon } : {}),
+  ...(h.color ? { cor: h.color } : {}),
+  ...(h.period ? { periodo: h.period } : {}),
+  ...(h.reminderMinutes === undefined ? {} : { lembrete: paraHora(h.reminderMinutes), lembreteLigado: h.reminderOn ?? false }),
+});
+
+const iconeSchema = z.string().trim().min(1).max(HABITS.iconMaxChars).regex(/^\S+$/).describe('Um emoji; null tira');
+
+const aparenciaDoHabito = {
+  icone: iconeSchema.nullable().optional(),
+  cor: z.enum(ACCENT_COLORS).nullable().optional().describe('Cor de destaque; null tira'),
+  periodo: periodSchema.nullable().optional().describe('Período do dia; null tira'),
+  lembrete: horaSchema.nullable().optional().describe('Horário do lembrete (HH:MM); null tira. Só a preferência: nenhum aviso é enviado ainda.'),
+  lembreteLigado: z.boolean().optional().describe('Liga ou desliga o lembrete sem perder o horário'),
+};
+
+type AparenciaDoHabito = z.infer<z.ZodObject<typeof aparenciaDoHabito>>;
+
+const paraAparencia = ({ icone, cor, periodo, lembrete, lembreteLigado }: AparenciaDoHabito) => ({
+  ...(icone === undefined ? {} : { icon: icone }),
+  ...(cor === undefined ? {} : { color: cor }),
+  ...(periodo === undefined ? {} : { period: periodo }),
+  ...(lembrete === undefined ? {} : { reminderMinutes: lembrete === null ? null : paraMinutos(lembrete) }),
+  ...(lembreteLigado === undefined ? {} : { reminderOn: lembreteLigado }),
+});
 
 const meta = (g: Goal, hoje: DateKey) => ({
   id: g.id,
@@ -83,19 +124,47 @@ const meta = (g: Goal, hoje: DateKey) => ({
   marcos: g.milestones.map((m) => ({ id: m.id, titulo: m.title, feito: m.doneAt !== undefined })),
 });
 
-const ilha = (e: EstadoDaIlha) => ({
+const tarefa = (t: Task, subtarefas: readonly TaskSubtask[], feitos?: number) => {
+  const progresso = subtaskProgress(subtarefas, t.id);
+  return {
+    id: t.id,
+    codigo: taskCode(t),
+    titulo: t.title,
+    coluna: t.status,
+    prioridade: t.priority,
+    ...(t.description ? { descricao: t.description } : {}),
+    ...(t.dueDate ? { prazo: t.dueDate } : {}),
+    ...(t.tags.length > 0 ? { etiquetas: t.tags } : {}),
+    ...(t.goalId ? { metaId: t.goalId } : {}),
+    pomodorosEstimados: t.pomodorosEstimated,
+    ...(feitos === undefined ? {} : { pomodorosFeitos: feitos }),
+    ...(progresso.total > 0 ? { subtarefas: { feitas: progresso.done, total: progresso.total } } : {}),
+  };
+};
+
+const colunaSchema = z.enum(TASK_COLUMNS).describe('Coluna do quadro');
+
+const ilha = (e: EstadoDaCasa) => ({
   saldo: e.saldo,
+  moeda: 'joias',
   ganhas: e.ganhas,
   gastas: e.gastas,
-  nivel: e.nivel,
-  areas: e.areas.map((a) => ({
-    id: a.id,
-    nome: a.nome,
-    custo: a.custo,
-    estado: a.estado,
-    enfeites: a.enfeitesNoMapa.map((en) => ({ id: en.id, nome: en.nome, custo: en.custo, comprado: en.comprado })),
-  })),
+  casa: { construidas: e.construidas, total: e.total, completa: e.completa, proxima: e.proxima, partes: e.partes },
+  quarto: {
+    grade: { colunas: ROOM_GRID.columns, linhas: ROOM_GRID.rows, giros: ROOM_GRID.rotations },
+    decoracoes: e.decoracoes.map((d) => ({
+      id: d.id,
+      nome: d.nome,
+      custo: d.custo,
+      comprado: d.posicao !== null,
+      ...(d.posicao ? { x: d.posicao.x, y: d.posicao.y, giro: d.posicao.rotation } : {}),
+    })),
+  },
 });
+
+const xSchema = z.number().int().min(0).max(ROOM_GRID.columns - 1).describe('Coluna no chão do quarto, a partir de 0');
+const ySchema = z.number().int().min(0).max(ROOM_GRID.rows - 1).describe('Linha no chão do quarto, a partir de 0');
+const giroSchema = z.union(ROOM_GRID.rotations.map((r) => z.literal(r))).describe('Giro em graus');
 
 // ---------- Respostas ----------
 
@@ -171,7 +240,16 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
           habitos: habitsForDate(habits, hoje).map((h) => ({ id: h.id, titulo: h.title, feito: feitos.has(h.id) })),
           blocos: blocksForWeekday(blocks, weekdayOf(hoje)).map(bloco),
           focoEmAndamento: ativa
-            ? { id: ativa.id, minutosPlanejados: ativa.plannedMinutes, pausado: ativa.pausedSince !== undefined, inicio: new Date(ativa.startedAt).toISOString() }
+            ? {
+                id: ativa.id,
+                minutosPlanejados: ativa.plannedMinutes,
+                pausado: ativa.pausedSince !== undefined,
+                inicio: new Date(ativa.startedAt).toISOString(),
+                ...(ativa.intention ? { intencao: ativa.intention } : {}),
+                ...(ativa.habitId ? { habitoId: ativa.habitId } : {}),
+                ...(ativa.goalId ? { metaId: ativa.goalId } : {}),
+                ...(ativa.taskId ? { tarefaId: ativa.taskId } : {}),
+              }
             : null,
           diaDeDescanso: restDays.some((r) => r.date === hoje),
           sapo: { nome: user.frogName, fase: mascot?.phase ?? 1, diasDeCuidado: mascot?.careDays ?? 0 },
@@ -181,12 +259,16 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
 
   server.registerTool(
     'ver_rotina',
-    { title: 'Ver a rotina', description: 'Todos os blocos da semana (foco e descanso) e todos os hábitos, com ids.', annotations: LEITURA },
+    { title: 'Ver a rotina', description: 'Todos os blocos da semana (foco e descanso) e os hábitos (ativos e pausados; os arquivados vêm à parte), com ids.', annotations: LEITURA },
     () =>
       protegido(async () => {
         await pessoa(repo);
         const [blocks, habits] = await Promise.all([repo.listBlocks(), repo.listHabits()]);
-        return resposta({ blocos: blocks.map(bloco), habitos: habits.map(habito) });
+        return resposta({
+          blocos: blocks.map(bloco),
+          habitos: habits.filter((h) => h.state !== 'arquivado').map(habito),
+          habitosArquivados: habits.filter((h) => h.state === 'arquivado').map(habito),
+        });
       }),
   );
 
@@ -210,6 +292,21 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
   );
 
   server.registerTool(
+    'ver_sequencia',
+    {
+      title: 'Ver a sequência',
+      description: 'Dias seguidos com hábito feito ou foco (descanso não quebra nem soma), o recorde e a semana, de domingo a sábado.',
+      annotations: LEITURA,
+    },
+    () =>
+      protegido(async () => {
+        await pessoa(repo);
+        const { streak } = await lerJson(await api.api.streak.$get());
+        return resposta(streak);
+      }),
+  );
+
+  server.registerTool(
     'ver_metas',
     { title: 'Ver as metas', description: 'Metas de longo prazo: ativas e concluídas, com marcos, progresso e prazo.', annotations: LEITURA },
     () =>
@@ -222,11 +319,13 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
 
   server.registerTool(
     'ver_perfil',
-    { title: 'Ver o perfil', description: 'Nome do sapo, início e fim do dia, tema e fuso.', annotations: LEITURA },
+    { title: 'Ver o perfil', description: 'Nome do sapo, início e fim do dia, tema, fuso e preferências.', annotations: LEITURA },
     () =>
       protegido(async () => {
         const user = await pessoa(repo);
+        const { metadata } = await lerJson(await api.api.me.$get());
         return resposta({
+          preferencias: preferencesFromMetadata(metadata),
           nomeDoSapo: user.frogName,
           inicioDoDia: paraHora(user.dayStartMinutes),
           fimDoDia: paraHora(user.dayEndMinutes % (24 * 60)),
@@ -310,13 +409,13 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     {
       title: 'Criar hábito',
       description: 'Cria um hábito em alguns dias da semana. Cada dia comporta até 5 hábitos ativos.',
-      inputSchema: { titulo: z.string().min(1).max(80), dias: z.array(diaSchema).min(1) },
+      inputSchema: { titulo: z.string().min(1).max(80), dias: z.array(diaSchema).min(1), ...aparenciaDoHabito },
       annotations: ESCRITA,
     },
-    ({ titulo, dias }) =>
+    ({ titulo, dias, ...aparencia }) =>
       protegido(async () => {
         await pessoa(repo);
-        const r = await criarHabito(repo, { title: titulo, weekdays: dias.map(weekdayDe) }, clock.now());
+        const r = await criarHabito(repo, { title: titulo, weekdays: dias.map(weekdayDe), ...paraAparencia(aparencia) }, clock.now());
         return deCaso(r, () => r.ok && habito(r.value));
       }),
   );
@@ -325,17 +424,26 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     'editar_habito',
     {
       title: 'Editar hábito',
-      description: 'Muda título, dias ou pausa (ativo = false) um hábito.',
-      inputSchema: { id: idSchema, titulo: z.string().min(1).max(80).optional(), dias: z.array(diaSchema).min(1).optional(), ativo: z.boolean().optional() },
+      description: 'Muda título, dias, aparência, lembrete ou estado de um hábito. Pausado sai do Hoje por um tempo; arquivado some das listas; os dois guardam o histórico e voltam com estado ativo.',
+      inputSchema: {
+        id: idSchema,
+        titulo: z.string().min(1).max(80).optional(),
+        dias: z.array(diaSchema).min(1).optional(),
+        estado: habitStateSchema.optional(),
+        ativo: z.boolean().optional().describe('Atalho antigo: false pausa, true reativa. `estado` vence.'),
+        ...aparenciaDoHabito,
+      },
       annotations: ESCRITA,
     },
-    ({ id, titulo, dias, ativo }) =>
+    ({ id, titulo, dias, estado, ativo, ...aparencia }) =>
       protegido(async () => {
         await pessoa(repo);
         const r = await editarHabito(repo, id, {
           ...(titulo ? { title: titulo } : {}),
           ...(dias ? { weekdays: dias.map(weekdayDe) } : {}),
-          ...(ativo === undefined ? {} : { active: ativo }),
+          ...(ativo === undefined ? {} : { state: ativo ? 'ativo' : 'pausado' }),
+          ...(estado ? { state: estado } : {}),
+          ...paraAparencia(aparencia),
         });
         return deCaso(r, () => r.ok && habito(r.value));
       }),
@@ -381,17 +489,25 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     minutos: z.number().int().min(5).max(120).describe('Duração, de 5 a 120 minutos'),
     tipo: z.enum(['foco', 'descanso']),
     titulo: z.string().min(1).max(80).optional(),
+    icone: iconeSchema.optional(),
   };
 
   server.registerTool(
     'criar_bloco',
     { title: 'Criar bloco', description: 'Cria um bloco de foco ou descanso na rotina semanal (sem sobrepor outro).', inputSchema: blocoEntrada, annotations: ESCRITA },
-    ({ dia, inicio, minutos, tipo, titulo }) =>
+    ({ dia, inicio, minutos, tipo, titulo, icone }) =>
       protegido(async () => {
         await pessoa(repo);
         const r = await criarBloco(
           repo,
-          { weekday: weekdayDe(dia), startMinutes: paraMinutos(inicio), durationMinutes: minutos, kind: tipo, ...(titulo ? { title: titulo } : {}) },
+          {
+            weekday: weekdayDe(dia),
+            startMinutes: paraMinutos(inicio),
+            durationMinutes: minutos,
+            kind: tipo,
+            ...(titulo ? { title: titulo } : {}),
+            ...(icone ? { icon: icone } : {}),
+          },
           clock.now(),
         );
         return deCaso(r, () => r.ok && bloco(r.value));
@@ -402,7 +518,7 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     'editar_bloco',
     {
       title: 'Editar ou mover bloco',
-      description: 'Muda dia, horário, duração, tipo ou título de um bloco.',
+      description: 'Muda dia, horário, duração, tipo, título ou ícone de um bloco.',
       inputSchema: {
         id: idSchema,
         dia: diaSchema.optional(),
@@ -410,10 +526,11 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
         minutos: blocoEntrada.minutos.optional(),
         tipo: blocoEntrada.tipo.optional(),
         titulo: blocoEntrada.titulo,
+        icone: iconeSchema.nullable().optional(),
       },
       annotations: ESCRITA,
     },
-    ({ id, dia, inicio, minutos, tipo, titulo }) =>
+    ({ id, dia, inicio, minutos, tipo, titulo, icone }) =>
       protegido(async () => {
         await pessoa(repo);
         const r = await editarBloco(repo, id, {
@@ -422,6 +539,7 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
           ...(minutos ? { durationMinutes: minutos } : {}),
           ...(tipo ? { kind: tipo } : {}),
           ...(titulo ? { title: titulo } : {}),
+          ...(icone === undefined ? {} : { icon: icone }),
         });
         return deCaso(r, () => r.ok && bloco(r.value));
       }),
@@ -455,17 +573,29 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     'comecar_foco',
     {
       title: 'Começar um foco',
-      description: `Começa uma sessão de foco (Pomodoro), livre ou de um bloco. De ${FOCUS.minMinutes} a ${FOCUS.maxMinutes} minutos, padrão ${FOCUS.defaultMinutes}.`,
+      description: `Começa uma sessão de foco (Pomodoro), livre ou de um bloco. De ${FOCUS.minMinutes} a ${FOCUS.maxMinutes} minutos, padrão a duração escolhida no perfil.`,
       inputSchema: {
         minutos: z.number().int().min(FOCUS.minMinutes).max(FOCUS.maxMinutes).optional(),
         blocoId: idSchema.optional().describe('Bloco de foco da rotina, se for o foco de um bloco'),
+        intencao: z.string().max(FOCUS.intentionMaxChars).optional().describe('No que a pessoa vai focar, em poucas palavras'),
+        habitoId: idSchema.optional().describe('Hábito que recebe o foco. Escolha no máximo um entre habitoId, metaId e tarefaId'),
+        metaId: idSchema.optional().describe('Meta que recebe o foco (veja ver_metas)'),
+        tarefaId: idSchema.optional().describe('Tarefa que soma um pomodoro quando o foco for concluído (veja ver_tarefas)'),
       },
       annotations: ESCRITA,
     },
-    ({ minutos, blocoId }) =>
+    ({ minutos, blocoId, intencao, habitoId, metaId, tarefaId }) =>
       protegido(async () => {
         const user = await pessoa(repo);
-        const r = await iniciarFoco(repo, clock, user.timezone, { ...(minutos ? { plannedMinutes: minutos } : {}), ...(blocoId ? { blockId: blocoId } : {}) });
+        const plannedMinutes = minutos ?? (await lerJson(await api.api.me.$get())).metadata.focusMinutes;
+        const r = await iniciarFoco(repo, clock, user.timezone, {
+          plannedMinutes,
+          ...(blocoId ? { blockId: blocoId } : {}),
+          intention: intencao,
+          habitId: habitoId,
+          goalId: metaId,
+          taskId: tarefaId,
+        });
         return deCaso(r, () => r.ok && { sessao: r.value.session.id, minutos: r.value.session.plannedMinutes });
       }),
   );
@@ -669,6 +799,73 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
       }),
   );
 
+  // ---------- Tarefas ----------
+
+  server.registerTool(
+    'ver_tarefas',
+    {
+      title: 'Ver as tarefas',
+      description: 'O quadro de tarefas por coluna (ideias, afazer, fazendo, feito), na ordem de cima para baixo, com código, prioridade, prazo e subtarefas.',
+      inputSchema: { filtro: z.enum(['hoje', 'semana']).optional().describe('Só as com prazo para hoje ou para esta semana (vencidas entram)') },
+      annotations: LEITURA,
+    },
+    ({ filtro }) =>
+      protegido(async () => {
+        const user = await pessoa(repo);
+        const hoje = hojeDe(user, clock);
+        const [todas, subtarefas, pomodoros] = await Promise.all([repo.listTasks(), repo.listSubtasks(), verPomodoros(repo)]);
+        const visiveis = filtro ? todas.filter((t) => matchesDueFilter(t, filtro, hoje)) : todas;
+        return resposta(Object.fromEntries(TASK_COLUMNS.map((coluna) => [coluna, columnTasks(visiveis, coluna).map((t) => tarefa(t, subtarefas, pomodoros[t.id] ?? 0))])));
+      }),
+  );
+
+  server.registerTool(
+    'criar_tarefa',
+    {
+      title: 'Criar tarefa',
+      description: 'Cria uma tarefa no quadro. Padrão: no fim da coluna "afazer".',
+      inputSchema: {
+        titulo: z.string().min(1).max(TASKS.titleMaxChars),
+        coluna: colunaSchema.optional(),
+        descricao: z.string().max(TASKS.descriptionMaxChars).optional(),
+        prioridade: z.enum(['normal', 'alta']).optional(),
+        prazo: dataSchema.optional(),
+        etiquetas: z.array(z.string().min(1).max(TASKS.tagMaxChars)).max(TASKS.maxTags).optional(),
+        metaId: idSchema.optional().describe('Meta que a tarefa empurra (veja ver_metas)'),
+        pomodoros: z.number().int().min(0).max(TASKS.maxPomodorosEstimated).optional().describe('Quantos pomodoros deve levar'),
+      },
+      annotations: ESCRITA,
+    },
+    ({ titulo, coluna, descricao, prioridade, prazo, etiquetas, metaId, pomodoros }) =>
+      protegido(async () => {
+        await pessoa(repo);
+        const r = await criarTarefa(
+          repo,
+          { title: titulo, status: coluna, description: descricao, priority: prioridade, dueDate: prazo, tags: etiquetas, goalId: metaId, pomodorosEstimated: pomodoros },
+          clock.now(),
+        );
+        return deCaso(r, () => r.ok && tarefa(r.value, []));
+      }),
+  );
+
+  server.registerTool(
+    'mover_tarefa',
+    {
+      title: 'Mover tarefa',
+      description: 'Leva uma tarefa para outra coluna (feito conclui) ou muda a altura dela. Padrão: fim da coluna.',
+      inputSchema: { id: idSchema, coluna: colunaSchema, noTopo: z.boolean().optional().describe('Põe no topo da coluna') },
+      annotations: ESCRITA,
+    },
+    ({ id, coluna, noTopo }) =>
+      protegido(async () => {
+        await pessoa(repo);
+        const outras = columnTasks(await repo.listTasks(), coluna).filter((t) => t.id !== id);
+        const r = await moverTarefa(repo, id, coluna, clock.now(), noTopo ? positionAt(outras, 'topo') : undefined);
+        const subtarefas = await repo.listSubtasks();
+        return deCaso(r, () => r.ok && tarefa(r.value, subtarefas));
+      }),
+  );
+
   // ---------- Ilha ----------
 
   server.registerTool(
@@ -676,13 +873,13 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     {
       title: 'Ver a ilha',
       description:
-        'A ilha do sapo: saldo de moscas (e de onde vieram), áreas na ordem do mapa (aberta, próxima ou fechada) e enfeites com preço e se já foram comprados.',
+        'A casa do sapo na ilha e o quarto: saldo de joias (e de onde vieram), partes da casa (construídas e por construir, com preço) e decorações do quarto (preço e posição das compradas).',
       annotations: LEITURA,
     },
     () =>
       protegido(async () => {
         await pessoa(repo);
-        return resposta(ilha(await verIlha(repo)));
+        return resposta(ilha(await verCasa(repo)));
       }),
   );
 
@@ -691,14 +888,38 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     {
       title: 'Comprar na ilha',
       description:
-        'Gasta moscas para abrir a próxima área ou comprar um enfeite de uma área aberta. Use os ids de ver_ilha. Compras não podem ser desfeitas.',
-      inputSchema: { item: idSchema.describe('Id da área ou do enfeite, como aparece em ver_ilha') },
+        'Gasta joias para construir uma parte da casa ou comprar uma decoração do quarto. Use os ids de ver_ilha. Para decoração, x, y e giro dizem onde colocar (padrão 0). Compras não podem ser desfeitas.',
+      inputSchema: {
+        item: idSchema.describe('Id da parte ou da decoração, como aparece em ver_ilha'),
+        x: xSchema.optional(),
+        y: ySchema.optional(),
+        giro: giroSchema.optional(),
+      },
       annotations: ESCRITA,
     },
-    ({ item }) =>
+    ({ item, x = 0, y = 0, giro = 0 }) =>
       protegido(async () => {
         await pessoa(repo);
-        const r = await comprarNaIlha(repo, clock, item);
+        const r =
+          precoDaDecoracao(item) === null
+            ? await comprarParte(repo, clock, item)
+            : await comprarDecoracao(repo, clock, item, { x, y, rotation: giro });
+        return deCaso(r, () => r.ok && ilha(r.value));
+      }),
+  );
+
+  server.registerTool(
+    'mover_decoracao',
+    {
+      title: 'Mover decoração',
+      description: 'Muda de lugar uma decoração já comprada, sem custo. Use os ids de ver_ilha.',
+      inputSchema: { item: idSchema.describe('Id da decoração'), x: xSchema, y: ySchema, giro: giroSchema.optional() },
+      annotations: ESCRITA,
+    },
+    ({ item, x, y, giro = 0 }) =>
+      protegido(async () => {
+        await pessoa(repo);
+        const r = await moverDecoracao(repo, item, { x, y, rotation: giro });
         return deCaso(r, () => r.ok && ilha(r.value));
       }),
   );
@@ -710,7 +931,7 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     {
       title: 'Apagar todos os dados',
       description:
-        'Apaga sapo, rotina, hábitos, focos, descansos, propostas, metas e compras da ilha da conta, em todos os aparelhos. Não dá para desfazer. Só use se a pessoa pediu explicitamente.',
+        'Apaga sapo, rotina, hábitos, focos, descansos, propostas, metas, tarefas, casa e quarto da conta, em todos os aparelhos. Não dá para desfazer. Só use se a pessoa pediu explicitamente.',
       inputSchema: { confirmacao: z.literal('APAGAR TUDO').describe('Escreva exatamente APAGAR TUDO') },
       annotations: DESTRUTIVA,
     },

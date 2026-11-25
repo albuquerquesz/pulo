@@ -47,8 +47,8 @@ try {
   });
 
   const habits = [
-    { id: 'seed-h1', title: 'Alongar', weekdays: [0, 1, 2, 3, 4], active: true },
-    { id: 'seed-h2', title: 'Ler dez minutos', weekdays: [0, 2, 4, 6], active: true },
+    { id: 'seed-h1', title: 'Alongar', weekdays: [0, 1, 2, 3, 4], state: 'ativo' },
+    { id: 'seed-h2', title: 'Ler dez minutos', weekdays: [0, 2, 4, 6], state: 'ativo' },
   ] satisfies Habit[];
   await db.habit.createMany({ data: habits.map((habit) => habitMapper.fromDomain(SEED_USER_ID, habit)) });
   await db.habitLog.createMany({

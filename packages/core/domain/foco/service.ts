@@ -11,11 +11,18 @@ import {
   resumeSession,
   startSession,
 } from './timer';
+import { linkCount, linkOf, type FocusLink } from './targets';
 
 /** Eventos para o barramento do sapo (spec 03). Esta camada só os devolve. */
 export type FocoEvent = 'bloco_concluido' | 'marco';
 
-export type FocoErrorCode = 'duracao_invalida' | 'sessao_em_andamento' | 'sem_sessao';
+export type FocoErrorCode =
+  | 'duracao_invalida'
+  | 'sessao_em_andamento'
+  | 'sem_sessao'
+  | 'intencao_invalida'
+  | 'vinculo_duplo'
+  | 'alvo_inexistente';
 export interface FocoError {
   code: FocoErrorCode;
   message: string;
@@ -73,15 +80,33 @@ export async function carregarSessaoAtiva(repo: Repository, clock: Clock, timeZo
   return persist(repo, reconciled, timeZone, now, reconciled !== active);
 }
 
+async function targetExists(repo: Repository, { habitId, goalId, taskId }: FocusLink): Promise<boolean> {
+  if (habitId !== undefined) return (await repo.listHabits()).some((habit) => habit.id === habitId);
+  if (goalId !== undefined) return (await repo.listGoals()).some((goal) => goal.id === goalId);
+  if (taskId !== undefined) return (await repo.listTasks()).some((task) => task.id === taskId);
+  return true;
+}
+
 export async function iniciarFoco(
   repo: Repository,
   clock: Clock,
   timeZone: string,
-  opts: { plannedMinutes?: number; blockId?: EntityId } = {},
+  opts: { plannedMinutes?: number; blockId?: EntityId; intention?: string } & FocusLink = {},
 ): Promise<FocoResult> {
   const minutes = opts.plannedMinutes ?? FOCUS.defaultMinutes;
   if (!isValidPlannedMinutes(minutes)) {
     return { ok: false, error: { code: 'duracao_invalida', message: `O foco vai de ${FOCUS.minMinutes} a ${FOCUS.maxMinutes} minutos.` } };
+  }
+  const intention = opts.intention?.trim() ?? '';
+  if (intention.length > FOCUS.intentionMaxChars) {
+    return { ok: false, error: { code: 'intencao_invalida', message: `Escreva a intenção em até ${FOCUS.intentionMaxChars} letras.` } };
+  }
+  const link = linkOf(opts);
+  if (linkCount(opts) > 1) {
+    return { ok: false, error: { code: 'vinculo_duplo', message: 'O foco se liga a um hábito, uma meta ou uma tarefa, só um deles.' } };
+  }
+  if (!(await targetExists(repo, link))) {
+    return { ok: false, error: { code: 'alvo_inexistente', message: 'O item escolhido para o foco não existe mais.' } };
   }
   // Se a sessão antiga já acabou pelo relógio, fecha antes de recusar.
   const stale = await carregarSessaoAtiva(repo, clock, timeZone);
@@ -89,7 +114,8 @@ export async function iniciarFoco(
     return { ok: false, error: { code: 'sessao_em_andamento', message: 'Já existe um foco em andamento.' } };
   }
   const now = clock.now();
-  const session = startSession(newId(now, 'sessao'), now, minutes, opts.blockId);
+  const extras = { ...link, ...(intention ? { intention } : {}) };
+  const session = startSession(newId(now, 'sessao'), now, minutes, opts.blockId, extras);
   return { ok: true, value: await persist(repo, session, timeZone, now, false) };
 }
 

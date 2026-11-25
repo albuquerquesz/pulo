@@ -1,6 +1,7 @@
 import { dateRangeQuerySchema, habitLogParamSchema, habitLogSchema } from '@pulo/core/api/schemas';
 import { dateKeyToDate, habitLogMapper } from '@pulo/db';
 import { Hono } from 'hono';
+import { unlockAchievements } from '../achievements';
 import {
   ApiError,
   type AppEnv,
@@ -44,7 +45,8 @@ export function habitLogRoutes({ auth, db, now }: RouteDeps) {
         select: habitLogSelect,
       });
       if (row === null) throw new ApiError(404, 'referencia_inexistente', 'O hábito não existe.');
-      return c.json({ habitLog: habitLogMapper.toDomain(row) });
+      const newAchievements = await unlockAchievements(db, c.var.user, now());
+      return c.json({ habitLog: habitLogMapper.toDomain(row), newAchievements });
     })
     .delete('/:habitId/:date', pathParams(habitLogParamSchema), async (c) => {
       const { habitId, date } = c.req.valid('param');

@@ -1,11 +1,15 @@
 // Roda a API de verdade (Hono + Better Auth + Prisma) no mesmo processo, sobre o Postgres de teste.
 // O `fetch` do cliente é o `app.fetch`: nenhuma rede, nenhum mock da API.
 import { createHarness, TEST_NOW, TEST_ORIGIN, type TestUser } from '@pulo/api/src/testing';
-import { MAX_HABITS_PER_DAY } from '@pulo/core/config/decisions';
+import { DEFAULT_TIMEZONE, JOIAS, MAX_HABITS_PER_DAY } from '@pulo/core/config/decisions';
+import { dateKeyOf } from '@pulo/core/domain/day';
+import { verConquistas } from '@pulo/core/domain/achievements';
+import { verSequencia } from '@pulo/core/domain/streak';
+import { verEstatisticasDoHabito } from '@pulo/core/domain/habit-stats';
 import { comprarNaIlha } from '@pulo/core/domain/ilha';
 import { criarPlanoInicial } from '@pulo/core/domain/routine';
 import { defineRepositoryContract } from '@pulo/core/data/repository-contract';
-import type { Habit, RoutineBlock, User } from '@pulo/core/domain/types';
+import type { Habit, RoutineBlock, Task, FocusSession, User } from '@pulo/core/domain/types';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
 import { type FetchLike, MENSAGENS_DA_API, RemoteError, createRemoteRepository } from './index';
 
@@ -57,15 +61,15 @@ const uuid = () => crypto.randomUUID();
 const bloco = (extra: Partial<RoutineBlock> = {}): RoutineBlock => ({
   id: uuid(), weekday: 1, startMinutes: 540, durationMinutes: 30, kind: 'foco', ...extra,
 });
-const habito = (extra: Partial<Habit> = {}): Habit => ({ id: uuid(), title: 'Ler', weekdays: [0], active: true, ...extra });
+const habito = (extra: Partial<Habit> = {}): Habit => ({ id: uuid(), title: 'Ler', weekdays: [0], state: 'ativo', ...extra });
 
 // ---------- O contrato compartilhado do Repository ----------
 
 /**
- * O servidor só grava uma compra da ilha se a pessoa tem moscas (`validarCompra`). Cada pessoa do contrato ganha
- * dias de descanso antigos, fora da janela do sync: o servidor conta as moscas, mas o cache (e o contrato) não os vê.
+ * O servidor só grava uma compra da ilha se a pessoa tem joias (`validarCompra`). Cada pessoa do contrato ganha
+ * dias de descanso antigos, fora da janela do sync: o servidor conta as joias, mas o cache (e o contrato) não os vê.
  */
-async function moscasForaDaJanela(me: TestUser) {
+async function joiasForaDaJanela(me: TestUser) {
   await database.db.restDay.createMany({
     data: Array.from({ length: 50 }, (_, i) => ({ userId: me.id, date: new Date(Date.UTC(2024, 0, 1 + i)) })),
   });
@@ -75,10 +79,10 @@ defineRepositoryContract(
   'RemoteRepository (API real)',
   async () => {
     const me = await h.newUser();
-    await moscasForaDaJanela(me);
+    await joiasForaDaJanela(me);
     return { repository: await open(me), userId: me.id };
   },
-  { mascotIsServerDerived: true },
+  { mascotIsServerDerived: true, now: TEST_NOW },
 );
 
 // ---------- Comportamento próprio do remoto ----------
@@ -146,6 +150,65 @@ describe('RemoteRepository: sync e cache', () => {
     const mascot = await repo.getMascotState();
     expect(mascot).toMatchObject({ phase: 1, updatedAt: TEST_NOW });
     expect(mascot?.careDays).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('RemoteRepository: sequência', () => {
+  it('vem no sync e só volta ao servidor depois de uma escrita que pode mudá-la', async () => {
+    const me = await h.newUser();
+    const { fetch, calls } = recordingFetch();
+    const repo = await open(me, fetch);
+    expect(await verSequencia(repo, clock)).toMatchObject({ atual: 0, recorde: 0 });
+    expect(calls).toEqual(['GET /api/sync']);
+
+    const x = habito();
+    await repo.saveHabit(x);
+    const gravando = repo.saveHabitLog({ habitId: x.id, date: dateKeyOf(TEST_NOW, DEFAULT_TIMEZONE), doneAt: TEST_NOW });
+    // Pedida com a escrita ainda no ar: espera ela terminar.
+    expect(await repo.getStreak()).toMatchObject({ atual: 1, recorde: 1 });
+    await gravando;
+    await repo.getStreak();
+    expect(calls.filter((c) => c === 'GET /api/streak')).toHaveLength(1);
+  });
+
+  it('sem rede depois de uma escrita, devolve a última conhecida', async () => {
+    const me = await h.newUser();
+    let caiu = false;
+    const repo = await open(me, (request) => {
+      if (caiu) throw new TypeError('Network request failed');
+      return h.app.fetch(request);
+    });
+    await repo.saveRestDay({ date: '2026-11-10' });
+    caiu = true;
+    expect(await repo.getStreak()).toMatchObject({ atual: 0, recorde: 0 });
+  });
+});
+
+describe('RemoteRepository: conquistas', () => {
+  it('vêm no sync, avisam ao destravar e só voltam ao servidor depois de uma escrita que pode mudá-las', async () => {
+    const me = await h.newUser();
+    const { fetch, calls } = recordingFetch();
+    const repo = await open(me, fetch);
+    const avisos: string[][] = [];
+    const cancelar = repo.onNewAchievements((novas) => avisos.push(novas.map((item) => item.id)));
+    expect((await verConquistas(repo, clock)).filter((item) => item.conquistada)).toEqual([]);
+    expect(calls).toEqual(['GET /api/sync']);
+
+    for (const date of ['2026-11-01', '2026-11-03', '2026-11-05', '2026-11-07']) await repo.saveRestDay({ date });
+    await repo.saveRestDay({ date: '2026-11-07' });
+    expect(avisos).toEqual([['descanso-sabido']]);
+
+    const depois = await repo.getAchievements();
+    expect(depois.find((item) => item.id === 'descanso-sabido')).toMatchObject({ conquistada: true, conquistadaEm: TEST_NOW });
+    await repo.getAchievements();
+    expect(calls.filter((c) => c === 'GET /api/achievements')).toHaveLength(1);
+
+    cancelar();
+    await repo.saveSession({
+      id: uuid(), startedAt: TEST_NOW - 60 * 60_000, endedAt: TEST_NOW - 10 * 60_000, plannedMinutes: 50, state: 'concluida', pausedMs: 0,
+    });
+    expect(avisos).toHaveLength(1);
+    expect((await repo.getAchievements()).find((item) => item.id === 'foco-profundo')).toMatchObject({ conquistada: true });
   });
 });
 
@@ -219,12 +282,12 @@ describe('RemoteRepository: erros e rollback', () => {
     expect(await repo.listHabits()).toHaveLength(MAX_HABITS_PER_DAY);
   });
 
-  it('ilha: compra sem moscas é recusada pelo servidor e sai do cache; com moscas, comprarNaIlha grava', async () => {
+  it('ilha: compra sem joias é recusada pelo servidor e sai do cache; com joias, comprarNaIlha grava', async () => {
     const me = await h.newUser();
     const repo = await open(me);
     const banco = { item: 'banco', cost: 8, createdAt: TEST_NOW };
     await expect(repo.saveIslandPurchase(banco)).rejects.toMatchObject({
-      kind: 'api', code: 'moscas_insuficientes', status: 409, mensagem: MENSAGENS_DA_API.moscas_insuficientes,
+      kind: 'api', code: 'joias_insuficientes', status: 409, mensagem: MENSAGENS_DA_API.joias_insuficientes,
     });
     expect(await repo.listIslandPurchases()).toEqual([]);
 
@@ -362,5 +425,198 @@ describe('RemoteRepository: erros e rollback', () => {
     await repo.saveBlocks([]);
     await repo.saveHabits([]);
     expect(calls).toEqual(['GET /api/sync']);
+  });
+});
+
+describe('RemoteRepository: perfil e conta', () => {
+  it('grava preferências, relê estatísticas, exporta e exclui a conta', async () => {
+    const me = await h.newUser();
+    const { fetch, calls } = recordingFetch();
+    const repo = await open(me, fetch);
+    expect(await repo.getStats()).toMatchObject({ habitosFeitos: 0, minutosDeFoco: 0 });
+    expect(calls).not.toContain('GET /api/stats');
+
+    await repo.savePreferences({ focusMinutes: 45, vacation: { ligado: true } });
+    expect(await repo.getPreferences()).toMatchObject({ focusMinutes: 45, vacation: { ligado: true } });
+    const again = await open(me);
+    expect(await again.getPreferences()).toEqual(await repo.getPreferences());
+    await expect(repo.savePreferences({ focusMinutes: 5 })).rejects.toBeInstanceOf(RemoteError);
+    expect(await repo.getPreferences()).toMatchObject({ focusMinutes: 45 });
+
+    await repo.saveHabit({ id: 'habito-perfil', title: 'Ler', weekdays: [0], state: 'ativo' });
+    await repo.saveHabitLog({ habitId: 'habito-perfil', date: '2026-11-16', doneAt: TEST_NOW });
+    expect(await repo.getStats()).toMatchObject({ habitosFeitos: 1 });
+    expect(calls).toContain('GET /api/stats');
+
+    expect(await repo.listConnections()).toEqual([]);
+    await repo.disconnect('nenhum');
+    expect(await repo.exportData()).toMatchObject({ habits: [{ id: 'habito-perfil' }] });
+
+    await repo.deleteAccount();
+    expect(await repo.listHabits()).toEqual([]);
+    expect(await database.db.user.count({ where: { id: me.id } })).toBe(0);
+  });
+});
+
+describe('RemoteRepository: tarefas', () => {
+  const tarefa = (extra: Partial<Task> = {}): Task => ({
+    id: uuid(), title: 'Estudar', status: 'afazer', position: 1, priority: 'normal', tags: [], pomodorosEstimated: 1, createdAt: TEST_NOW - 1, ...extra,
+  });
+
+  it('o código chega com a resposta, a subtarefa espera a tarefa e outro aparelho vê tudo', async () => {
+    const me = await h.newUser();
+    const repo = await open(me);
+    const nova = tarefa();
+    const sub = { id: uuid(), taskId: nova.id, title: 'passo', done: false, position: 1 };
+    const meta = { id: uuid(), title: 'm', state: 'ativa' as const, milestones: [], createdAt: 1 };
+    // Tudo disparado junto, como a tela faria.
+    await Promise.all([repo.saveGoal(meta), repo.saveTask({ ...nova, goalId: meta.id }), repo.saveSubtask(sub)]);
+    expect(await repo.listTasks()).toEqual([{ ...nova, goalId: meta.id, number: 1 }]);
+    await repo.addTaskComment({ id: uuid(), taskId: nova.id, body: 'anotado', createdAt: TEST_NOW - 1 });
+    expect((await repo.listTaskActivity(nova.id)).comments).toHaveLength(1);
+
+    const outro = await open(me);
+    expect(await outro.listTasks()).toEqual(await repo.listTasks());
+    expect(await outro.listSubtasks()).toEqual([sub]);
+  });
+
+  it('desfaz a escrita otimista quando o servidor recusa', async () => {
+    const me = await h.newUser();
+    let quebrado = false;
+    const repo = await open(me, (request) =>
+      quebrado && request.method !== 'GET' ? Promise.reject(new TypeError('sem rede')) : h.app.fetch(request),
+    );
+    const nova = tarefa();
+    const sub = { id: uuid(), taskId: nova.id, title: 'passo', done: false, position: 1 };
+    await repo.saveTask(nova);
+    await repo.saveSubtask(sub);
+    const antes = await repo.listTasks();
+    quebrado = true;
+
+    const movendo = repo.saveTask({ ...antes[0], status: 'fazendo' });
+    expect((await repo.listTasks())[0].status).toBe('fazendo');
+    await expect(movendo).rejects.toBeInstanceOf(RemoteError);
+    expect(await repo.listTasks()).toEqual(antes);
+    await expect(repo.deleteTask(nova.id)).rejects.toBeInstanceOf(RemoteError);
+    expect(await repo.listTasks()).toEqual(antes);
+    expect(await repo.listSubtasks()).toEqual([sub]);
+    await expect(repo.saveTask(tarefa())).rejects.toBeInstanceOf(RemoteError);
+    expect(await repo.listTasks()).toEqual(antes);
+  });
+
+  it('conflito: id de outra pessoa e meta apagada em outro aparelho sobem o erro e o cache volta', async () => {
+    const dona = await h.newUser();
+    const intrusa = await h.newUser();
+    const alheia = tarefa();
+    await (await open(dona)).saveTask(alheia);
+    const repo = await open(intrusa);
+    await expect(repo.saveTask(alheia)).rejects.toMatchObject({ code: 'nao_encontrado' });
+    await expect(repo.saveTask(tarefa({ goalId: uuid() }))).rejects.toMatchObject({ code: 'referencia_inexistente' });
+    expect(await repo.listTasks()).toEqual([]);
+  });
+});
+
+
+describe('RemoteRepository: baú e hábito atrelado', () => {
+  it('o baú vem do servidor, outro aparelho vê e o recusado sai do cache', async () => {
+    const me = await h.newUser();
+    const repo = await open(me);
+    const goal = { id: 'meta-bau', title: 'x', state: 'concluida' as const, milestones: [], createdAt: 1, completedAt: 2 };
+    const habit = { id: 'habito-bau', title: 'ler', weekdays: [0 as const], state: 'ativo' as const, goalId: goal.id };
+    // Sem esperar: o hábito e o baú aguardam a meta chegar.
+    await Promise.all([repo.saveGoal(goal), repo.saveHabit(habit), repo.saveGoalChest({ goalId: goal.id, abertoEm: 1, joias: 999 })]);
+    const chest = { goalId: goal.id, abertoEm: TEST_NOW, joias: JOIAS.por.goalCompleted };
+    expect(await repo.listGoalChests()).toEqual([chest]);
+    const outro = await open(me);
+    expect(await outro.listGoalChests()).toEqual([chest]);
+    expect(await outro.listHabits()).toEqual([habit]);
+
+    await expect(repo.saveGoalChest({ goalId: goal.id, abertoEm: 1, joias: 999 })).rejects.toMatchObject({ code: 'bau_ja_aberto' });
+    expect(await repo.listGoalChests()).toEqual([chest]);
+
+    // Soltar chega ao servidor (um corpo sem `goalId` manteria a meta).
+    const { goalId: _goalId, ...solto } = habit;
+    await repo.saveHabits([solto]);
+    expect(await (await open(me)).listHabits()).toEqual([solto]);
+  });
+});
+
+describe('hábitos v2 (spec 17)', () => {
+  it('grava e tira os campos novos do hábito e o ícone do bloco; as estatísticas vêm do servidor', async () => {
+    const me = await h.newUser();
+    const repo = await open(me);
+    const completo = habito({ icon: '📚', color: 'sol', period: 'noite', reminderMinutes: 1260, reminderOn: true, state: 'pausado' });
+    const icone = bloco({ icon: '🐸' });
+    await Promise.all([repo.saveHabit(completo), repo.saveBlock(icone)]);
+    await repo.saveHabitLog({ habitId: completo.id, date: '2026-11-16', doneAt: TEST_NOW });
+    const lido = await open(me);
+    expect(await lido.listHabits()).toEqual([completo]);
+    expect(await lido.listBlocks()).toEqual([icone]);
+    expect(await verEstatisticasDoHabito(repo, completo.id, clock)).toMatchObject({ total: 1, recorde: 1 });
+
+    const limpo = habito({ id: completo.id, reminderMinutes: 1260 });
+    const { icon: _icon, ...semIcone } = icone;
+    await Promise.all([lido.saveHabit(limpo), lido.saveBlocks([semIcone])]);
+    const fim = await open(me);
+    expect(await fim.listHabits()).toEqual([limpo]);
+    expect(await fim.listBlocks()).toEqual([semIcone]);
+  });
+});
+
+describe('RemoteRepository: foco com intenção e vínculo (spec 19)', () => {
+  const meta = () => ({ id: uuid(), title: 'm', state: 'ativa' as const, milestones: [], createdAt: 1 });
+  const foco = (extra: Partial<FocusSession> = {}): FocusSession => ({
+    id: uuid(), startedAt: TEST_NOW - 25 * 60_000, plannedMinutes: 25, state: 'em_andamento', pausedMs: 0, ...extra,
+  });
+
+  it('espera o alvo, limpa o que saiu, conta pomodoros e solta o foco ao apagar o alvo', async () => {
+    const me = await h.newUser();
+    const repo = await open(me);
+    const goal = meta();
+    const task: Task = { id: uuid(), title: 't', status: 'afazer', position: 1, priority: 'normal', tags: [], pomodorosEstimated: 1, createdAt: TEST_NOW - 1 };
+    const open1 = foco({ goalId: goal.id, intention: 'ler' });
+    await Promise.all([repo.saveGoal(goal), repo.saveTask(task), repo.saveSession(open1)]);
+
+    // Troca o alvo e tira a intenção.
+    const { goalId: _goal, intention: _intention, ...bare } = open1;
+    await repo.saveSession({ ...bare, taskId: task.id });
+    expect(await (await open(me)).listSessions()).toEqual([{ ...bare, taskId: task.id }]);
+
+    const done: FocusSession = { ...bare, taskId: task.id, state: 'concluida', endedAt: TEST_NOW };
+    await repo.saveSession(done);
+    await repo.saveSession(done);
+    expect(await repo.getPomodoros()).toEqual({ [task.id]: 1 });
+    expect(await (await open(me)).getPomodoros()).toEqual({ [task.id]: 1 });
+
+    await repo.deleteTask(task.id);
+    const { taskId: _task, ...unlinked } = done;
+    expect(await repo.listSessions()).toEqual([unlinked]);
+    expect(await repo.getPomodoros()).toEqual({});
+    expect(await (await open(me)).listSessions()).toEqual([unlinked]);
+  });
+
+  it('alvo apagado em outro aparelho: o foco encerra e o cache fica como o servidor', async () => {
+    const me = await h.newUser();
+    const repo = await open(me);
+    const goal = meta();
+    await repo.saveGoal(goal);
+    const running = foco({ goalId: goal.id });
+    await repo.saveSession(running);
+    await (await open(me)).deleteGoal(goal.id);
+    await repo.saveSession({ ...running, state: 'concluida', endedAt: TEST_NOW });
+    expect((await repo.listSessions())[0]).not.toHaveProperty('goalId');
+  });
+
+  it('apagar alvo recusado devolve o vínculo no cache', async () => {
+    const me = await h.newUser();
+    let falhar = false;
+    const repo = await open(me, (request) => (falhar ? Response.json({ error: 'erro_interno' }, { status: 500 }) : h.app.fetch(request)));
+    const goal = meta();
+    await repo.saveGoal(goal);
+    const running = foco({ goalId: goal.id });
+    await repo.saveSession(running);
+    falhar = true;
+    await expect(repo.deleteGoal(goal.id)).rejects.toMatchObject({ code: 'erro_interno' });
+    expect(await repo.listSessions()).toEqual([running]);
   });
 });

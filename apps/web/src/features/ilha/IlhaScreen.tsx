@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { ISLAND } from '@pulo/core/config/decisions';
+import { JOIAS } from '@pulo/core/config/decisions';
 import { AREAS, comprarNaIlha, verIlha, type AreaId, type AreaNoMapa, type EstadoDaIlha } from '@pulo/core/domain/ilha';
 import type { Phase } from '@pulo/core/domain/types';
 import { MapaDaIlha } from '@/mascot/ilha/MapaDaIlha';
@@ -35,11 +35,11 @@ function Preco({ valor }: { valor: number }) {
 }
 
 const GANHOS: { chave: keyof EstadoDaIlha['ganhas']; texto: string; por: number }[] = [
-  { chave: 'habitos', texto: 'Hábito feito', por: ISLAND.fliesPer.habitDone },
-  { chave: 'focos', texto: 'Foco concluído', por: ISLAND.fliesPer.careSession },
-  { chave: 'descansos', texto: 'Dia de descanso', por: ISLAND.fliesPer.restDay },
-  { chave: 'marcos', texto: 'Marco de meta', por: ISLAND.fliesPer.milestoneDone },
-  { chave: 'metas', texto: 'Meta concluída', por: ISLAND.fliesPer.goalCompleted },
+  { chave: 'habitos', texto: 'Hábito feito', por: JOIAS.por.habitDone },
+  { chave: 'focos', texto: `${JOIAS.focusMinutesPerJoia} minutos de foco`, por: 1 },
+  { chave: 'descansos', texto: 'Dia de descanso', por: JOIAS.por.restDay },
+  { chave: 'marcos', texto: 'Marco de meta', por: JOIAS.por.milestoneDone },
+  { chave: 'metas', texto: 'Meta concluída', por: JOIAS.por.goalCompleted },
 ];
 
 type Dados = { ilha: EstadoDaIlha; fase: Phase };

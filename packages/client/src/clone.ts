@@ -1,9 +1,13 @@
-import type { FocusSession, Goal, Habit, HabitLog, IslandPurchase, MascotState, ProposalChange, RestDay, RoutineBlock, User, WeeklyProposal } from '@pulo/core/domain/types';
+import type { Achievement, FocusSession, Goal, GoalChest, Habit, HabitLog, IslandPurchase, MascotState, ProposalChange, RestDay, RoomDecor, RoutineBlock, Streak, Task, TaskSubtask, User, WeeklyProposal } from '@pulo/core/domain/types';
 
 // Cópias explícitas e tipadas (sem JSON.parse nem structuredClone, que perdem o tipo ou faltam no Hermes).
 
 export const cloneBlock = (b: RoutineBlock): RoutineBlock => ({ ...b });
-export const cloneHabit = (h: Habit): Habit => ({ ...h, weekdays: [...h.weekdays] });
+/** Tira o `active` que a API ainda manda para o web antigo: quem vale é o `state`. */
+export const cloneHabit = (h: Habit & { active?: boolean }): Habit => {
+  const { active: _legado, ...habit } = h;
+  return { ...habit, weekdays: [...h.weekdays] };
+};
 export const cloneHabitLog = (l: HabitLog): HabitLog => ({ ...l });
 export const cloneSession = (s: FocusSession): FocusSession => ({ ...s });
 export const cloneRestDay = (r: RestDay): RestDay => ({ ...r });
@@ -15,4 +19,15 @@ export const cloneProposal = (p: WeeklyProposal): WeeklyProposal => ({ ...p, cha
 
 export const cloneGoal = (g: Goal): Goal => ({ ...g, milestones: g.milestones.map((m) => ({ ...m })) });
 
+export const cloneGoalChest = (b: GoalChest): GoalChest => ({ ...b });
+
 export const cloneIslandPurchase = (p: IslandPurchase): IslandPurchase => ({ ...p });
+
+export const cloneRoomDecor = (d: RoomDecor): RoomDecor => ({ ...d });
+
+export const cloneStreak = (s: Streak): Streak => ({ ...s, semana: s.semana.map((d) => ({ ...d })) });
+
+export const cloneAchievement = (a: Achievement): Achievement => ({ ...a });
+
+export const cloneTask = (t: Task): Task => ({ ...t, tags: [...t.tags] });
+export const cloneSubtask = (s: TaskSubtask): TaskSubtask => ({ ...s });

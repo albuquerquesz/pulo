@@ -1,6 +1,6 @@
 // Prova de tipos ponta a ponta: o cliente `hc<AppType>` do Hono infere rotas, corpos e respostas da própria API.
 // Os `expectTypeOf` são checados pelo `tsc` (npm run typecheck); o resto roda de verdade contra o app.
-import type { FocusSession, Habit, MascotState, RestDay, RoutineBlock, WeekSummary } from '@pulo/core/domain/types';
+import type { FocusSession, Habit, MascotState, Streak, RestDay, RoutineBlock, WeekSummary } from '@pulo/core/domain/types';
 import { type ApiErrorBody, apiErrorSchema } from '@pulo/core/api/schemas';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
 import { hc } from 'hono/client';
@@ -46,9 +46,9 @@ describe('hc<AppType>', () => {
     const habitId = crypto.randomUUID();
     const habitRes = await client.api.habits[':id'].$put({
       param: { id: habitId },
-      json: { id: habitId, title: 'Ler', weekdays: [0, 1], active: true },
+      json: { id: habitId, title: 'Ler', weekdays: [0, 1], state: 'ativo' },
     });
-    expectTypeOf((await habitRes.json()).habit).toEqualTypeOf<Habit>();
+    expectTypeOf((await habitRes.json()).habit).toExtend<Habit & { active: boolean }>();
 
     const sessionId = crypto.randomUUID();
     const sessionRes = await client.api.sessions[':id'].$put({
@@ -75,6 +75,7 @@ describe('hc<AppType>', () => {
     const sync = await (await client.api.sync.$get({ query: { from: '2026-11-01', to: '2026-11-30' } })).json();
     expectTypeOf(sync.blocks).toEqualTypeOf<RoutineBlock[]>();
     expectTypeOf(sync.mascot).toEqualTypeOf<MascotState | null>();
+    expectTypeOf(sync.streak).toEqualTypeOf<Streak>();
     expect(sync.restDays).toEqual([{ date: '2026-11-18' }]);
   });
 

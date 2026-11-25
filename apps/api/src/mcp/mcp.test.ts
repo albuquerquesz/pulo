@@ -92,6 +92,33 @@ async function ferramenta(token: string, name: string, args: Record<string, unkn
 }
 
 describe('servidor MCP', () => {
+  it('desconectar no Perfil corta o acesso na hora, mesmo com o token ainda no prazo', async () => {
+    const me = await h.newUser();
+    const token = await tokenDe(me);
+    expect((await rpc(token, 'tools/list')).status).toBe(200);
+    const { connections } = await (await me.call('GET', '/api/mcp/connections')).json();
+    expect(connections).toMatchObject([{ name: 'Cliente de teste' }]);
+    expect(connections[0].connectedAt).toBeGreaterThan(0);
+    expect(await (await me.call('DELETE', `/api/mcp/connections/${connections[0].clientId}`)).json()).toEqual({ deleted: 1 });
+    expect((await rpc(token, 'tools/list')).status).toBe(401);
+  });
+
+  it('excluir a conta corta o token do MCP', async () => {
+    const me = await h.newUser();
+    const token = await tokenDe(me);
+    expect((await me.call('DELETE', '/api/account', { confirm: 'EXCLUIR' })).status).toBe(200);
+    expect((await rpc(token, 'tools/list')).status).toBe(401);
+  });
+
+  it('o perfil mostra as preferências e o foco começa na duração escolhida', async () => {
+    const me = await h.newUser();
+    const token = await tokenDe(me);
+    await ferramenta(token, 'concluir_onboarding', {});
+    await me.call('PATCH', '/api/me/metadata', { focusMinutes: 40 });
+    expect((await ferramenta(token, 'ver_perfil')).dados).toMatchObject({ preferencias: { focusMinutes: 40 } });
+    expect((await ferramenta(token, 'comecar_foco')).dados).toMatchObject({ minutos: 40 });
+  });
+
   it('descoberta: o recurso aponta para o servidor de autorização, que anuncia registro e PKCE', async () => {
     const recurso = await (await h.app.request('/.well-known/oauth-protected-resource/mcp')).json();
     expect(recurso).toMatchObject({ resource: RESOURCE, authorization_servers: [`${API}/api/auth`] });
@@ -118,19 +145,28 @@ describe('servidor MCP', () => {
 
     const lista = await (await rpc(token, 'tools/list')).json();
     const nomes = lista.result.tools.map((t: { name: string }) => t.name);
-    expect(nomes).toEqual(expect.arrayContaining(['ver_hoje', 'criar_habito', 'marcar_habito', 'comecar_foco', 'criar_meta', 'decidir_proposta', 'ver_ilha', 'comprar_na_ilha']));
+    expect(nomes).toEqual(expect.arrayContaining(['ver_hoje', 'ver_sequencia', 'criar_habito', 'marcar_habito', 'comecar_foco', 'criar_meta', 'decidir_proposta', 'ver_ilha', 'comprar_na_ilha', 'mover_decoracao', 'ver_tarefas', 'criar_tarefa', 'mover_tarefa']));
 
     // Conta nova: precisa criar o sapo primeiro, como no onboarding.
     expect((await ferramenta(token, 'ver_hoje')).erro).toBe(true);
     const onboarding = await ferramenta(token, 'concluir_onboarding', { nomeDoSapo: 'Juca', inicioDoDia: 6, fimDoDia: 23 });
     expect(onboarding.dados).toMatchObject({ criado: true, habitos: 2 });
 
-    // Ilha: conta nova não tem moscas, então a compra é recusada com a mensagem da tela.
+    // Tarefas: cria, move para feito e lista por coluna, só na conta da pessoa do token.
+    const nova = await ferramenta(token, 'criar_tarefa', { titulo: 'Estudar', prioridade: 'alta', etiquetas: ['Faculdade'] });
+    expect(nova.dados).toMatchObject({ codigo: 'PULO-1', coluna: 'afazer', prioridade: 'alta' });
+    const movida = await ferramenta(token, 'mover_tarefa', { id: nova.dados.id, coluna: 'feito' });
+    expect(movida.dados).toMatchObject({ codigo: 'PULO-1', coluna: 'feito' });
+    expect((await ferramenta(token, 'ver_tarefas')).dados).toMatchObject({ afazer: [], feito: [{ id: nova.dados.id }] });
+    expect((await (await outra.call('GET', '/api/tasks')).json()).tasks).toEqual([]);
+    expect(await ferramenta(token, 'mover_tarefa', { id: 'nao-existe', coluna: 'feito' })).toMatchObject({ erro: true });
+
+    // Ilha: conta nova não tem joias, então a compra é recusada com a mensagem da tela.
     const mapa = await ferramenta(token, 'ver_ilha');
-    expect(mapa.dados).toMatchObject({ saldo: 0, nivel: 1 });
-    expect(mapa.dados.areas[0]).toMatchObject({ id: 'lagoa', estado: 'aberta' });
-    expect(mapa.dados.areas[0].enfeites[0]).toMatchObject({ id: 'banco', custo: 8, comprado: false });
-    expect(await ferramenta(token, 'comprar_na_ilha', { item: 'banco' })).toMatchObject({ erro: true, texto: 'Faltam 8 moscas.' });
+    expect(mapa.dados).toMatchObject({ saldo: 0, moeda: 'joias', casa: { construidas: 1, total: 6 } });
+    expect(await ferramenta(token, 'comprar_na_ilha', { item: 'cerca' })).toMatchObject({ erro: true, texto: 'Faltam 40 joias.' });
+    expect(await ferramenta(token, 'comprar_na_ilha', { item: 'tapete', x: 1, y: 1 })).toMatchObject({ erro: true, texto: 'Faltam 10 joias.' });
+    expect(await ferramenta(token, 'mover_decoracao', { item: 'tapete', x: 1, y: 1 })).toMatchObject({ erro: true });
 
     const habito = await ferramenta(token, 'criar_habito', { titulo: 'Ler 10 páginas', dias: ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'] });
     expect(habito.dados).toMatchObject({ titulo: 'Ler 10 páginas', ativo: true });
@@ -138,6 +174,16 @@ describe('servidor MCP', () => {
     const hoje = await ferramenta(token, 'ver_hoje');
     expect(hoje.dados.habitos).toEqual(expect.arrayContaining([{ id: habito.dados.id, titulo: 'Ler 10 páginas', feito: true }]));
     expect(hoje.dados.sapo.nome).toBe('Juca');
+    expect((await ferramenta(token, 'ver_sequencia')).dados).toMatchObject({ atual: 1, recorde: 1 });
+
+    // Spec 17: aparência, lembrete, pausa e arquivo.
+    const id = habito.dados.id;
+    const mudado = await ferramenta(token, 'editar_habito', { id, icone: '📚', periodo: 'noite', lembrete: '21:00', lembreteLigado: true });
+    expect(mudado.dados).toMatchObject({ estado: 'ativo', icone: '📚', periodo: 'noite', lembrete: '21:00', lembreteLigado: true });
+    expect((await ferramenta(token, 'editar_habito', { id, ativo: false })).dados).toMatchObject({ estado: 'pausado', icone: '📚' });
+    expect((await ferramenta(token, 'editar_habito', { id, estado: 'arquivado', lembrete: null })).dados).not.toHaveProperty('lembrete');
+    expect((await ferramenta(token, 'ver_rotina')).dados.habitosArquivados).toMatchObject([{ id }]);
+    expect((await ferramenta(token, 'editar_habito', { id, ativo: true, icone: null })).dados).not.toHaveProperty('icone');
 
     const meta = await ferramenta(token, 'criar_meta', { titulo: 'Correr uma maratona', prazo: '2027-09-20', marcos: ['5 km', '10 km'] });
     expect(meta.dados.progresso).toEqual({ done: 0, total: 2, ratio: 0 });
@@ -147,6 +193,8 @@ describe('servidor MCP', () => {
     // Regras do app valem: sobreposição de blocos é recusada com a mensagem da tela.
     const bloco = await ferramenta(token, 'criar_bloco', { dia: 'sabado', inicio: '10:00', minutos: 30, tipo: 'foco' });
     expect(bloco.dados).toMatchObject({ dia: 'sabado', inicio: '10:00', fim: '10:30' });
+    expect((await ferramenta(token, 'editar_bloco', { id: bloco.dados.id, icone: '🐸' })).dados.icone).toBe('🐸');
+    expect((await ferramenta(token, 'editar_bloco', { id: bloco.dados.id, icone: null })).dados).not.toHaveProperty('icone');
     expect((await ferramenta(token, 'criar_bloco', { dia: 'sabado', inicio: '10:15', minutos: 30, tipo: 'foco' })).erro).toBe(true);
 
     const foco = await ferramenta(token, 'comecar_foco', { minutos: 25 });

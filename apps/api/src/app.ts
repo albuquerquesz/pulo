@@ -8,17 +8,24 @@ import { type RouteDeps, handleError, handleNotFound } from './http';
 import { meRoutes } from './me';
 import { resolveMcpConfig } from './mcp-config';
 import { lerPessoa, mcpRoutes } from './mcp/rotas';
+import { accountRoutes } from './routes/account';
+import { achievementRoutes } from './routes/achievements';
 import { blockRoutes } from './routes/blocks';
+import { connectionRoutes } from './routes/connections';
 import { dataRoutes } from './routes/data';
 import { goalRoutes } from './routes/goals';
 import { habitLogRoutes } from './routes/habit-logs';
 import { habitRoutes } from './routes/habits';
+import { houseRoutes, roomRoutes } from './routes/house';
 import { islandRoutes } from './routes/island';
 import { mascotRoutes } from './routes/mascot';
 import { proposalRoutes } from './routes/proposals';
 import { restDayRoutes } from './routes/rest-days';
 import { sessionRoutes } from './routes/sessions';
+import { statsRoutes } from './routes/stats';
+import { streakRoutes } from './routes/streak';
 import { syncRoutes } from './routes/sync';
+import { taskRoutes } from './routes/tasks';
 import { weekSummaryRoutes } from './routes/week-summary';
 import { resolveWebConfig } from './web-config';
 import { type AiEnv, type ProviderAdapter, aiClientFromEnv, createProviderFromEnv, handleWeeklyAi, providerAsClient } from './weekly-ai';
@@ -81,11 +88,19 @@ export function createApp(env: ApiEnv, db: Db, now = Date.now, options: AppOptio
     .route('/api/rest-days', restDayRoutes(deps))
     .route('/api/proposals', proposalRoutes(deps))
     .route('/api/goals', goalRoutes(deps))
+    .route('/api/tasks', taskRoutes(deps))
     .route('/api/island', islandRoutes(deps))
+    .route('/api/house', houseRoutes(deps))
+    .route('/api/room', roomRoutes(deps))
     .route('/api/mascot', mascotRoutes(deps))
     .route('/api/week-summary', weekSummaryRoutes(deps))
+    .route('/api/streak', streakRoutes(deps))
+    .route('/api/achievements', achievementRoutes(deps))
     .route('/api/sync', syncRoutes(deps))
     .route('/api/data', dataRoutes(deps))
+    .route('/api/stats', statsRoutes(deps))
+    .route('/api/account', accountRoutes(deps))
+    .route('/api/mcp/connections', connectionRoutes(deps))
     .route('/', mcp)
     .post('/weekly-ai', async (c) => {
       const body = await c.req.json().catch(() => null);

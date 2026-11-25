@@ -16,8 +16,19 @@ erDiagram
   user ||--o{ rest_day : tem
   user ||--o{ weekly_proposal : tem
   user ||--o{ goal : tem
+  goal |o--o{ habit : "atrelada a"
+  goal ||--o| goal_chest : "baú aberto"
+  user ||--o{ task : tem
+  user ||--o| task_counter : tem
+  task ||--o{ task_subtask : "tem"
+  task ||--o{ task_comment : "tem"
+  task ||--o{ task_event : "registra"
+  goal |o--o{ task : "empurrada por"
   user ||--o{ island_purchase : tem
+  user ||--o| joia_credit : tem
+  island_purchase ||--o| room_placement : posiciona
   user ||--o| mascot_state : tem
+  user ||--o{ achievement : conquistou
   habit ||--o{ habit_log : registra
   routine_block |o--o{ focus_session : "ocorre em"
 
@@ -34,13 +45,22 @@ erDiagram
     smallint durationMinutes "5 a 120"
     block_kind kind
     text title
+    text icon
   }
   habit {
     text id PK
     text userId FK
     text title
     smallint_array weekdays
-    boolean active
+    boolean active "legado"
+    habit_state state
+    text goalId FK "SET NULL"
+    text icon
+    accent_color color
+    habit_period period
+    smallint reminderMinutes "0 a 1439"
+    boolean reminderOn
+    timestamptz createdAt
   }
   habit_log {
     text habitId PK
@@ -58,6 +78,10 @@ erDiagram
     focus_session_state state
     int pausedMs
     timestamptz pausedSince
+    text intention
+    text habitId FK "SET NULL"
+    text goalId FK "SET NULL"
+    text taskId FK "SET NULL"
   }
   rest_day {
     text userId PK
@@ -85,12 +109,82 @@ erDiagram
     jsonb milestones "GoalMilestone[]"
     timestamptz createdAt
     timestamptz completedAt
+    text icon
+    accent_color color
+  }
+  goal_chest {
+    text userId PK
+    text goalId PK
+    timestamptz abertoEm
+    int joias "0 ou mais"
+  }
+  task {
+    text id PK
+    text userId FK
+    int number "unico por pessoa"
+    text title
+    text description
+    task_status status
+    float position "ordem na coluna"
+    task_priority priority
+    date dueDate
+    text_array tags
+    text goalId FK "SET NULL"
+    smallint pomodorosEstimated
+    timestamptz createdAt
+    timestamptz completedAt
+  }
+  task_subtask {
+    text id PK
+    text userId
+    text taskId FK
+    text title
+    boolean done
+    float position
+  }
+  task_comment {
+    text id PK
+    text userId
+    text taskId FK
+    text body
+    timestamptz createdAt
+  }
+  task_event {
+    text id PK
+    text userId
+    text taskId FK
+    task_event_kind kind
+    text de
+    text para
+    timestamptz createdAt
+    serial seq "desempata a ordem"
+  }
+  task_counter {
+    text userId PK
+    int last "ultimo numero dado"
   }
   island_purchase {
     text userId PK
-    text item PK "id do catálogo ISLAND"
-    int cost "moscas, 0 ou mais"
+    text item PK "id de catálogo"
+    purchase_kind kind "casa, decoracao ou antiga"
+    int cost "joias, 0 ou mais"
     timestamptz createdAt
+  }
+  room_placement {
+    text userId PK
+    text item PK
+    smallint x
+    smallint y
+    smallint rotation "0, 90, 180 ou 270"
+  }
+  joia_credit {
+    text userId PK
+    int amount "maior que 0"
+  }
+  achievement {
+    text userId PK
+    text achievement PK "id do catálogo"
+    timestamptz conquistadaEm
   }
   mascot_state {
     text userId PK
@@ -113,13 +207,34 @@ Regras que o banco garante (migração `restricoes`, em SQL):
 - `goal` concluída se, e somente se, tem `completedAt`; `milestones` é sempre um array JSON (migração `metas`).
   O limite de metas ativas (`GOALS.maxActive`) é da API, numa transação serializável.
 - uma `island_purchase` por pessoa e item (chave primária `userId, item`) e `cost` nunca negativo (migração `ilha`).
-  A compra é imutável e o saldo de moscas não é gravado: sai dos hábitos feitos, sessões, descansos e metas.
-  O preço, a ordem das áreas e o saldo são conferidos pela API (`validarCompra` do core), numa transação serializável.
+  A compra é imutável e o saldo de joias não é gravado: sai dos hábitos feitos, sessões, descansos, marcos, baús de meta abertos e do `joia_credit`.
+  O preço e o saldo são conferidos pela API (core), numa transação serializável.
+- migração `joias_casa`: `kind` separa a casa, o quarto e a ilha antiga (`antiga`, o padrão, que não gasta joias na casa nem no quarto);
+  `room_placement` guarda a posição de cada decoração (sai junto com a compra); `joia_credit` recebe, uma vez, a diferença de quem
+  ganharia menos com a regra nova do foco. Nenhuma compra é apagada. Foco encerrado pela API antiga depois da migração e antes do
+  deploy novo não entra no crédito.
+- migração `tarefas` (só tipos e tabelas novas): `task` feita se, e somente se, tem `completedAt`; `(userId, number)` único;
+  subtarefa, comentário e evento só apontam para tarefa da mesma pessoa (chave composta `taskId, userId`) e saem junto com ela.
+  `task_counter` só cresce, então o número de uma tarefa apagada não volta. Que a meta da tarefa é da pessoa quem confere é a API.
+- migração `metas_v2`: `goal` ganha `icon` e `color` (nulos nas que já existiam), `habit` ganha `goalId` (apagar a meta solta o
+  hábito; que a meta é da pessoa quem confere é a API) e `goal_chest` guarda um resgate por meta (sai junto com ela). A migração
+  cria, uma vez, o resgate já aberto das metas que estavam concluídas, com as 10 joias que elas já valiam.
+- migração `conquistas` (só a tabela nova): `achievement` guarda uma linha por pessoa e conquista (chave `userId, achievement`),
+  com a data em que a regra passou pela primeira vez. O progresso é calculado. Sem preenchimento retroativo: quem já cumpria uma
+  regra a recebe na próxima escrita que confere conquistas.
 
 Convenções de tipo: `DateKey` do domínio ('AAAA-MM-DD', o dia lógico) é `date`; instantes (ms) são `timestamptz`;
 os enums do Prisma têm os mesmos valores das uniões de `packages/core/domain/types.ts`.
 Os ids das tabelas do domínio têm `@@unique([id, userId])` para dar upsert seguro por dono:
 `where: { id_userId: { id, userId } }`.
+- migração `habitos_v2` (só acrescenta; nenhum dado é apagado): `habit` ganha `state` (`active = false` vira `arquivado`), `icon`,
+  `color`, `period`, `reminderMinutes` (CHECK 0 a 1439), `reminderOn` e `createdAt` (nulo nos que já existiam); `routine_block`
+  ganha `icon`; o índice `(userId, active)` vira `(userId, state)`. A coluna `active` continua, só para a API anterior (janela do
+  deploy e volta de versão): o gatilho `habit_sync_active` a mantém igual a `state = 'ativo'`. O código novo não a lê nem grava;
+  uma migração futura apaga a coluna e o gatilho.
+- migração `foco_vinculo` (só acrescenta): `focus_session` ganha `intention`, `habitId`, `goalId` e `taskId` (nulos nas sessões
+  que já existiam), no máximo um dos três vínculos (CHECK). Apagar o alvo solta o vínculo e a sessão fica. Que o alvo é da pessoa
+  quem confere é a API. A API anterior não conhece as colunas e as preserva.
 
 ## Rodar
 

@@ -80,12 +80,15 @@ describe('/api/rest-days', () => {
     const get = await queriesOf(database, small, 'GET', '/api/rest-days?from=2026-01-01&to=2026-12-31');
     expect(await queriesOf(database, big, 'GET', '/api/rest-days?from=2026-01-01&to=2026-12-31')).toBe(get);
     expect(get).toBe(3);
+    // Grava o que o histórico já destrava, para a contagem abaixo não incluir o INSERT de uma conquista.
+    await big.call('PUT', '/api/rest-days/2026-01-01');
     const put = await queriesOf(database, small, 'PUT', '/api/rest-days/2026-11-17');
     expect(await queriesOf(database, big, 'PUT', '/api/rest-days/2026-11-17')).toBe(put);
     const del = await queriesOf(database, small, 'DELETE', '/api/rest-days/2026-11-17');
     expect(await queriesOf(database, big, 'DELETE', '/api/rest-days/2026-11-17')).toBe(del);
-    expect(put).toBe(del);
-    expect(put).toBe(7);
+    // O descanso criado ainda confere as conquistas (5 leituras).
+    expect(del).toBe(7);
+    expect(put).toBe(12);
 
     const mascot = await queriesOf(database, big, 'GET', '/api/mascot');
     expect(mascot).toBe(3);

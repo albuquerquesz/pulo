@@ -55,7 +55,12 @@ model User {
   restDays        RestDay[]
   weeklyProposals WeeklyProposal[]
   goals           Goal[]
+  tasks           Task[]
+  taskCounter     TaskCounter?
   islandPurchases IslandPurchase[]
+  joiaCredit      JoiaCredit?
+  goalChests      GoalChest[]
+  achievements    Achievement[]
   mascotState     MascotState?
 
   oauthClients       OauthClient[]
@@ -304,6 +309,39 @@ model OauthClientAssertion {
 
 // ---------- Domínio ----------
 
+enum TaskStatus {
+  ideias
+  afazer
+  fazendo
+  feito
+
+  @@map("task_status")
+}
+
+enum TaskPriority {
+  normal
+  alta
+
+  @@map("task_priority")
+}
+
+enum TaskEventKind {
+  criada
+  status
+  prioridade
+  prazo
+
+  @@map("task_event_kind")
+}
+
+enum PurchaseKind {
+  casa
+  decoracao
+  antiga
+
+  @@map("purchase_kind")
+}
+
 enum BlockKind {
   foco
   descanso
@@ -336,6 +374,34 @@ enum GoalState {
   @@map("goal_state")
 }
 
+/// Nomes de cor do design system (`ACCENT_COLORS` no core).
+enum AccentColor {
+  sapo
+  agua
+  foco
+  descanso
+  sol
+  atencao
+
+  @@map("accent_color")
+}
+
+enum HabitState {
+  ativo
+  pausado
+  arquivado
+
+  @@map("habit_state")
+}
+
+enum HabitPeriod {
+  manha
+  tarde
+  noite
+
+  @@map("habit_period")
+}
+
 enum ProposalOrigin {
   ia
   regra
@@ -355,6 +421,8 @@ model RoutineBlock {
   durationMinutes Int       @db.SmallInt
   kind            BlockKind
   title           String?
+  /// Emoji curto da Linha do dia.
+  icon            String?
 
   focusSessions FocusSession[]
 
@@ -371,12 +439,27 @@ model Habit {
   title    String
   /// Dias da semana (0 a 6) em que o hábito vale.
   weekdays Int[]   @db.SmallInt
-  active   Boolean @default(true)
+  /// Legado, igual a `state = ativo` (gatilho na migração habitos_v2). Não leia nem grave: use `state`.
+  active          Boolean      @default(true)
+  state           HabitState   @default(ativo)
+  icon            String?
+  color           AccentColor?
+  period          HabitPeriod?
+  /// Minutos desde 00:00 (CHECK na migração).
+  reminderMinutes Int?         @db.SmallInt
+  reminderOn      Boolean      @default(false)
+  /// Nulo nos hábitos anteriores à spec 17.
+  createdAt       DateTime?    @default(now()) @db.Timestamptz(3)
+  /// Meta que o hábito empurra; se ela for apagada, o hábito fica sem. A rota confere o dono.
+  goalId   String?
+  goal     Goal?   @relation(fields: [goalId], references: [id], onDelete: SetNull)
 
-  logs HabitLog[]
+  logs          HabitLog[]
+  focusSessions FocusSession[]
 
   @@unique([id, userId])
-  @@index([userId, active])
+  @@index([userId, state])
+  @@index([goalId])
   @@map("habit")
 }
 
@@ -411,10 +494,22 @@ model FocusSession {
   pausedMs       Int               @default(0)
   /// Se está pausada agora, quando a pausa começou.
   pausedSince    DateTime?         @db.Timestamptz(3)
+  /// No que a pessoa vai focar, em texto curto.
+  intention      String?
+  /// Vínculo opcional, no máximo um dos três (CHECK na migração). A rota confere o dono; apagar o alvo deixa a sessão.
+  habitId        String?
+  habit          Habit?            @relation(fields: [habitId], references: [id], onDelete: SetNull)
+  goalId         String?
+  goal           Goal?             @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  taskId         String?
+  task           Task?             @relation(fields: [taskId], references: [id], onDelete: SetNull)
 
   @@unique([id, userId])
   @@index([userId, startedAt])
   @@index([blockId])
+  @@index([habitId])
+  @@index([goalId])
+  @@index([taskId])
   @@map("focus_session")
 }
 
@@ -460,25 +555,168 @@ model Goal {
   milestones  Json      @db.JsonB
   createdAt   DateTime  @db.Timestamptz(3)
   completedAt DateTime? @db.Timestamptz(3)
+  icon        String?
+  color       AccentColor?
+
+  tasks         Task[]
+  habits        Habit[]
+  chest         GoalChest[]
+  focusSessions FocusSession[]
 
   @@unique([id, userId])
   @@index([userId, state])
   @@map("goal")
 }
 
-/// Compra da ilha (área ou enfeite), uma por item e pessoa. Imutável: só `DELETE /api/data` apaga.
-/// O saldo de moscas nunca é gravado, sai dos registros (ver packages/core/domain/ilha.ts).
+/// Resgate do baú de uma meta concluída (spec 16): um por meta. Sai junto se a meta for apagada.
+model GoalChest {
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goalId   String
+  goal     Goal     @relation(fields: [goalId, userId], references: [id, userId], onDelete: Cascade)
+  abertoEm DateTime @db.Timestamptz(3)
+  joias    Int
+
+  @@id([userId, goalId])
+  @@map("goal_chest")
+}
+
+/// Conquista ganha (spec 14): gravada uma vez, para a data não mudar. O progresso é calculado, nunca gravado.
+model Achievement {
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Id do catálogo (`ACHIEVEMENTS`).
+  achievement   String
+  conquistadaEm DateTime @db.Timestamptz(3)
+
+  @@id([userId, achievement])
+  @@map("achievement")
+}
+
+/// Cartão do quadro de tarefas (spec 20). O número (`PULO-n`) é dado pelo servidor.
+model Task {
+  id                 String       @id @default(uuid())
+  userId             String
+  user               User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  number             Int
+  title              String
+  description        String?
+  status             TaskStatus
+  /// Ordem na coluna; fracionária.
+  position           Float
+  priority           TaskPriority
+  dueDate            DateTime?    @db.Date
+  tags               String[]
+  /// Se a meta for apagada, a tarefa fica sem ela.
+  goalId             String?
+  goal               Goal?        @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  pomodorosEstimated Int          @db.SmallInt
+  createdAt          DateTime     @db.Timestamptz(3)
+  completedAt        DateTime?    @db.Timestamptz(3)
+
+  subtasks      TaskSubtask[]
+  comments      TaskComment[]
+  events        TaskEvent[]
+  focusSessions FocusSession[]
+
+  @@unique([id, userId])
+  @@unique([userId, number])
+  @@index([goalId])
+  @@map("task")
+}
+
+model TaskSubtask {
+  id       String  @id @default(uuid())
+  userId   String
+  taskId   String
+  task     Task    @relation(fields: [taskId, userId], references: [id, userId], onDelete: Cascade)
+  title    String
+  done     Boolean
+  position Float
+
+  @@unique([id, userId])
+  @@index([userId, taskId])
+  @@map("task_subtask")
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  userId    String
+  taskId    String
+  task      Task     @relation(fields: [taskId, userId], references: [id, userId], onDelete: Cascade)
+  body      String
+  createdAt DateTime @db.Timestamptz(3)
+
+  @@index([userId, taskId])
+  @@map("task_comment")
+}
+
+/// Histórico da tarefa. `de` e `para` guardam o valor antigo e o novo (nulo = sem valor).
+model TaskEvent {
+  id        String        @id @default(uuid())
+  userId    String
+  taskId    String
+  task      Task          @relation(fields: [taskId, userId], references: [id, userId], onDelete: Cascade)
+  kind      TaskEventKind
+  de        String?
+  para      String?
+  createdAt DateTime      @db.Timestamptz(3)
+  /// Ordem de gravação: desempata eventos do mesmo instante.
+  seq       Int           @default(autoincrement())
+
+  @@index([userId, taskId])
+  @@map("task_event")
+}
+
+/// Último número de tarefa dado a cada pessoa. Só cresce: um código apagado não volta.
+model TaskCounter {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  last   Int
+
+  @@map("task_counter")
+}
+
+/// Compra com joias (parte da casa, decoração ou área e enfeite da ilha antiga), uma por item e pessoa.
+/// Imutável: só `DELETE /api/data` apaga. O saldo nunca é gravado (ver packages/core/domain/joias.ts).
 model IslandPurchase {
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /// Id do item no catálogo (`ISLAND` em packages/core/config/decisions.ts).
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Id do item no catálogo (`HOUSE`, `ROOM_DECOR` ou `ISLAND` em packages/core/config/decisions.ts).
   item      String
-  /// Preço pago, em moscas (CHECK >= 0 na migração).
+  /// `antiga` é a ilha da spec 12: não gasta joias na casa nem no quarto.
+  kind      PurchaseKind @default(antiga)
+  /// Preço pago, em joias (CHECK >= 0 na migração).
   cost      Int
-  createdAt DateTime @db.Timestamptz(3)
+  createdAt DateTime     @db.Timestamptz(3)
+
+  placement RoomPlacement?
 
   @@id([userId, item])
   @@map("island_purchase")
+}
+
+/// Posição de uma decoração no quarto. Separada da compra porque muda sem nova compra.
+model RoomPlacement {
+  userId   String
+  item     String
+  purchase IslandPurchase @relation(fields: [userId, item], references: [userId, item], onDelete: Cascade)
+  x        Int            @db.SmallInt
+  y        Int            @db.SmallInt
+  /// Graus: 0, 90, 180 ou 270 (CHECK na migração).
+  rotation Int            @db.SmallInt
+
+  @@id([userId, item])
+  @@map("room_placement")
+}
+
+/// Joias de ganho histórico concedidas na troca de regra (spec 18). Só a migração grava; `DELETE /api/data` apaga.
+model JoiaCredit {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount Int
+
+  @@map("joia_credit")
 }
 
 /// Cache do estado do sapo (derivado). Uma linha por pessoa.

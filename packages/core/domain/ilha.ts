@@ -1,13 +1,17 @@
+/**
+ * Ilha antiga (spec 12), em modo legado: continua valendo para a tela atual até a casa (spec 18, `casa.ts`) tomar o lugar.
+ * O saldo daqui desconta as compras antigas e as novas; o da casa não desconta as antigas (as joias voltam).
+ */
 import { ISLAND } from '../config/decisions';
-import { sessionCountsAsCare } from './care-days';
+import { type FontesDeJoias, type JoiasGanhas, joiasGanhas, joiasGastas, saldoDeJoias, textoDeFalta } from './joias';
 import { fail, ok, type Result } from './result';
-import type { Clock, FocusSession, Goal, HabitLog, IslandPurchase, Repository, RestDay } from './types';
+import type { Clock, IslandPurchase, Purchase, Repository } from './types';
 
 export type AreaId = keyof typeof ISLAND.areaCost;
 export type EnfeiteId = keyof typeof ISLAND.decorCost;
 export type ItemDaIlha = AreaId | EnfeiteId;
 
-export type IslandErrorCode = 'item_inexistente' | 'ja_comprado' | 'area_fechada' | 'fora_de_ordem' | 'moscas_insuficientes';
+export type IslandErrorCode = 'item_inexistente' | 'ja_comprado' | 'area_fechada' | 'fora_de_ordem' | 'joias_insuficientes';
 
 export interface Enfeite {
   id: EnfeiteId;
@@ -86,34 +90,6 @@ export function precoDoItem(item: string): number | null {
   return null;
 }
 
-/** O que gera moscas. Tudo vem dos registros que o app já guarda. */
-export interface FontesDeMoscas {
-  habitLogs: readonly HabitLog[];
-  sessions: readonly FocusSession[];
-  restDays: readonly RestDay[];
-  goals: readonly Goal[];
-}
-
-export interface MoscasGanhas {
-  habitos: number;
-  focos: number;
-  descansos: number;
-  marcos: number;
-  metas: number;
-  total: number;
-}
-
-/** Moscas ganhas desde sempre. Calculado, nunca gravado: desmarcar um hábito devolve a mosca. */
-export function moscasGanhas(fontes: FontesDeMoscas): MoscasGanhas {
-  const por = ISLAND.fliesPer;
-  const habitos = fontes.habitLogs.length * por.habitDone;
-  const focos = fontes.sessions.filter(sessionCountsAsCare).length * por.careSession;
-  const descansos = fontes.restDays.length * por.restDay;
-  const marcos = fontes.goals.reduce((n, g) => n + g.milestones.filter((m) => m.doneAt !== undefined).length, 0) * por.milestoneDone;
-  const metas = fontes.goals.filter((g) => g.state === 'concluida').length * por.goalCompleted;
-  return { habitos, focos, descansos, marcos, metas, total: habitos + focos + descansos + marcos + metas };
-}
-
 export type EstadoDaArea = 'aberta' | 'proxima' | 'fechada';
 
 export interface AreaNoMapa extends Area {
@@ -123,7 +99,7 @@ export interface AreaNoMapa extends Area {
 }
 
 export interface EstadoDaIlha {
-  ganhas: MoscasGanhas;
+  ganhas: JoiasGanhas;
   gastas: number;
   /** Nunca negativo (se a pessoa desmarcar hábitos depois de comprar, fica em zero). */
   saldo: number;
@@ -133,9 +109,13 @@ export interface EstadoDaIlha {
 }
 
 /** O mapa inteiro, a partir dos registros e das compras. Função pura. */
-export function estadoDaIlha(fontes: FontesDeMoscas, compras: readonly IslandPurchase[]): EstadoDaIlha {
-  const ganhas = moscasGanhas(fontes);
-  const gastas = compras.reduce((n, c) => n + c.cost, 0);
+export function estadoDaIlha(
+  fontes: FontesDeJoias,
+  compras: readonly IslandPurchase[],
+  comprasNovas: readonly Purchase[] = [],
+): EstadoDaIlha {
+  const ganhas = joiasGanhas(fontes);
+  const gastas = joiasGastas(compras) + joiasGastas(comprasNovas);
   const comprado = new Set(compras.map((c) => c.item));
   const aberta = (a: Area, i: number) => i === 0 || comprado.has(a.id);
   const nivel = AREAS.filter(aberta).length;
@@ -148,7 +128,7 @@ export function estadoDaIlha(fontes: FontesDeMoscas, compras: readonly IslandPur
       enfeitesNoMapa: a.enfeites.map((e) => ({ ...e, custo: ISLAND.decorCost[e.id], comprado: comprado.has(e.id) })),
     };
   });
-  return { ganhas, gastas, saldo: Math.max(0, ganhas.total - gastas), nivel, areas };
+  return { ganhas, gastas, saldo: saldoDeJoias(ganhas.total, gastas), nivel, areas };
 }
 
 /** Se dá para comprar o item agora. O servidor usa a mesma regra antes de gravar. */
@@ -164,19 +144,23 @@ export function validarCompra(item: string, estado: EstadoDaIlha): Result<number
     if (area?.enfeitesNoMapa.some((e) => e.id === item && e.comprado)) return fail('ja_comprado', 'Esse enfeite já é seu.');
     if (area?.estado !== 'aberta') return fail('area_fechada', 'Abra a área antes de enfeitar.');
   }
-  if (estado.saldo < preco) return fail('moscas_insuficientes', `Faltam ${preco - estado.saldo} moscas.`);
+  if (estado.saldo < preco) return fail('joias_insuficientes', textoDeFalta(preco - estado.saldo));
   return ok(preco);
 }
 
 async function lerIlha(repo: Repository): Promise<EstadoDaIlha> {
-  const [habitLogs, sessions, restDays, goals, compras] = await Promise.all([
+  const [habitLogs, sessions, restDays, goals, baus, credito, compras, casa, quarto] = await Promise.all([
     repo.listHabitLogs(),
     repo.listSessions(),
     repo.listRestDays(),
     repo.listGoals(),
+    repo.listGoalChests(),
+    repo.getJoiaCredit(),
     repo.listIslandPurchases(),
+    repo.listHousePurchases(),
+    repo.listRoomDecor(),
   ]);
-  return estadoDaIlha({ habitLogs, sessions, restDays, goals }, compras);
+  return estadoDaIlha({ habitLogs, sessions, restDays, goals, baus, credito }, compras, [...casa, ...quarto]);
 }
 
 /** Estado atual da ilha, lido do repositório. */
@@ -184,7 +168,7 @@ export function verIlha(repo: Repository): Promise<EstadoDaIlha> {
   return lerIlha(repo);
 }
 
-/** Compra uma área ou um enfeite com moscas. */
+/** Compra uma área ou um enfeite com joias. */
 export async function comprarNaIlha(repo: Repository, clock: Clock, item: string): Promise<Result<EstadoDaIlha, IslandErrorCode>> {
   const antes = await lerIlha(repo);
   const preco = validarCompra(item, antes);

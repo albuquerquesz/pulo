@@ -1,8 +1,10 @@
-import { GOALS } from '../config/decisions';
-import { diffDays } from './day';
+import { DEFAULT_TIMEZONE, GOALS, JOIAS } from '../config/decisions';
+import { MINUTE_MS } from './clock';
+import { dateKeyOf, diffDays } from './day';
 import { newId } from './ids';
+import { focusedMs } from './joias';
 import { fail, ok, type Result } from './result';
-import type { DateKey, EntityId, Goal, GoalMilestone, Repository } from './types';
+import type { AccentColor, DateKey, EntityId, FocusSession, Goal, GoalChest, GoalMilestone, Habit, HabitLog, Repository } from './types';
 
 export type GoalErrorCode =
   | 'titulo_vazio'
@@ -10,7 +12,10 @@ export type GoalErrorCode =
   | 'limite_de_marcos'
   | 'meta_inexistente'
   | 'marco_inexistente'
-  | 'prazo_no_passado';
+  | 'prazo_no_passado'
+  | 'icone_invalido'
+  | 'meta_nao_concluida'
+  | 'bau_ja_aberto';
 
 export interface GoalInput {
   title: string;
@@ -18,6 +23,10 @@ export interface GoalInput {
   targetDate?: DateKey;
   /** Títulos dos marcos iniciais (vazios são ignorados). */
   milestones?: string[];
+  /** Emoji curto. Na edição, omitido (ou vazio) mantém o atual. */
+  icon?: string;
+  /** Na edição, omitida mantém a atual. */
+  color?: AccentColor;
 }
 
 export interface GoalProgress {
@@ -45,6 +54,12 @@ function checkTarget(targetDate: DateKey | undefined, today: DateKey): Result<Da
   return ok(targetDate);
 }
 
+function checkLook(icon: string | undefined, color: AccentColor | undefined): Result<Pick<Goal, 'icon' | 'color'>, GoalErrorCode> {
+  const clean = cleanText(icon);
+  if (clean && (clean.length > GOALS.iconMaxChars || /\s/.test(clean))) return fail('icone_invalido', 'O ícone é um emoji só.');
+  return ok({ ...(clean ? { icon: clean } : {}), ...(color ? { color } : {}) });
+}
+
 async function findGoal(repo: Repository, id: EntityId): Promise<Result<Goal, GoalErrorCode>> {
   const goal = (await repo.listGoals()).find((g) => g.id === id);
   return goal ? ok(goal) : fail('meta_inexistente', 'Essa meta não existe mais.');
@@ -61,6 +76,86 @@ export function goalProgress(goal: Goal): GoalProgress {
 /** Dias até o prazo (negativo se passou), ou null sem prazo. */
 export function daysUntilTarget(goal: Goal, today: DateKey): number | null {
   return goal.targetDate ? diffDays(goal.targetDate, today) : null;
+}
+
+export type PaceState = 'no-ritmo' | 'atras' | 'concluida' | 'sem-data';
+
+export interface GoalPace {
+  /** Quanto já devia estar feito hoje, de 0 a 1 (a linha de ritmo na barra). Sem data alvo, 0. */
+  esperado: number;
+  /** Quanto está feito, de 0 a 1 (marcos riscados). */
+  atual: number;
+  estado: PaceState;
+}
+
+const entre0e1 = (n: number) => Math.min(1, Math.max(0, n));
+
+/**
+ * Ritmo da meta: marcos feitos contra o tempo passado entre a criação e a data alvo.
+ * Está no ritmo com até `GOALS.paceTolerance` abaixo do esperado; depois da data, sem terminar, está atrás.
+ */
+export function ritmo(meta: Goal, hoje: DateKey, timeZone: string = DEFAULT_TIMEZONE): GoalPace {
+  const atual = goalProgress(meta).ratio;
+  if (meta.state === 'concluida') return { esperado: 1, atual, estado: 'concluida' };
+  if (!meta.targetDate) return { esperado: 0, atual, estado: 'sem-data' };
+  const inicio = dateKeyOf(meta.createdAt, timeZone);
+  const prazo = diffDays(meta.targetDate, inicio);
+  const esperado = diffDays(hoje, meta.targetDate) >= 0 ? 1 : entre0e1(diffDays(hoje, inicio) / prazo);
+  const vencida = diffDays(hoje, meta.targetDate) > 0 && atual < 1;
+  const noRitmo = !vencida && atual + GOALS.paceTolerance >= esperado;
+  return { esperado, atual, estado: noRitmo ? 'no-ritmo' : 'atras' };
+}
+
+export interface GoalRecords {
+  habits: readonly Habit[];
+  habitLogs: readonly HabitLog[];
+  sessions: readonly FocusSession[];
+}
+
+export interface GoalNumbers {
+  /** Hábitos atrelados à meta que aparecem na lista: os arquivados ficam de fora, mas o que foi feito neles continua somando. */
+  habitos: Habit[];
+  /** Vezes que os hábitos atrelados foram feitos, em todo o histórico recebido. */
+  habitosFeitos: number;
+  /** Minutos inteiros de foco: sessões ligadas à meta direto ou por um hábito atrelado, cada uma contada uma vez. */
+  minutosDeFoco: number;
+  /** Dias até a data alvo (negativo se passou), ou null sem data. */
+  diasRestantes: number | null;
+}
+
+/** Os números da meta, a partir dos registros. Função pura. */
+export function numerosDaMeta(meta: Goal, registros: GoalRecords, hoje: DateKey): GoalNumbers {
+  const atrelados = registros.habits.filter((h) => h.goalId === meta.id);
+  const ids = new Set(atrelados.map((h) => h.id));
+  // O vínculo direto vence: sessão ligada a outra meta não conta aqui pelo hábito.
+  const daMeta = (s: FocusSession) => (s.goalId !== undefined ? s.goalId === meta.id : s.habitId !== undefined && ids.has(s.habitId));
+  const ms = registros.sessions.filter(daMeta).reduce((total, s) => total + focusedMs(s), 0);
+  return {
+    habitos: atrelados.filter((h) => h.state !== 'arquivado'),
+    habitosFeitos: registros.habitLogs.filter((log) => ids.has(log.habitId)).length,
+    minutosDeFoco: Math.floor(ms / MINUTE_MS),
+    diasRestantes: daysUntilTarget(meta, hoje),
+  };
+}
+
+/** `nenhum`: meta em andamento (o baú aparece fechado); `fechado`: concluída e esperando; `aberto`: já resgatado. */
+export type ChestState = 'nenhum' | 'fechado' | 'aberto';
+
+export function estadoDoBau(meta: Goal, baus: readonly GoalChest[]): ChestState {
+  if (baus.some((b) => b.goalId === meta.id)) return 'aberto';
+  return meta.state === 'concluida' ? 'fechado' : 'nenhum';
+}
+
+/** Abre o baú de uma meta concluída, uma vez só: a partir daí as joias contam no saldo. */
+export async function abrirBau(repo: Repository, goalId: EntityId, now: number): Promise<Result<GoalChest, GoalErrorCode>> {
+  const found = await findGoal(repo, goalId);
+  if (!found.ok) return found;
+  const estado = estadoDoBau(found.value, await repo.listGoalChests());
+  if (estado === 'aberto') return fail('bau_ja_aberto', 'Esse baú já foi aberto.');
+  if (estado === 'nenhum') return fail('meta_nao_concluida', 'Conclua a meta para abrir o baú.');
+  await repo.saveGoalChest({ goalId, abertoEm: now, joias: JOIAS.por.goalCompleted });
+  const saved = (await repo.listGoalChests()).find((b) => b.goalId === goalId);
+  return saved ? ok(saved) : fail('meta_inexistente', 'Essa meta não existe mais.');
 }
 
 /** Ativas primeiro (prazo mais perto antes, sem prazo por último), depois concluídas da mais recente. */
@@ -84,11 +179,13 @@ export async function criarMeta(
   if (activeCount(goals) >= GOALS.maxActive) return fail('limite_de_metas', LIMITE_DE_METAS);
   const target = checkTarget(input.targetDate, today);
   if (!target.ok) return target;
+  const look = checkLook(input.icon, input.color);
+  if (!look.ok) return look;
   const titles = (input.milestones ?? []).map((t) => t.trim()).filter(Boolean);
   if (titles.length > GOALS.maxMilestones) return fail('limite_de_marcos', LIMITE_DE_MARCOS);
 
   const milestones: GoalMilestone[] = titles.map((t) => ({ id: newId(now, 'marco'), title: t }));
-  const base: Goal = { id: newId(now, 'meta'), title, state: 'ativa', milestones, createdAt: now };
+  const base: Goal = { id: newId(now, 'meta'), title, state: 'ativa', milestones, createdAt: now, ...look.value };
   const goal = withOptional(base, cleanText(input.why), target.value);
   await repo.saveGoal(goal);
   return ok(goal);
@@ -97,7 +194,7 @@ export async function criarMeta(
 export async function editarMeta(
   repo: Repository,
   id: EntityId,
-  patch: Pick<GoalInput, 'title' | 'why' | 'targetDate'>,
+  patch: Pick<GoalInput, 'title' | 'why' | 'targetDate' | 'icon' | 'color'>,
   today: DateKey,
 ): Promise<Result<Goal, GoalErrorCode>> {
   const found = await findGoal(repo, id);
@@ -107,7 +204,9 @@ export async function editarMeta(
   const keepsTarget = patch.targetDate === found.value.targetDate;
   const target = keepsTarget ? ok(patch.targetDate) : checkTarget(patch.targetDate, today);
   if (!target.ok) return target;
-  const goal = withOptional({ ...found.value, title }, cleanText(patch.why), target.value);
+  const look = checkLook(patch.icon, patch.color);
+  if (!look.ok) return look;
+  const goal = withOptional({ ...found.value, title, ...look.value }, cleanText(patch.why), target.value);
   await repo.saveGoal(goal);
   return ok(goal);
 }

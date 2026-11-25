@@ -46,13 +46,30 @@ export interface RoutineBlock {
   durationMinutes: number;
   kind: 'foco' | 'descanso';
   title?: string;
+  /** Emoji curto da Linha do dia (spec 17). */
+  icon?: string;
 }
+
+/** `pausado` sai do Hoje e volta depois; `arquivado` some das listas. Os dois guardam o histórico (spec 17). */
+export type HabitState = 'ativo' | 'pausado' | 'arquivado';
 
 export interface Habit {
   id: EntityId;
   title: string;
   weekdays: Weekday[];
-  active: boolean;
+  state: HabitState;
+  /** Meta que o hábito empurra (spec 16); no máximo uma. */
+  goalId?: EntityId;
+  /** Emoji curto. Ausente: a tela usa `HABITS.defaultIcon`. */
+  icon?: string;
+  /** Ausente: a tela usa `HABITS.defaultColor`. */
+  color?: AccentColor;
+  /** Período do dia, que agrupa a lista. */
+  period?: Period;
+  /** Horário do lembrete, em minutos desde 00:00. Só a preferência: a entrega não existe ainda. */
+  reminderMinutes?: number;
+  /** Ausente é desligado. Só vale com `reminderMinutes`. */
+  reminderOn?: boolean;
 }
 
 export interface HabitLog {
@@ -74,10 +91,66 @@ export interface FocusSession {
   pausedMs: number;
   /** Se está pausada agora, o instante em que a pausa começou. */
   pausedSince?: number;
+  /** No que a pessoa vai focar, em texto curto (spec 19). */
+  intention?: string;
+  /** Vínculo opcional (spec 19): no máximo um entre `habitId`, `goalId` e `taskId`. Apagar o alvo solta o vínculo. */
+  habitId?: EntityId;
+  goalId?: EntityId;
+  taskId?: EntityId;
+}
+
+/** Para onde foi um foco (spec 19). */
+export interface FocusTarget {
+  tipo: 'habito' | 'meta' | 'tarefa';
+  id: EntityId;
+}
+
+/** Minutos de foco de um alvo; `alvo` nulo junta as sessões sem vínculo. */
+export interface TargetFocus {
+  alvo: FocusTarget | null;
+  minutos: number;
 }
 
 export interface RestDay {
   date: DateKey;
+}
+
+export type AmbientSound = 'silencio' | 'lagoa' | 'chuva';
+
+/** Intervalo de dias de férias, extremos incluídos. */
+export interface VacationPeriod {
+  de: DateKey;
+  ate: DateKey;
+}
+
+export interface Vacation {
+  ligado: boolean;
+  /** Primeiro dia das férias atuais; `null` com o modo desligado. */
+  desde: DateKey | null;
+  /** Férias já encerradas: continuam valendo como descanso na sequência. */
+  periodos: VacationPeriod[];
+}
+
+/** Preferências da conta (spec 15). */
+export interface Preferences {
+  focusMinutes: number;
+  breakMinutes: number;
+  /** `null` = sem meta diária. */
+  dailyFocusGoalMinutes: number | null;
+  /** `minutos` desde 00:00, no fuso da pessoa. Só a preferência: a entrega do lembrete não existe ainda. */
+  eveningReminder: { ligado: boolean; minutos: number };
+  vacation: Vacation;
+  sounds: boolean;
+  aiEnabled: boolean;
+  ambientSound: AmbientSound;
+}
+
+/** Números de todo o tempo, mostrados no Perfil. */
+export interface ProfileStats {
+  habitosFeitos: number;
+  minutosDeFoco: number;
+  /** Instante (ms) em que a conta foi criada. */
+  desde: number;
 }
 
 export type ProposalState = 'pendente' | 'aceita' | 'editada' | 'negada' | 'expirada';
@@ -114,6 +187,9 @@ export interface WeeklyProposal {
 
 export type GoalState = 'ativa' | 'concluida';
 
+/** Cor de destaque escolhida pela pessoa: um nome do design system (`ACCENT_COLORS`), nunca um hex. */
+export type AccentColor = 'sapo' | 'agua' | 'foco' | 'descanso' | 'sol' | 'atencao';
+
 /** Passo de uma meta. `doneAt` existe quando o marco foi riscado. */
 export interface GoalMilestone {
   id: EntityId;
@@ -135,25 +211,184 @@ export interface Goal {
   milestones: GoalMilestone[];
   createdAt: number;
   completedAt?: number;
+  /** Emoji curto (spec 16). Ausente: a tela usa `GOALS.defaultIcon`. */
+  icon?: string;
+  /** Ausente: a tela usa `GOALS.defaultColor`. */
+  color?: AccentColor;
+}
+
+/** Resgate do baú de uma meta concluída (spec 16): um por meta, e só então as joias contam no saldo. */
+export interface GoalChest {
+  goalId: EntityId;
+  abertoEm: number;
+  joias: number;
 }
 
 /**
- * Compra na ilha (spec 12): uma área aberta ou um enfeite. Uma por item; nunca muda nem some (só `clearAll`).
- * O saldo de moscas é calculado a partir dos registros, nunca gravado.
+ * Compra com joias (spec 18). Uma por item; o preço nunca muda nem some (só `clearAll`).
+ * O saldo de joias é calculado a partir dos registros, nunca gravado.
  */
-export interface IslandPurchase {
-  /** Id do item no catálogo (`ISLAND.areaCost` ou `ISLAND.decorCost`). */
+export interface Purchase {
+  /** Id do item no catálogo (`HOUSE`, `ROOM_DECOR` ou, no legado, `ISLAND`). */
   item: string;
-  /** Moscas pagas, igual ao preço do catálogo na hora da compra. */
+  /** Joias pagas, igual ao preço do catálogo na hora da compra. */
   cost: number;
   createdAt: number;
 }
+
+/** Compra da ilha antiga (spec 12, legado): área ou enfeite. */
+export type IslandPurchase = Purchase;
+
+/** Giro de um item no chão do quarto, em graus (`ROOM_GRID.rotations`). */
+export type RoomRotation = 0 | 90 | 180 | 270;
+
+/** Lugar de um item no chão do quarto. Mover é grátis. */
+export interface RoomSpot {
+  x: number;
+  y: number;
+  rotation: RoomRotation;
+}
+
+/** Decoração comprada, onde está no quarto. */
+export interface RoomDecor extends Purchase, RoomSpot {}
 
 /** Derivado e guardado em cache. Nunca é a fonte da verdade. */
 export interface MascotState {
   phase: Phase;
   careDays: number;
   updatedAt: number;
+}
+
+// ---------- Tarefas (spec 20) ----------
+
+export type TaskStatus = 'ideias' | 'afazer' | 'fazendo' | 'feito';
+export type TaskPriority = 'normal' | 'alta';
+
+/** Cartão do quadro. `completedAt` existe quando, e só quando, o status é `feito`. */
+export interface Task {
+  id: EntityId;
+  /** Sequência por pessoa, que gera o código `PULO-n`. Quem atribui é o repositório na primeira gravação; nunca muda nem é reusado. */
+  number?: number;
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  /** Ordem dentro da coluna (menor em cima). Fracionário, para reordenar sem reescrever a coluna. */
+  position: number;
+  priority: TaskPriority;
+  /** Prazo. "Esta semana" é o domingo da semana. */
+  dueDate?: DateKey;
+  tags: string[];
+  goalId?: EntityId;
+  pomodorosEstimated: number;
+  /** Fica o da primeira gravação. */
+  createdAt: number;
+  completedAt?: number;
+}
+
+export interface TaskSubtask {
+  id: EntityId;
+  taskId: EntityId;
+  title: string;
+  done: boolean;
+  position: number;
+}
+
+export interface TaskComment {
+  id: EntityId;
+  taskId: EntityId;
+  body: string;
+  createdAt: number;
+}
+
+export type TaskEventKind = 'criada' | 'status' | 'prioridade' | 'prazo';
+
+/** Registro de uma mudança, gravado pelo repositório. `de` e `para` são o valor antigo e o novo (ausente = sem valor). */
+export interface TaskEvent {
+  id: EntityId;
+  taskId: EntityId;
+  kind: TaskEventKind;
+  de?: string;
+  para?: string;
+  createdAt: number;
+}
+
+/** O histórico de uma tarefa, lido sob demanda (mais antigo primeiro). */
+export interface TaskActivity {
+  events: TaskEvent[];
+  comments: TaskComment[];
+}
+
+// ---------- Sequência ----------
+
+/** `hoje` é o dia de hoje ainda vazio; com algo feito ou descanso marcado, ele aparece como tal. */
+export type StreakDayState = 'feito' | 'descanso' | 'vazio' | 'hoje' | 'futuro';
+
+export interface StreakDay {
+  date: DateKey;
+  estado: StreakDayState;
+}
+
+/** Sequência com foguinho. Calculada a partir dos registros, nunca gravada. */
+export interface Streak {
+  /** Dias feitos seguidos até hoje (descanso não quebra nem soma). */
+  atual: number;
+  /** Maior sequência de todo o histórico. */
+  recorde: number;
+  /** Os 7 dias da semana corrente, na ordem (veja `STREAK.weekStartsOn`). */
+  semana: StreakDay[];
+}
+
+// ---------- Estatísticas do hábito (spec 17) ----------
+
+/** `parcial` fica reservado para hábitos com quantidade (fora do MVP) e não é produzido. */
+export type HabitDayState = 'feito' | 'parcial' | 'descanso' | 'vazio' | 'fora' | 'futuro';
+
+export interface HabitDay {
+  date: DateKey;
+  estado: HabitDayState;
+}
+
+/** Calculadas a partir dos registros, nunca gravadas. */
+export interface HabitStats {
+  /** Dias feitos seguidos até hoje (descanso e dia fora da frequência não quebram nem somam). */
+  sequencia: number;
+  recorde: number;
+  /** De 0 a 1: dias da frequência cumpridos. `null` sem nenhum dia que conte ainda. */
+  taxa: number | null;
+  /** Vezes feito, em todo o histórico até hoje. */
+  total: number;
+  /** Semanas (`HABITS.statsWeeks`, da mais antiga à corrente), cada uma com 7 dias. */
+  calendario: HabitDay[][];
+}
+
+// ---------- Conquistas (spec 14) ----------
+
+export type AchievementId =
+  | 'primeira-semana'
+  | 'foco-profundo'
+  | 'descanso-sabido'
+  | 'mes-de-fogo'
+  | 'casa-inteira'
+  | 'segredo';
+
+/** Uma conquista gravada. `id` é o que está no banco (do catálogo). */
+export interface UnlockedAchievement {
+  id: string;
+  conquistadaEm: number;
+}
+
+/** Uma conquista como a pessoa a vê. Progresso é calculado; só a data da conquista é gravada. */
+export interface Achievement {
+  id: AchievementId;
+  /** Nome e emoji do catálogo; ausentes na secreta ainda não conquistada. */
+  nome?: string;
+  emoji?: string;
+  conquistada: boolean;
+  /** Instante (ms) em que foi gravada. Ausente no que o app calcula sozinho (demo). */
+  conquistadaEm?: number;
+  /** De 0 a `meta`. */
+  progresso: number;
+  meta: number;
 }
 
 // ---------- Resumo da semana (entrada da IA e das telas) ----------
@@ -179,6 +414,13 @@ export interface WeekSummary {
   daysWithRecord: number;
   /** careDays >= STABLE_WEEK_MIN_CARE_DAYS. */
   stable: boolean;
+  /** Minutos de foco da semana por alvo, do maior para o menor (spec 19). Só ids, sem títulos. */
+  focoPorAlvo: TargetFocus[];
+  sessoesTerminadas: number;
+  /** Sessões interrompidas antes do fim. */
+  sessoesLargadas: number;
+  /** Período do dia com mais minutos de foco; `null` sem nenhum minuto. */
+  melhorPeriodo: Period | null;
 }
 
 // ---------- Repositório ----------
@@ -220,10 +462,40 @@ export interface Repository {
 
   listGoals(): Promise<Goal[]>;
   saveGoal(goal: Goal): Promise<void>;
+  /** Apaga a meta e o baú dela; hábitos e tarefas ficam, sem a meta. */
   deleteGoal(id: EntityId): Promise<void>;
+  /** Baús já abertos. */
+  listGoalChests(): Promise<GoalChest[]>;
+  /** Abre o baú de uma meta concluída. No remoto, quem decide as joias e a hora é o servidor. */
+  saveGoalChest(chest: GoalChest): Promise<void>;
 
   listIslandPurchases(): Promise<IslandPurchase[]>;
   saveIslandPurchase(purchase: IslandPurchase): Promise<void>;
+
+  /** Partes da casa compradas. */
+  listHousePurchases(): Promise<Purchase[]>;
+  saveHousePurchase(purchase: Purchase): Promise<void>;
+  /** Decorações compradas, com a posição. */
+  listRoomDecor(): Promise<RoomDecor[]>;
+  saveRoomDecor(decor: RoomDecor): Promise<void>;
+  /** Muda a posição de uma decoração já comprada. Item não comprado não faz nada no repositório local. */
+  moveRoomDecor(item: string, spot: RoomSpot): Promise<void>;
+  /** Joias de ganho histórico dadas na troca de regra (spec 18); 0 para quem começou depois. Só o servidor concede. */
+  getJoiaCredit(): Promise<number>;
+
+  listTasks(): Promise<Task[]>;
+  /** Cria ou atualiza. O número e o `createdAt` da primeira gravação ficam; mudar status, prioridade ou prazo gera um evento. */
+  saveTask(task: Task): Promise<void>;
+  /** Apaga a tarefa com subtarefas, comentários e eventos. */
+  deleteTask(id: EntityId): Promise<void>;
+  listSubtasks(): Promise<TaskSubtask[]>;
+  /** A tarefa precisa existir. */
+  saveSubtask(subtask: TaskSubtask): Promise<void>;
+  deleteSubtask(taskId: EntityId, id: EntityId): Promise<void>;
+  /** A tarefa precisa existir. Repetir o mesmo comentário não duplica. */
+  addTaskComment(comment: TaskComment): Promise<void>;
+  /** Eventos e comentários de uma tarefa. Falha se a tarefa não existe. */
+  listTaskActivity(taskId: EntityId): Promise<TaskActivity>;
 
   getMascotState(): Promise<MascotState | null>;
   saveMascotState(state: MascotState): Promise<void>;

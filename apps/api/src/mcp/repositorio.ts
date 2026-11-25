@@ -54,7 +54,7 @@ export function repositorioInterno(api: ClienteInterno): Repository {
 
     listBlocks: async () => (await lerJson(await api.api.blocks.$get())).blocks,
     saveBlock: async (block) => {
-      await lerJson(await api.api.blocks[':id'].$put({ param: { id: block.id }, json: block }));
+      await lerJson(await api.api.blocks[':id'].$put({ param: { id: block.id }, json: { ...block, icon: block.icon ?? null } }));
     },
     deleteBlock: async (id) => {
       await lerJson(await api.api.blocks[':id'].$delete({ param: { id } }));
@@ -62,7 +62,17 @@ export function repositorioInterno(api: ClienteInterno): Repository {
 
     listHabits: async () => (await lerJson(await api.api.habits.$get())).habits,
     saveHabit: async (habit) => {
-      await lerJson(await api.api.habits[':id'].$put({ param: { id: habit.id }, json: habit }));
+      // Aqui o hábito sempre acabou de ser lido: sem `goalId` quer dizer sem meta.
+      await lerJson(await api.api.habits[':id'].$put({ param: { id: habit.id }, json: {
+          ...habit,
+          goalId: habit.goalId ?? null,
+          icon: habit.icon ?? null,
+          color: habit.color ?? null,
+          period: habit.period ?? null,
+          reminderMinutes: habit.reminderMinutes ?? null,
+          reminderOn: habit.reminderOn ?? false,
+        },
+      }));
     },
     deleteHabit: async (id) => {
       await lerJson(await api.api.habits[':id'].$delete({ param: { id } }));
@@ -101,10 +111,47 @@ export function repositorioInterno(api: ClienteInterno): Repository {
       await lerJson(await api.api.goals[':id'].$delete({ param: { id } }));
     },
 
+    listGoalChests: async () => (await lerJson(await api.api.goals.$get())).chests,
+    saveGoalChest: async (chest) => {
+      await lerJson(await api.api.goals[':id'].chest.$post({ param: { id: chest.goalId } }));
+    },
+
     listIslandPurchases: async () => (await lerJson(await api.api.island.purchases.$get())).purchases,
     saveIslandPurchase: async (purchase) => {
       await lerJson(await api.api.island.purchases[':item'].$put({ param: { item: purchase.item }, json: purchase }));
     },
+
+    listHousePurchases: async () => (await lerJson(await api.api.house.$get())).purchases,
+    saveHousePurchase: async (purchase) => {
+      await lerJson(await api.api.house[':item'].$put({ param: { item: purchase.item }, json: purchase }));
+    },
+    listRoomDecor: async () => (await lerJson(await api.api.room.$get())).decor,
+    saveRoomDecor: async (decor) => {
+      await lerJson(await api.api.room[':item'].$put({ param: { item: decor.item }, json: decor }));
+    },
+    moveRoomDecor: async (item, spot) => {
+      await lerJson(await api.api.room[':item'].$patch({ param: { item }, json: spot }));
+    },
+    getJoiaCredit: async () => (await lerJson(await api.api.house.$get())).joiaCredit,
+
+    listTasks: async () => (await lerJson(await api.api.tasks.$get())).tasks,
+    saveTask: async (task) => {
+      await lerJson(await api.api.tasks[':id'].$put({ param: { id: task.id }, json: task }));
+    },
+    deleteTask: async (id) => {
+      await lerJson(await api.api.tasks[':id'].$delete({ param: { id } }));
+    },
+    listSubtasks: async () => (await lerJson(await api.api.tasks.$get())).subtasks,
+    saveSubtask: async (subtask) => {
+      await lerJson(await api.api.tasks[':id'].subtasks[':subId'].$put({ param: { id: subtask.taskId, subId: subtask.id }, json: subtask }));
+    },
+    deleteSubtask: async (taskId, subId) => {
+      await lerJson(await api.api.tasks[':id'].subtasks[':subId'].$delete({ param: { id: taskId, subId } }));
+    },
+    addTaskComment: async (comment) => {
+      await lerJson(await api.api.tasks[':id'].comments.$post({ param: { id: comment.taskId }, json: comment }));
+    },
+    listTaskActivity: async (id) => lerJson(await api.api.tasks[':id'].activity.$get({ param: { id } })),
 
     getMascotState: async () => (await lerJson(await api.api.mascot.$get())).mascot,
     // O servidor calcula o sapo ao gravar sessões e descansos.

@@ -1,7 +1,9 @@
 export { createDb, type CreateDbOptions, type Db, type QueryEvent } from './client';
 export { dateKeyToDate, dateToDateKey, dateToMs, msToDate } from './dates';
 export {
+  achievementMapper,
   focusSessionMapper,
+  goalChestMapper,
   goalMapper,
   goalMilestonesSchema,
   habitLogMapper,
@@ -10,7 +12,12 @@ export {
   mascotStateMapper,
   proposalChangesSchema,
   restDayMapper,
+  roomPlacementMapper,
   routineBlockMapper,
+  taskCommentMapper,
+  taskEventMapper,
+  taskMapper,
+  taskSubtaskMapper,
   toPhase,
   toWeekday,
   weeklyProposalMapper,

@@ -1,11 +1,15 @@
 import type { DateRangeQuery } from '@pulo/core/api/schemas';
+import { type AchievementSummary, summarizeForAchievements } from '@pulo/core/domain/achievements';
 import { addDays, startOfLogicalDay, weekEndOf } from '@pulo/core/domain/day';
-import type { MascotState, WeekSummary } from '@pulo/core/domain/types';
+import { computeStats } from '@pulo/core/domain/stats';
+import { computeStreak } from '@pulo/core/domain/streak';
+import type { UserMetadata } from '@pulo/core/domain/user-metadata';
+import type { MascotState, ProfileStats, Streak, WeekSummary } from '@pulo/core/domain/types';
 import { computeMascotState } from '@pulo/core/domain/phase';
 import { buildWeekSummary } from '@pulo/core/domain/week-summary';
-import { type Db, type Prisma, dateKeyToDate, focusSessionMapper, habitLogMapper, mascotStateMapper, restDayMapper } from '@pulo/db';
+import { type Db, type Prisma, dateKeyToDate, focusSessionMapper, habitLogMapper, islandPurchaseMapper, mascotStateMapper, restDayMapper } from '@pulo/db';
 import type { Client } from './http';
-import { habitLogSelect, mascotSelect, restDaySelect, sessionSelect } from './selects';
+import { achievementSelect, habitLogSelect, islandPurchaseSelect, mascotSelect, restDaySelect, sessionSelect } from './selects';
 
 /** Filtro de uma coluna `date` por intervalo de DateKey (extremos incluídos); sem extremos, sem filtro. */
 export function dateFilter(range: DateRangeQuery): { gte?: Date; lte?: Date } | undefined {
@@ -88,4 +92,76 @@ export function summaryFromRows(weekStart: string, timeZone: string, rows: WeekS
     restDays: rows.restDays.map(restDayMapper.toDomain),
     habitLogs: rows.habitLogs.map(habitLogMapper.toDomain),
   });
+}
+
+/**
+ * As três leituras da sequência, para entrar numa `db.$transaction([...])`. Todo o histórico (o recorde é calculado, nunca
+ * gravado), mas os hábitos feitos já vêm agrupados em uma linha por dia.
+ */
+export function streakReads(db: Db, userId: string) {
+  return [
+    db.habitLog.groupBy({ by: ['date'], where: { userId }, orderBy: { date: 'asc' }, _count: { habitId: true } }),
+    db.focusSession.findMany({ where: { userId, state: { not: 'em_andamento' } }, select: sessionSelect }),
+    db.restDay.findMany({ where: { userId }, select: restDaySelect }),
+  ] as const;
+}
+
+type StreakRows = {
+  habitDays: { date: Date }[];
+  sessions: Parameters<typeof focusSessionMapper.toDomain>[0][];
+  restDays: Parameters<typeof restDayMapper.toDomain>[0][];
+};
+
+export function streakFromRows(metadata: UserMetadata, now: number, rows: StreakRows): Streak {
+  return computeStreak({
+    habitLogs: rows.habitDays.map(restDayMapper.toDomain),
+    sessions: rows.sessions.map(focusSessionMapper.toDomain),
+    restDays: rows.restDays.map(restDayMapper.toDomain),
+    vacation: metadata.vacation,
+    timeZone: metadata.timezone,
+    dayStartMinutes: metadata.profile?.dayStartMinutes,
+    now,
+  });
+}
+
+/**
+ * As leituras das conquistas além das três da sequência, para entrar numa `db.$transaction([...])`
+ * (ordem: gravadas, partes da casa compradas).
+ */
+export function achievementReads(db: Db, userId: string) {
+  return [
+    db.achievement.findMany({ where: { userId }, select: achievementSelect }),
+    db.islandPurchase.findMany({ where: { userId, kind: 'casa' }, select: islandPurchaseSelect, orderBy: { createdAt: 'asc' } }),
+  ] as const;
+}
+
+type AchievementRows = StreakRows & { casa: Parameters<typeof islandPurchaseMapper.toDomain>[0][] };
+
+/** O resumo que as regras olham, a partir das linhas de todo o histórico e da sequência já calculada. */
+export function achievementSummaryFromRows(streak: Streak, rows: AchievementRows): AchievementSummary {
+  return summarizeForAchievements({
+    sequencia: streak,
+    sessions: rows.sessions.map(focusSessionMapper.toDomain),
+    descansos: rows.restDays.length,
+    casa: rows.casa.map(islandPurchaseMapper.toDomain),
+  });
+}
+
+/** Pomodoros por tarefa de todo o histórico: as sessões concluídas, contadas pelo banco numa query. */
+export function pomodoroRead(db: Db, userId: string) {
+  return db.focusSession.groupBy({
+    by: ['taskId'],
+    where: { userId, state: 'concluida', taskId: { not: null } },
+    orderBy: { taskId: 'asc' },
+    _count: { id: true },
+  });
+}
+
+export function pomodorosFromRows(rows: { taskId: string | null; _count: { id: number } }[]): Record<string, number> {
+  return Object.fromEntries(rows.flatMap((row) => (row.taskId === null ? [] : [[row.taskId, row._count.id]])));
+}
+
+/** Estatísticas de todo o tempo. Os hábitos feitos chegam contados pelo banco; o foco sai das sessões terminadas. */
+export function statsFromRows(desde: number, habitosFeitos: number, sessions: StreakRows['sessions']): ProfileStats {
+  return computeStats({ desde, habitosFeitos, sessions: sessions.map(focusSessionMapper.toDomain) });
 }

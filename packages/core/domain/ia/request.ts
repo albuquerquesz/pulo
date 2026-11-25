@@ -12,9 +12,12 @@ export interface AiCandidate {
   to: BlockSlot;
 }
 
+/** O resumo como a IA o vê: sem o foco por alvo (ids) nem os números só das telas. */
+export type AiWeekSummary = Omit<WeekSummary, 'focoPorAlvo' | 'sessoesTerminadas' | 'sessoesLargadas' | 'melhorPeriodo'>;
+
 /** Corpo enviado à função de servidor. Só números, enums e datas. */
 export interface WeeklyAiRequest {
-  summary: WeekSummary;
+  summary: AiWeekSummary;
   candidates: AiCandidate[];
   tone: AiTone;
 }

@@ -49,7 +49,7 @@ describe('repositório fechado e avisos de erro', () => {
       { ...base, saveBlock: () => Promise.reject(falha), deleteBlock: () => Promise.reject(new RemoteError({ kind: 'sessao', mensagem: 'x' })) },
       { avisar: (m) => avisos.push(m), sessaoExpirou: () => void (expirou += 1) },
     );
-    await repo.saveHabit({ id: 'h', title: 'a', weekdays: [0], active: true });
+    await repo.saveHabit({ id: 'h', title: 'a', weekdays: [0], state: 'ativo' });
     expect(await repo.listHabits()).toHaveLength(1);
     expect(avisos).toEqual([]);
     await expect(repo.saveBlock({ id: 'b', weekday: 0, startMinutes: 0, durationMinutes: 5, kind: 'foco' })).rejects.toBe(falha);

@@ -1,8 +1,10 @@
 import type { User } from './types';
 import {
   applyUserMetadataPatch,
+  DEFAULT_PREFERENCES,
   DEFAULT_USER_METADATA,
   metadataPatchFromUser,
+  preferencesFromMetadata,
   readUserMetadata,
   userFromMetadata,
   userMetadataPatchSchema,
@@ -97,5 +99,42 @@ describe('perfil nos metadados', () => {
     expect(aceita({ ...base, dayEndMinutes: 1441 })).toBe(false);
     expect(aceita({ ...base, dayStartMinutes: -1 })).toBe(false);
     expect(aceita({ ...base, extra: 1 })).toBe(true); // campos extras são ignorados pelo objeto do perfil
+  });
+});
+
+describe('preferências nos metadados', () => {
+  const antiga = {
+    version: 1,
+    theme: 'claro',
+    reduceMotion: true,
+    timezone: 'America/Sao_Paulo',
+    onboarding: { completed: true, completedAt: NOW },
+    profile: null,
+  };
+
+  it('conta antiga, sem os campos novos, lê os padrões e mantém o resto', () => {
+    const lido = readUserMetadata(antiga);
+    expect(lido).toMatchObject({ theme: 'claro', reduceMotion: true });
+    expect(preferencesFromMetadata(lido)).toEqual(DEFAULT_PREFERENCES);
+  });
+
+  it('um valor guardado fora dos limites vira o padrão sem derrubar a conta', () => {
+    const lido = readUserMetadata({ ...antiga, focusMinutes: 999, ambientSound: 'mar', sounds: false });
+    expect(lido).toMatchObject({ theme: 'claro', focusMinutes: 25, ambientSound: 'silencio', sounds: false });
+  });
+
+  it('o servidor marca os dias das férias e guarda os períodos encerrados', () => {
+    const dia = 86_400_000;
+    const liga = (m: typeof DEFAULT_USER_METADATA, ligado: boolean, em: number) => applyUserMetadataPatch(m, { vacation: { ligado } }, em);
+    const ligado = liga(DEFAULT_USER_METADATA, true, NOW);
+    const { desde } = ligado.vacation;
+    expect(desde).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(liga(ligado, true, NOW + dia).vacation).toEqual(ligado.vacation);
+    const desligado = liga(ligado, false, NOW + 3 * dia);
+    expect(desligado.vacation.ligado).toBe(false);
+    expect(desligado.vacation.periodos).toEqual([{ de: desde, ate: expect.any(String) }]);
+    // Religar no dia seguinte continua o mesmo período; bem depois, começa outro.
+    expect(liga(desligado, true, NOW + 4 * dia).vacation).toEqual({ ligado: true, desde, periodos: [] });
+    expect(liga(desligado, true, NOW + 9 * dia).vacation.periodos).toHaveLength(1);
   });
 });

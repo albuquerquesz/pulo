@@ -1,6 +1,7 @@
 import { dateParamSchema, dateRangeQuerySchema } from '@pulo/core/api/schemas';
 import { dateKeyToDate, restDayMapper } from '@pulo/db';
 import { Hono } from 'hono';
+import { unlockAchievements } from '../achievements';
 import { type AppEnv, type RouteDeps, pathParams, queryParams, requireSession } from '../http';
 import { dateFilter, refreshMascot } from '../queries';
 import { restDaySelect } from '../selects';
@@ -27,7 +28,8 @@ export function restDayRoutes({ auth, db, now }: RouteDeps) {
         await tx.restDay.createMany({ data: [{ userId, date }], skipDuplicates: true });
         return { restDay: { date: dateKey }, mascot: await refreshMascot(tx, userId, metadata.timezone, now()) };
       });
-      return c.json({ restDay, mascot });
+      const newAchievements = await unlockAchievements(db, c.var.user, now());
+      return c.json({ restDay, mascot, newAchievements });
     })
     .delete('/:date', pathParams(dateParamSchema), async (c) => {
       const { id: userId, metadata } = c.var.user;

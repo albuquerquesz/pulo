@@ -19,7 +19,11 @@ const uuid = () => crypto.randomUUID();
 const block = (extra: Record<string, unknown> = {}) => ({
   id: uuid(), weekday: 1, startMinutes: 540, durationMinutes: 50, kind: 'foco', ...extra,
 });
-const habit = (extra: Record<string, unknown> = {}) => ({ id: uuid(), title: 'Beber água', weekdays: [0, 2], active: true, ...extra });
+/** O corpo que um hábito tem na resposta: `active` acompanha o `state`. */
+const habit = (extra: Record<string, unknown> = {}) => {
+  const body = { id: uuid(), title: 'Beber água', weekdays: [0, 2], active: true, ...extra };
+  return { state: body.active === false ? 'arquivado' : 'ativo', ...body };
+};
 const blocksOf = async (me: Awaited<ReturnType<typeof h.newUser>>) => (await (await me.call('GET', '/api/blocks')).json()).blocks;
 const habitsOf = async (me: Awaited<ReturnType<typeof h.newUser>>) => (await (await me.call('GET', '/api/habits')).json()).habits;
 
