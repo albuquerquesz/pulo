@@ -20,6 +20,7 @@ O teste `apps/api/src/client.test.ts` prova a inferência de rotas, corpos e res
 - Instantes enviados pelo app não podem estar mais de 5 minutos no futuro do relógio do servidor (400 `horario_no_futuro`).
 - "Queries" abaixo é o total de SQL por chamada: 2 da sessão do Better Auth (sessão e usuário) mais as da rota.
   O número não depende da quantidade de dados: cada rota tem um teste que compara 1 registro com 50 (`countQueries`).
+  Nas rotas que acertam o gelo, a primeira chamada do dia faz ainda as gravações do acerto.
   Escritas com `upsert` usam `INSERT ... ON CONFLICT` do Prisma (uma query); BEGIN e COMMIT não entram na conta.
 
 ## Erros
@@ -52,6 +53,9 @@ Nunca há stack trace; erro inesperado vira 500 `erro_interno` e o detalhe fica 
 | 409 | `fora_de_ordem` | só na ilha antiga: área que não é a próxima do mapa |
 | 409 | `area_fechada` | só na ilha antiga: enfeite de uma área que ainda não foi aberta |
 | 409 | `joias_insuficientes` | o saldo de joias não paga o item. A mensagem diz quantas faltam |
+| 409 | `gelo_no_maximo` | já há `GELO.maxGuardados` gelos guardados |
+| 400 | `descanso_so_hoje` | marcar ou desmarcar descanso em um dia que não é o de hoje |
+| 409 | `limite_de_descanso` | passaria de `DESCANSO.maxPorSemana` descansos na semana do app |
 | 409 | `sessao_em_andamento` | já existe outra sessão em andamento (índice único parcial no banco) |
 | 409 | `sessao_encerrada` | mudança numa sessão `concluida` ou `interrompida` |
 | 409 | `sessao_imutavel` | mudou início, duração planejada ou bloco de uma sessão em andamento |
@@ -77,15 +81,15 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `PUT /api/habits` (lote) | `{ habits: Habit[] }`, 1 a 50 | `{ habits }` | 4 com 1 ou com 50 (5 quando algum traz meta) |
 | `PUT /api/habits/:id` | `Habit` (opcionais aceitam `null`; veja Hábitos) | `{ habit }` | 4 (5 quando traz meta) |
 | `GET /api/habits/:id/stats` | | `{ stats: HabitStats }` (404 `referencia_inexistente`) | 5 |
-| `DELETE /api/habits/:id` | | `{ deleted }` (os registros do hábito saem junto) | 3 |
+| `DELETE /api/habits/:id` | | `{ deleted }` (os registros do hábito saem junto) | 9 |
 | `GET /api/habit-logs?from&to` | | `{ habitLogs: HabitLog[] }` | 3 |
-| `PUT /api/habit-logs/:habitId/:date` | `HabitLog` | `{ habitLog, newAchievements }` | 9 (10 ao destravar) |
-| `DELETE /api/habit-logs/:habitId/:date` | | `{ deleted }` | 3 |
+| `PUT /api/habit-logs/:habitId/:date` | `HabitLog` | `{ habitLog, newAchievements }` | 12 (mais ao destravar) |
+| `DELETE /api/habit-logs/:habitId/:date` | | `{ deleted }` | 9 |
 | `GET /api/sessions?from&to` | | `{ sessions: FocusSession[] }` | 3 |
-| `PUT /api/sessions/:id` | `FocusSession` (`intention` e vínculo aceitam `null`) | `{ session, mascot: MascotState \| null, newAchievements }` | 4 em andamento, 13 ao encerrar (14 ao destravar); 1 a mais ao gravar um vínculo novo |
+| `PUT /api/sessions/:id` | `FocusSession` (`intention` e vínculo aceitam `null`) | `{ session, mascot: MascotState \| null, newAchievements }` | 4 em andamento, 16 ao encerrar (mais ao destravar); 1 a mais ao gravar um vínculo novo |
 | `GET /api/rest-days?from&to` | | `{ restDays: RestDay[] }` | 3 |
-| `PUT /api/rest-days/:date` | (sem corpo) | `{ restDay, mascot: MascotState, newAchievements }` | 12 (13 ao destravar) |
-| `DELETE /api/rest-days/:date` | | `{ deleted, mascot: MascotState }` | 7 |
+| `PUT /api/rest-days/:date` | (sem corpo) | `{ restDay, mascot: MascotState, newAchievements }` | 17 (mais ao destravar) |
+| `DELETE /api/rest-days/:date` | | `{ deleted, mascot: MascotState }` | 15 |
 | `GET /api/proposals` | | `{ proposals: WeeklyProposal[] }` (semana mais nova primeiro) | 3 |
 | `PUT /api/proposals/:id` | `WeeklyProposal` | `{ proposal }` | 4 |
 | `POST /api/proposals/generate` | `{ date? }` (qualquer dia da semana) | `{ outcome, proposal? }` | 8 sem criar, 9 criando |
@@ -104,21 +108,25 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `GET /api/island/purchases` | | `{ purchases: IslandPurchase[] }` (mais antiga primeiro) | 3 |
 | `PUT /api/island/purchases/:item` | `IslandPurchase` | `{ purchase }` | 10 comprando, 9 repetindo |
 | `GET /api/house` | | `{ purchases: Purchase[], joiaCredit: number }` | 4 |
-| `PUT /api/house/:item` | `Purchase` | `{ purchase, newAchievements }` | 16 comprando (17 ao destravar) |
+| `PUT /api/house/:item` | `Purchase` | `{ purchase, newAchievements }` | 19 comprando (mais ao destravar) |
 | `GET /api/room` | | `{ decor: RoomDecor[] }` (mais antiga primeiro) | 3 |
 | `PUT /api/room/:item` | `RoomDecor` | `{ decor }` | 13 comprando |
 | `PATCH /api/room/:item` | `RoomSpot` | `{ item, spot }` | 3 |
 | `GET /api/mascot` | | `{ mascot: MascotState \| null }` | 3 |
 | `GET /api/week-summary?date` | | `{ summary: WeekSummary }` | 5 |
-| `GET /api/streak` | | `{ streak: Streak }` | 5 |
+| `GET /api/streak` | | `{ streak: Streak }` | 8 |
+| `GET /api/gelo` | | `{ guardados, max, usados, recentes, compras }` | 10 |
+| `POST /api/gelo` | (sem corpo) | o mesmo de `GET /api/gelo` | fixo |
+| `PUT /api/gelo/visto` | (sem corpo) | `{ vistos: n }` | 3 |
+| `GET /api/profile/metrics` | | `{ metrics: ProfileMetrics }` | fixo |
 | `GET /api/stats` | | `{ stats: ProfileStats }` | 4 |
-| `GET /api/achievements` | | `{ achievements: Achievement[] }` | 7 |
-| `GET /api/data/export` | | arquivo JSON com tudo da pessoa | 20 |
+| `GET /api/achievements` | | `{ achievements: Achievement[] }` | 8 |
+| `GET /api/data/export` | | arquivo JSON com tudo da pessoa | 21 |
 | `DELETE /api/account` | `{ confirm: 'EXCLUIR' }` | `{ deleted: true }` e o cookie apagado | fixo (igual com 1 ou 50 registros) |
 | `GET /api/mcp/connections` | | `{ connections: McpConnection[] }` (a mais recente primeiro) | 3 |
 | `DELETE /api/mcp/connections/:clientId` | | `{ deleted }` | 6 |
-| `GET /api/sync?from&to` | | ver abaixo (inclui `goals`, `goalChests`, `tasks`, `subtasks`, `islandPurchases`, `housePurchases`, `roomDecor`, `joiaCredit`, `streak`, `stats` e `achievements`) | 21 |
-| `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, goals, islandPurchases, mascot, tasks, achievements } }` | 13 |
+| `GET /api/sync?from&to` | | ver abaixo (inclui `goals`, `goalChests`, `tasks`, `subtasks`, `islandPurchases`, `housePurchases`, `roomDecor`, `joiaCredit`, `streak`, `stats`, `achievements`, `gelo`, `gelosComprados` e `descanso`) | 23 |
+| `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, goals, islandPurchases, mascot, tasks, achievements, freezeUses } }` | 14 |
 
 Já existiam e continuam: `GET /health`, `/api/auth/*`, `GET /api/me`, `PATCH /api/me/metadata`, `POST /weekly-ai`.
 
@@ -158,7 +166,8 @@ Rota do Better Auth. Corpo `{ name?, image? }`: nome de 1 a `ACCOUNT.nameMaxChar
 
 Download (`Content-Disposition`, `Cache-Control: no-store`) com `exportVersion`, `exportedAt`, `user` (id, nome, email, foto, criação),
 `metadata`, `blocks`, `habits`, `habitLogs`, `sessions`, `restDays`, `proposals`, `goals`, `goalChests`, `tasks`, `subtasks`, `taskComments`,
-`taskEvents`, `housePurchases`, `roomDecor`, `islandPurchases`, `joiaCredit`, `mascot`, `achievements` (id e data) e `connections`.
+`taskEvents`, `housePurchases`, `roomDecor`, `islandPurchases`, `joiaCredit`, `mascot`, `achievements` (id e data), `freezeUses`,
+`freezePurchases` e `connections`.
 Sem recorte de datas. Nunca entram tokens, segredos, sessões de login nem contas OAuth. Tabela nova com `userId` precisa entrar
 no arquivo (`data-export.test.ts` cobra).
 
@@ -234,6 +243,11 @@ Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBl
   `PUT /api/proposals/:id` só grava a proposta (usado pelo `saveProposal` do `Repository`) e NÃO mexe nos blocos. No app da conta, gerar e decidir
   passam pelas duas rotas abaixo, que aplicam os blocos junto. A regra pura da máquina de estados está em `@pulo/core/api/proposal-state`
   e a da decisão em `@pulo/core/api/proposal-decision`.
+- **Descanso** (spec 29): `PUT` e `DELETE` só aceitam o dia de hoje (400 `descanso_so_hoje`), o da sequência: vira no começo
+  do dia da pessoa, no fuso dela. Entre a virada do app (`DAY_ROLLOVER_HOUR`) e esse começo, vale também o dia novo, que passa
+  a ser o único assim que tem um registro. No máximo `DESCANSO.maxPorSemana` por semana do app (409 `limite_de_descanso`);
+  repetir o de hoje é aceito. Descansos antigos continuam. Desmarcar devolve as joias. Regra em `@pulo/core/domain/descanso`.
+  O sync traz `descanso: { restantesNaSemana, maxPorSemana }`.
 - **Joias**: a moeda. O saldo nunca é gravado: são as joias ganhas menos as gastas, no mínimo zero (`joiasGanhas` em
   `@pulo/core/domain/joias`). Rendem: hábito feito, dia de descanso, marco e baú de meta aberto (`JOIAS.por`) e o foco, com
   `floor(minutos focados / JOIAS.focusMinutesPerJoia)` por sessão encerrada (concluída ou interrompida), sem as pausas e até o planejado.
@@ -334,6 +348,31 @@ Resposta 200 `{ proposal, blocks }`: a proposta já atualizada e TODOS os blocos
 - Proposta inexistente ou de outra pessoa: 404 `nao_encontrado`.
 - Queries (com a sessão): 6 aplicando blocos (proposta, blocos, um `UPDATE ... FROM unnest` dos blocos, `UPDATE` da proposta), 5 ao negar, 4 repetindo, 3 se não existe.
 
+### Gelo: `/api/gelo`
+
+- Um gelo protege um dia lógico que terminou vazio, sem descanso nem férias, com a sequência viva. Guarda-se até
+  `GELO.maxGuardados`; o saldo é `GELO.presenteInicial` mais compras menos usos, nunca gravado.
+- **Gasto preguiçoso, sem job:** `/api/sync`, `GET /api/streak`, `GET` e `POST /api/gelo`, as métricas, as escritas que
+  destravam conquistas e os `DELETE` de hábito, hábito feito e descanso resolvem os dias fechados desde o último resolvido
+  (`mascot_state.geloResolvidoAte`), do mais antigo ao mais novo. Sem gelo, a sequência quebra ali. Repetir não gasta de novo.
+  Os `DELETE` acertam antes de apagar. Na primeira vez, o último resolvido é ontem. Regra em `@pulo/core/domain/gelo`.
+- `POST /api/gelo` compra um por `GELO.preco` joias (409 `gelo_no_maximo` ou `joias_insuficientes`), gravado em
+  `island_purchase` com `kind = 'gelo'`. O gasto entra no saldo da casa, do quarto e da ilha antiga.
+- `recentes` são os dias protegidos que a pessoa ainda não viu; `PUT /api/gelo/visto` marca todos.
+- O sync traz `gelo: { guardados, max, recentes }` e `gelosComprados` (para o app calcular o saldo).
+- MCP: `ver_gelo` e `ver_metricas`, só leitura. O MCP não compra gelo.
+
+### Métricas: `GET /api/profile/metrics`
+
+`{ metrics: ProfileMetrics }`, calculado por `computeMetrics` (`@pulo/core/domain/metricas`), o mesmo do modo demo.
+
+- `ritmo`: últimos `METRICAS.janelaDias` dias lógicos, nunca antes da criação da conta. `taxaHabitos30` (0 a 1) olha só os
+  hábitos ativos, nos dias da frequência, sem descanso, férias e hoje vazio. `melhorDiaDaSemana` (0 = segunda) soma minutos;
+  empate: o mais recente. `sessoesTerminadas` são as concluídas.
+- `descanso`: `total` e `noMes` (mês do calendário) contam os marcados. A comparação de foco usa semanas fechadas, desde a
+  criação da conta e com algum registro, e fica nula com menos de `METRICAS.minSemanasPorTipo` de cada tipo.
+- `gelo` e `feitos` são de todo o histórico (`joiasGanhas` é o ganho total, sem descontar gastos).
+
 ### Sequência: `GET /api/streak`
 
 Resposta `{ streak: { atual, recorde, semana } }` (`streakResponseSchema`). O mesmo objeto vem no campo `streak` do `/api/sync`.
@@ -341,9 +380,9 @@ A regra é a função pura `computeStreak` do core (`@pulo/core/domain/streak`),
 
 - Um dia conta quando tem pelo menos um hábito feito **ou** uma sessão de foco que conta como cuidado (a mesma regra da ilha).
 - Dias do modo férias valem como descanso.
-- Dia de descanso não quebra a sequência e não soma. Hoje vazio ainda não quebra: ela só zera quando um dia termina vazio.
+- Dia de descanso e dia protegido por gelo não quebram a sequência e não somam. Hoje vazio ainda não quebra: ela só zera quando um dia termina vazio.
 - `atual` são os dias feitos seguidos; `recorde` é o maior trecho de todo o histórico. Os dois são calculados, nada é gravado.
-- `semana` tem 7 itens `{ date, estado }`, de domingo a sábado (`STREAK.weekStartsOn`). `estado`: `feito`, `descanso`, `vazio`,
+- `semana` tem 7 itens `{ date, estado }`, de domingo a sábado (`STREAK.weekStartsOn`). `estado`: `feito`, `descanso`, `gelo`, `vazio`,
   `hoje` (hoje ainda sem nada) ou `futuro`. Dia feito e marcado como descanso aparece `feito`.
 - O dia vira no começo do dia da pessoa (`metadata.profile.dayStartMinutes`) no fuso dela; sem perfil, às `DAY_ROLLOVER_HOUR`.
   Hábitos e descansos usam a data gravada pelo app (virada às `DAY_ROLLOVER_HOUR`): se a pessoa marca um deles entre essa virada
@@ -363,6 +402,7 @@ catálogo inteiro, na mesma ordem. A secreta não conquistada vem sem `nome` e `
 | `descanso-sabido` | dias de descanso marcados (férias não contam) | 4 |
 | `mes-de-fogo` | dias seguidos | 30 |
 | `casa-inteira` | partes da casa prontas (o quarto já conta) | 6 |
+| `gelo-na-hora` | gelos já usados | 1 |
 | `segredo` | regra ainda não escolhida: ninguém recebe | 1 |
 
 - **Gravação:** só `(conquista, conquistadaEm)`, na primeira vez que a regra passa, com o relógio do servidor. Nunca some, mesmo
@@ -375,7 +415,7 @@ catálogo inteiro, na mesma ordem. A secreta não conquistada vem sem `nome` e `
 
 ### `GET /api/sync?from&to`
 
-`from` e `to` obrigatórios, até 400 dias. Dezenove leituras numa transação (as estatísticas reaproveitam as da sequência), resposta:
+`from` e `to` obrigatórios, até 400 dias. Vinte e uma leituras numa transação (as estatísticas reaproveitam as da sequência), resposta:
 
 ```json
 {
@@ -385,6 +425,7 @@ catálogo inteiro, na mesma ordem. A secreta não conquistada vem sem `nome` e `
   "proposals": [], "goals": [], "goalChests": [], "tasks": [], "subtasks": [], "pomodoros": {}, "islandPurchases": [], "housePurchases": [], "roomDecor": [], "joiaCredit": 0, "mascot": null,
   "streak": { "atual": 0, "recorde": 0, "semana": [{ "date": "2026-11-15", "estado": "vazio" }] }, "stats": { "habitosFeitos": 0, "minutosDeFoco": 0, "desde": 1795000000000 },
   "achievements": [{ "id": "primeira-semana", "nome": "Primeira semana", "emoji": "🔥", "conquistada": false, "progresso": 0, "meta": 7 }],
+  "gelo": { "guardados": 1, "max": 2, "recentes": [] }, "gelosComprados": [], "descanso": { "restantesNaSemana": 2, "maxPorSemana": 2 },
   "serverTime": 1795000000000
 }
 ```
@@ -395,7 +436,7 @@ em andamento. `streak` olha todo o histórico, não só o intervalo (acima; `sem
 ### `DELETE /api/data`
 
 O `clearAll` do servidor, único jeito de zerar o progresso: apaga blocos, hábitos (e seus registros), sessões, descansos,
-propostas, metas (e baús), tarefas (com subtarefas, comentários e histórico), compras com joias (e posições do quarto), crédito de joias, conquistas e o estado do sapo da pessoa, numa transação. Conta, login e metadados (tema, fuso, onboarding) ficam.
+propostas, metas (e baús), tarefas (com subtarefas, comentários e histórico), compras com joias (e posições do quarto, e os gelos), gelos usados, crédito de joias, conquistas e o estado do sapo da pessoa, numa transação. Conta, login e metadados (tema, fuso, onboarding) ficam.
 
 ## Mapa para o `Repository`
 
@@ -427,6 +468,9 @@ propostas, metas (e baús), tarefas (com subtarefas, comentários e histórico),
 | `exportData`, `deleteAccount` (só no `RemoteRepository`) | `GET /api/data/export`, `DELETE /api/account` |
 | `listConnections`, `disconnect` (só no `RemoteRepository`) | `GET`, `DELETE /api/mcp/connections` |
 | `verConquistas` do core (`getAchievements` só no `RemoteRepository`) | `GET /api/sync` e `GET /api/achievements` |
+| `verGelo`, `comprarGelo`, `marcarGeloVisto` do core (`getFreezes`, `buyFreeze`, `markFreezesSeen` no `RemoteRepository`) | `GET /api/sync`, `/api/gelo` |
+| `verMetricas` do core (`getMetrics` só no `RemoteRepository`) | `GET /api/profile/metrics` |
+| `verDescanso`, `marcarDescanso` do core | calculados no app; a escrita é `PUT /api/rest-days/:date` |
 | `clearAll` | `DELETE /api/data` |
 
 ## Cliente no app: `@pulo/client`

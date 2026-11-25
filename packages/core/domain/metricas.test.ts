@@ -36,7 +36,7 @@ describe('métricas', () => {
   });
 
   it('taxa de hábitos: dias da frequência, sem descanso e sem hoje vazio', () => {
-    const habits = [{ id: 'h', weekdays: [0, 1, 2, 3, 4, 5, 6] as const, state: 'ativo' as const }].map((h) => ({ ...h, weekdays: [...h.weekdays] }));
+    const habits: MetricsInput['habits'] = [{ id: 'h', weekdays: [0, 1, 2, 3, 4, 5, 6], state: 'ativo' }];
     const habitLogs = [{ habitId: 'h', date: '2026-11-14' }, { habitId: 'h', date: '2026-11-17' }];
     const result = metrics({ habits, habitLogs, restDays: [{ date: '2026-11-15' }] });
     // Contam 14 (feito), 16 (vazio) e 17 (feito).
