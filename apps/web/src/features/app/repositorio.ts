@@ -1,13 +1,17 @@
-import { isRemoteError, mensagemDeErro, RemoteError } from '@pulo/client';
+import { isRemoteError, RemoteError } from '@pulo/client';
 import { type BatchRepository, supportsBatch } from '@pulo/core/data/batch';
 import { providesAchievements } from '@pulo/core/domain/achievements';
+import { providesFreezes } from '@pulo/core/domain/gelo';
 import { providesHabitStats } from '@pulo/core/domain/habit-stats';
+import { providesFreezePurchases } from '@pulo/core/domain/joias';
+import { providesMetrics } from '@pulo/core/domain/metricas';
 import { providesStats } from '@pulo/core/domain/stats';
 import { providesStreak } from '@pulo/core/domain/streak';
 import { providesPomodoros } from '@pulo/core/domain/tasks';
 import type { Repository } from '@pulo/core/domain/types';
 
-import { temAvisosDeConquista, temConta, temPreferencias } from './conta';
+import { mensagemNaTela } from '../casca/erros';
+import { temAvisosDeConquista, temConta, temDatasDoGelo, temPreferencias } from './conta';
 
 /** Repositório "fechado": enquanto não há dados (login ou carregando), qualquer uso falha em vez de gravar no lugar errado. */
 export const repositorioFechado: Repository = (() => {
@@ -78,7 +82,7 @@ export function comAvisosDeErro(repo: Repository, avisos: AvisosDeErro): Reposit
         return await escrita(...args);
       } catch (erro) {
         if (isRemoteError(erro) && erro.kind === 'sessao') avisos.sessaoExpirou();
-        else avisos.avisar(mensagemDeErro(erro));
+        else avisos.avisar(mensagemNaTela(erro));
         throw erro;
       }
     };
@@ -134,6 +138,12 @@ export function comAvisosDeErro(repo: Repository, avisos: AvisosDeErro): Reposit
     ...(providesHabitStats(repo) ? { getHabitStats: (id: string) => repo.getHabitStats(id) } : {}),
     ...(providesStreak(repo) ? { getStreak: () => repo.getStreak() } : {}),
     ...(providesStats(repo) ? { getStats: () => repo.getStats() } : {}),
+    ...(providesFreezes(repo)
+      ? { getFreezes: () => repo.getFreezes(), buyFreeze: guardar(() => repo.buyFreeze()), markFreezesSeen: guardar(() => repo.markFreezesSeen()) }
+      : {}),
+    ...(providesFreezePurchases(repo) ? { listFreezePurchases: () => repo.listFreezePurchases() } : {}),
+    ...(temDatasDoGelo(repo) ? { getFreezeDates: () => repo.getFreezeDates() } : {}),
+    ...(providesMetrics(repo) ? { getMetrics: () => repo.getMetrics() } : {}),
     ...(providesAchievements(repo) ? { getAchievements: () => repo.getAchievements() } : {}),
     ...(temAvisosDeConquista(repo)
       ? { onNewAchievements: (ouvir: Parameters<typeof repo.onNewAchievements>[0]) => repo.onNewAchievements(ouvir) }

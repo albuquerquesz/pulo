@@ -3,6 +3,8 @@ import { ACHIEVEMENTS, DEFAULT_TIMEZONE } from '@pulo/core/config/decisions';
 import { localToMs, type DemoClock } from '@pulo/core/demo';
 import { type AchievementSource, verConquistas } from '@pulo/core/domain/achievements';
 import { dateKeyOf } from '@pulo/core/domain/day';
+import { acertarGeloLocal } from '@pulo/core/domain/gelo';
+import { listFreezeDatesOf } from '@pulo/core/domain/gelo-store';
 import { computeStats, type StatsSource } from '@pulo/core/domain/stats';
 import { computeStreak, type StreakSource } from '@pulo/core/domain/streak';
 import type { Achievement, AchievementId, ProfileStats, Repository } from '@pulo/core/domain/types';
@@ -72,11 +74,15 @@ export async function comContaDoDemo<R extends Repository>(repo: R, clock: DemoC
       };
     },
     getStreak: async () => {
+      // O gelo devido é gasto antes de contar a sequência, como o servidor faz.
+      await acertarGeloLocal(repo, clock);
+      const freezes = await listFreezeDatesOf(repo);
       const [user, habitLogs, sessions, restDays] = await Promise.all([repo.getUser(), repo.listHabitLogs(), repo.listSessions(), repo.listRestDays()]);
       const sequencia = computeStreak({
         habitLogs,
         sessions,
         restDays,
+        freezes,
         vacation: metadata.vacation,
         timeZone: user?.timezone ?? DEFAULT_TIMEZONE,
         dayStartMinutes: user?.dayStartMinutes,

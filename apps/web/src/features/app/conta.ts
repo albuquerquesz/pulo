@@ -10,6 +10,8 @@ export type FonteDePreferencias = Pick<RemoteRepository, 'getPreferences' | 'sav
 /** Ações de conta: exportar, aplicativos conectados e excluir. */
 export type FonteDaConta = Pick<RemoteRepository, 'exportData' | 'listConnections' | 'disconnect' | 'deleteAccount'>;
 export type AvisosDeConquista = Pick<RemoteRepository, 'onNewAchievements'>;
+/** Todos os dias protegidos por gelo, quando quem os guarda é o servidor. */
+export type FonteDasDatasDoGelo = Pick<RemoteRepository, 'getFreezeDates'>;
 
 export function temPreferencias(repo: Repository): repo is Repository & FonteDePreferencias {
   return 'getPreferences' in repo && 'savePreferences' in repo;
@@ -21,6 +23,10 @@ export function temConta(repo: Repository): repo is Repository & FonteDaConta {
 
 export function temAvisosDeConquista(repo: Repository): repo is Repository & AvisosDeConquista {
   return 'onNewAchievements' in repo;
+}
+
+export function temDatasDoGelo(repo: Repository): repo is Repository & FonteDasDatasDoGelo {
+  return 'getFreezeDates' in repo;
 }
 
 /** As preferências da conta; os padrões onde o repositório não as guarda. */

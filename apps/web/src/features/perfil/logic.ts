@@ -93,6 +93,10 @@ const TEXTOS: Record<AchievementId, TextoDaRegra> = {
     pedido: (meta) => `${meta} partes da casa`,
     andamento: (progresso, meta) => `${progresso} de ${meta} partes construídas`,
   },
+  'gelo-na-hora': {
+    pedido: (meta) => (meta === 1 ? 'o primeiro gelo usado' : `${meta} gelos usados`),
+    andamento: (progresso, meta) => `${progresso} de ${meta} ${meta === 1 ? 'gelo usado' : 'gelos usados'}`,
+  },
   segredo: { pedido: () => 'Segredo revelado', andamento: () => 'Continue cuidando do sapo' },
 };
 

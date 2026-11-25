@@ -72,6 +72,6 @@ describe('textos do Perfil', () => {
     expect(dados.sequencia).toMatchObject({ atual: 12, recorde: 21 });
     expect(dados.estatisticas).toMatchObject({ habitosFeitos: 186, minutosDeFoco: 1240 });
     expect(dados.preferencias).toMatchObject({ focusMinutes: 25, eveningReminder: { ligado: true, minutos: 1200 } });
-    expect(dados.conquistas.map((c) => c.id)).toHaveLength(6);
+    expect(dados.conquistas.map((c) => c.id)).toHaveLength(7);
   });
 });
