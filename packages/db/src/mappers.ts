@@ -14,6 +14,10 @@ import type {
   ProposalChange,
   RestDay,
   RoutineBlock,
+  Task,
+  TaskComment,
+  TaskEvent,
+  TaskSubtask,
   Weekday,
   WeeklyProposal,
 } from '@pulo/core/domain/types';
@@ -29,6 +33,10 @@ import type {
   MascotState as MascotStateRow,
   RestDay as RestDayRow,
   RoutineBlock as RoutineBlockRow,
+  Task as TaskRow,
+  TaskComment as TaskCommentRow,
+  TaskEvent as TaskEventRow,
+  TaskSubtask as TaskSubtaskRow,
   WeeklyProposal as WeeklyProposalRow,
 } from '#client';
 
@@ -285,5 +293,79 @@ export const mascotStateMapper = {
   },
   fromDomain(userId: string, state: MascotState): Prisma.MascotStateUncheckedCreateInput {
     return { userId, phase: state.phase, careDays: state.careDays, updatedAt: msToDate(state.updatedAt) };
+  },
+};
+
+// ---------- Tarefas ----------
+
+export const taskMapper = {
+  toDomain(row: Omit<TaskRow, 'userId'>): Task {
+    return {
+      id: row.id,
+      number: row.number,
+      title: row.title,
+      ...(row.description === null ? {} : { description: row.description }),
+      status: row.status,
+      position: row.position,
+      priority: row.priority,
+      ...(row.dueDate === null ? {} : { dueDate: dateToDateKey(row.dueDate) }),
+      tags: row.tags,
+      ...(row.goalId === null ? {} : { goalId: row.goalId }),
+      pomodorosEstimated: row.pomodorosEstimated,
+      createdAt: dateToMs(row.createdAt),
+      ...(row.completedAt === null ? {} : { completedAt: dateToMs(row.completedAt) }),
+    };
+  },
+  /** O número é do servidor (primeira gravação), por isso vem à parte. */
+  fromDomain(userId: string, task: Task, number: number): Prisma.TaskUncheckedCreateInput {
+    return {
+      id: task.id,
+      userId,
+      number,
+      title: task.title,
+      description: task.description ?? null,
+      status: task.status,
+      position: task.position,
+      priority: task.priority,
+      dueDate: task.dueDate === undefined ? null : dateKeyToDate(task.dueDate),
+      tags: task.tags,
+      goalId: task.goalId ?? null,
+      pomodorosEstimated: task.pomodorosEstimated,
+      createdAt: msToDate(task.createdAt),
+      completedAt: task.completedAt === undefined ? null : msToDate(task.completedAt),
+    };
+  },
+};
+
+export const taskSubtaskMapper = {
+  toDomain(row: Omit<TaskSubtaskRow, 'userId'>): TaskSubtask {
+    return { id: row.id, taskId: row.taskId, title: row.title, done: row.done, position: row.position };
+  },
+  fromDomain(userId: string, subtask: TaskSubtask): Prisma.TaskSubtaskUncheckedCreateInput {
+    const { id, taskId, title, done, position } = subtask;
+    return { id, userId, taskId, title, done, position };
+  },
+};
+
+export const taskCommentMapper = {
+  toDomain(row: Omit<TaskCommentRow, 'userId'>): TaskComment {
+    return { id: row.id, taskId: row.taskId, body: row.body, createdAt: dateToMs(row.createdAt) };
+  },
+  fromDomain(userId: string, comment: TaskComment): Prisma.TaskCommentUncheckedCreateInput {
+    const { id, taskId, body, createdAt } = comment;
+    return { id, userId, taskId, body, createdAt: msToDate(createdAt) };
+  },
+};
+
+export const taskEventMapper = {
+  toDomain(row: Omit<TaskEventRow, 'userId' | 'seq'>): TaskEvent {
+    return {
+      id: row.id,
+      taskId: row.taskId,
+      kind: row.kind,
+      ...(row.de === null ? {} : { de: row.de }),
+      ...(row.para === null ? {} : { para: row.para }),
+      createdAt: dateToMs(row.createdAt),
+    };
   },
 };

@@ -55,6 +55,8 @@ model User {
   restDays        RestDay[]
   weeklyProposals WeeklyProposal[]
   goals           Goal[]
+  tasks           Task[]
+  taskCounter     TaskCounter?
   islandPurchases IslandPurchase[]
   joiaCredit      JoiaCredit?
   mascotState     MascotState?
@@ -305,6 +307,31 @@ model OauthClientAssertion {
 
 // ---------- Domínio ----------
 
+enum TaskStatus {
+  ideias
+  afazer
+  fazendo
+  feito
+
+  @@map("task_status")
+}
+
+enum TaskPriority {
+  normal
+  alta
+
+  @@map("task_priority")
+}
+
+enum TaskEventKind {
+  criada
+  status
+  prioridade
+  prazo
+
+  @@map("task_event_kind")
+}
+
 enum PurchaseKind {
   casa
   decoracao
@@ -470,9 +497,94 @@ model Goal {
   createdAt   DateTime  @db.Timestamptz(3)
   completedAt DateTime? @db.Timestamptz(3)
 
+  tasks Task[]
+
   @@unique([id, userId])
   @@index([userId, state])
   @@map("goal")
+}
+
+/// Cartão do quadro de tarefas (spec 20). O número (`PULO-n`) é dado pelo servidor.
+model Task {
+  id                 String       @id @default(uuid())
+  userId             String
+  user               User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  number             Int
+  title              String
+  description        String?
+  status             TaskStatus
+  /// Ordem na coluna; fracionária.
+  position           Float
+  priority           TaskPriority
+  dueDate            DateTime?    @db.Date
+  tags               String[]
+  /// Se a meta for apagada, a tarefa fica sem ela.
+  goalId             String?
+  goal               Goal?        @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  pomodorosEstimated Int          @db.SmallInt
+  createdAt          DateTime     @db.Timestamptz(3)
+  completedAt        DateTime?    @db.Timestamptz(3)
+
+  subtasks TaskSubtask[]
+  comments TaskComment[]
+  events   TaskEvent[]
+
+  @@unique([id, userId])
+  @@unique([userId, number])
+  @@index([goalId])
+  @@map("task")
+}
+
+model TaskSubtask {
+  id       String  @id @default(uuid())
+  userId   String
+  taskId   String
+  task     Task    @relation(fields: [taskId, userId], references: [id, userId], onDelete: Cascade)
+  title    String
+  done     Boolean
+  position Float
+
+  @@unique([id, userId])
+  @@index([userId, taskId])
+  @@map("task_subtask")
+}
+
+model TaskComment {
+  id        String   @id @default(uuid())
+  userId    String
+  taskId    String
+  task      Task     @relation(fields: [taskId, userId], references: [id, userId], onDelete: Cascade)
+  body      String
+  createdAt DateTime @db.Timestamptz(3)
+
+  @@index([userId, taskId])
+  @@map("task_comment")
+}
+
+/// Histórico da tarefa. `de` e `para` guardam o valor antigo e o novo (nulo = sem valor).
+model TaskEvent {
+  id        String        @id @default(uuid())
+  userId    String
+  taskId    String
+  task      Task          @relation(fields: [taskId, userId], references: [id, userId], onDelete: Cascade)
+  kind      TaskEventKind
+  de        String?
+  para      String?
+  createdAt DateTime      @db.Timestamptz(3)
+  /// Ordem de gravação: desempata eventos do mesmo instante.
+  seq       Int           @default(autoincrement())
+
+  @@index([userId, taskId])
+  @@map("task_event")
+}
+
+/// Último número de tarefa dado a cada pessoa. Só cresce: um código apagado não volta.
+model TaskCounter {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  last   Int
+
+  @@map("task_counter")
 }
 
 /// Compra com joias (parte da casa, decoração ou área e enfeite da ilha antiga), uma por item e pessoa.

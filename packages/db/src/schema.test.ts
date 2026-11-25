@@ -111,4 +111,32 @@ describe('schema do domínio no Postgres', () => {
     await t.db.routineBlock.delete({ where: { id: 'rb-del' } });
     expect((await t.db.focusSession.findUniqueOrThrow({ where: { id: 'fs-del' } })).blockId).toBeNull();
   });
+
+  it('tarefas: CHECKs, número único por pessoa, cascade e meta apagada solta o vínculo', async () => {
+    await createUser('u-task');
+    await createUser('u-task-2');
+    await t.db.goal.create({ data: { id: 'g-task', userId: 'u-task', title: 'x', state: 'ativa', milestones: [], createdAt: new Date() } });
+    const base = { title: 'x', status: 'afazer' as const, position: 1.5, priority: 'normal' as const, tags: ['a'], pomodorosEstimated: 0, createdAt: new Date() };
+    await t.db.task.create({ data: { ...base, id: 'tk1', userId: 'u-task', number: 1, goalId: 'g-task' } });
+    await expect(t.db.task.create({ data: { ...base, userId: 'u-task', number: 1 } })).rejects.toThrow();
+    await expect(t.db.task.create({ data: { ...base, userId: 'u-task', number: 2, status: 'feito' } })).rejects.toThrow();
+    await expect(t.db.taskSubtask.create({ data: { userId: 'u-task-2', taskId: 'tk1', title: 'x', done: false, position: 1 } })).rejects.toThrow();
+    await t.db.taskSubtask.create({ data: { userId: 'u-task', taskId: 'tk1', title: 'x', done: false, position: 1 } });
+    await t.db.taskComment.create({ data: { userId: 'u-task', taskId: 'tk1', body: 'x', createdAt: new Date() } });
+    await t.db.taskEvent.create({ data: { userId: 'u-task', taskId: 'tk1', kind: 'criada', createdAt: new Date() } });
+    await t.db.taskCounter.create({ data: { userId: 'u-task', last: 1 } });
+
+    await t.db.goal.delete({ where: { id: 'g-task' } });
+    expect((await t.db.task.findUniqueOrThrow({ where: { id: 'tk1' } })).goalId).toBeNull();
+
+    await t.db.user.delete({ where: { id: 'u-task' } });
+    const where = { userId: 'u-task' };
+    expect(await Promise.all([
+      t.db.task.count({ where }),
+      t.db.taskSubtask.count({ where }),
+      t.db.taskComment.count({ where }),
+      t.db.taskEvent.count({ where }),
+      t.db.taskCounter.count({ where }),
+    ])).toEqual([0, 0, 0, 0, 0]);
+  });
 });
