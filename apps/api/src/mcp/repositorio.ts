@@ -54,7 +54,7 @@ export function repositorioInterno(api: ClienteInterno): Repository {
 
     listBlocks: async () => (await lerJson(await api.api.blocks.$get())).blocks,
     saveBlock: async (block) => {
-      await lerJson(await api.api.blocks[':id'].$put({ param: { id: block.id }, json: block }));
+      await lerJson(await api.api.blocks[':id'].$put({ param: { id: block.id }, json: { ...block, icon: block.icon ?? null } }));
     },
     deleteBlock: async (id) => {
       await lerJson(await api.api.blocks[':id'].$delete({ param: { id } }));
@@ -63,7 +63,16 @@ export function repositorioInterno(api: ClienteInterno): Repository {
     listHabits: async () => (await lerJson(await api.api.habits.$get())).habits,
     saveHabit: async (habit) => {
       // Aqui o hábito sempre acabou de ser lido: sem `goalId` quer dizer sem meta.
-      await lerJson(await api.api.habits[':id'].$put({ param: { id: habit.id }, json: { ...habit, goalId: habit.goalId ?? null } }));
+      await lerJson(await api.api.habits[':id'].$put({ param: { id: habit.id }, json: {
+          ...habit,
+          goalId: habit.goalId ?? null,
+          icon: habit.icon ?? null,
+          color: habit.color ?? null,
+          period: habit.period ?? null,
+          reminderMinutes: habit.reminderMinutes ?? null,
+          reminderOn: habit.reminderOn ?? false,
+        },
+      }));
     },
     deleteHabit: async (id) => {
       await lerJson(await api.api.habits[':id'].$delete({ param: { id } }));

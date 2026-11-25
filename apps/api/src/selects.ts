@@ -11,9 +11,21 @@ export const blockSelect = {
   durationMinutes: true,
   kind: true,
   title: true,
+  icon: true,
 } as const satisfies Prisma.RoutineBlockSelect;
 
-export const habitSelect = { id: true, title: true, weekdays: true, active: true, goalId: true } as const satisfies Prisma.HabitSelect;
+export const habitSelect = {
+  id: true,
+  title: true,
+  weekdays: true,
+  state: true,
+  goalId: true,
+  icon: true,
+  color: true,
+  period: true,
+  reminderMinutes: true,
+  reminderOn: true,
+} as const satisfies Prisma.HabitSelect;
 
 export const habitLogSelect = { habitId: true, date: true, doneAt: true } as const satisfies Prisma.HabitLogSelect;
 

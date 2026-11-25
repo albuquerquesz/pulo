@@ -1,11 +1,11 @@
-import { blocksBatchSchema, idParamSchema, routineBlockSchema } from '@pulo/core/api/schemas';
+import { blocksBatchSchema, idParamSchema, routineBlockInputSchema } from '@pulo/core/api/schemas';
 import { routineBlockMapper } from '@pulo/db';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { ApiError, type AppEnv, type RouteDeps, jsonBody, pathParams, requireMatch, requireSession } from '../http';
 import { blockSelect } from '../selects';
 
-const returnedIds = z.array(z.object({ id: z.string() }));
+const returnedBlocks = z.array(z.object({ id: z.string(), icon: z.string().nullable() }));
 
 /** Rotina semanal: `/api/blocks`. */
 export function blockRoutes({ auth, db }: RouteDeps) {
@@ -24,27 +24,33 @@ export function blockRoutes({ auth, db }: RouteDeps) {
     .put('/', jsonBody(blocksBatchSchema), async (c) => {
       const { blocks } = c.req.valid('json');
       const userId = c.var.user.id;
-      await db.$transaction(async (tx) => {
+      const saved = await db.$transaction(async (tx) => {
         const rows = await tx.$queryRaw`
-          INSERT INTO "routine_block" ("id", "userId", "weekday", "startMinutes", "durationMinutes", "kind", "title")
-          SELECT t."id", ${userId}, t."weekday", t."startMinutes", t."durationMinutes", t."kind", t."title"
+          INSERT INTO "routine_block" ("id", "userId", "weekday", "startMinutes", "durationMinutes", "kind", "title", "icon")
+          SELECT t."id", ${userId}, t."weekday", t."startMinutes", t."durationMinutes", t."kind", t."title",
+            CASE WHEN t."keepIcon" THEN r."icon" ELSE t."icon" END
           FROM unnest(
             ${blocks.map((b) => b.id)}::text[],
             ${blocks.map((b) => b.weekday)}::smallint[],
             ${blocks.map((b) => b.startMinutes)}::smallint[],
             ${blocks.map((b) => b.durationMinutes)}::smallint[],
             ${blocks.map((b) => b.kind)}::"block_kind"[],
-            ${blocks.map((b) => b.title ?? null)}::text[]
-          ) AS t("id", "weekday", "startMinutes", "durationMinutes", "kind", "title")
+            ${blocks.map((b) => b.title ?? null)}::text[],
+            ${blocks.map((b) => b.icon ?? null)}::text[],
+            ${blocks.map((b) => b.icon === undefined)}::boolean[]
+          ) AS t("id", "weekday", "startMinutes", "durationMinutes", "kind", "title", "icon", "keepIcon")
+          LEFT JOIN "routine_block" r ON r."id" = t."id" AND r."userId" = ${userId}
           ON CONFLICT ("id") DO UPDATE SET
             "weekday" = EXCLUDED."weekday",
             "startMinutes" = EXCLUDED."startMinutes",
             "durationMinutes" = EXCLUDED."durationMinutes",
             "kind" = EXCLUDED."kind",
-            "title" = EXCLUDED."title"
+            "title" = EXCLUDED."title",
+            "icon" = EXCLUDED."icon"
           WHERE "routine_block"."userId" = EXCLUDED."userId"
-          RETURNING "id"`;
-        if (returnedIds.parse(rows).length === blocks.length) return;
+          RETURNING "id", "icon"`;
+        const written = returnedBlocks.parse(rows);
+        if (written.length === blocks.length) return new Map(written.map((row) => [row.id, row.icon]));
         // Algum id é de outra pessoa (o WHERE acima o pulou): desfaz o lote inteiro e diz quais itens.
         const foreign = await tx.routineBlock.findMany({
           where: { id: { in: blocks.map((b) => b.id) }, userId: { not: userId } },
@@ -58,9 +64,14 @@ export function blockRoutes({ auth, db }: RouteDeps) {
           blocks.flatMap((b, index) => (taken.has(b.id) ? [{ path: `blocks.${index}.id`, message: 'já existe um registro com este identificador' }] : [])),
         );
       });
-      return c.json({ blocks });
+      return c.json({
+        blocks: blocks.map(({ icon: _icon, ...block }) => {
+          const icon = saved.get(block.id);
+          return typeof icon === 'string' ? { ...block, icon } : block;
+        }),
+      });
     })
-    .put('/:id', pathParams(idParamSchema), jsonBody(routineBlockSchema), async (c) => {
+    .put('/:id', pathParams(idParamSchema), jsonBody(routineBlockInputSchema), async (c) => {
       const block = c.req.valid('json');
       requireMatch(c.req.valid('param').id, block.id, 'id_divergente');
       const userId = c.var.user.id;

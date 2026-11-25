@@ -14,7 +14,7 @@ export async function seedEverything({ db }: TestDatabase, userId: string, mark:
   const list = Array.from({ length: rows }, (_, i) => i);
   const id = (kind: string, i = 0) => `${mark}-${kind}-${i}`;
   await db.routineBlock.createMany({ data: list.map((i) => ({ id: id('bloco', i), userId, weekday: 1, startMinutes: 480, durationMinutes: 30, kind: 'foco' as const, title: id('titulo', i) })) });
-  await db.habit.createMany({ data: list.map((i) => ({ id: id('habito', i), userId, title: id('ler', i), weekdays: [0], active: true })) });
+  await db.habit.createMany({ data: list.map((i) => ({ id: id('habito', i), userId, title: id('ler', i), weekdays: [0], state: 'ativo' as const })) });
   await db.habitLog.createMany({ data: list.map((i) => ({ userId, habitId: id('habito', i), date: day, doneAt: at })) });
   await db.focusSession.createMany({
     data: list.map((i) => ({ id: id('sessao', i), userId, startedAt: new Date(TEST_NOW - 30 * 60_000), endedAt: at, plannedMinutes: 25, state: 'concluida' as const })),

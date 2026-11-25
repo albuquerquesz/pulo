@@ -16,7 +16,11 @@ afterAll(async () => {
 const uuid = () => crypto.randomUUID();
 const goal = (id: string, extra: Record<string, unknown> = {}) => ({ id, title: 'Maratona', state: 'ativa', milestones: [], createdAt: 1, ...extra });
 const concluida = (id: string) => goal(id, { state: 'concluida', completedAt: 2 });
-const habit = (id: string, extra: Record<string, unknown> = {}) => ({ id, title: 'Ler', weekdays: [0], active: true, ...extra });
+/** O corpo que um hábito tem na resposta: `active` acompanha o `state`. */
+const habit = (id: string, extra: Record<string, unknown> = {}) => {
+  const body = { id, title: 'Ler', weekdays: [0], active: true, ...extra };
+  return { state: body.active === false ? 'arquivado' : 'ativo', ...body };
+};
 
 async function novaMeta(user: TestUser, body: (id: string) => object = goal) {
   const id = uuid();
