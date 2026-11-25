@@ -725,20 +725,19 @@ class ApiRepository implements RemoteRepository {
   }
 
   /**
-   * Numa tarefa nova o cartão aparece na hora sem número; o código chega com a resposta.
-   * As escritas de uma tarefa (ela, subtarefas e comentários) seguem em ordem.
+   * O cartão aparece na hora. As escritas de uma tarefa (ela, subtarefas e comentários) seguem em ordem.
    */
   saveTask(task: Task): Promise<void> {
     const { id, goalId } = task;
     const previous = this.tasks.peek(id);
-    const next: Task = previous ? { ...task, number: previous.number, createdAt: previous.createdAt } : task;
+    const next: Task = previous ? { ...task, createdAt: previous.createdAt } : task;
     let stored: Task | undefined;
     const done = this.write(this.tasks, `task:${id}`, id, next, async () => {
       // A meta pode estar sendo criada agora: espera a escrita dela.
       if (goalId !== undefined) await this.locks.get(`goal:${goalId}`);
       const { task: saved } = await readJson(await this.client.api.tasks[':id'].$put({ param: { id }, json: task }));
       // Muda as instâncias guardadas no lugar: o rollback compara identidade.
-      const server = { number: saved.number, createdAt: saved.createdAt };
+      const server = { createdAt: saved.createdAt };
       // A minha cópia (a que um rollback posterior devolve) e a atual.
       for (const cached of [stored, this.tasks.peek(id)]) {
         if (cached) Object.assign(cached, server);
