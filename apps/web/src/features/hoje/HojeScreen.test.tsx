@@ -1,25 +1,36 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
+
+import type { Repository } from '@pulo/core/domain/types';
 
 import { AppProvider, useApp } from '../app';
 import { criarSessaoDemo } from '../app/demo';
 import { HojeScreen } from './HojeScreen';
 
-type LinkFalso = { to: string; search?: object; children: ReactNode; className?: string; 'aria-label'?: string };
+type LinkFalso = { to: string; search?: object; hash?: string; children: ReactNode; className?: string; 'aria-label'?: string };
 vi.mock('@tanstack/react-router', () => ({
-  Link: ({ to, search, children, ...resto }: LinkFalso) => (
-    <a href={search ? `${to}?${new URLSearchParams({ ...search })}` : to} {...resto}>
+  Link: ({ to, search, hash, children, ...resto }: LinkFalso) => (
+    <a href={`${to}${search ? `?${new URLSearchParams({ ...search })}` : ''}${hash ? `#${hash}` : ''}`} {...resto}>
       {children}
     </a>
   ),
 }));
 
 function SoPronto({ children }: { children: ReactNode }) {
-  return useApp().fase === 'pronto' ? children : null;
+  const { fase, aviso } = useApp();
+  return fase === 'pronto' ? (
+    <>
+      {children}
+      <p data-testid="aviso">{aviso?.mensagem}</p>
+    </>
+  ) : null;
 }
 
-async function abrir() {
+/** `dias`: quanto o relógio anda depois do sábado do rascunho. Domingo (1) começa a semana sem nenhum cuidado. */
+async function abrir({ dias = 0, preparar }: { dias?: number; preparar?: (repo: Repository) => Promise<void> } = {}) {
   const { repo, clock } = await criarSessaoDemo();
+  clock.advanceDays(dias);
+  await preparar?.(repo);
   render(
     <AppProvider repoInicial={repo} relogioInicial={clock} demoNaAbertura={false}>
       <SoPronto>
@@ -31,13 +42,15 @@ async function abrir() {
   return { repo };
 }
 
+const clicar = (elemento: HTMLElement) => act(async () => void fireEvent.click(elemento));
+
 const regiao = (nome: string) => within(screen.getByRole('region', { name: nome }));
 
 describe('Tela Hoje', () => {
   test('blocos na ordem do rascunho', async () => {
     await abrir();
     const titulos = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
-    expect(titulos).toEqual(['Sequência', 'Esta semana', 'Hábitos de hoje', 'Tarefas de hoje', 'Linha do dia']);
+    expect(titulos).toEqual(['Sequência', 'Esta semana', 'Hábitos de hoje', 'Seu mês', 'Tarefas de hoje', 'Linha do dia']);
     expect(regiao('Tarefas de hoje').getByRole('link', { name: 'Ver quadro' }).getAttribute('href')).toBe('/tarefas');
   });
 
@@ -65,5 +78,45 @@ describe('Tela Hoje', () => {
     });
     expect(screen.getByRole('checkbox', { name: nome }).getAttribute('aria-checked')).toBe('true');
     expect((await repo.listTasks()).find((t) => t.id === 'demo-tarefa-2')?.status).toBe('feito');
+  });
+
+  test('Descansar hoje grava, muda o dia na barra e desfaz', async () => {
+    const { repo } = await abrir({ dias: 1 });
+    expect(regiao('Sequência').getByText('Restam 2 descansos nesta semana')).toBeTruthy();
+    await clicar(screen.getByRole('button', { name: 'Descansar hoje' }));
+    expect(await regiao('Sequência').findByText('domingo, descanso')).toBeTruthy();
+    expect(regiao('Sequência').getByText('Resta 1 descanso nesta semana')).toBeTruthy();
+    expect((await repo.listRestDays()).map((r) => r.date)).toContain('2026-11-22');
+    await clicar(screen.getByRole('button', { name: 'Desmarcar descanso de hoje' }));
+    expect(await regiao('Sequência').findByText('domingo, hoje')).toBeTruthy();
+    expect((await repo.listRestDays()).map((r) => r.date)).not.toContain('2026-11-22');
+  });
+
+  test('no limite da semana mostra a mensagem e nada muda', async () => {
+    const { repo } = await abrir({
+      preparar: async (r) => {
+        await r.saveRestDay({ date: '2026-11-16' });
+        await r.saveRestDay({ date: '2026-11-17' });
+      },
+    });
+    const antes = await repo.listRestDays();
+    await clicar(screen.getByRole('button', { name: 'Descansar hoje' }));
+    expect(screen.getByTestId('aviso').textContent).toBe('Você já usou os 2 descansos desta semana.');
+    expect(regiao('Sequência').getByText('sábado, hoje')).toBeTruthy();
+    expect(await repo.listRestDays()).toEqual(antes);
+  });
+
+  test('a recusa do servidor desfaz o que a tela adiantou', async () => {
+    await abrir({ dias: 1, preparar: async (r) => void vi.spyOn(r, 'saveRestDay').mockRejectedValue(new Error('recusado')) });
+    await clicar(screen.getByRole('button', { name: 'Descansar hoje' }));
+    expect(await regiao('Sequência').findByRole('button', { name: 'Descansar hoje' })).toBeTruthy();
+    expect(regiao('Sequência').getByText('domingo, hoje')).toBeTruthy();
+  });
+
+  test('Seu mês mostra os três números e leva às métricas', async () => {
+    await abrir();
+    expect(regiao('Seu mês').getByRole('link', { name: 'Ver métricas' }).getAttribute('href')).toBe('/perfil#metricas');
+    expect(await regiao('Seu mês').findByText('dias de cuidado')).toBeTruthy();
+    await waitFor(() => expect(regiao('Seu mês').queryByText('…')).toBeNull());
   });
 });

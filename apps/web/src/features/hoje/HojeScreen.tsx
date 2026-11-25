@@ -1,23 +1,32 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { MINUTE_MS } from '@pulo/core/domain/clock';
 import { criarPlanoInicial } from '@pulo/core/domain/routine';
+import { useConsultaDeMidia } from '@/theme';
 import { Botao, EstadoVazio } from '@/ui';
 
 import { Tela, useApp, useCarregar } from '../app';
+import { MENSAGENS_DE_ERRO } from '../casca/erros';
 import { contaNaTela } from '../casca/logic';
 import { EstaSemana } from './EstaSemana';
 import { HabitosDeHoje } from './HabitosDeHoje';
 import { LinhaDoDia } from './LinhaDoDia';
-import { alternarHabito, alternarTarefa, carregarHoje } from './logic';
+import { alternarDescanso, alternarHabito, alternarTarefa, barraDaSemana, carregarHoje, comDescansoDeHoje } from './logic';
 import { Sequencia } from './Sequencia';
+import { SeuMes } from './SeuMes';
 import { TarefasDeHoje } from './TarefasDeHoje';
 import { Topo } from './Topo';
+
+/** A partir daqui Seu mês fica logo abaixo de Esta semana; no celular, depois dos hábitos. */
+const CONSULTA_DA_COLUNA_LARGA = '(min-width: 48rem)';
 
 export const TEXTO_DE_ERRO = 'A lagoa ficou sem sinal. Seus dados estão salvos aqui.';
 
 export function HojeScreen() {
-  const { repo, clock, user, conta, refresh } = useApp();
+  const { repo, clock, user, conta, refresh, mostrarAviso } = useApp();
+  const largo = useConsultaDeMidia(CONSULTA_DA_COLUNA_LARGA);
+  /** O descanso que acabou de ser pedido, mostrado antes da resposta. */
+  const [descansoPedido, setDescansoPedido] = useState<boolean | null>(null);
   const { estado, recarregar } = useCarregar(async () => {
     if (!user) throw new Error('sem usuário');
     return carregarHoje(repo, clock, user, contaNaTela(conta, user).nome);
@@ -63,12 +72,41 @@ export function HojeScreen() {
     }
   };
 
+  const pedido = descansoPedido;
+  const semana = pedido === null ? d.semana : comDescansoDeHoje(d.semana, pedido);
+  const descanso =
+    pedido === null
+      ? d.descanso
+      : { ...d.descanso, marcado: pedido, restantesNaSemana: d.descanso.restantesNaSemana + Number(d.descanso.marcado) - Number(pedido) };
+  const mudarDescanso = async () => {
+    // Sem vaga na semana não há o que adiantar: só a resposta da regra.
+    if (d.descanso.marcado || d.descanso.restantesNaSemana > 0) setDescansoPedido(!d.descanso.marcado);
+    try {
+      const resultado = await alternarDescanso(repo, clock, d.descanso);
+      if (!resultado.ok) mostrarAviso({ mensagem: MENSAGENS_DE_ERRO[resultado.error.code], variante: 'atencao' });
+    } catch {
+      // O repositório da conta já avisou o que houve e voltou ao que era.
+    } finally {
+      await recarregar();
+      setDescansoPedido(null);
+      refresh();
+    }
+  };
+
   return (
     <Tela>
       <Topo saudacao={d.saudacao} foco={d.foco} />
-      <Sequencia dias={d.diasSeguidos} barra={d.barra} />
+      <Sequencia
+        dias={d.diasSeguidos}
+        barra={barraDaSemana(semana)}
+        descanso={descanso}
+        gravando={pedido !== null}
+        onDescanso={() => void mudarDescanso()}
+      />
       <EstaSemana grafico={d.grafico} />
+      {largo ? <SeuMes /> : null}
       <HabitosDeHoje habitos={d.habitos} onAlternar={(h) => void gravar(alternarHabito(repo, clock, user, h.id, h.feito))} />
+      {largo ? null : <SeuMes />}
       <TarefasDeHoje tarefas={d.tarefas} onAlternar={(t) => void gravar(alternarTarefa(repo, clock, t.id, t.feita))} />
       {d.temRotina ? (
         <LinhaDoDia itens={d.linha} minutos={d.minutosAgora} />

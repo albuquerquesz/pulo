@@ -1,7 +1,8 @@
 import { CARTAO, LEGENDA, TITULO } from './estilos';
 import type { GraficoDaSemana, TipoDaBarra } from './logic';
 
-const COR_DA_BARRA: Record<TipoDaBarra, string> = { foco: 'bg-sapo', descanso: 'bg-descanso', vazia: 'bg-line' };
+const COR_DA_BARRA: Record<TipoDaBarra, string> = { foco: 'bg-sapo', descanso: 'bg-descanso', gelo: 'bg-agua', vazia: 'bg-line' };
+const PREFIXO_DA_BARRA: Record<TipoDaBarra, string> = { foco: '', descanso: 'descanso, ', gelo: 'protegido por gelo, ', vazia: '' };
 
 /** O gráfico da semana, com o foco e as joias somados. */
 export function EstaSemana({ grafico }: { grafico: GraficoDaSemana }) {
@@ -20,7 +21,7 @@ export function EstaSemana({ grafico }: { grafico: GraficoDaSemana }) {
             <span aria-hidden="true" className="text-[11px] text-muted">
               {barra.letra}
             </span>
-            <span className="sr-only">{`${barra.letra}: ${barra.tipo === 'descanso' ? 'descanso, ' : ''}${barra.minutos} min de foco`}</span>
+            <span className="sr-only">{`${barra.letra}: ${PREFIXO_DA_BARRA[barra.tipo]}${barra.minutos} min de foco`}</span>
           </li>
         ))}
       </ol>

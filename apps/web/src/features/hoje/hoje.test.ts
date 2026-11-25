@@ -66,6 +66,12 @@ describe('barra da semana', () => {
     expect(b.completa).toBe(false);
   });
 
+  test('o dia de gelo tem tom e descrição próprios', () => {
+    const b = barraDaSemana(semana(['feito', 'gelo', 'descanso', 'hoje', 'futuro', 'futuro', 'futuro']));
+    expect(b.letras.map((d) => d.tom).slice(0, 4)).toEqual(['feito', 'gelo', 'descanso', 'hoje']);
+    expect(b.letras[1]?.descricao).toBe('segunda, protegido por gelo');
+  });
+
   test('o foguinho acende com os 7 dias feitos ou de descanso', () => {
     expect(barraDaSemana(semana(['feito', 'feito', 'descanso', 'feito', 'feito', 'feito', 'feito'])).completa).toBe(true);
     expect(barraDaSemana(semana(['feito', 'feito', 'descanso', 'feito', 'feito', 'feito', 'hoje'])).completa).toBe(false);

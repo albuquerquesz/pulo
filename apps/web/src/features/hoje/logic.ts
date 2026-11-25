@@ -1,6 +1,7 @@
 import { FOCUS, GOALS, HABITS } from '@pulo/core/config/decisions';
 import { dateKeyOf, localMinutesOf, periodOf, weekdayOf } from '@pulo/core/domain/day';
 import { hasTimeRunOut, proximoFoco } from '@pulo/core/domain/foco';
+import { desmarcarDescanso, marcarDescanso, situacaoDoDescanso } from '@pulo/core/domain/descanso';
 import { desmarcarHabito, habitsForDate, marcarHabito } from '@pulo/core/domain/habits';
 import { joiasGanhas } from '@pulo/core/domain/joias';
 import { blocksForWeekday } from '@pulo/core/domain/routine';
@@ -17,6 +18,7 @@ import type {
   Period,
   Repository,
   RestDay,
+  RestStatus,
   RoutineBlock,
   StreakDay,
   Task,
@@ -66,12 +68,24 @@ export function textoDeFolga(minutos: number): string {
 /** Letra de cada dia da semana (0 = segunda). */
 const LETRAS: Record<Weekday, string> = { 0: 'S', 1: 'T', 2: 'Q', 3: 'Q', 4: 'S', 5: 'S', 6: 'D' };
 
-export type TomDoDia = 'feito' | 'descanso' | 'hoje' | 'apagado';
+export type TomDoDia = 'feito' | 'descanso' | 'gelo' | 'hoje' | 'apagado';
+
+const NOMES_DOS_DIAS: Record<Weekday, string> = { 0: 'segunda', 1: 'terça', 2: 'quarta', 3: 'quinta', 4: 'sexta', 5: 'sábado', 6: 'domingo' };
+
+const DESCRICAO_DO_TOM: Record<TomDoDia, string> = {
+  feito: 'feito',
+  descanso: 'descanso',
+  gelo: 'protegido por gelo',
+  hoje: 'hoje',
+  apagado: 'sem registro',
+};
 
 export interface LetraDaSemana {
   date: DateKey;
   letra: string;
   tom: TomDoDia;
+  /** Para o leitor de tela: "sábado, protegido por gelo". */
+  descricao: string;
 }
 
 export interface BarraDaSemana {
@@ -87,9 +101,19 @@ function indiceDeHoje(semana: readonly StreakDay[]): number {
   return semana.reduce((ultimo, dia, i) => (dia.estado === 'futuro' ? ultimo : i), 0);
 }
 
+/** O descanso de hoje já aparece com a lua; o resto do dia de hoje segue em aberto. */
 function tomDoDia(dia: StreakDay, ehHoje: boolean): TomDoDia {
-  if (ehHoje) return 'hoje';
-  return dia.estado === 'feito' || dia.estado === 'descanso' ? dia.estado : 'apagado';
+  if (ehHoje) return dia.estado === 'descanso' ? 'descanso' : 'hoje';
+  return dia.estado === 'feito' || dia.estado === 'descanso' || dia.estado === 'gelo' ? dia.estado : 'apagado';
+}
+
+/** A semana como fica ao marcar ou desmarcar o descanso de hoje, antes da resposta. Dia feito continua feito. */
+export function comDescansoDeHoje(semana: readonly StreakDay[], marcado: boolean): StreakDay[] {
+  const hoje = indiceDeHoje(semana);
+  return semana.map((dia, i): StreakDay => {
+    if (i !== hoje || dia.estado === 'feito') return dia;
+    return { ...dia, estado: marcado ? 'descanso' : 'hoje' };
+  });
 }
 
 const cuidado = (dia: StreakDay): boolean => dia.estado === 'feito' || dia.estado === 'descanso';
@@ -97,7 +121,11 @@ const cuidado = (dia: StreakDay): boolean => dia.estado === 'feito' || dia.estad
 export function barraDaSemana(semana: readonly StreakDay[]): BarraDaSemana {
   const hoje = indiceDeHoje(semana);
   return {
-    letras: semana.map((dia, i) => ({ date: dia.date, letra: LETRAS[weekdayOf(dia.date)], tom: tomDoDia(dia, i === hoje) })),
+    letras: semana.map((dia, i) => {
+      const tom = tomDoDia(dia, i === hoje);
+      const weekday = weekdayOf(dia.date);
+      return { date: dia.date, letra: LETRAS[weekday], tom, descricao: `${NOMES_DOS_DIAS[weekday]}, ${DESCRICAO_DO_TOM[tom]}` };
+    }),
     cheio: semana.length === 0 ? 0 : (hoje + 0.5) / semana.length,
     completa: semana.length > 0 && semana.every(cuidado),
   };
@@ -106,7 +134,7 @@ export function barraDaSemana(semana: readonly StreakDay[]): BarraDaSemana {
 /** Alturas do gráfico, em % (medidas do rascunho): a maior barra, o descanso sem foco e o dia vazio. */
 const ALTURA = { maxima: 90, descanso: 40, minima: 12, vazia: 6 } as const;
 
-export type TipoDaBarra = 'foco' | 'descanso' | 'vazia';
+export type TipoDaBarra = 'foco' | 'descanso' | 'gelo' | 'vazia';
 
 export interface BarraDoGrafico {
   date: DateKey;
@@ -157,8 +185,14 @@ export function graficoDaSemana(registros: RegistrosDaSemana): GraficoDaSemana {
     const doDia = minutos[i] ?? 0;
     const descanso = dia.estado !== 'futuro' && (dia.estado === 'descanso' || descansos.has(dia.date));
     const proporcional = doDia === 0 ? 0 : Math.max(ALTURA.minima, Math.round((doDia / maior) * ALTURA.maxima));
-    const tipo = descanso ? 'descanso' : doDia > 0 ? 'foco' : 'vazia';
-    const altura = tipo === 'descanso' ? Math.max(ALTURA.descanso, proporcional) : tipo === 'foco' ? proporcional : ALTURA.vazia;
+    const tipo: TipoDaBarra = descanso ? 'descanso' : doDia > 0 ? 'foco' : dia.estado === 'gelo' ? 'gelo' : 'vazia';
+    const alturas: Record<TipoDaBarra, number> = {
+      descanso: Math.max(ALTURA.descanso, proporcional),
+      gelo: ALTURA.descanso,
+      foco: proporcional,
+      vazia: ALTURA.vazia,
+    };
+    const altura = alturas[tipo];
     return { date: dia.date, letra: LETRAS[weekdayOf(dia.date)], minutos: doDia, tipo, altura };
   });
   return {
@@ -355,11 +389,19 @@ export function posicaoDoAgora(marcos: readonly MarcoDaLinha[], minutos: number)
 
 // ---------- A tela ----------
 
+export interface DescansoDeHoje extends RestStatus {
+  /** O dia de hoje da sequência, o único que se pode marcar. */
+  date: DateKey;
+  marcado: boolean;
+}
+
 export interface DadosHoje {
   saudacao: string;
   foco: FocoDoTopo;
   diasSeguidos: number;
-  barra: BarraDaSemana;
+  /** Os 7 dias da sequência, de onde sai a barra. */
+  semana: StreakDay[];
+  descanso: DescansoDeHoje;
   grafico: GraficoDaSemana;
   habitos: HabitoDeHoje[];
   tarefas: TarefaDeHoje[];
@@ -368,6 +410,11 @@ export interface DadosHoje {
   minutosAgora: number;
   /** Há algum bloco em toda a rotina (para o estado vazio). */
   temRotina: boolean;
+}
+
+export function descansoDeHoje(semana: readonly StreakDay[], restDays: readonly RestDay[]): DescansoDeHoje {
+  const date = semana[indiceDeHoje(semana)]?.date ?? '';
+  return { date, marcado: restDays.some((r) => r.date === date), ...situacaoDoDescanso(date, restDays) };
 }
 
 export async function carregarHoje(repo: Repository, clock: Clock, user: User, nome: string): Promise<DadosHoje> {
@@ -404,7 +451,8 @@ export async function carregarHoje(repo: Repository, clock: Clock, user: User, n
     saudacao: saudacao(agora, fuso, nome),
     foco,
     diasSeguidos: sequencia.atual,
-    barra: barraDaSemana(sequencia.semana),
+    semana: sequencia.semana,
+    descanso: descansoDeHoje(sequencia.semana, restDays),
     grafico: graficoDaSemana({ semana: sequencia.semana, sessions, restDays, habitLogs, goals, baus, fuso }),
     habitos: habitsForDate(habitos, hoje).map((h) => ({ id: h.id, titulo: h.title, quando: quandoDoHabito(h), feito: feitos.has(h.id) })),
     tarefas: tarefasDeHoje(tarefas, hoje),
@@ -428,6 +476,11 @@ export async function alternarHabito(repo: Repository, clock: Clock, user: User,
   const hoje = dateKeyOf(clock.now(), user.timezone);
   if (feito) await desmarcarHabito(repo, habitId, hoje);
   else await marcarHabito(repo, habitId, hoje, clock.now());
+}
+
+/** Marca ou desmarca o descanso de hoje. A regra recusada no app volta como resultado; a da API, como erro. */
+export function alternarDescanso(repo: Repository, clock: Clock, { date, marcado }: DescansoDeHoje) {
+  return marcado ? desmarcarDescanso(repo, clock, date) : marcarDescanso(repo, clock, date);
 }
 
 /** O quadradinho: de feita volta para "a fazer"; senão vai para "feito", com a hora. */

@@ -1,19 +1,41 @@
+import type { ReactNode } from 'react';
+
 import { Foguinho } from '@/ui';
 
-import { CARTAO, TITULO } from './estilos';
-import type { BarraDaSemana, TomDoDia } from './logic';
+import { Floco } from '../casca/Floco';
+import { textoDeDescansos } from '../casca/gelo';
+
+import { CARTAO, LEGENDA, TITULO } from './estilos';
+import type { BarraDaSemana, DescansoDeHoje, TomDoDia } from './logic';
 
 const COR_DA_LETRA: Record<TomDoDia, string> = {
   feito: 'text-[color-mix(in_srgb,var(--pulo-sol)_75%,var(--pulo-ink))]',
   descanso: 'text-descanso',
+  gelo: 'text-agua',
   hoje: 'text-foco',
   apagado: 'text-muted',
 };
 
-const DESCRICAO: Record<TomDoDia, string> = { feito: 'feito', descanso: 'descanso', hoje: 'hoje', apagado: 'sem registro' };
+/** O desenho sob a letra: fogo no feito, lua no descanso e floco no gelo. */
+const ICONE_DO_TOM: Record<TomDoDia, ReactNode> = {
+  feito: <Foguinho className="size-4" />,
+  descanso: '☾',
+  gelo: <Floco className="size-4" />,
+  hoje: null,
+  apagado: null,
+};
+
+type SequenciaProps = {
+  dias: number;
+  barra: BarraDaSemana;
+  descanso: DescansoDeHoje;
+  /** Esperando a resposta. */
+  gravando: boolean;
+  onDescanso: () => void;
+};
 
 /** A sequência com o foguinho e a barra da semana, que enche até hoje. */
-export function Sequencia({ dias, barra }: { dias: number; barra: BarraDaSemana }) {
+export function Sequencia({ dias, barra, descanso, gravando, onDescanso }: SequenciaProps) {
   return (
     <section
       aria-label="Sequência"
@@ -32,8 +54,13 @@ export function Sequencia({ dias, barra }: { dias: number; barra: BarraDaSemana 
           <ol aria-label="Dias da semana" className="grid grid-cols-7 pr-[42px] text-center text-[15px] font-extrabold">
             {barra.letras.map((dia) => (
               <li key={dia.date} data-tom={dia.tom} className={COR_DA_LETRA[dia.tom]}>
-                <span aria-hidden="true">{dia.letra}</span>
-                <span className="sr-only">{`${dia.letra}: ${DESCRICAO[dia.tom]}`}</span>
+                <span aria-hidden="true" className="block">
+                  {dia.letra}
+                </span>
+                <span aria-hidden="true" className="grid h-4 place-items-center text-sm leading-none">
+                  {ICONE_DO_TOM[dia.tom]}
+                </span>
+                <span className="sr-only">{dia.descricao}</span>
               </li>
             ))}
           </ol>
@@ -56,6 +83,22 @@ export function Sequencia({ dias, barra }: { dias: number; barra: BarraDaSemana 
             </span>
           </div>
         </div>
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <button
+          type="button"
+          disabled={gravando}
+          onClick={onDescanso}
+          className={`min-h-11 cursor-pointer rounded-md px-5 py-2.5 font-extrabold enabled:active:translate-y-[3px] disabled:cursor-wait ${
+            descanso.marcado
+              ? 'border-[1.5px] border-descanso text-ink shadow-[inset_0_-3px_0_var(--pulo-descanso)]'
+              : 'bg-descanso text-on-descanso shadow-[inset_0_-4px_0_var(--pulo-descanso-borda)]'
+          }`}
+        >
+          <span aria-hidden="true">☾ </span>
+          {descanso.marcado ? 'Desmarcar descanso de hoje' : 'Descansar hoje'}
+        </button>
+        <span className={LEGENDA}>{textoDeDescansos(descanso.restantesNaSemana, descanso.maxPorSemana)}</span>
       </div>
     </section>
   );
