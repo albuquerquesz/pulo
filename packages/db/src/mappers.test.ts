@@ -174,8 +174,10 @@ describe('mapeadores', () => {
 
   it('IslandPurchase', () => {
     const purchase: IslandPurchase = { item: 'banco', cost: 8, createdAt: 42 };
-    const row: IslandPurchaseRow = { userId: USER, item: 'banco', cost: 8, createdAt: new Date(42) };
-    expect(islandPurchaseMapper.fromDomain(USER, purchase)).toStrictEqual(row);
+    const row: IslandPurchaseRow = { userId: USER, item: 'banco', kind: 'antiga', cost: 8, createdAt: new Date(42) };
+    const { kind, ...semKind } = row;
+    expect(kind).toBe('antiga');
+    expect(islandPurchaseMapper.fromDomain(USER, purchase)).toStrictEqual(semKind);
     expect(islandPurchaseMapper.toDomain(row)).toStrictEqual(purchase);
   });
 

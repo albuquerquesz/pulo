@@ -56,6 +56,7 @@ model User {
   weeklyProposals WeeklyProposal[]
   goals           Goal[]
   islandPurchases IslandPurchase[]
+  joiaCredit      JoiaCredit?
   mascotState     MascotState?
 
   oauthClients       OauthClient[]
@@ -304,6 +305,14 @@ model OauthClientAssertion {
 
 // ---------- Domínio ----------
 
+enum PurchaseKind {
+  casa
+  decoracao
+  antiga
+
+  @@map("purchase_kind")
+}
+
 enum BlockKind {
   foco
   descanso
@@ -466,19 +475,46 @@ model Goal {
   @@map("goal")
 }
 
-/// Compra da ilha (área ou enfeite), uma por item e pessoa. Imutável: só `DELETE /api/data` apaga.
-/// O saldo de moscas nunca é gravado, sai dos registros (ver packages/core/domain/ilha.ts).
+/// Compra com joias (parte da casa, decoração ou área e enfeite da ilha antiga), uma por item e pessoa.
+/// Imutável: só `DELETE /api/data` apaga. O saldo nunca é gravado (ver packages/core/domain/joias.ts).
 model IslandPurchase {
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /// Id do item no catálogo (`ISLAND` em packages/core/config/decisions.ts).
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Id do item no catálogo (`HOUSE`, `ROOM_DECOR` ou `ISLAND` em packages/core/config/decisions.ts).
   item      String
-  /// Preço pago, em moscas (CHECK >= 0 na migração).
+  /// `antiga` é a ilha da spec 12: não gasta joias na casa nem no quarto.
+  kind      PurchaseKind @default(antiga)
+  /// Preço pago, em joias (CHECK >= 0 na migração).
   cost      Int
-  createdAt DateTime @db.Timestamptz(3)
+  createdAt DateTime     @db.Timestamptz(3)
+
+  placement RoomPlacement?
 
   @@id([userId, item])
   @@map("island_purchase")
+}
+
+/// Posição de uma decoração no quarto. Separada da compra porque muda sem nova compra.
+model RoomPlacement {
+  userId   String
+  item     String
+  purchase IslandPurchase @relation(fields: [userId, item], references: [userId, item], onDelete: Cascade)
+  x        Int            @db.SmallInt
+  y        Int            @db.SmallInt
+  /// Graus: 0, 90, 180 ou 270 (CHECK na migração).
+  rotation Int            @db.SmallInt
+
+  @@id([userId, item])
+  @@map("room_placement")
+}
+
+/// Joias de ganho histórico concedidas na troca de regra (spec 18). Só a migração grava; `DELETE /api/data` apaga.
+model JoiaCredit {
+  userId String @id
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount Int
+
+  @@map("joia_credit")
 }
 
 /// Cache do estado do sapo (derivado). Uma linha por pessoa.

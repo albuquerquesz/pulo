@@ -23,6 +23,9 @@ import type {
   Habit,
   HabitLog,
   IslandPurchase,
+  Purchase,
+  RoomDecor,
+  RoomSpot,
   MascotState,
   Repository,
   RestDay,
@@ -40,6 +43,7 @@ import {
   cloneHabit,
   cloneHabitLog,
   cloneIslandPurchase,
+  cloneRoomDecor,
   cloneMascot,
   cloneProposal,
   cloneRestDay,
@@ -115,6 +119,7 @@ class ApiRepository implements RemoteRepository {
   private accountValue: Account = { id: '', name: '', email: '', image: null };
   private metadata: UserMetadata | null = null;
   private mascot: MascotState | null = null;
+  private joiaCredit = 0;
   private streak: Streak | null = null;
   /** Dia (do app) em que a sequência guardada foi lida; `null` quando uma escrita a envelheceu. */
   private streakDay: DateKey | null = null;
@@ -129,6 +134,9 @@ class ApiRepository implements RemoteRepository {
   private readonly proposals = new Collection<WeeklyProposal>((p) => p.id, cloneProposal);
   private readonly goals = new Collection<Goal>((g) => g.id, cloneGoal);
   private readonly islandPurchases = new Collection<IslandPurchase>((p) => p.item, cloneIslandPurchase);
+
+  private readonly housePurchases = new Collection<Purchase>((p) => p.item, cloneIslandPurchase);
+  private readonly roomDecor = new Collection<RoomDecor>((d) => d.item, cloneRoomDecor);
 
   /** Uma escrita por chave de cada vez, na ordem em que foram pedidas (escritas em chaves diferentes seguem em paralelo). */
   private readonly locks = new Map<string, Promise<void>>();
@@ -160,6 +168,9 @@ class ApiRepository implements RemoteRepository {
     this.proposals.replaceAll(data.proposals);
     this.goals.replaceAll(data.goals);
     this.islandPurchases.replaceAll(data.islandPurchases);
+    this.housePurchases.replaceAll(data.housePurchases);
+    this.roomDecor.replaceAll(data.roomDecor);
+    this.joiaCredit = data.joiaCredit;
   }
 
   // ---------- Escrita com cache otimista ----------
@@ -479,6 +490,43 @@ class ApiRepository implements RemoteRepository {
     });
   }
 
+  // ---------- Casa e quarto ----------
+
+  async listHousePurchases(): Promise<Purchase[]> {
+    return this.housePurchases.values().sort((a, b) => a.createdAt - b.createdAt);
+  }
+
+  /** O servidor confere o saldo e o preço; se recusar, a compra sai do cache e o erro sobe. */
+  saveHousePurchase(purchase: Purchase): Promise<void> {
+    const { item } = purchase;
+    return this.write(this.housePurchases, `house:${item}`, item, purchase, async () => {
+      await readJson(await this.client.api.house[':item'].$put({ param: { item }, json: purchase }));
+    });
+  }
+
+  async listRoomDecor(): Promise<RoomDecor[]> {
+    return this.roomDecor.values().sort((a, b) => a.createdAt - b.createdAt);
+  }
+
+  saveRoomDecor(decor: RoomDecor): Promise<void> {
+    const { item } = decor;
+    return this.write(this.roomDecor, `room:${item}`, item, decor, async () => {
+      await readJson(await this.client.api.room[':item'].$put({ param: { item }, json: decor }));
+    });
+  }
+
+  async moveRoomDecor(item: string, spot: RoomSpot): Promise<void> {
+    const atual = this.roomDecor.peek(item);
+    if (!atual) return;
+    await this.write(this.roomDecor, `room:${item}`, item, { ...atual, ...spot }, async () => {
+      await readJson(await this.client.api.room[':item'].$patch({ param: { item }, json: spot }));
+    });
+  }
+
+  async getJoiaCredit(): Promise<number> {
+    return this.joiaCredit;
+  }
+
   // ---------- Estado do sapo ----------
 
   async getMascotState(): Promise<MascotState | null> {
@@ -523,11 +571,12 @@ class ApiRepository implements RemoteRepository {
     await this.serial('all', () =>
       this.withRetry(async () => {
         await readJson(await this.client.api.data.$delete());
-        const collections = [this.blocks, this.habits, this.habitLogs, this.sessions, this.restDays, this.proposals, this.goals, this.islandPurchases];
+        const collections = [this.blocks, this.habits, this.habitLogs, this.sessions, this.restDays, this.proposals, this.goals, this.islandPurchases, this.housePurchases, this.roomDecor];
         for (const collection of collections) {
           collection.clear();
         }
         this.mascot = null;
+        this.joiaCredit = 0;
         const { metadata } = await readJson(
           await this.client.api.me.metadata.$patch({ json: { profile: null, onboardingCompleted: false } }),
         );

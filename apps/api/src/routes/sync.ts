@@ -7,6 +7,7 @@ import {
   islandPurchaseMapper,
   mascotStateMapper,
   restDayMapper,
+  roomPlacementMapper,
   routineBlockMapper,
   weeklyProposalMapper,
 } from '@pulo/db';
@@ -22,17 +23,18 @@ import {
   mascotSelect,
   proposalSelect,
   restDaySelect,
+  roomDecorSelect,
   sessionSelect,
 } from '../selects';
 
-/** Tudo o que o app precisa para abrir: `/api/sync`. Doze leituras fixas numa transação, qualquer volume de dados. */
+/** Tudo o que o app precisa para abrir: `/api/sync`. Quinze leituras fixas numa transação, qualquer volume de dados. */
 export function syncRoutes({ auth, db, now }: RouteDeps) {
   return new Hono<AppEnv>().use(requireSession(auth)).get('/', queryParams(syncQuerySchema), async (c) => {
     const { id: userId, name, email, image, metadata } = c.var.user;
     const range = c.req.valid('query');
     const date = dateFilter(range);
 
-    const [blocks, habits, habitLogs, sessions, restDays, proposals, goals, islandPurchases, mascot, habitDays, allSessions, allRestDays] =
+    const [blocks, habits, habitLogs, sessions, restDays, proposals, goals, islandPurchases, housePurchases, roomDecor, joiaCredit, mascot, habitDays, allSessions, allRestDays] =
       await db.$transaction([
       db.routineBlock.findMany({
         where: { userId },
@@ -49,7 +51,15 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
       db.restDay.findMany({ where: { userId, date }, select: restDaySelect, orderBy: { date: 'asc' } }),
       db.weeklyProposal.findMany({ where: { userId }, select: proposalSelect, orderBy: { weekStart: 'desc' } }),
       db.goal.findMany({ where: { userId }, select: goalSelect, orderBy: { createdAt: 'asc' } }),
-      db.islandPurchase.findMany({ where: { userId }, select: islandPurchaseSelect, orderBy: { createdAt: 'asc' } }),
+      db.islandPurchase.findMany({ where: { userId, kind: 'antiga' }, select: islandPurchaseSelect, orderBy: { createdAt: 'asc' } }),
+      db.islandPurchase.findMany({ where: { userId, kind: 'casa' }, select: islandPurchaseSelect, orderBy: { createdAt: 'asc' } }),
+      db.islandPurchase.findMany({
+        where: { userId, kind: 'decoracao' },
+        select: roomDecorSelect,
+        orderBy: { createdAt: 'asc' },
+        relationLoadStrategy: 'join',
+      }),
+      db.joiaCredit.findUnique({ where: { userId }, select: { amount: true } }),
       db.mascotState.findUnique({ where: { userId }, select: mascotSelect }),
       ...streakReads(db, userId),
     ]);
@@ -66,6 +76,9 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
       proposals: proposals.map(weeklyProposalMapper.toDomain),
       goals: goals.map(goalMapper.toDomain),
       islandPurchases: islandPurchases.map(islandPurchaseMapper.toDomain),
+      housePurchases: housePurchases.map(islandPurchaseMapper.toDomain),
+      roomDecor: roomDecor.map(roomPlacementMapper.toDomain),
+      joiaCredit: joiaCredit?.amount ?? 0,
       mascot: mascot === null ? null : mascotStateMapper.toDomain(mascot),
       streak: streakFromRows(metadata, serverTime, { habitDays, sessions: allSessions, restDays: allRestDays }),
       serverTime,

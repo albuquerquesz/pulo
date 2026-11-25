@@ -76,12 +76,34 @@ export const GOALS = {
 } as const;
 
 /**
- * Ilha do sapo (spec 12). Moscas são a moeda: ganhas com cuidado, gastas em enfeites e em áreas novas.
- * Nada se perde por falhar: o que foi comprado fica para sempre. Proposta.
+ * Joias (spec 18): a moeda do jogo. Ganhas com cuidado e foco, gastas na casa e no quarto.
+ * O saldo é calculado a partir dos registros, nunca gravado. Proposta.
+ */
+export const JOIAS = {
+  /** Joias por cada coisa feita. */
+  por: { habitDone: 1, restDay: 2, milestoneDone: 3, goalCompleted: 10 },
+  /** O foco rende 1 joia a cada tantos minutos focados, por sessão terminada (até o tempo planejado). */
+  focusMinutesPerJoia: 5,
+} as const;
+
+/** Casa do sapo (spec 18): preço de cada parte, em joias. O quarto (preço 0) já vem pronto. Sem ordem obrigatória. Proposta. */
+export const HOUSE = {
+  partCost: { quarto: 0, cozinha: 120, varanda: 80, jardim: 60, arvore: 90, cerca: 40 },
+} as const;
+
+/** Decorações do quarto (spec 18): preço em joias. O quarto começa vazio. Proposta. */
+export const ROOM_DECOR = {
+  itemCost: { tapete: 10, vaso: 15, luminaria: 25, quadro: 30, estante: 45, poltrona: 60, aquario: 80 },
+} as const;
+
+/** Grade do chão do quarto (`x` de 0 a columns - 1, `y` de 0 a rows - 1) e giros possíveis, em graus. Proposta. */
+export const ROOM_GRID = { columns: 6, rows: 6, rotations: [0, 90, 180, 270] } as const;
+
+/**
+ * Ilha antiga (spec 12), em modo legado até a tela nova: catálogo de áreas e enfeites. As compras dela
+ * não gastam joias na casa nem no quarto (o valor volta para a pessoa).
  */
 export const ISLAND = {
-  /** Moscas ganhas por cada coisa feita (calculadas a partir dos registros, nunca gravadas). */
-  fliesPer: { habitDone: 1, careSession: 3, restDay: 2, milestoneDone: 3, goalCompleted: 10 },
   /** Preço para abrir cada área, na ordem do mapa. A primeira já vem aberta. */
   areaCost: { lagoa: 0, praia: 40, bosque: 90, cachoeira: 160, farol: 250 },
   /** Preço de cada enfeite. Um enfeite só pode ser comprado com a área dele aberta. */

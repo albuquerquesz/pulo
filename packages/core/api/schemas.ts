@@ -6,6 +6,7 @@ import {
   FOCUS,
   GOALS,
   MAX_HABITS_PER_DAY,
+  ROOM_GRID,
   WEEKLY_AI,
 } from '../config/decisions';
 import { addDays, isDateKey, weekdayOf } from '../domain/day';
@@ -18,6 +19,9 @@ import type {
   Habit,
   HabitLog,
   IslandPurchase,
+  RoomDecor,
+  RoomRotation,
+  RoomSpot,
   MascotState,
   Phase,
   ProposalChange,
@@ -286,12 +290,25 @@ export const goalSchema = z
     if (new Set(goal.milestones.map((m) => m.id)).size !== goal.milestones.length) issue('milestones', 'id de marco repetido');
   }) satisfies z.ZodType<Goal, unknown>;
 
-/** Compra da ilha. `item` é um id do catálogo (`ISLAND`); o preço e a ordem quem confere é o servidor (`validarCompra`). */
+/** Compra com joias (ilha antiga ou casa). `item` é um id de catálogo; o preço e o saldo quem confere é o servidor. */
 export const islandPurchaseSchema = z.object({
   item: idSchema,
   cost: z.number().int().min(0),
   createdAt: msSchema,
 }) satisfies z.ZodType<IslandPurchase, unknown>;
+
+const rotationSchema = z.custom<RoomRotation>((v) => ROOM_GRID.rotations.some((r) => r === v), { message: 'giro inválido' });
+const spotShape = {
+  x: z.number().int().min(0).max(ROOM_GRID.columns - 1),
+  y: z.number().int().min(0).max(ROOM_GRID.rows - 1),
+  rotation: rotationSchema,
+};
+
+/** Corpo de `PATCH /api/room/:item`: só a posição. */
+export const roomSpotSchema = z.object(spotShape) satisfies z.ZodType<RoomSpot, unknown>;
+
+/** Corpo de `PUT /api/room/:item`: a compra com a posição inicial. */
+export const roomDecorSchema = islandPurchaseSchema.extend(spotShape) satisfies z.ZodType<RoomDecor, unknown>;
 
 /** Corpo de `PUT /api/habits`: vários hábitos de uma vez (tudo ou nada). Cada item segue `habitSchema`. */
 export const habitsBatchSchema = z
@@ -354,7 +371,7 @@ export const API_ERROR_CODES = [
   'ja_comprado',
   'area_fechada',
   'fora_de_ordem',
-  'moscas_insuficientes',
+  'joias_insuficientes',
   'sessao_em_andamento',
   'sessao_encerrada',
   'sessao_imutavel',

@@ -132,6 +132,8 @@ export function defineRepositoryContract(
       await r.saveProposal(p);
       await r.saveProposal({ ...p, state: 'aceita', decidedAt: 2 });
       expect((await r.listProposals())[0].state).toBe('aceita');
+      await r.saveHousePurchase({ item: 'cerca', cost: 40, createdAt: 1 });
+      await r.saveRoomDecor({ item: 'tapete', cost: 10, createdAt: 1, x: 0, y: 0, rotation: 0 });
       if (!options.mascotIsServerDerived) {
         await r.saveMascotState({ phase: 2, careDays: 4, updatedAt: 9 });
         expect(await r.getMascotState()).toEqual({ phase: 2, careDays: 4, updatedAt: 9 });
@@ -187,6 +189,18 @@ export function defineRepositoryContract(
       ]);
     });
 
+    it('casa e quarto: compras por item, mover muda só a posição', async () => {
+      const { r } = await subject();
+      const parte = { item: 'cerca', cost: 40, createdAt: 1 };
+      const tapete = { item: 'tapete', cost: 10, createdAt: 2, x: 0, y: 0, rotation: 0 as const };
+      await r.saveHousePurchase(parte);
+      await r.saveRoomDecor(tapete);
+      await r.moveRoomDecor('tapete', { x: 1, y: 2, rotation: 180 });
+      expect(await r.listHousePurchases()).toEqual([parte]);
+      expect(await r.listRoomDecor()).toEqual([{ ...tapete, x: 1, y: 2, rotation: 180 }]);
+      expect(await r.getJoiaCredit()).toBe(0);
+    });
+
     it('escritas concorrentes não se perdem', async () => {
       const { r } = await subject();
       const h = uid('h');
@@ -220,6 +234,8 @@ export function defineRepositoryContract(
       expect(await r.listProposals()).toEqual([]);
       expect(await r.listGoals()).toEqual([]);
       expect(await r.listIslandPurchases()).toEqual([]);
+      expect(await r.listHousePurchases()).toEqual([]);
+      expect(await r.listRoomDecor()).toEqual([]);
       expect(await r.getMascotState()).toBeNull();
     });
   });

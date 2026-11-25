@@ -3,8 +3,8 @@ import { type AppEnv, type RouteDeps, requireSession } from '../http';
 
 /**
  * `DELETE /api/data`: o `clearAll` do servidor, único jeito de zerar o progresso. Apaga tudo do domínio da pessoa
- * (rotina, hábitos e registros, sessões, descansos, propostas, metas, compras da ilha e o sapo). A conta, o login e os
- * metadados (tema, fuso, onboarding) ficam. Oito deletes numa transação.
+ * (rotina, hábitos e registros, sessões, descansos, propostas, metas, compras com joias, crédito de joias e o sapo). A conta, o login e os
+ * metadados (tema, fuso, onboarding) ficam. As posições do quarto saem com as compras (cascade). Nove deletes numa transação.
  */
 export function dataRoutes({ auth, db }: RouteDeps) {
   return new Hono<AppEnv>().use(requireSession(auth)).delete('/', async (c) => {
@@ -19,6 +19,7 @@ export function dataRoutes({ auth, db }: RouteDeps) {
       db.goal.deleteMany({ where }),
       db.islandPurchase.deleteMany({ where }),
       db.mascotState.deleteMany({ where }),
+      db.joiaCredit.deleteMany({ where }),
     ]);
     return c.json({
       deleted: {
