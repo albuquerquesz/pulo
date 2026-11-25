@@ -1,8 +1,9 @@
 import { createMemoryRepository } from '@/data';
 import { createDemoClock, localToMs, seedRepository, type DemoClock } from '@pulo/core/demo';
+import type { ParteId } from '@pulo/core/domain/casa';
 import type { Repository } from '@pulo/core/domain/types';
 
-import { completarDemo, DIA_DO_DEMO, MINUTOS_DO_DEMO } from './demoDoRascunho';
+import { CASA_DO_DEMO, completarDemo, custoDaCasa, DIA_DO_DEMO, MINUTOS_DO_DEMO } from './demoDoRascunho';
 import { comHistoricoDosHabitos } from './demoDosHabitos';
 import { comContaDoDemo } from './demoDoPerfil';
 import type { PessoaLogada } from '../sessao/auth';
@@ -24,14 +25,29 @@ function relogioCorrendo(base: DemoClock): DemoClock {
 export interface OpcoesDoDemo {
   /** O relógio anda (no app); sem isto fica parado no instante do rascunho (testes). */
   aoVivo?: boolean;
+  /** As partes que a casa de exemplo já tem; o padrão é a casa pela metade. */
+  casa?: readonly ParteId[];
+}
+
+/** O crédito paga a casa de exemplo, sem mexer no saldo que o rascunho mostra. Apagar tudo zera. */
+function comCreditoDaCasa(repo: Repository, custo: number): Repository {
+  let credito = custo;
+  return {
+    ...repo,
+    getJoiaCredit: async () => credito,
+    clearAll: async () => {
+      await repo.clearAll();
+      credito = 0;
+    },
+  };
 }
 
 /** Ponto único do modo demo: repositório em memória com dados sintéticos e o relógio do demo. */
-export async function criarSessaoDemo({ aoVivo = false }: OpcoesDoDemo = {}): Promise<SessaoDemo> {
+export async function criarSessaoDemo({ aoVivo = false, casa = CASA_DO_DEMO }: OpcoesDoDemo = {}): Promise<SessaoDemo> {
   const parado = createDemoClock(localToMs(DIA_DO_DEMO, MINUTOS_DO_DEMO));
   const clock = aoVivo ? relogioCorrendo(parado) : parado;
   const repo = createMemoryRepository(undefined, clock);
   await seedRepository(repo, clock);
-  await completarDemo(repo, clock);
-  return { repo: await comContaDoDemo(comHistoricoDosHabitos(repo, clock), clock), clock };
+  await completarDemo(repo, clock, casa);
+  return { repo: await comContaDoDemo(comHistoricoDosHabitos(comCreditoDaCasa(repo, custoDaCasa(casa)), clock), clock), clock };
 }

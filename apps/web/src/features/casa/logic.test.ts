@@ -116,6 +116,20 @@ describe('compra', () => {
     expect(await repo.listRoomDecor()).toHaveLength(2);
   });
 
+  test('cada cômodo mostra e libera só a decoração dele', async () => {
+    const { repo, clock } = await comJoias(60);
+    const quadro = { loja: 'completa', escolha: escolha('quadro'), lugar: parede } as const;
+    const relogio = { loja: 'completa', escolha: escolha('relogio'), lugar: parede, comodo: 'cozinha' } as const;
+    await comprarOuColocar(repo, clock, quadro);
+    await comprarOuColocar(repo, clock, relogio);
+    const quarto = await repo.listRoomDecor();
+    expect(colocadosNoQuarto(quarto).map((c) => c.escolha.item.id)).toEqual(['quadro']);
+    expect(colocadosNoQuarto(quarto, 'cozinha').map((c) => c.escolha.item.id)).toEqual(['relogio']);
+    await tirarDoLugar(repo, parede, 'cozinha');
+    expect(colocadosNoQuarto(await repo.listRoomDecor(), 'cozinha')).toEqual([]);
+    expect(colocadosNoQuarto(await repo.listRoomDecor())).toHaveLength(1);
+  });
+
   test('pela loja de canto a compra fica guardada e não repete', async () => {
     const { repo, clock } = await comJoias(40);
     const pedido = { loja: 'completa', lugar: null, escolha: escolha('planta') } as const;

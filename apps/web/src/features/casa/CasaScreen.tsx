@@ -1,11 +1,14 @@
 import { useCallback, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 
+import { artigoDaParte, COMODOS } from '@pulo/core/domain/casa';
+
 import { BarraValor, BotaoCanto, Foguinho, Joia, Nuvens, Placa, pontoNaCena, useCamera, type LimitesDaCamera, type Ponto } from '@/ui';
 
 import { useApp, useCarregar } from '../app';
 import type { VinculoDaCasa } from '../foco/vinculo';
 import { COR_NATURAL, ITENS, type Escolha } from './catalogo';
+import { guardarComodo, useComodoAtual } from './comodoAtual';
 import { Comodo } from './Comodo';
 import { colocadosNoQuarto, comprarOuColocar, estadoDaCompra, tirarDoLugar } from './decoracao';
 import { ItensDoQuarto, LugaresDoQuarto } from './Decoracao';
@@ -13,6 +16,7 @@ import { carregarCasa, type OpcaoDeVinculo } from './logic';
 import { BOTAO_DE_COMPRA, BOTAO_NEUTRO, LojaModal, RotuloDaCompra } from './LojaModal';
 import type { Lugar } from './lugares';
 import { SapoDaCasa } from './SapoDaCasa';
+import { SeletorDeComodo } from './SeletorDeComodo';
 import { TimerModal } from './TimerModal';
 import { useFoco } from './useFoco';
 import { useTelaCheia } from './useTelaCheia';
@@ -48,7 +52,7 @@ const primeiraEscolha = (lugar: Lugar | null): Escolha | null => {
   return item ? { item, cor: COR_NATURAL } : null;
 };
 
-/** A Casa: o quarto do sapo, o foco e a decoração com loja. */
+/** A Casa: os cômodos do sapo, o foco e a decoração com loja. */
 export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
   const { repo, clock, user, demo, refresh } = useApp();
   const navegar = useNavigate();
@@ -58,6 +62,9 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
     return carregarCasa(repo, clock, user, vinculo);
   });
   const dados = estado.tipo === 'ok' ? estado.dados : null;
+  const comodoId = useComodoAtual(dados?.comodos ?? []);
+  const comodo = COMODOS.find((c) => c.id === comodoId);
+  const doPulo = comodo ? `${artigoDaParte(comodo.id)} ${comodo.nome.toLowerCase()} do Pulo` : 'a casa do Pulo';
 
   const cena = useRef<HTMLDivElement>(null);
   const svg = useRef<SVGSVGElement | null>(null);
@@ -99,7 +106,7 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
   const comprando = useRef(false);
 
   const abrirLoja = (lugar: Lugar | null) => {
-    const atual = dados && lugar ? colocadosNoQuarto(dados.quarto).find((c) => c.lugar.id === lugar.id) : undefined;
+    const atual = dados && lugar ? colocadosNoQuarto(dados.quarto, comodoId).find((c) => c.lugar.id === lugar.id) : undefined;
     const escolha = atual?.escolha ?? primeiraEscolha(lugar);
     if (escolha) setAberta({ lugar, escolha, vendo: false });
   };
@@ -117,10 +124,10 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
       refresh();
     }
   };
-  const comprar = () => aberta && void gravar(() => comprarOuColocar(repo, clock, { loja, lugar: aberta.lugar, escolha: aberta.escolha }));
+  const comprar = () => aberta && void gravar(() => comprarOuColocar(repo, clock, { loja, lugar: aberta.lugar, escolha: aberta.escolha, comodo: comodoId }));
   const tirar = () => {
     const lugar = aberta?.lugar;
-    if (lugar) void gravar(() => tirarDoLugar(repo, lugar).then(() => true));
+    if (lugar) void gravar(() => tirarDoLugar(repo, lugar, comodoId).then(() => true));
   };
 
   const apertarPlaca = () => {
@@ -139,9 +146,9 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
 
   if (!user) return null;
 
-  const colocados = dados ? colocadosNoQuarto(dados.quarto) : [];
+  const colocados = dados ? colocadosNoQuarto(dados.quarto, comodoId) : [];
   const previa = aberta?.vendo && aberta.lugar ? { lugar: aberta.lugar, escolha: aberta.escolha } : null;
-  const compraDaPrevia = previa && dados ? estadoDaCompra({ quarto: dados.quarto, saldo: dados.saldo, loja, ...previa }) : null;
+  const compraDaPrevia = previa && dados ? estadoDaCompra({ quarto: dados.quarto, saldo: dados.saldo, loja, comodo: comodoId, ...previa }) : null;
 
   return (
     <main className="md:px-10 md:pt-8 md:pb-12">
@@ -158,11 +165,11 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
           viewBox={viewBox ?? '-20 90 840 620'}
           preserveAspectRatio="xMidYMid meet"
           role="group"
-          aria-label="Quarto do Pulo"
+          aria-label={`${comodo?.nome ?? 'Cômodo'} do Pulo`}
           className={`relative z-1 block size-full touch-none select-none ${arrastando ? 'cursor-grabbing' : 'cursor-grab'}`}
         >
           <g transform="translate(400,490) scale(2) translate(-400,-490)">
-            <Comodo />
+            <Comodo comodo={comodoId} />
             <ItensDoQuarto colocados={colocados} previa={previa} />
             {decorando ? <LugaresDoQuarto colocados={colocados} onAbrir={abrirLoja} /> : null}
           </g>
@@ -218,13 +225,25 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
             }
           />
         </div>
+        {dados ? (
+          <div className="pointer-events-none absolute inset-x-0 top-[146px] z-3 flex justify-center px-2 md:top-[92px] md:px-24">
+            <SeletorDeComodo
+              meus={dados.comodos}
+              atual={comodoId}
+              onEscolher={(escolhido) => {
+                setAberta(null);
+                guardarComodo(escolhido);
+              }}
+            />
+          </div>
+        ) : null}
         {decorando ? (
-          <p className="absolute top-[150px] left-1/2 z-3 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-3xl bg-white/80 px-7 py-3 text-center text-sm font-black tracking-wider text-contorno uppercase md:top-24 md:text-base md:whitespace-nowrap">
-            Toque num <b>+</b> para decorar o quarto do Pulo
+          <p className="absolute top-[214px] left-1/2 z-3 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-3xl bg-white/80 px-7 py-3 text-center text-sm font-black tracking-wider text-contorno uppercase md:top-[164px] md:text-base md:whitespace-nowrap">
+            Toque num <b>+</b> para decorar {doPulo}
           </p>
         ) : null}
         {estado.tipo === 'erro' ? (
-          <div role="alert" className="absolute top-[150px] left-1/2 z-3 flex -translate-x-1/2 flex-col items-center gap-2 rounded-3xl bg-white/90 px-7 py-3 text-center font-black text-contorno md:top-24">
+          <div role="alert" className="absolute top-[214px] left-1/2 z-3 flex -translate-x-1/2 flex-col items-center gap-2 rounded-3xl bg-white/90 px-7 py-3 text-center font-black text-contorno md:top-[164px]">
             Não consegui abrir o quarto.
             <button type="button" onClick={() => void recarregar()} className={BOTAO_NEUTRO}>
               Tentar de novo
@@ -252,13 +271,14 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
             onComecar={(minutos, opcao) => void comecar(minutos, opcao)}
           />
         ) : null}
-        {aberta && dados && !aberta.vendo ? (
+        {aberta && dados && comodo && !aberta.vendo ? (
           <LojaModal
             lugar={aberta.lugar}
             escolha={aberta.escolha}
             quarto={dados.quarto}
             saldo={dados.saldo}
             loja={loja}
+            comodo={comodo}
             onEscolher={(escolha) => setAberta({ ...aberta, escolha })}
             onVer={() => setAberta({ ...aberta, vendo: true })}
             onComprar={comprar}

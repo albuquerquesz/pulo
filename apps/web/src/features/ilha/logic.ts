@@ -1,17 +1,18 @@
-import { verCasa, type EstadoDaCasa, type ParteId, type ParteNaCasa } from '@pulo/core/domain/casa';
+import { PARTES, podeComprar, progressoPorCamada, textoDoRequisito, verCasa, type CamadaDaCasa, type EstadoDaCasa, type ParteId, type PodeComprar, type ProgressoDaCamada } from '@pulo/core/domain/casa';
 import { verConquistas } from '@pulo/core/domain/achievements';
 import type { Achievement, Clock, Repository } from '@pulo/core/domain/types';
 
-import { EMOJI_DA_PARTE } from '../casca/logic';
-
-export type SituacaoDaParte = 'feita' | 'disponivel' | 'cara';
+export type SituacaoDaParte = 'feita' | 'disponivel' | 'cara' | 'trancada';
 
 export interface ParteAVenda {
   id: ParteId;
   nome: string;
   emoji: string;
+  camada: CamadaDaCasa;
   custo: number;
   situacao: SituacaoDaParte;
+  /** Por que está trancada; null nas outras. */
+  motivo: string | null;
 }
 
 export interface IlhaNaTela {
@@ -19,10 +20,17 @@ export interface IlhaNaTela {
   construidas: ParteId[];
   total: number;
   partes: ParteAVenda[];
+  progresso: Record<CamadaDaCasa, ProgressoDaCamada>;
+  /** A parte mais barata que o saldo já paga: o próximo alvo. */
+  alvo: ParteId | null;
 }
 
-const situacaoDa = (parte: ParteNaCasa, saldo: number): SituacaoDaParte =>
-  parte.construida ? 'feita' : saldo < parte.custo ? 'cara' : 'disponivel';
+const SITUACAO: Record<PodeComprar['situacao'], SituacaoDaParte> = {
+  ja_tem: 'feita',
+  ok: 'disponivel',
+  falta_requisito: 'trancada',
+  joias_insuficientes: 'cara',
+};
 
 /**
  * O que a Ilha mostra. `comprando` é a parte com a compra a caminho: já aparece pronta e paga,
@@ -31,13 +39,14 @@ const situacaoDa = (parte: ParteNaCasa, saldo: number): SituacaoDaParte =>
 export function ilhaNaTela(casa: EstadoDaCasa, comprando: ParteId | null = null): IlhaNaTela {
   const pendente = casa.partes.find((p) => p.id === comprando && !p.construida);
   const saldo = casa.saldo - (pendente?.custo ?? 0);
-  const partes = casa.partes.map((p) => (p === pendente ? { ...p, construida: true } : p));
-  return {
-    saldo,
-    construidas: partes.filter((p) => p.construida).map((p) => p.id),
-    total: casa.total,
-    partes: partes.map((p) => ({ id: p.id, nome: p.nome, emoji: EMOJI_DA_PARTE[p.id], custo: p.custo, situacao: situacaoDa(p, saldo) })),
-  };
+  const construidas = casa.partes.filter((p) => p.construida || p === pendente).map((p) => p.id);
+  const partes = PARTES.map(({ id, nome, emoji, camada, custo }): ParteAVenda => {
+    const pode = podeComprar(id, construidas, saldo);
+    const motivo = pode.situacao === 'falta_requisito' ? textoDoRequisito(pode.requer) : null;
+    return { id, nome, emoji, camada, custo, situacao: SITUACAO[pode.situacao], motivo };
+  });
+  const [alvo] = partes.filter((p) => p.situacao === 'disponivel').sort((a, b) => a.custo - b.custo);
+  return { saldo, construidas, total: casa.total, partes, progresso: progressoPorCamada(construidas), alvo: alvo?.id ?? null };
 }
 
 /** As conquistas que passaram a valer entre duas leituras. */

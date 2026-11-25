@@ -54,6 +54,7 @@ const noMostrador = () => screen.getByTestId('minutos').textContent;
 
 beforeEach(() => {
   navegar.mockClear();
+  window.localStorage.clear();
 });
 
 describe('Casa', () => {
@@ -143,6 +144,34 @@ describe('Casa', () => {
     expect(screen.queryByRole('button', { name: /^Decorar:/ })).toBeNull();
   });
 
+  test('o seletor mostra só os cômodos comprados e troca a decoração', async () => {
+    const { repo } = await abrir();
+    const seletor = within(screen.getByRole('group', { name: 'Cômodo' }));
+    expect(seletor.getAllByRole('button').map((b) => b.textContent)).toEqual(['🛏️Quarto', '🍳Cozinha', '🛋️Sala de estar', '🛁Banheiro']);
+
+    await clicar('Decorar');
+    await clicar('Decorar: parede esquerda, primeiro lugar');
+    await clicar('Relógio', within(screen.getByRole('group', { name: 'Tipo de item' })));
+    await clicar(/Comprar/);
+    expect(screen.getByTestId('item-p1')).toBeTruthy();
+
+    await clicar(/Cozinha/, seletor);
+    expect(screen.getByTestId('comodo').getAttribute('data-comodo')).toBe('cozinha');
+    expect(screen.getByRole('group', { name: 'Cozinha do Pulo' })).toBeTruthy();
+    expect(screen.getByText(/para decorar a cozinha do Pulo/)).toBeTruthy();
+    expect(screen.queryByTestId('item-p1')).toBeNull();
+
+    // O mesmo item vem para a cozinha de graça e sai do quarto.
+    await clicar('Decorar: parede esquerda, primeiro lugar');
+    await clicar('Relógio', within(screen.getByRole('group', { name: 'Tipo de item' })));
+    await clicar('Colocar');
+    expect(screen.getByTestId('item-p1')).toBeTruthy();
+    expect(await repo.listRoomDecor()).toMatchObject([{ item: 'relogio', comodo: 'cozinha' }]);
+    await clicar(/Quarto/, seletor);
+    expect(screen.queryByTestId('item-p1')).toBeNull();
+    expect(window.localStorage.getItem('pulo.comodo')).toBe('quarto');
+  });
+
   test('na conta, só dá para comprar o que a API vende', async () => {
     await abrir(undefined, false);
     await clicar('Decorar');
@@ -155,7 +184,7 @@ describe('Casa', () => {
   test('a loja de canto abre sem lugar, e Sair de casa vai para a Ilha', async () => {
     await abrir();
     await clicar('Loja');
-    expect(screen.getByRole('dialog', { name: 'Loja do quarto' })).toBeTruthy();
+    expect(screen.getByRole('dialog', { name: 'Loja: Quarto' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Ver no quarto' })).toBeNull();
     await clicar('Cancelar');
     await clicar('Sair de casa');

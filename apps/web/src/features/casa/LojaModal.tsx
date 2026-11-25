@@ -1,3 +1,4 @@
+import type { ComodoDaCasa } from '@pulo/core/domain/casa';
 import type { RoomDecor } from '@pulo/core/domain/types';
 import { Joia, Modal } from '@/ui';
 
@@ -34,6 +35,8 @@ export type LojaModalProps = {
   quarto: readonly RoomDecor[];
   saldo: number;
   loja: Loja;
+  /** O cômodo que está sendo decorado. */
+  comodo: ComodoDaCasa;
   onEscolher: (escolha: Escolha) => void;
   onVer: () => void;
   onComprar: () => void;
@@ -41,16 +44,16 @@ export type LojaModalProps = {
   onCancelar: () => void;
 };
 
-export function LojaModal({ lugar, escolha, quarto, saldo, loja, onEscolher, onVer, onComprar, onTirar, onCancelar }: LojaModalProps) {
+export function LojaModal({ lugar, escolha, quarto, saldo, loja, comodo, onEscolher, onVer, onComprar, onTirar, onCancelar }: LojaModalProps) {
   const tipos = ITENS.filter((i) => !lugar || i.tipo === lugar.tipo);
-  const compra = estadoDaCompra({ quarto, saldo, loja, lugar, escolha });
-  const ocupado = lugar !== null && colocadosNoQuarto(quarto).some((c) => c.lugar.id === lugar.id);
+  const compra = estadoDaCompra({ quarto, saldo, loja, lugar, escolha, comodo: comodo.id });
+  const ocupado = lugar !== null && colocadosNoQuarto(quarto, comodo.id).some((c) => c.lugar.id === lugar.id);
   return (
     <Modal
       aberto
       contido
       onFechar={onCancelar}
-      rotulo={lugar ? 'Decorar o quarto' : 'Loja do quarto'}
+      rotulo={`${lugar ? 'Decorar' : 'Loja'}: ${comodo.nome}`}
       rodape={
         <button
           type="button"

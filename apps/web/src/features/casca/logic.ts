@@ -1,5 +1,5 @@
 import { DEFAULT_TIMEZONE, GOALS } from '@pulo/core/config/decisions';
-import { verCasa, type ParteId, type ProximaParte } from '@pulo/core/domain/casa';
+import { PARTES, verCasa, type ParteId, type ProximaParte } from '@pulo/core/domain/casa';
 import { MINUTE_MS } from '@pulo/core/domain/clock';
 import { dateKeyOf } from '@pulo/core/domain/day';
 import { estadoDoBau, goalProgress, sortGoals } from '@pulo/core/domain/goals';
@@ -40,15 +40,6 @@ export function abaAtiva(caminho: string): ChaveDaAba | null {
 const IMERSAO: readonly string[] = ['/ilha', '/casa', '/tarefas'];
 export const telaDeImersao = (caminho: string): boolean => IMERSAO.includes(caminho);
 
-export const EMOJI_DA_PARTE: Record<ParteId, string> = {
-  quarto: '🛏️',
-  cozinha: '🍳',
-  varanda: '🪑',
-  jardim: '🌷',
-  arvore: '🌳',
-  cerca: '🪵',
-};
-
 export interface FraseDaProximaParte {
   antes: string;
   destaque: string;
@@ -58,7 +49,7 @@ export interface FraseDaProximaParte {
 /** A frase do cartão da casa: o que falta para a próxima parte, ou que já dá para construir. */
 export function fraseDaProximaParte(proxima: ProximaParte | null): FraseDaProximaParte {
   if (!proxima) return { antes: '', destaque: 'Casa completa!', depois: '' };
-  const destaque = `${EMOJI_DA_PARTE[proxima.id]} ${proxima.nome}`;
+  const destaque = [PARTES.find((p) => p.id === proxima.id)?.emoji, proxima.nome].filter(Boolean).join(' ');
   if (proxima.faltam === 0) return { antes: 'Você já pode construir: ', destaque, depois: '' };
   const falta = textoDeFalta(proxima.faltam).replace(/\.$/, '').toLowerCase();
   return { antes: 'Próxima: ', destaque, depois: ` · ${falta}, uns ${proxima.horasDeFoco}h de foco` };

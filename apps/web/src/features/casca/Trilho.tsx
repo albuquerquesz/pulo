@@ -86,7 +86,7 @@ export function CartaoDaCasa({ dados }: { dados: DadosDoTrilho }) {
   const construidas = dados.partesConstruidas.length;
   return (
     <section aria-label="Sua casa" className={`${CARTAO} shrink-0 overflow-hidden`}>
-      <CasaDaIlha construidas={dados.partesConstruidas} viewBox="110 110 780 700" rotulo="Sua casa" className="block h-[230px] w-full bg-ceu" />
+      <CasaDaIlha construidas={dados.partesConstruidas} viewBox="-140 -95 1280 1015" rotulo="Sua casa" className="block h-[230px] w-full bg-ceu" />
       <div className="flex flex-col gap-3.5 px-5 pt-[22px] pb-6">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="text-lg font-extrabold">Sua casa</h2>

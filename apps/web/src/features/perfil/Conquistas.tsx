@@ -15,6 +15,8 @@ const VISUAL: Record<AchievementId, { icone: ReactNode; fundo: string }> = {
   'foco-profundo': { icone: '⏱️', fundo: 'bg-agua/25' },
   'descanso-sabido': { icone: '☾', fundo: 'bg-descanso/28' },
   'mes-de-fogo': FOGO,
+  'dois-andares': { icone: '🏘️', fundo: 'bg-agua/35' },
+  'cinco-comodos': { icone: '🚪', fundo: 'bg-sapo/35' },
   'casa-inteira': { icone: '🏡', fundo: 'bg-sol/35' },
   'gelo-na-hora': { icone: '❄', fundo: 'bg-agua/25' },
   segredo: { icone: '✨', fundo: 'bg-sol/35' },

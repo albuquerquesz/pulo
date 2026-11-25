@@ -70,7 +70,7 @@ describe('Casca', () => {
     const habitos = await screen.findByRole('group', { name: 'hábitos feitos hoje' });
     expect(habitos.textContent).toBe('2/4');
     expect(screen.getByRole('group', { name: 'minutos de foco hoje' }).textContent).toBe('50');
-    expect(screen.getByText('1 de 6 partes')).toBeTruthy();
+    expect(screen.getByText('12 de 24 partes')).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Focar' }).getAttribute('href')).toBe('/casa');
     expect(screen.getByRole('progressbar', { name: 'Terminar o curso de inglês' }).textContent).toBe('3 / 5');
     expect(screen.getByRole('img', { name: 'Baú aberto' })).toBeTruthy();

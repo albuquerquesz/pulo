@@ -13,9 +13,17 @@ import { IlhaScreen } from './IlhaScreen';
 const navegar = vi.fn();
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navegar }));
 
-/** A Ilha sobre o repositório do demo com o saldo pedido; `trocar` muda o repositório antes de abrir. */
-async function abrir({ saldo, trocar }: { saldo?: number; trocar?: (repo: Repository) => Repository } = {}) {
-  const sessao = await criarSessaoDemo();
+interface Abertura {
+  saldo?: number;
+  trocar?: (repo: Repository) => Repository;
+  /** Abre com a casa de exemplo do demo (pela metade). */
+  comCasa?: boolean;
+}
+
+/** A Ilha com o saldo pedido; `trocar` muda o repositório antes de abrir. */
+async function abrir({ saldo, trocar, comCasa = false }: Abertura = {}) {
+  // Sem a casa de exemplo, só o quarto.
+  const sessao = await criarSessaoDemo(comCasa ? {} : { casa: [] });
   if (saldo !== undefined) {
     const credito = (await sessao.repo.getJoiaCredit()) + saldo - (await verCasa(sessao.repo)).saldo;
     sessao.repo.getJoiaCredit = async () => credito;
@@ -38,6 +46,13 @@ async function abrir({ saldo, trocar }: { saldo?: number; trocar?: (repo: Reposi
   return { repo, saldo: async () => (await verCasa(repo)).saldo, app: () => app };
 }
 
+const aba = async (nome: 'Cômodos' | 'Estrutura' | 'Exterior') => {
+  await act(async () => {
+    fireEvent.click(screen.getByRole('tab', { name: new RegExp(nome) }));
+  });
+};
+const contador = (nome: 'Cômodos' | 'Estrutura' | 'Exterior') => screen.getByRole('tab', { name: new RegExp(nome) }).textContent;
+
 const parte = (nome: RegExp) => within(screen.getByRole('list', { name: 'Partes da casa' })).getByRole('button', { name: nome });
 const desligado = (el: HTMLElement) => el.hasAttribute('disabled');
 const noTopo = () => screen.getByText('joias', { exact: false, selector: 'span.sr-only' }).closest('b')?.textContent;
@@ -49,18 +64,32 @@ describe('Ilha', () => {
   test('mostra o saldo, o contador e só o quarto pronto', async () => {
     const { saldo } = await abrir();
     expect(noTopo()).toBe(`${await saldo()} joias`);
-    expect(screen.getByText('1 de 6')).toBeTruthy();
+    expect(screen.getByText('1 de 24')).toBeTruthy();
+    await aba('Cômodos');
     expect(desligado(parte(/Quarto, pronta/))).toBe(true);
     expect(naCena('quarto')?.classList.contains('feita')).toBe(true);
     expect(naCena('cerca')?.classList.contains('feita')).toBe(false);
+    expect(screen.queryByTestId('fumaca')).toBeNull();
   });
 
-  test('comprar desconta o saldo, muda o contador e a parte cai', async () => {
+  test('as abas filtram as partes e contam cada camada', async () => {
+    await abrir({ saldo: 0 });
+    await aba('Estrutura');
+    expect(within(screen.getByRole('list', { name: 'Partes da casa' })).getAllByRole('button')).toHaveLength(4);
+    expect(contador('Estrutura')).toBe('Estrutura0/4');
+    await aba('Exterior');
+    expect(within(screen.getByRole('list', { name: 'Partes da casa' })).getAllByRole('button')).toHaveLength(12);
+    expect(contador('Cômodos')).toBe('Cômodos1/8');
+  });
+
+  test('comprar desconta o saldo, muda o contador da camada e a parte cai', async () => {
     const { repo, saldo } = await abrir({ saldo: 100 });
+    await aba('Exterior');
     await act(async () => {
       fireEvent.click(parte(/Cerca/));
     });
-    await screen.findByText('2 de 6');
+    await screen.findByText('2 de 24');
+    expect(contador('Exterior')).toBe('Exterior1/12');
     expect(await saldo()).toBe(100 - HOUSE.partCost.cerca);
     expect(noTopo()).toBe(`${100 - HOUSE.partCost.cerca} joias`);
     expect(naCena('cerca')?.getAttribute('class')).toBe('parte-da-casa feita nova');
@@ -68,11 +97,29 @@ describe('Ilha', () => {
     expect((await repo.listHousePurchases()).map((c) => c.item)).toEqual(['cerca']);
   });
 
+  test('a próxima parte que cabe no saldo ganha destaque', async () => {
+    await abrir({ saldo: 30 });
+    expect(parte(/Caixa de correio, 25 joias, próximo alvo/)).toBeTruthy();
+  });
+
   test('parte sem saldo fica apagada e não grava', async () => {
     const gravar = vi.fn();
     await abrir({ saldo: 50, trocar: (repo) => ({ ...repo, saveHousePurchase: gravar }) });
+    await aba('Cômodos');
     expect(desligado(parte(/Cozinha/))).toBe(true);
     fireEvent.click(parte(/Cozinha/));
+    expect(gravar).not.toHaveBeenCalled();
+  });
+
+  test('parte trancada mostra o motivo e não chama o repositório', async () => {
+    const gravar = vi.fn();
+    await abrir({ saldo: 1000, trocar: (repo) => ({ ...repo, saveHousePurchase: gravar }) });
+    await aba('Estrutura');
+    const torre = parte(/Torre/);
+    expect(torre.textContent).toContain('Precisa do Segundo andar');
+    expect(torre.textContent).toContain('🔒');
+    expect(desligado(torre)).toBe(true);
+    fireEvent.click(torre);
     expect(gravar).not.toHaveBeenCalled();
   });
 
@@ -87,25 +134,41 @@ describe('Ilha', () => {
         },
       }),
     });
+    await aba('Exterior');
     await act(async () => {
       fireEvent.click(parte(/Cerca/));
     });
     await waitFor(() => expect(app()?.aviso?.mensagem).toBe(mensagem));
-    expect(screen.getByText('1 de 6')).toBeTruthy();
+    expect(screen.getByText('1 de 24')).toBeTruthy();
     expect(naCena('cerca')?.classList.contains('feita')).toBe(false);
   });
 
-  test('a última parte comemora a conquista', async () => {
+  test('a chaminé comprada solta fumaça e o segundo andar comemora a conquista', async () => {
     const { app } = await abrir({ saldo: 1000 });
-    for (const nome of [/Cozinha/, /Varanda/, /Jardim/, /Árvore/, /Cerca/]) {
+    await aba('Cômodos');
+    for (const nome of [/Sala de estar/, /Cozinha/]) {
       await waitFor(() => expect(desligado(parte(nome))).toBe(false));
       await act(async () => {
         fireEvent.click(parte(nome));
       });
     }
-    await screen.findByText('6 de 6');
-    await waitFor(() => expect(app()?.aviso?.mensagem).toBe('Conquista nova: 🏡 Casa inteira'));
+    await aba('Estrutura');
+    for (const nome of [/Chaminé/, /Segundo andar, /]) {
+      await waitFor(() => expect(desligado(parte(nome))).toBe(false));
+      await act(async () => {
+        fireEvent.click(parte(nome));
+      });
+    }
+    await screen.findByText('5 de 24');
+    expect(screen.getByTestId('fumaca')).toBeTruthy();
+    await waitFor(() => expect(app()?.aviso?.mensagem).toBe('Conquista nova: 🏘️ Dois andares'));
     expect(app()?.evento).toBe('feliz');
+  });
+
+  test('o demo mostra a casa pela metade', async () => {
+    await abrir({ comCasa: true });
+    expect(screen.getByText('12 de 24')).toBeTruthy();
+    expect(screen.getByTestId('sapo-na-janela')).toBeTruthy();
   });
 
   test('o botão de canto e o + levam para a Casa', async () => {

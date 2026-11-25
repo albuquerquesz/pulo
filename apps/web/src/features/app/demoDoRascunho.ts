@@ -1,4 +1,4 @@
-import { DEFAULT_TIMEZONE, JOIAS, TASKS } from '@pulo/core/config/decisions';
+import { DEFAULT_TIMEZONE, HOUSE, JOIAS, TASKS, type ParteId } from '@pulo/core/config/decisions';
 import { MINUTE_MS } from '@pulo/core/domain/clock';
 import { addDays, dateKeyOf, weekEndOf } from '@pulo/core/domain/day';
 import type { DemoClock } from '@pulo/core/demo';
@@ -7,6 +7,12 @@ import type { AccentColor, FocusSession, Goal, GoalMilestone, Habit, Period, Rep
 /** O instante do rascunho: sábado, 21/11/2026, 14h38, dentro das quatro semanas de exemplo. */
 export const DIA_DO_DEMO = '2026-11-21';
 export const MINUTOS_DO_DEMO = 14 * 60 + 38;
+
+/** A casa de exemplo, já pela metade (spec 31), na ordem em que os requisitos permitem. */
+export const CASA_DO_DEMO: readonly ParteId[] = [
+  'cozinha', 'sala', 'banheiro', 'segundo-andar', 'chamine', 'jardim', 'horta', 'arvore', 'balanco', 'caixa-correio', 'cerca',
+];
+export const custoDaCasa = (casa: readonly ParteId[]): number => casa.reduce((total, id) => total + HOUSE.partCost[id], 0);
 
 const TODOS_OS_DIAS: Habit['weekdays'] = [0, 1, 2, 3, 4, 5, 6];
 
@@ -187,12 +193,15 @@ function sessaoConcluida(id: string, blockId: string, startedAt: number): FocusS
 }
 
 /** O que o rascunho mostra além das quatro semanas de exemplo: um dia em andamento, tarefas e três metas. Tudo inventado. */
-export async function completarDemo(repo: Repository, clock: DemoClock): Promise<void> {
+export async function completarDemo(repo: Repository, clock: DemoClock, casa: readonly ParteId[] = CASA_DO_DEMO): Promise<void> {
   const agora = clock.now();
   const hoje = dateKeyOf(agora, DEFAULT_TIMEZONE);
   const user = await repo.getUser();
   if (user) await repo.saveUser({ ...user, dayStartMinutes: COMECO_DO_DIA, frogName: NOME_DO_SAPO });
   for (const h of HABITOS) await repo.saveHabit(h);
+  for (const [i, item] of casa.entries()) {
+    await repo.saveHousePurchase({ item, cost: HOUSE.partCost[item], createdAt: agora - (casa.length - i) * DIA_MS });
+  }
   for (const habitId of FEITOS_HOJE) await repo.saveHabitLog({ habitId, date: hoje, doneAt: agora - 360 * MINUTE_MS });
   // Fecha o domingo que faltava: a sequência fica em 12 dias, como no rascunho.
   const domingo = addDays(hoje, -6);

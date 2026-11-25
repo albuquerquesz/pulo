@@ -8,11 +8,12 @@ import { CasaDaIlha } from '@/mascot/ilha/CasaDaIlha';
 import { BarraValor, BotaoCanto, Joia, Nuvens, useCamera, type LimitesDaCamera } from '@/ui';
 
 import { useApp, useCarregar } from '../app';
+import { useComodoAtual } from '../casa/comodoAtual';
 import { carregarIlha, conquistasNovas, ilhaNaTela, textoDaConquista } from './logic';
 import { Partes } from './Partes';
 
-/** A câmera da ilha, com os números do rascunho. */
-const CAMERA: LimitesDaCamera = { cx: 500, cy: 470, w: 1000, wEstreito: 820, min: 350, max: 1800, x0: 0, x1: 1000, y0: 100, y1: 900 };
+/** A câmera da ilha: abre mostrando a mansão toda. */
+const CAMERA: LimitesDaCamera = { cx: 500, cy: 470, w: 1450, wEstreito: 1050, min: 350, max: 2400, x0: -150, x1: 1150, y0: 0, y1: 900 };
 
 const AVISO = 'absolute top-[150px] left-1/2 z-3 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-3xl bg-white/90 px-7 py-3 text-center font-black text-contorno';
 
@@ -30,6 +31,7 @@ export function IlhaScreen() {
   const ocupado = useRef(false);
 
   const dados = estado.tipo === 'ok' ? estado.dados : null;
+  const sapoEm = useComodoAtual(dados?.casa.comodos ?? []);
   const ilha = dados ? ilhaNaTela(dados.casa, comprando) : null;
   const irParaCasa = () => void navegar({ to: '/casa' });
 
@@ -68,12 +70,13 @@ export function IlhaScreen() {
   return (
     <main className="md:px-10 md:pt-8 md:pb-12">
       <h1 className="sr-only">Ilha</h1>
-      <div data-testid="cena-da-ilha" className="relative h-[calc(100dvh-5rem)] min-h-[520px] overflow-hidden bg-ceu md:min-h-[620px] md:rounded-lg">
+      <div data-testid="cena-da-ilha" className="cena-ilha relative h-[calc(100dvh-5rem)] min-h-[520px] overflow-hidden bg-ceu md:min-h-[620px] md:rounded-lg">
         <Nuvens />
         <CasaDaIlha
           {...gestos}
           construidas={ilha?.construidas ?? []}
           nova={nova}
+          sapoEm={sapoEm}
           viewBox={viewBox}
           className={`relative z-1 block size-full touch-none select-none ${arrastando ? 'cursor-grabbing' : 'cursor-grab'}`}
         />
@@ -99,7 +102,7 @@ export function IlhaScreen() {
         ) : null}
 
         <div className="absolute right-3 bottom-4 left-3 z-3 flex flex-col items-end gap-3 md:right-6 md:bottom-6 md:left-6 md:flex-row md:gap-4">
-          <div className="w-full md:w-auto md:flex-1">{ilha ? <Partes partes={ilha.partes} onComprar={(id) => void comprar(id)} /> : null}</div>
+          <div className="w-full min-w-0 md:w-auto md:flex-1">{ilha ? <Partes ilha={ilha} onComprar={(id) => void comprar(id)} /> : null}</div>
           <BotaoCanto icone="🏠" rotulo="Entrar em casa" onPress={irParaCasa} />
         </div>
       </div>

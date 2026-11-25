@@ -70,7 +70,9 @@ describe('números do dia', () => {
     expect(dados.minutosDeFoco).toBe(50);
     expect(dados.sequencia).toBeGreaterThan(1);
     expect(dados.joias).toBeGreaterThan(0);
-    expect(dados.partesConstruidas).toEqual(['quarto']);
+    // A casa de exemplo já vem pela metade.
+    expect(dados.partesConstruidas).toHaveLength(12);
+    expect(dados.totalDePartes).toBe(24);
     expect(dados.metas.map((m) => `${m.feito}/${m.total}`)).toEqual(['3/5', '1/4', '5/5']);
   });
   test('sem registros tudo é zero', async () => {

@@ -89,6 +89,14 @@ const TEXTOS: Record<AchievementId, TextoDaRegra> = {
     andamento: (progresso, meta) => `${progresso} de ${meta} descansos marcados`,
   },
   'mes-de-fogo': sequencia,
+  'dois-andares': {
+    pedido: () => 'o segundo andar da casa',
+    andamento: () => 'Construa o segundo andar',
+  },
+  'cinco-comodos': {
+    pedido: (meta) => `${meta} cômodos na casa`,
+    andamento: (progresso, meta) => `${progresso} de ${meta} cômodos`,
+  },
   'casa-inteira': {
     pedido: (meta) => `${meta} partes da casa`,
     andamento: (progresso, meta) => `${progresso} de ${meta} partes construídas`,

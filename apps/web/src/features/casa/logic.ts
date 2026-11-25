@@ -1,5 +1,5 @@
 import { FOCUS, GOALS, HABITS, JOIAS } from '@pulo/core/config/decisions';
-import { verCasa } from '@pulo/core/domain/casa';
+import { verCasa, type ComodoId } from '@pulo/core/domain/casa';
 import { MINUTE_MS } from '@pulo/core/domain/clock';
 import { dateKeyOf } from '@pulo/core/domain/day';
 import { elapsedFocusMs } from '@pulo/core/domain/foco';
@@ -72,6 +72,8 @@ export function opcoesDeVinculo(busca: VinculoDaCasa, { habitos, pendentes, meta
 
 export interface DadosDaCasa {
   saldo: number;
+  /** Os cômodos prontos, para o seletor. */
+  comodos: ComodoId[];
   diasSeguidos: number;
   quarto: RoomDecor[];
   opcoes: OpcaoDeVinculo[];
@@ -98,6 +100,7 @@ export async function carregarCasa(repo: Repository, clock: Clock, user: User, b
   const pendentes = habitsForDate(habitos, hoje).filter((h) => !feitos.has(h.id));
   return {
     saldo: casa.saldo,
+    comodos: casa.comodos,
     diasSeguidos: sequencia.atual,
     quarto,
     opcoes: opcoesDeVinculo(busca, { habitos, pendentes, metas, tarefas }),
