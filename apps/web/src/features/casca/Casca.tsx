@@ -1,12 +1,15 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { useConsultaDeMidia } from '@/theme';
-import { Botao } from '@/ui';
+import { Botao, Modal } from '@/ui';
 
 import { useApp, useCarregar } from '../app';
+import { AvisoDoGelo } from './AvisoDoGelo';
+import { CartaoDoGelo } from './CartaoDoGelo';
 import { Conta } from './Conta';
 import { abaAtiva, carregarTrilho, contaNaTela, telaDeImersao } from './logic';
 import { Navegacao } from './Navegacao';
+import { RostoDoSapo } from './RostoDoSapo';
 import { CartaoDaCasa, CartaoDasMetas, NumerosDoDia } from './Trilho';
 
 /** A partir daqui cabem as três colunas do rascunho (barra 312, conteúdo e trilho 460). */
@@ -15,16 +18,7 @@ export const CONSULTA_DO_TRILHO = '(min-width: 80rem)';
 function Marca() {
   return (
     <div className="flex items-center gap-2.5 px-2 text-[22px] font-extrabold">
-      <svg viewBox="0 0 40 40" aria-hidden="true" className="size-[34px]">
-        <ellipse cx="20" cy="26" rx="15" ry="11" fill="#8fe05a" />
-        <circle cx="12" cy="13" r="7" fill="#8fe05a" />
-        <circle cx="28" cy="13" r="7" fill="#8fe05a" />
-        <circle cx="12" cy="13" r="4" fill="#fff" />
-        <circle cx="28" cy="13" r="4" fill="#fff" />
-        <circle cx="12.5" cy="13.5" r="2" fill="#1f2a24" />
-        <circle cx="28.5" cy="13.5" r="2" fill="#1f2a24" />
-        <path d="M14 25q6 4 12 0" stroke="#1f2a24" strokeWidth="2" fill="none" strokeLinecap="round" />
-      </svg>
+      <RostoDoSapo className="size-[34px]" />
       Pulo
     </div>
   );
@@ -43,6 +37,9 @@ export function Casca({ caminho, children }: CascaProps) {
     if (!user) throw new Error('sem usuário');
     return carregarTrilho(repo, clock, user);
   });
+
+  const [lojaDoGelo, setLojaDoGelo] = useState(false);
+  const abrirLojaDoGelo = () => setLojaDoGelo(true);
 
   const imersao = telaDeImersao(caminho);
   const noHoje = caminho === '/';
@@ -73,7 +70,7 @@ export function Casca({ caminho, children }: CascaProps) {
         {noConteudo ? (
           <div className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 pt-4 md:max-w-none md:px-10 md:pt-8">
             <Conta conta={conta} noPerfil={noPerfil} className="md:hidden" />
-            {dados ? <NumerosDoDia dados={dados} /> : falha}
+            {dados ? <NumerosDoDia dados={dados} onGelo={abrirLojaDoGelo} /> : falha}
           </div>
         ) : null}
         {children}
@@ -89,7 +86,7 @@ export function Casca({ caminho, children }: CascaProps) {
         <aside aria-label="Seu dia" className="sticky top-0 flex h-dvh flex-col gap-5 overflow-auto px-6 py-8">
           {dados ? (
             <>
-              <NumerosDoDia dados={dados} />
+              <NumerosDoDia dados={dados} onGelo={abrirLojaDoGelo} />
               <CartaoDaCasa dados={dados} />
               {caminho === '/metas' ? null : <CartaoDasMetas metas={dados.metas} />}
             </>
@@ -98,6 +95,23 @@ export function Casca({ caminho, children }: CascaProps) {
           )}
         </aside>
       ) : null}
+      {dados ? <AvisoDoGelo dias={dados.gelo?.recentes ?? []} hoje={dados.hoje} /> : null}
+      <Modal
+        aberto={lojaDoGelo}
+        onFechar={() => setLojaDoGelo(false)}
+        rotulo="Loja de gelo"
+        rodape={
+          <button
+            type="button"
+            onClick={() => setLojaDoGelo(false)}
+            className="cursor-pointer rounded-[14px] border-4 border-contorno bg-cancelar px-[46px] py-3 text-[19px] font-black tracking-wider text-contorno uppercase shadow-[inset_0_-5px_0_var(--pulo-cancelar-borda)]"
+          >
+            Fechar
+          </button>
+        }
+      >
+        <CartaoDoGelo />
+      </Modal>
     </div>
   );
 }

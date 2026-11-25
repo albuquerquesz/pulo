@@ -1,6 +1,7 @@
 import type { RoomDecor } from '@pulo/core/domain/types';
 import { Joia, Modal } from '@/ui';
 
+import { CartaoDoGelo } from '../casca/CartaoDoGelo';
 import { COR_NATURAL, CORES, idDaCompra, ITENS, precoDe, type Escolha, type Loja } from './catalogo';
 import { colocadosNoQuarto, ehMeu, estadoDaCompra, type EstadoDaCompra } from './decoracao';
 import type { Lugar } from './lugares';
@@ -60,6 +61,7 @@ export function LojaModal({ lugar, escolha, quarto, saldo, loja, onEscolher, onV
         </button>
       }
     >
+      {lugar ? null : <CartaoDoGelo />}
       <div className="flex shrink-0 flex-col items-center justify-end gap-2 md:min-h-[130px]">
         <span className="origin-bottom max-md:[zoom:0.65]">
           <VisualDoItem {...escolha} tamanho={96} />

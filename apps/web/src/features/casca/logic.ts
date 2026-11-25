@@ -4,9 +4,10 @@ import { MINUTE_MS } from '@pulo/core/domain/clock';
 import { dateKeyOf } from '@pulo/core/domain/day';
 import { estadoDoBau, goalProgress, sortGoals } from '@pulo/core/domain/goals';
 import { habitsForDate } from '@pulo/core/domain/habits';
+import { verGelo } from '@pulo/core/domain/gelo';
 import { focusedMs, textoDeFalta } from '@pulo/core/domain/joias';
 import { verSequencia } from '@pulo/core/domain/streak';
-import type { AccentColor, Clock, DateKey, FocusSession, Goal, GoalChest, Habit, HabitLog, Repository, User } from '@pulo/core/domain/types';
+import type { AccentColor, Clock, DateKey, FocusSession, FreezeSummary, Goal, GoalChest, Habit, HabitLog, Repository, User } from '@pulo/core/domain/types';
 
 export interface ContaNaTela {
   nome: string;
@@ -118,7 +119,10 @@ export function minutosDeFocoDoDia(sessoes: readonly FocusSession[], hoje: DateK
 }
 
 export interface DadosDoTrilho {
+  hoje: DateKey;
   sequencia: number;
+  /** `null` onde o repositório não guarda gelo. */
+  gelo: FreezeSummary | null;
   habitos: HabitosDoDia;
   minutosDeFoco: number;
   joias: number;
@@ -131,8 +135,9 @@ export interface DadosDoTrilho {
 export async function carregarTrilho(repo: Repository, clock: Clock, user: User): Promise<DadosDoTrilho> {
   const fuso = user.timezone || DEFAULT_TIMEZONE;
   const hoje = dateKeyOf(clock.now(), fuso);
-  const [sequencia, casa, habitos, registros, sessoes, metas, baus] = await Promise.all([
+  const [sequencia, gelo, casa, habitos, registros, sessoes, metas, baus] = await Promise.all([
     verSequencia(repo, clock),
+    verGelo(repo, clock),
     verCasa(repo),
     repo.listHabits(),
     repo.listHabitLogs({ from: hoje, to: hoje }),
@@ -141,7 +146,9 @@ export async function carregarTrilho(repo: Repository, clock: Clock, user: User)
     repo.listGoalChests(),
   ]);
   return {
+    hoje,
     sequencia: sequencia.atual,
+    gelo,
     habitos: habitosDoDia(habitos, registros, hoje),
     minutosDeFoco: minutosDeFocoDoDia(sessoes, hoje, fuso),
     joias: casa.saldo,
