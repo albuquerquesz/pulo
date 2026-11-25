@@ -318,8 +318,11 @@ export interface TaskActivity {
 
 // ---------- Sequência ----------
 
-/** `hoje` é o dia de hoje ainda vazio; com algo feito ou descanso marcado, ele aparece como tal. */
-export type StreakDayState = 'feito' | 'descanso' | 'vazio' | 'hoje' | 'futuro';
+/**
+ * `hoje` é o dia de hoje ainda vazio; com algo feito ou descanso marcado, ele aparece como tal.
+ * `gelo` é um dia vazio protegido por um gelo (spec 29).
+ */
+export type StreakDayState = 'feito' | 'descanso' | 'gelo' | 'vazio' | 'hoje' | 'futuro';
 
 export interface StreakDay {
   date: DateKey;
@@ -328,12 +331,64 @@ export interface StreakDay {
 
 /** Sequência com foguinho. Calculada a partir dos registros, nunca gravada. */
 export interface Streak {
-  /** Dias feitos seguidos até hoje (descanso não quebra nem soma). */
+  /** Dias feitos seguidos até hoje (descanso e gelo não quebram nem somam). */
   atual: number;
   /** Maior sequência de todo o histórico. */
   recorde: number;
   /** Os 7 dias da semana corrente, na ordem (veja `STREAK.weekStartsOn`). */
   semana: StreakDay[];
+}
+
+// ---------- Gelo e descanso (spec 29) ----------
+
+/** Um dia protegido por um gelo. `vistoEm` falta enquanto a pessoa não viu o aviso. */
+export interface FreezeUse {
+  date: DateKey;
+  vistoEm?: number;
+}
+
+/** O que a abertura do app mostra do gelo. O saldo é calculado (presente mais compras menos usos), nunca gravado. */
+export interface FreezeSummary {
+  guardados: number;
+  max: number;
+  /** Dias protegidos que a pessoa ainda não viu, do mais antigo ao mais novo. */
+  recentes: DateKey[];
+}
+
+export interface FreezeStatus extends FreezeSummary {
+  /** Todos os dias já protegidos, do mais antigo ao mais novo. */
+  usados: DateKey[];
+}
+
+/** Quantos descansos ainda cabem na semana corrente. */
+export interface RestStatus {
+  restantesNaSemana: number;
+  maxPorSemana: number;
+}
+
+// ---------- Métricas do Perfil (spec 29) ----------
+
+export interface ProfileMetrics {
+  descanso: {
+    total: number;
+    /** No mês corrente do calendário. */
+    noMes: number;
+    semanasComDescanso: number;
+    /** Minutos de foco por semana fechada; `null` os dois enquanto não há semanas suficientes de cada tipo. */
+    focoMedioSemanaComDescanso: number | null;
+    focoMedioSemanaSem: number | null;
+  };
+  gelo: { usadosTotal: number; guardados: number };
+  /** Dos últimos dias lógicos (`METRICAS.janelaDias`), nunca antes de a conta existir. */
+  ritmo: {
+    focoMedioPorDia30: number;
+    /** De 0 a 1; `null` sem nenhum dia de hábito que conte. */
+    taxaHabitos30: number | null;
+    melhorPeriodo: Period | null;
+    melhorDiaDaSemana: Weekday | null;
+    sessoesTerminadas: number;
+  };
+  feitos: { tarefasConcluidas: number; metasConcluidas: number; joiasGanhas: number };
 }
 
 // ---------- Estatísticas do hábito (spec 17) ----------
@@ -367,6 +422,7 @@ export type AchievementId =
   | 'descanso-sabido'
   | 'mes-de-fogo'
   | 'casa-inteira'
+  | 'gelo-na-hora'
   | 'segredo';
 
 /** Uma conquista gravada. `id` é o que está no banco (do catálogo). */

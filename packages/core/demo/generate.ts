@@ -1,5 +1,6 @@
 import type {
   FocusSession,
+  FreezeUse,
   Habit,
   HabitLog,
   RestDay,
@@ -22,6 +23,8 @@ export interface DemoData {
   habitLogs: HabitLog[];
   sessions: FocusSession[];
   restDays: RestDay[];
+  /** Um dia esquecido que o gelo salvou (spec 29). */
+  freezeUses: FreezeUse[];
 }
 
 /** PRNG determinístico (mulberry32). */
@@ -117,5 +120,8 @@ export function generateDemoData(seed: number = DEMO_DEFAULT_SEED, createdAt = 0
     }
   }
 
-  return { user, blocks, habits, habitLogs, sessions, restDays };
+  // Terça da primeira semana: sem registro, protegida pelo gelo de presente.
+  const freezeUses: FreezeUse[] = [{ date: addDays(DEMO_FIRST_MONDAY, 1), vistoEm: createdAt }];
+
+  return { user, blocks, habits, habitLogs, sessions, restDays, freezeUses };
 }

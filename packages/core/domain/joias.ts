@@ -1,6 +1,20 @@
 import { JOIAS } from '../config/decisions';
 import { effectiveMs } from './care-days';
-import type { FocusSession, GoalChest, Goal, HabitLog, Purchase, RestDay } from './types';
+import type { FocusSession, GoalChest, Goal, HabitLog, Purchase, Repository, RestDay } from './types';
+
+/** Repositório que sabe das compras de gelo (spec 29): elas também gastam joias. */
+export interface FreezePurchaseList {
+  listFreezePurchases(): Promise<Purchase[]>;
+}
+
+export function providesFreezePurchases(repo: Repository): repo is Repository & FreezePurchaseList {
+  return 'listFreezePurchases' in repo && typeof repo.listFreezePurchases === 'function';
+}
+
+/** As compras de gelo de um repositório; vazio quando ele não as guarda. */
+export async function listFreezePurchasesOf(repo: Repository): Promise<Purchase[]> {
+  return providesFreezePurchases(repo) ? repo.listFreezePurchases() : [];
+}
 
 /** O que gera joias. Tudo vem dos registros que o app já guarda, mais o crédito histórico. */
 export interface FontesDeJoias {

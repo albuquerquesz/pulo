@@ -1,4 +1,5 @@
 import { createRepository, emptyDatabase, type Database } from './repository-core';
+import type { FreezeStore } from '../domain/gelo-store';
 import type { Repository } from '../domain/types';
 
 /** Chave e valor, só texto. Qualquer coisa que guarde string serve. */
@@ -54,7 +55,7 @@ function parse(raw: string | null): Database {
 }
 
 /** Repositório persistente: o banco inteiro vira um JSON numa chave. */
-export function createStorageRepository(adapter: StorageAdapter = createDefaultAdapter(), key = STORAGE_KEY): Repository {
+export function createStorageRepository(adapter: StorageAdapter = createDefaultAdapter(), key = STORAGE_KEY): Repository & FreezeStore {
   return createRepository({
     load: async () => parse(await adapter.getItem(key)),
     commit: async (db) => adapter.setItem(key, JSON.stringify(db)),

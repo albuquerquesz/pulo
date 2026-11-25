@@ -1,5 +1,13 @@
 import { HOUSE, JOIAS, ROOM_DECOR, ROOM_GRID } from '../config/decisions';
-import { type FontesDeJoias, type JoiasGanhas, joiasGanhas, joiasGastas, saldoDeJoias, textoDeFalta } from './joias';
+import {
+  type FontesDeJoias,
+  type JoiasGanhas,
+  joiasGanhas,
+  joiasGastas,
+  listFreezePurchasesOf,
+  saldoDeJoias,
+  textoDeFalta,
+} from './joias';
 import { fail, ok, type Result } from './result';
 import type { Clock, Purchase, Repository, RoomDecor, RoomRotation, RoomSpot } from './types';
 
@@ -93,9 +101,14 @@ export function partesDaCasa(casa: readonly Purchase[]): ParteNaCasa[] {
 }
 
 /** A casa e o quarto, a partir dos registros e das compras. Função pura. */
-export function estadoDaCasa(fontes: FontesDeJoias, casa: readonly Purchase[], quarto: readonly RoomDecor[]): EstadoDaCasa {
+export function estadoDaCasa(
+  fontes: FontesDeJoias,
+  casa: readonly Purchase[],
+  quarto: readonly RoomDecor[],
+  gelos: readonly Purchase[] = [],
+): EstadoDaCasa {
   const ganhas = joiasGanhas(fontes);
-  const gastas = joiasGastas(casa) + joiasGastas(quarto);
+  const gastas = joiasGastas(casa) + joiasGastas(quarto) + joiasGastas(gelos);
   const saldo = saldoDeJoias(ganhas.total, gastas);
   const partes = partesDaCasa(casa);
   const construidas = partes.filter((p) => p.construida).length;
@@ -140,7 +153,7 @@ export function validarCompraDaDecoracao(item: string, estado: EstadoDaCasa): Re
 
 /** Estado atual da casa, lido do repositório. */
 export async function verCasa(repo: Repository): Promise<EstadoDaCasa> {
-  const [habitLogs, sessions, restDays, goals, baus, credito, casa, quarto] = await Promise.all([
+  const [habitLogs, sessions, restDays, goals, baus, credito, casa, quarto, gelos] = await Promise.all([
     repo.listHabitLogs(),
     repo.listSessions(),
     repo.listRestDays(),
@@ -149,8 +162,9 @@ export async function verCasa(repo: Repository): Promise<EstadoDaCasa> {
     repo.getJoiaCredit(),
     repo.listHousePurchases(),
     repo.listRoomDecor(),
+    listFreezePurchasesOf(repo),
   ]);
-  return estadoDaCasa({ habitLogs, sessions, restDays, goals, baus, credito }, casa, quarto);
+  return estadoDaCasa({ habitLogs, sessions, restDays, goals, baus, credito }, casa, quarto, gelos);
 }
 
 /** Constrói uma parte da casa com joias. */

@@ -19,6 +19,17 @@ function perPeriod<T>(make: () => T): Record<Period, T> {
   return { manha: make(), tarde: make(), noite: make() };
 }
 
+/** O período com mais tempo focado. Empate: mais sessões concluídas e, ainda assim, o mais cedo. `null` sem nenhum tempo. */
+export function bestPeriod(
+  focusByPeriod: Record<Period, number>,
+  sessions: Record<Period, Pick<PeriodSessionStats, 'completed'>>,
+): Period | null {
+  const [best] = [...PERIOD_LIST].sort(
+    (a, b) => focusByPeriod[b] - focusByPeriod[a] || sessions[b].completed - sessions[a].completed,
+  );
+  return best !== undefined && focusByPeriod[best] > 0 ? best : null;
+}
+
 export interface WeekSummaryInput {
   /** Qualquer data da semana: o resumo usa a segunda-feira correspondente. */
   weekStart: DateKey;
@@ -77,11 +88,6 @@ export function buildWeekSummary(input: WeekSummaryInput): WeekSummary {
     focusMinutesByPeriod[p] = Math.round(minutesMs[p] / 60_000);
   }
 
-  // Empate: mais sessões concluídas e, ainda assim, o período mais cedo.
-  const [best] = [...PERIOD_LIST].sort(
-    (a, b) => minutesMs[b] - minutesMs[a] || sessionStats[b].completed - sessionStats[a].completed,
-  );
-
   return {
     weekStart,
     weekEnd,
@@ -95,7 +101,7 @@ export function buildWeekSummary(input: WeekSummaryInput): WeekSummary {
     focoPorAlvo: focusByTarget(counted),
     sessoesTerminadas: PERIOD_LIST.reduce((n, p) => n + sessionStats[p].completed, 0),
     sessoesLargadas: PERIOD_LIST.reduce((n, p) => n + sessionStats[p].interrupted, 0),
-    melhorPeriodo: best !== undefined && minutesMs[best] > 0 ? best : null,
+    melhorPeriodo: bestPeriod(minutesMs, sessionStats),
   };
 }
 

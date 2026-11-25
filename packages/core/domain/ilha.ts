@@ -3,7 +3,7 @@
  * O saldo daqui desconta as compras antigas e as novas; o da casa não desconta as antigas (as joias voltam).
  */
 import { ISLAND } from '../config/decisions';
-import { type FontesDeJoias, type JoiasGanhas, joiasGanhas, joiasGastas, saldoDeJoias, textoDeFalta } from './joias';
+import { type FontesDeJoias, type JoiasGanhas, joiasGanhas, joiasGastas, saldoDeJoias, textoDeFalta, listFreezePurchasesOf } from './joias';
 import { fail, ok, type Result } from './result';
 import type { Clock, IslandPurchase, Purchase, Repository } from './types';
 
@@ -149,7 +149,7 @@ export function validarCompra(item: string, estado: EstadoDaIlha): Result<number
 }
 
 async function lerIlha(repo: Repository): Promise<EstadoDaIlha> {
-  const [habitLogs, sessions, restDays, goals, baus, credito, compras, casa, quarto] = await Promise.all([
+  const [habitLogs, sessions, restDays, goals, baus, credito, compras, casa, quarto, gelos] = await Promise.all([
     repo.listHabitLogs(),
     repo.listSessions(),
     repo.listRestDays(),
@@ -159,8 +159,9 @@ async function lerIlha(repo: Repository): Promise<EstadoDaIlha> {
     repo.listIslandPurchases(),
     repo.listHousePurchases(),
     repo.listRoomDecor(),
+    listFreezePurchasesOf(repo),
   ]);
-  return estadoDaIlha({ habitLogs, sessions, restDays, goals, baus, credito }, compras, [...casa, ...quarto]);
+  return estadoDaIlha({ habitLogs, sessions, restDays, goals, baus, credito }, compras, [...casa, ...quarto, ...gelos]);
 }
 
 /** Estado atual da ilha, lido do repositório. */

@@ -27,6 +27,30 @@ export const STREAK = {
   weekStartsOn: 6,
 } as const;
 
+/**
+ * Gelo da sequência (spec 29): comprado com joias e gasto sozinho num dia que termina vazio.
+ * `presenteInicial` é o gelo que toda pessoa já tem sem comprar. Proposta.
+ */
+export const GELO = {
+  preco: 50,
+  maxGuardados: 2,
+  presenteInicial: 1,
+} as const;
+
+/** Dia de descanso (spec 29): só o de hoje, até este número por semana do app (`STREAK.weekStartsOn`). Proposta. */
+export const DESCANSO = {
+  maxPorSemana: 2,
+} as const;
+
+/**
+ * Métricas do Perfil (spec 29): as médias olham os últimos `janelaDias` dias lógicos, e a comparação entre semanas com e
+ * sem descanso só aparece com `minSemanasPorTipo` semanas de cada tipo. Proposta.
+ */
+export const METRICAS = {
+  janelaDias: 30,
+  minSemanasPorTipo: 2,
+} as const;
+
 /** Períodos do dia, em horas locais [início, fim). Proposta. */
 export const PERIODS = {
   manha: { startHour: 5, endHour: 12 },
@@ -137,7 +161,8 @@ export const ROOM_GRID = { columns: 6, rows: 6, rotations: [0, 90, 180, 270] } a
 
 /**
  * Conquistas (spec 14): catálogo na ordem em que aparecem. `meta` é o alvo numérico de cada regra
- * (`@pulo/core/domain/achievements`): dias seguidos, minutos de uma sessão de foco, dias de descanso ou partes da casa.
+ * (`@pulo/core/domain/achievements`): dias seguidos, minutos de uma sessão de foco, dias de descanso, partes da casa
+ * ou gelos usados.
  * A regra da secreta ainda não foi escolhida: ela não é concedida a ninguém. Proposta.
  */
 export const ACHIEVEMENTS = [
@@ -146,6 +171,7 @@ export const ACHIEVEMENTS = [
   { id: 'descanso-sabido', nome: 'Descanso sabido', emoji: '🌙', secreta: false, meta: 4 },
   { id: 'mes-de-fogo', nome: 'Mês de fogo', emoji: '🏆', secreta: false, meta: 30 },
   { id: 'casa-inteira', nome: 'Casa inteira', emoji: '🏡', secreta: false, meta: Object.keys(HOUSE.partCost).length },
+  { id: 'gelo-na-hora', nome: 'Gelo na hora certa', emoji: '🧊', secreta: false, meta: 1 },
   { id: 'segredo', nome: 'Segredo', emoji: '✨', secreta: true, meta: 1 },
 ] as const;
 

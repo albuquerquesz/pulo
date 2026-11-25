@@ -56,6 +56,8 @@ export function defineRepositoryContract(
   make: () => RepositoryUnderTest | Promise<RepositoryUnderTest>,
   options: ContractOptions = {},
 ): void {
+  // O servidor só aceita descanso para hoje.
+  const restDate = dateKeyOf(options.now ?? sp(2026, 11, 18), baseUser.timezone);
   const subject = async () => {
     const { repository, userId } = await make();
     return { r: repository, user: { ...baseUser, id: userId } };
@@ -147,10 +149,10 @@ export function defineRepositoryContract(
 
     it('descanso, propostas e estado do mascote', async () => {
       const { r } = await subject();
-      await r.saveRestDay({ date: '2026-11-10' });
-      await r.saveRestDay({ date: '2026-11-10' });
+      await r.saveRestDay({ date: restDate });
+      await r.saveRestDay({ date: restDate });
       expect(await r.listRestDays()).toHaveLength(1);
-      await r.deleteRestDay('2026-11-10');
+      await r.deleteRestDay(restDate);
       expect(await r.listRestDays()).toEqual([]);
       const p = {
         id: uid('p'), weekStart: '2026-11-09', state: 'pendente' as const, patternText: 'x', changes: [],
@@ -180,7 +182,9 @@ export function defineRepositoryContract(
       const h = uid('h');
       await r.saveHabit({ id: h, title: 'x', weekdays: [0], state: 'ativo' as const });
       await r.saveHabitLog({ habitId: h, date: addDays(today, -2), doneAt: 1 });
-      await r.saveRestDay({ date: addDays(today, -1) });
+      await r.saveHabitLog({ habitId: h, date: addDays(today, -1), doneAt: 1 });
+      await r.deleteHabitLog(h, addDays(today, -2));
+      await r.saveRestDay({ date: today });
       await r.saveHabitLog({ habitId: h, date: today, doneAt: 2 });
       const streak = await verSequencia(r, clock);
       expect(streak).toMatchObject({ atual: 2, recorde: 2 });
@@ -321,7 +325,7 @@ export function defineRepositoryContract(
       await r.saveHabit({ id: h, title: 'x', weekdays: [0], state: 'ativo' as const });
       await r.saveHabitLog({ habitId: h, date: '2026-11-10', doneAt: 1 });
       await r.saveSession({ ...endedSession(1, 25, 'concluida'), id: uid('s') });
-      await r.saveRestDay({ date: '2026-11-10' });
+      await r.saveRestDay({ date: restDate });
       await r.saveProposal({ id: uid('p'), weekStart: '2026-11-09', state: 'pendente', patternText: 'x', changes: [], origin: 'ia', createdAt: 1 });
       await r.saveGoal({ id: uid('g'), title: 'x', state: 'ativa', milestones: [], createdAt: 1 });
       await r.saveIslandPurchase({ item: 'banco', cost: 8, createdAt: 1 });

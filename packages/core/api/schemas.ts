@@ -20,6 +20,8 @@ import type {
   BlockSlot,
   DateKey,
   FocusSession,
+  FreezeStatus,
+  FreezeSummary,
   Goal,
   GoalMilestone,
   Habit,
@@ -31,7 +33,9 @@ import type {
   RoomSpot,
   MascotState,
   Phase,
+  ProfileMetrics,
   ProfileStats,
+  Purchase,
   ProposalChange,
   RestDay,
   RoutineBlock,
@@ -344,7 +348,7 @@ export const streakSchema = z.object({
   atual: z.number().int().min(0),
   recorde: z.number().int().min(0),
   semana: z
-    .array(z.object({ date: dateKeySchema, estado: z.enum(['feito', 'descanso', 'vazio', 'hoje', 'futuro']) }))
+    .array(z.object({ date: dateKeySchema, estado: z.enum(['feito', 'descanso', 'gelo', 'vazio', 'hoje', 'futuro']) }))
     .length(7),
 }) satisfies z.ZodType<Streak, unknown>;
 
@@ -372,6 +376,47 @@ export const achievementSchema = z.object({
 
 /** Resposta de `GET /api/achievements`. */
 export const achievementsResponseSchema = z.object({ achievements: z.array(achievementSchema) });
+
+// ---------- Gelo e métricas (spec 29) ----------
+
+const countSchema = z.number().int().min(0);
+
+export const freezeSummarySchema = z.object({
+  guardados: countSchema,
+  max: countSchema,
+  recentes: z.array(dateKeySchema),
+}) satisfies z.ZodType<FreezeSummary, unknown>;
+
+/** Resposta de `GET /api/gelo`. `compras` entram na conta do saldo de joias. */
+export const freezeStatusResponseSchema = freezeSummarySchema.extend({
+  usados: z.array(dateKeySchema),
+  compras: z.array(z.object({ item: z.string(), cost: countSchema, createdAt: msSchema })),
+}) satisfies z.ZodType<FreezeStatus & { compras: Purchase[] }, unknown>;
+export type FreezeStatusResponse = z.infer<typeof freezeStatusResponseSchema>;
+
+const minutesOrNullSchema = countSchema.nullable();
+
+export const profileMetricsSchema = z.object({
+  descanso: z.object({
+    total: countSchema,
+    noMes: countSchema,
+    semanasComDescanso: countSchema,
+    focoMedioSemanaComDescanso: minutesOrNullSchema,
+    focoMedioSemanaSem: minutesOrNullSchema,
+  }),
+  gelo: z.object({ usadosTotal: countSchema, guardados: countSchema }),
+  ritmo: z.object({
+    focoMedioPorDia30: countSchema,
+    taxaHabitos30: z.number().min(0).max(1).nullable(),
+    melhorPeriodo: periodSchema.nullable(),
+    melhorDiaDaSemana: weekdaySchema.nullable(),
+    sessoesTerminadas: countSchema,
+  }),
+  feitos: z.object({ tarefasConcluidas: countSchema, metasConcluidas: countSchema, joiasGanhas: countSchema }),
+});
+
+/** Resposta de `GET /api/profile/metrics`. */
+export const metricsResponseSchema = z.object({ metrics: profileMetricsSchema }) satisfies z.ZodType<{ metrics: ProfileMetrics }, unknown>;
 
 // ---------- Conta (spec 15) ----------
 
@@ -567,6 +612,9 @@ export const API_ERROR_CODES = [
   'area_fechada',
   'fora_de_ordem',
   'joias_insuficientes',
+  'gelo_no_maximo',
+  'descanso_so_hoje',
+  'limite_de_descanso',
   'sessao_em_andamento',
   'sessao_encerrada',
   'sessao_imutavel',

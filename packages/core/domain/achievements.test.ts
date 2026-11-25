@@ -7,7 +7,7 @@ import type { AchievementId, Purchase } from './types';
 
 const parts = (...items: string[]): Purchase[] => items.map((item) => ({ item, cost: 1, createdAt: 1 }));
 const summary = (extra: Partial<AchievementSources> = {}) =>
-  summarizeForAchievements({ sequencia: { atual: 0, recorde: 0 }, sessions: [], descansos: 0, casa: [], ...extra });
+  summarizeForAchievements({ sequencia: { atual: 0, recorde: 0 }, sessions: [], descansos: 0, casa: [], gelosUsados: 0, ...extra });
 const one = (id: AchievementId, extra: Partial<AchievementSources> = {}) =>
   computeAchievements(summary(extra), []).find((item) => item.id === id);
 const passes = (id: AchievementId, extra: Partial<AchievementSources>) => passingAchievements(summary(extra)).includes(id);
@@ -18,7 +18,7 @@ describe('conquistas', () => {
     const all = computeAchievements(summary(), []);
     expect(all.map((item) => item.id)).toEqual(ACHIEVEMENTS.map((item) => item.id));
     expect(all.some((item) => item.conquistada)).toBe(false);
-    expect(all.map((item) => item.progresso)).toEqual([0, 0, 0, 0, 1, 0]);
+    expect(all.map((item) => item.progresso)).toEqual([0, 0, 0, 0, 1, 0, 0]);
   });
 
   it.each([
@@ -50,6 +50,11 @@ describe('conquistas', () => {
   it('descanso sabido: 3 não, 4 sim', () => {
     expect(passes('descanso-sabido', { descansos: 3 })).toBe(false);
     expect(passes('descanso-sabido', { descansos: 4 })).toBe(true);
+  });
+
+  it('gelo na hora certa: o primeiro gelo usado conquista', () => {
+    expect(passes('gelo-na-hora', { gelosUsados: 0 })).toBe(false);
+    expect(passes('gelo-na-hora', { gelosUsados: 1 })).toBe(true);
   });
 
   it('casa inteira: precisa de todas as partes', () => {
