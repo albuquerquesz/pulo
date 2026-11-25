@@ -64,10 +64,10 @@ const habito = (extra: Partial<Habit> = {}): Habit => ({ id: uuid(), title: 'Ler
 // ---------- O contrato compartilhado do Repository ----------
 
 /**
- * O servidor só grava uma compra da ilha se a pessoa tem moscas (`validarCompra`). Cada pessoa do contrato ganha
- * dias de descanso antigos, fora da janela do sync: o servidor conta as moscas, mas o cache (e o contrato) não os vê.
+ * O servidor só grava uma compra da ilha se a pessoa tem joias (`validarCompra`). Cada pessoa do contrato ganha
+ * dias de descanso antigos, fora da janela do sync: o servidor conta as joias, mas o cache (e o contrato) não os vê.
  */
-async function moscasForaDaJanela(me: TestUser) {
+async function joiasForaDaJanela(me: TestUser) {
   await database.db.restDay.createMany({
     data: Array.from({ length: 50 }, (_, i) => ({ userId: me.id, date: new Date(Date.UTC(2024, 0, 1 + i)) })),
   });
@@ -77,7 +77,7 @@ defineRepositoryContract(
   'RemoteRepository (API real)',
   async () => {
     const me = await h.newUser();
-    await moscasForaDaJanela(me);
+    await joiasForaDaJanela(me);
     return { repository: await open(me), userId: me.id };
   },
   { mascotIsServerDerived: true, now: TEST_NOW },
@@ -252,12 +252,12 @@ describe('RemoteRepository: erros e rollback', () => {
     expect(await repo.listHabits()).toHaveLength(MAX_HABITS_PER_DAY);
   });
 
-  it('ilha: compra sem moscas é recusada pelo servidor e sai do cache; com moscas, comprarNaIlha grava', async () => {
+  it('ilha: compra sem joias é recusada pelo servidor e sai do cache; com joias, comprarNaIlha grava', async () => {
     const me = await h.newUser();
     const repo = await open(me);
     const banco = { item: 'banco', cost: 8, createdAt: TEST_NOW };
     await expect(repo.saveIslandPurchase(banco)).rejects.toMatchObject({
-      kind: 'api', code: 'moscas_insuficientes', status: 409, mensagem: MENSAGENS_DA_API.moscas_insuficientes,
+      kind: 'api', code: 'joias_insuficientes', status: 409, mensagem: MENSAGENS_DA_API.joias_insuficientes,
     });
     expect(await repo.listIslandPurchases()).toEqual([]);
 

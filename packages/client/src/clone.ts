@@ -1,4 +1,4 @@
-import type { FocusSession, Goal, Habit, HabitLog, IslandPurchase, MascotState, ProposalChange, RestDay, RoutineBlock, Streak, User, WeeklyProposal } from '@pulo/core/domain/types';
+import type { FocusSession, Goal, Habit, HabitLog, IslandPurchase, MascotState, ProposalChange, RestDay, RoomDecor, RoutineBlock, Streak, User, WeeklyProposal } from '@pulo/core/domain/types';
 
 // Cópias explícitas e tipadas (sem JSON.parse nem structuredClone, que perdem o tipo ou faltam no Hermes).
 
@@ -16,5 +16,7 @@ export const cloneProposal = (p: WeeklyProposal): WeeklyProposal => ({ ...p, cha
 export const cloneGoal = (g: Goal): Goal => ({ ...g, milestones: g.milestones.map((m) => ({ ...m })) });
 
 export const cloneIslandPurchase = (p: IslandPurchase): IslandPurchase => ({ ...p });
+
+export const cloneRoomDecor = (d: RoomDecor): RoomDecor => ({ ...d });
 
 export const cloneStreak = (s: Streak): Streak => ({ ...s, semana: s.semana.map((d) => ({ ...d })) });
