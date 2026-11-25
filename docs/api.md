@@ -92,7 +92,8 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `PUT /api/island/purchases/:item` | `IslandPurchase` | `{ purchase }` | 8 comprando, 7 repetindo |
 | `GET /api/mascot` | | `{ mascot: MascotState \| null }` | 3 |
 | `GET /api/week-summary?date` | | `{ summary: WeekSummary }` | 5 |
-| `GET /api/sync?from&to` | | ver abaixo (inclui `goals` e `islandPurchases`) | 11 |
+| `GET /api/streak` | | `{ streak: Streak }` | 5 |
+| `GET /api/sync?from&to` | | ver abaixo (inclui `goals`, `islandPurchases` e `streak`) | 14 |
 | `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, goals, islandPurchases, mascot } }` | 10 |
 
 Já existiam e continuam: `GET /health`, `/api/auth/*`, `GET /api/me`, `PATCH /api/me/metadata`, `POST /weekly-ai`.
@@ -183,21 +184,37 @@ Resposta 200 `{ proposal, blocks }`: a proposta já atualizada e TODOS os blocos
 - Proposta inexistente ou de outra pessoa: 404 `nao_encontrado`.
 - Queries (com a sessão): 6 aplicando blocos (proposta, blocos, um `UPDATE ... FROM unnest` dos blocos, `UPDATE` da proposta), 5 ao negar, 4 repetindo, 3 se não existe.
 
+### Sequência: `GET /api/streak`
+
+Resposta `{ streak: { atual, recorde, semana } }` (`streakResponseSchema`). O mesmo objeto vem no campo `streak` do `/api/sync`.
+A regra é a função pura `computeStreak` do core (`@pulo/core/domain/streak`), usada também no modo demo.
+
+- Um dia conta quando tem pelo menos um hábito feito **ou** uma sessão de foco que conta como cuidado (a mesma regra da ilha).
+- Dia de descanso não quebra a sequência e não soma. Hoje vazio ainda não quebra: ela só zera quando um dia termina vazio.
+- `atual` são os dias feitos seguidos; `recorde` é o maior trecho de todo o histórico. Os dois são calculados, nada é gravado.
+- `semana` tem 7 itens `{ date, estado }`, de domingo a sábado (`STREAK.weekStartsOn`). `estado`: `feito`, `descanso`, `vazio`,
+  `hoje` (hoje ainda sem nada) ou `futuro`. Dia feito e marcado como descanso aparece `feito`.
+- O dia vira no começo do dia da pessoa (`metadata.profile.dayStartMinutes`) no fuso dela; sem perfil, às `DAY_ROLLOVER_HOUR`.
+  Hábitos e descansos usam a data gravada pelo app (virada às `DAY_ROLLOVER_HOUR`): se a pessoa marca um deles entre essa virada
+  e o começo do dia dela, o dia novo passa a ser o `hoje` da sequência. Registros em datas futuras não contam.
+- Leituras fixas numa transação: hábitos feitos agrupados por dia, sessões encerradas e descansos, de todo o histórico.
+
 ### `GET /api/sync?from&to`
 
-`from` e `to` obrigatórios, até 400 dias. Nove leituras numa transação, resposta:
+`from` e `to` obrigatórios, até 400 dias. Doze leituras numa transação, resposta:
 
 ```json
 {
   "user": { "id": "", "name": "", "email": "", "image": null },
   "metadata": { "version": 1, "theme": "sistema", "reduceMotion": false, "timezone": "America/Sao_Paulo", "onboarding": { "completed": false, "completedAt": null }, "profile": null },
   "blocks": [], "habits": [], "habitLogs": [], "sessions": [], "restDays": [],
-  "proposals": [], "goals": [], "islandPurchases": [], "mascot": null, "serverTime": 1795000000000
+  "proposals": [], "goals": [], "islandPurchases": [], "mascot": null,
+  "streak": { "atual": 0, "recorde": 0, "semana": [{ "date": "2026-11-15", "estado": "vazio" }] }, "serverTime": 1795000000000
 }
 ```
 
 Blocos, hábitos, propostas, metas e compras da ilha vêm inteiros; hábitos feitos e descansos, só do intervalo; sessões do intervalo mais a
-em andamento. `serverTime` é o relógio do servidor em ms.
+em andamento. `streak` olha todo o histórico, não só o intervalo (acima; `semana` tem sempre 7 itens). `serverTime` é o relógio do servidor em ms.
 
 ### `DELETE /api/data`
 
@@ -218,6 +235,7 @@ propostas, metas, compras da ilha e o estado do sapo da pessoa, numa transação
 | `listGoals`, `saveGoal`, `deleteGoal` | `GET /api/goals`, `PUT`, `DELETE /api/goals/:id` |
 | `listIslandPurchases`, `saveIslandPurchase` | `GET /api/island/purchases`, `PUT /api/island/purchases/:item` |
 | `getMascotState` (`saveMascotState` não existe: o servidor calcula) | `GET /api/mascot` |
+| `verSequencia` do core (`getStreak` só no `RemoteRepository`) | `GET /api/sync` e `GET /api/streak` |
 | `getUser` | `GET /api/me` e `metadata` do `GET /api/sync` |
 | `clearAll` | `DELETE /api/data` |
 
@@ -238,5 +256,8 @@ propostas, metas, compras da ilha e o estado do sapo da pessoa, numa transação
 - **Erros:** `RemoteError` com `kind` (`rede`, `sessao`, `api`, `resposta_invalida`), `code` (código da tabela acima), `status`, `issues` e `mensagem` em português.
 - **Propostas:** `generateProposal(date?)` e `decideProposal(id, decisao)` chamam as duas rotas acima, validam a resposta com os schemas do core,
   atualizam o cache (proposta e, na decisão, todos os blocos) e, se o servidor recusar, releem o `GET /api/sync`. No app, a tela Semana usa a `PropostaFonte` remota na conta e a local no demo.
+- **Sequência:** `getStreak()` (ou `verSequencia(repo, clock)` do core) devolve a do sync, sem rede. Depois de uma escrita em hábito,
+  registro, sessão, descanso, perfil ou do `clearAll`, ou na virada do dia, espera as escritas pendentes e chama `GET /api/streak`;
+  sem rede, devolve a última conhecida.
 - **Lote:** `saveBlocks(blocks)` e `saveHabits(habits)` (cache otimista, um `PUT` cada, tudo ou nada com rollback do cache). `saveBlock` e `saveHabit` continuam.
 - **Cookie:** sempre `credentials: 'include'`. O cookie da sessão é HttpOnly e do navegador: o cliente não o lê, não o guarda e não manda cabeçalho `Cookie`.
