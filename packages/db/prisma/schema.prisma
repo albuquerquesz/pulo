@@ -60,6 +60,7 @@ model User {
   islandPurchases IslandPurchase[]
   joiaCredit      JoiaCredit?
   goalChests      GoalChest[]
+  achievements    Achievement[]
   mascotState     MascotState?
 
   oauthClients       OauthClient[]
@@ -536,6 +537,18 @@ model GoalChest {
 
   @@id([userId, goalId])
   @@map("goal_chest")
+}
+
+/// Conquista ganha (spec 14): gravada uma vez, para a data não mudar. O progresso é calculado, nunca gravado.
+model Achievement {
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Id do catálogo (`ACHIEVEMENTS`).
+  achievement   String
+  conquistadaEm DateTime @db.Timestamptz(3)
+
+  @@id([userId, achievement])
+  @@map("achievement")
 }
 
 /// Cartão do quadro de tarefas (spec 20). O número (`PULO-n`) é dado pelo servidor.

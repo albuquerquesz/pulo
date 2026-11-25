@@ -315,6 +315,12 @@ export type AchievementId =
   | 'casa-inteira'
   | 'segredo';
 
+/** Uma conquista gravada. `id` é o que está no banco (do catálogo). */
+export interface UnlockedAchievement {
+  id: string;
+  conquistadaEm: number;
+}
+
 /** Uma conquista como a pessoa a vê. Progresso é calculado; só a data da conquista é gravada. */
 export interface Achievement {
   id: AchievementId;

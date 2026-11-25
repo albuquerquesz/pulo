@@ -19,6 +19,7 @@ import type {
   TaskComment,
   TaskEvent,
   TaskSubtask,
+  UnlockedAchievement,
   Weekday,
   WeeklyProposal,
 } from '@pulo/core/domain/types';
@@ -26,6 +27,7 @@ import { z } from 'zod';
 import { dateKeyToDate, dateToDateKey, dateToMs, msToDate } from './dates';
 import type {
   Prisma,
+  Achievement as AchievementRow,
   FocusSession as FocusSessionRow,
   Goal as GoalRow,
   GoalChest as GoalChestRow,
@@ -281,6 +283,14 @@ export const goalChestMapper = {
   },
   fromDomain(userId: string, chest: GoalChest): Prisma.GoalChestUncheckedCreateInput {
     return { userId, goalId: chest.goalId, abertoEm: msToDate(chest.abertoEm), joias: chest.joias };
+  },
+};
+
+// ---------- Achievement ----------
+
+export const achievementMapper = {
+  toDomain(row: Omit<AchievementRow, 'userId'>): UnlockedAchievement {
+    return { id: row.achievement, conquistadaEm: dateToMs(row.conquistadaEm) };
   },
 };
 

@@ -3,7 +3,7 @@ import { partesDaCasa } from './casa';
 import { MINUTE_MS } from './clock';
 import { focusedMs } from './joias';
 import { computeStreak } from './streak';
-import type { Achievement, AchievementId, Clock, FocusSession, Purchase, Repository, Streak } from './types';
+import type { Achievement, AchievementId, Clock, FocusSession, Purchase, Repository, Streak, UnlockedAchievement } from './types';
 
 /** O que as regras olham: só contagens e sequências, nunca o banco. */
 export interface AchievementSummary {
@@ -46,12 +46,6 @@ export function summarizeForAchievements({ sequencia, sessions, descansos, casa 
     descansos,
     partesConstruidas: partesDaCasa(casa).filter((parte) => parte.construida).length,
   };
-}
-
-/** Uma conquista gravada. */
-export interface UnlockedAchievement {
-  id: string;
-  conquistadaEm: number;
 }
 
 /** As conquistas que a regra já dá, estejam gravadas ou não. */
