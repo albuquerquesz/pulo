@@ -240,6 +240,6 @@ describe('/api/sessions', () => {
     const finish = await queriesOf(database, small, 'PUT', `/api/sessions/${startId.small}`, finished(startId.small));
     expect(await queriesOf(database, big, 'PUT', `/api/sessions/${startId.big}`, finished(startId.big))).toBe(finish);
     // 2 de sessão + leitura + upsert + (sessões, descansos, sapo, upsert do sapo) + 5 leituras das conquistas.
-    expect(finish).toBe(13);
+    expect(finish).toBe(16);
   });
 });

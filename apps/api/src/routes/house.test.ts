@@ -166,8 +166,8 @@ describe('/api/house e /api/room', () => {
       expect(await queriesOf(database, big, method, path, body)).toBe(count);
       return count;
     };
-    // 2 de sessão + 7 leituras + o insert + 5 leituras das conquistas.
-    expect(await both('PUT', '/api/house/cerca', parte('cerca'))).toBe(16);
+    // 2 de sessão + 7 leituras + o insert + 8 leituras das conquistas + a gravação do primeiro acerto do gelo no dia.
+    expect(await both('PUT', '/api/house/cerca', parte('cerca'))).toBe(20);
     // 2 de sessão + 7 leituras + 2 inserts + a leitura da resposta.
     expect(await both('PUT', '/api/room/tapete', decor('tapete'))).toBe(13);
     expect(await both('GET', '/api/house')).toBe(4);

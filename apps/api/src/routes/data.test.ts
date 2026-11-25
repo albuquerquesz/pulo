@@ -26,7 +26,7 @@ async function populate(user: TestUser, extra = 0) {
   await user.call('PUT', `/api/sessions/${sessionId}`, {
     id: sessionId, blockId, startedAt: TEST_NOW - 30 * MIN, endedAt: TEST_NOW - 5 * MIN, plannedMinutes: 25, state: 'concluida', pausedMs: 0,
   });
-  await user.call('PUT', '/api/rest-days/2026-11-17');
+  await user.call('PUT', '/api/rest-days/2026-11-18');
   const proposalId = uuid();
   await user.call('PUT', `/api/proposals/${proposalId}`, {
     id: proposalId, weekStart: '2026-11-23', state: 'pendente', patternText: 'p', changes: [], origin: 'regra', createdAt: TEST_NOW - 1,
@@ -65,7 +65,7 @@ describe('DELETE /api/data', () => {
     const res = await me.call('DELETE', '/api/data');
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
-      deleted: { sessions: 1, blocks: 1, habits: 1, restDays: 1, proposals: 1, goals: 0, islandPurchases: 1, mascot: 1, tasks: 0, achievements: 0 },
+      deleted: { sessions: 1, blocks: 1, habits: 1, restDays: 1, proposals: 1, goals: 0, islandPurchases: 1, mascot: 1, tasks: 0, achievements: 0, freezeUses: 0 },
     });
     expect(await snapshot(me)).toEqual({ blocks: 0, habits: 0, habitLogs: 0, sessions: 0, restDays: 0, proposals: 0, islandPurchases: 0, mascot: null });
     expect(await database.db.habitLog.count({ where: { userId: me.id } })).toBe(0);
@@ -101,7 +101,7 @@ describe('DELETE /api/data', () => {
     await populate(big, 50);
     const one = await queriesOf(database, small, 'DELETE', '/api/data');
     expect(await queriesOf(database, big, 'DELETE', '/api/data')).toBe(one);
-    // 2 de sessão + 10 deletes numa transação.
-    expect(one).toBe(13);
+    // 2 de sessão + 12 deletes numa transação.
+    expect(one).toBe(14);
   });
 });

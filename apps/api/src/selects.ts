@@ -46,6 +46,8 @@ export const sessionSelect = {
 
 export const restDaySelect = { date: true } as const satisfies Prisma.RestDaySelect;
 
+export const freezeUseSelect = { date: true, vistoEm: true } as const satisfies Prisma.FreezeUseSelect;
+
 export const proposalSelect = {
   id: true,
   weekStart: true,

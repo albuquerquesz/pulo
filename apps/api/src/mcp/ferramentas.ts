@@ -294,7 +294,7 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     'ver_sequencia',
     {
       title: 'Ver a sequência',
-      description: 'Dias seguidos com hábito feito ou foco (descanso não quebra nem soma), o recorde e a semana, de domingo a sábado.',
+      description: 'Dias seguidos com hábito feito ou foco (descanso e gelo não quebram nem somam), o recorde e a semana, de domingo a sábado.',
       annotations: LEITURA,
     },
     () =>
@@ -302,6 +302,40 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
         await pessoa(repo);
         const { streak } = await lerJson(await api.api.streak.$get());
         return resposta(streak);
+      }),
+  );
+
+  server.registerTool(
+    'ver_gelo',
+    {
+      title: 'Ver o gelo',
+      description:
+        'O gelo protege a sequência num dia esquecido: quantos estão guardados, o máximo, os dias já protegidos e os que a pessoa ainda não viu. Comprar só no app.',
+      annotations: LEITURA,
+    },
+    () =>
+      protegido(async () => {
+        await pessoa(repo);
+        const { guardados, max, usados, recentes } = await lerJson(await api.api.gelo.$get());
+        return resposta({ guardados, max, usados, recentes });
+      }),
+  );
+
+  server.registerTool(
+    'ver_metricas',
+    {
+      title: 'Ver as métricas',
+      description:
+        'Os números do Perfil: descanso, gelo, ritmo dos últimos 30 dias (foco médio por dia, taxa de hábitos, melhor período e melhor dia da semana) e o que foi concluído.',
+      annotations: LEITURA,
+    },
+    () =>
+      protegido(async () => {
+        await pessoa(repo);
+        const { metrics } = await lerJson(await api.api.profile.metrics.$get());
+        const { melhorDiaDaSemana } = metrics.ritmo;
+        const melhorDia = melhorDiaDaSemana === null ? null : nomeDoDia(melhorDiaDaSemana);
+        return resposta({ ...metrics, ritmo: { ...metrics.ritmo, melhorDiaDaSemana: melhorDia } });
       }),
   );
 
@@ -622,7 +656,8 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     'dia_de_descanso',
     {
       title: 'Dia de descanso',
-      description: 'Marca (ou desfaz, com descanso = false) um dia de descanso. Padrão: hoje. Descanso também conta como cuidado.',
+      description:
+        'Marca (ou desfaz, com descanso = false) o descanso de hoje. Só vale para hoje, com limite por semana. Descanso também conta como cuidado.',
       inputSchema: { descanso: z.boolean().default(true), data: dataSchema.optional() },
       annotations: ESCRITA,
     },

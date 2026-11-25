@@ -7,6 +7,7 @@ import type { Habit, Weekday } from '@pulo/core/domain/types';
 import { Prisma, habitLogMapper, habitMapper, restDayMapper, toWeekday } from '@pulo/db';
 import { Hono } from 'hono';
 import { z } from 'zod';
+import { acertarGeloDaPessoa } from '../gelo';
 import { habitFromRow, habitResponse } from '../habits';
 import { ApiError, type AppEnv, type Client, type RouteDeps, jsonBody, pathParams, requireMatch, requireSession } from '../http';
 import { habitSelect, restDaySelect } from '../selects';
@@ -208,6 +209,8 @@ export function habitRoutes({ auth, db, now }: RouteDeps) {
       return c.json({ stats });
     })
     .delete('/:id', pathParams(idParamSchema), async (c) => {
+      // Acerta o gelo antes: apagar o hábito não pode fazer dias já cumpridos gastarem gelo.
+      await acertarGeloDaPessoa(db, c.var.user, now());
       // Os registros do hábito saem junto (cascade no banco).
       const { count } = await db.habit.deleteMany({ where: { id: c.req.valid('param').id, userId: c.var.user.id } });
       return c.json({ deleted: count });

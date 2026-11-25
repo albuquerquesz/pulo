@@ -37,15 +37,20 @@ async function comprar(db: Db, userId: string, purchase: Purchase, regra: Regra,
     await db.$transaction(
       async (tx) => {
         const fontes = await lerFontesDeJoias(tx, userId);
-        const casa = await tx.islandPurchase.findMany({ where: { userId, kind: 'casa' }, select: islandPurchaseSelect });
+        // As partes da casa e os gelos numa leitura só: os gelos também gastam joias.
+        const livro = await tx.islandPurchase.findMany({
+          where: { userId, kind: { in: ['casa', 'gelo'] } },
+          select: { ...islandPurchaseSelect, kind: true },
+        });
         const quarto = await tx.islandPurchase.findMany({ where: { userId, kind: 'decoracao' }, select: roomDecorSelect });
-        const compras = casa.map(islandPurchaseMapper.toDomain);
+        const compras = livro.filter((p) => p.kind === 'casa').map(islandPurchaseMapper.toDomain);
+        const gelos = livro.filter((p) => p.kind === 'gelo').map(islandPurchaseMapper.toDomain);
         const decor = quarto.map(roomPlacementMapper.toDomain);
 
         const repetida = [...compras, ...decor].find((p) => p.item === purchase.item);
         if (repetida && sameValue({ item: repetida.item, cost: repetida.cost, createdAt: repetida.createdAt }, purchase)) return;
 
-        const validada = regra(purchase.item, estadoDaCasa(fontes, compras, decor));
+        const validada = regra(purchase.item, estadoDaCasa(fontes, compras, decor, gelos));
         if (!validada.ok) {
           throw new ApiError(validada.error.code === 'item_inexistente' ? 404 : 409, validada.error.code, validada.error.message);
         }

@@ -98,10 +98,11 @@ describe('escritas que destravam', () => {
 
   it('quarto dia de descanso', async () => {
     const me = await h.newUser();
-    for (const date of ['2026-11-01', '2026-11-03', '2026-11-05']) {
-      expect((await (await me.call('PUT', `/api/rest-days/${date}`)).json()).newAchievements).toEqual([]);
-    }
-    const fourth = await (await me.call('PUT', '/api/rest-days/2026-11-07')).json();
+    // Os três de antes entram direto no banco: pela API só dá para marcar o de hoje.
+    await database.db.restDay.createMany({
+      data: ['2026-11-01', '2026-11-03', '2026-11-05'].map((date) => ({ userId: me.id, date: dayOf(date) })),
+    });
+    const fourth = await (await me.call('PUT', `/api/rest-days/${TODAY}`)).json();
     expect(ids(fourth.newAchievements)).toEqual(['descanso-sabido']);
   });
 
@@ -110,7 +111,8 @@ describe('escritas que destravam', () => {
     const habitId = await newHabit(me);
     await history(me, habitId, 15, 0);
     await history(me, habitId, 15, 16);
-    const res = await (await me.call('PUT', `/api/rest-days/${addDays(TODAY, -15)}`)).json();
+    await database.db.restDay.create({ data: { userId: me.id, date: dayOf(addDays(TODAY, -15)) } });
+    const res = await markDay(me, habitId, TODAY);
     expect(ids(res.newAchievements)).toEqual(['primeira-semana', 'mes-de-fogo']);
   });
 
@@ -128,7 +130,9 @@ describe('escritas que destravam', () => {
 
   it('duas escritas simultâneas comemoram uma vez só', async () => {
     const me = await h.newUser();
-    for (const date of ['2026-11-01', '2026-11-03', '2026-11-05']) await me.call('PUT', `/api/rest-days/${date}`);
+    await database.db.restDay.createMany({
+      data: ['2026-11-01', '2026-11-03', '2026-11-05'].map((date) => ({ userId: me.id, date: dayOf(date) })),
+    });
     const habitId = await newHabit(me);
     await database.db.restDay.create({ data: { userId: me.id, date: dayOf('2026-11-07') } });
     const results = await Promise.all([markDay(me, habitId, TODAY), markDay(me, habitId, addDays(TODAY, -1))]);
@@ -153,18 +157,20 @@ describe('escritas que destravam', () => {
     await history(big, bigHabit, 50);
     // Grava o que o histórico já dá, para os dois ficarem sem nada novo.
     await markDay(big, bigHabit, addDays(TODAY, -1));
+    // E acerta o gelo dos dois, que só grava na primeira vez do dia.
+    await markDay(small, smallHabit, addDays(TODAY, 0));
 
     const get = await queriesOf(database, small, 'GET', '/api/achievements');
     expect(await queriesOf(database, big, 'GET', '/api/achievements')).toBe(get);
-    expect(get).toBe(7);
+    expect(get).toBe(8);
 
     const put = await queriesOf(database, small, 'PUT', logPath(smallHabit, TODAY), logBody(smallHabit, TODAY));
     expect(await queriesOf(database, big, 'PUT', logPath(bigHabit, TODAY), logBody(bigHabit, TODAY))).toBe(put);
-    expect(put).toBe(9);
+    expect(put).toBe(12);
 
     const fresh = await h.newUser();
     const freshHabit = await newHabit(fresh);
     await history(fresh, freshHabit, 40);
-    expect(await queriesOf(database, fresh, 'PUT', logPath(freshHabit, TODAY), logBody(freshHabit, TODAY))).toBe(10);
+    expect(await queriesOf(database, fresh, 'PUT', logPath(freshHabit, TODAY), logBody(freshHabit, TODAY))).toBe(14);
   });
 });

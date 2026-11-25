@@ -144,8 +144,9 @@ describe('servidor MCP', () => {
     const token = await tokenDe(me);
 
     const lista = await (await rpc(token, 'tools/list')).json();
+    expect(JSON.stringify(lista)).not.toContain('comprar_gelo');
     const nomes = lista.result.tools.map((t: { name: string }) => t.name);
-    expect(nomes).toEqual(expect.arrayContaining(['ver_hoje', 'ver_sequencia', 'criar_habito', 'marcar_habito', 'comecar_foco', 'criar_meta', 'decidir_proposta', 'ver_ilha', 'comprar_na_ilha', 'mover_decoracao', 'ver_tarefas', 'criar_tarefa', 'mover_tarefa']));
+    expect(nomes).toEqual(expect.arrayContaining(['ver_hoje', 'ver_sequencia', 'criar_habito', 'marcar_habito', 'comecar_foco', 'criar_meta', 'decidir_proposta', 'ver_ilha', 'comprar_na_ilha', 'mover_decoracao', 'ver_tarefas', 'criar_tarefa', 'mover_tarefa', 'ver_gelo', 'ver_metricas']));
 
     // Conta nova: precisa criar o sapo primeiro, como no onboarding.
     expect((await ferramenta(token, 'ver_hoje')).erro).toBe(true);
@@ -176,6 +177,9 @@ describe('servidor MCP', () => {
     expect(hoje.dados.habitos).toEqual(expect.arrayContaining([{ id: habito.dados.id, titulo: 'Ler 10 páginas', feito: true }]));
     expect(hoje.dados.sapo.nome).toBe('Juca');
     expect((await ferramenta(token, 'ver_sequencia')).dados).toMatchObject({ atual: 1, recorde: 1 });
+    expect((await ferramenta(token, 'ver_gelo')).dados).toEqual({ guardados: 1, max: 2, usados: [], recentes: [] });
+    expect((await ferramenta(token, 'ver_metricas')).dados).toMatchObject({ gelo: { guardados: 1 }, descanso: { total: 0 } });
+    expect(await ferramenta(token, 'dia_de_descanso', { data: '2020-01-01' })).toMatchObject({ erro: true });
 
     // Spec 17: aparência, lembrete, pausa e arquivo.
     const id = habito.dados.id;

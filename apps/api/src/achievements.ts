@@ -2,20 +2,25 @@ import { earnedAchievement, passingAchievements } from '@pulo/core/domain/achiev
 import type { Achievement } from '@pulo/core/domain/types';
 import type { Db } from '@pulo/db';
 import type { SessionUser } from './http';
-import { achievementReads, achievementSummaryFromRows, streakFromRows, streakReads } from './queries';
+import { acertarGelos } from './gelo';
+import { achievementReads, achievementSummaryFromRows, freezeReads, streakFromRows, streakReads } from './queries';
 
 /**
  * Grava as conquistas que as regras passaram a dar e devolve só as gravadas agora (a comemoração acontece uma vez).
  * Chame DEPOIS da escrita confirmada: assim duas escritas simultâneas enxergam uma à outra, e se algo falhar aqui,
- * repetir o `PUT` (idempotente) tenta de novo. Cinco leituras fixas e, só quando há conquista nova, um `INSERT`.
+ * repetir o `PUT` (idempotente) tenta de novo. Antes das regras acerta o gelo dos dias fechados, que muda a sequência.
+ * Oito leituras fixas; só grava quando há gelo a acertar ou conquista nova.
  */
 export async function unlockAchievements(db: Db, person: SessionUser, now: number): Promise<Achievement[]> {
   const { id: userId, metadata } = person;
-  const [unlocked, casa, habitDays, sessions, restDays] = await db.$transaction([
+  const [unlocked, casa, habitDays, sessions, restDays, freezeUses, gelosComprados, resolvido] = await db.$transaction([
     ...achievementReads(db, userId),
     ...streakReads(db, userId),
+    ...freezeReads(db, userId),
   ]);
-  const rows = { habitDays, sessions, restDays, casa };
+  const lidas = { habitDays, sessions, restDays, freezeUses };
+  const acerto = await acertarGelos(db, person, now, { ...lidas, gelosComprados, resolvido });
+  const rows = { ...lidas, freezeUses: acerto.freezeUses, casa };
   const owned = new Set(unlocked.map((row) => row.achievement));
   const summary = achievementSummaryFromRows(streakFromRows(metadata, now, rows), rows);
   const fresh = passingAchievements(summary).filter((id) => !owned.has(id));
