@@ -27,7 +27,7 @@ export function islandRoutes({ auth, db, now }: RouteDeps) {
       assertNotInFuture(purchase.createdAt, now(), 'createdAt');
       const preco = precoDoItem(purchase.item);
       if (preco === null) throw new ApiError(404, 'item_inexistente', 'Esse item não existe na ilha.');
-      if (purchase.cost !== preco) throw new ApiError(400, 'preco_divergente', `Esse item custa ${preco} moscas.`);
+      if (purchase.cost !== preco) throw new ApiError(400, 'preco_divergente', `Esse item custa ${preco} joias.`);
       const userId = c.var.user.id;
 
       // Ler os registros e as compras e gravar na mesma transação serializável: duas compras simultâneas
