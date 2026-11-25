@@ -88,6 +88,10 @@ export const drawingColors = {
   limaForte: '#D3E36B',
   bege: '#EFEACB',
   begeBorda: '#D9D2A8',
+  /** Parte da casa já construída, na Ilha (spec 24). */
+  prontaFundo: '#E9F8D9',
+  prontaBorda: '#C6E6A6',
+  prontaTexto: '#3F8F23',
 } as const;
 
 /** Céu noturno da lagoa (spec 04). */
