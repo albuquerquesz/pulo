@@ -1,7 +1,9 @@
 // Roda a API de verdade (Hono + Better Auth + Prisma) no mesmo processo, sobre o Postgres de teste.
 // O `fetch` do cliente é o `app.fetch`: nenhuma rede, nenhum mock da API.
 import { createHarness, TEST_NOW, TEST_ORIGIN, type TestUser } from '@pulo/api/src/testing';
-import { MAX_HABITS_PER_DAY } from '@pulo/core/config/decisions';
+import { DEFAULT_TIMEZONE, MAX_HABITS_PER_DAY } from '@pulo/core/config/decisions';
+import { dateKeyOf } from '@pulo/core/domain/day';
+import { verSequencia } from '@pulo/core/domain/streak';
 import { comprarNaIlha } from '@pulo/core/domain/ilha';
 import { criarPlanoInicial } from '@pulo/core/domain/routine';
 import { defineRepositoryContract } from '@pulo/core/data/repository-contract';
@@ -78,7 +80,7 @@ defineRepositoryContract(
     await moscasForaDaJanela(me);
     return { repository: await open(me), userId: me.id };
   },
-  { mascotIsServerDerived: true },
+  { mascotIsServerDerived: true, now: TEST_NOW },
 );
 
 // ---------- Comportamento próprio do remoto ----------
@@ -146,6 +148,37 @@ describe('RemoteRepository: sync e cache', () => {
     const mascot = await repo.getMascotState();
     expect(mascot).toMatchObject({ phase: 1, updatedAt: TEST_NOW });
     expect(mascot?.careDays).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('RemoteRepository: sequência', () => {
+  it('vem no sync e só volta ao servidor depois de uma escrita que pode mudá-la', async () => {
+    const me = await h.newUser();
+    const { fetch, calls } = recordingFetch();
+    const repo = await open(me, fetch);
+    expect(await verSequencia(repo, clock)).toMatchObject({ atual: 0, recorde: 0 });
+    expect(calls).toEqual(['GET /api/sync']);
+
+    const x = habito();
+    await repo.saveHabit(x);
+    const gravando = repo.saveHabitLog({ habitId: x.id, date: dateKeyOf(TEST_NOW, DEFAULT_TIMEZONE), doneAt: TEST_NOW });
+    // Pedida com a escrita ainda no ar: espera ela terminar.
+    expect(await repo.getStreak()).toMatchObject({ atual: 1, recorde: 1 });
+    await gravando;
+    await repo.getStreak();
+    expect(calls.filter((c) => c === 'GET /api/streak')).toHaveLength(1);
+  });
+
+  it('sem rede depois de uma escrita, devolve a última conhecida', async () => {
+    const me = await h.newUser();
+    let caiu = false;
+    const repo = await open(me, (request) => {
+      if (caiu) throw new TypeError('Network request failed');
+      return h.app.fetch(request);
+    });
+    await repo.saveRestDay({ date: '2026-11-10' });
+    caiu = true;
+    expect(await repo.getStreak()).toMatchObject({ atual: 0, recorde: 0 });
   });
 });
 
