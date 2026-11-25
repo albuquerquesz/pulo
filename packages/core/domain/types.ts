@@ -172,6 +172,65 @@ export interface MascotState {
   updatedAt: number;
 }
 
+// ---------- Tarefas (spec 20) ----------
+
+export type TaskStatus = 'ideias' | 'afazer' | 'fazendo' | 'feito';
+export type TaskPriority = 'normal' | 'alta';
+
+/** Cartão do quadro. `completedAt` existe quando, e só quando, o status é `feito`. */
+export interface Task {
+  id: EntityId;
+  /** Sequência por pessoa, que gera o código `PULO-n`. Quem atribui é o repositório na primeira gravação; nunca muda nem é reusado. */
+  number?: number;
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  /** Ordem dentro da coluna (menor em cima). Fracionário, para reordenar sem reescrever a coluna. */
+  position: number;
+  priority: TaskPriority;
+  /** Prazo. "Esta semana" é o domingo da semana. */
+  dueDate?: DateKey;
+  tags: string[];
+  goalId?: EntityId;
+  pomodorosEstimated: number;
+  /** Fica o da primeira gravação. */
+  createdAt: number;
+  completedAt?: number;
+}
+
+export interface TaskSubtask {
+  id: EntityId;
+  taskId: EntityId;
+  title: string;
+  done: boolean;
+  position: number;
+}
+
+export interface TaskComment {
+  id: EntityId;
+  taskId: EntityId;
+  body: string;
+  createdAt: number;
+}
+
+export type TaskEventKind = 'criada' | 'status' | 'prioridade' | 'prazo';
+
+/** Registro de uma mudança, gravado pelo repositório. `de` e `para` são o valor antigo e o novo (ausente = sem valor). */
+export interface TaskEvent {
+  id: EntityId;
+  taskId: EntityId;
+  kind: TaskEventKind;
+  de?: string;
+  para?: string;
+  createdAt: number;
+}
+
+/** O histórico de uma tarefa, lido sob demanda (mais antigo primeiro). */
+export interface TaskActivity {
+  events: TaskEvent[];
+  comments: TaskComment[];
+}
+
 // ---------- Sequência ----------
 
 /** `hoje` é o dia de hoje ainda vazio; com algo feito ou descanso marcado, ele aparece como tal. */
@@ -271,6 +330,20 @@ export interface Repository {
   moveRoomDecor(item: string, spot: RoomSpot): Promise<void>;
   /** Joias de ganho histórico dadas na troca de regra (spec 18); 0 para quem começou depois. Só o servidor concede. */
   getJoiaCredit(): Promise<number>;
+
+  listTasks(): Promise<Task[]>;
+  /** Cria ou atualiza. O número e o `createdAt` da primeira gravação ficam; mudar status, prioridade ou prazo gera um evento. */
+  saveTask(task: Task): Promise<void>;
+  /** Apaga a tarefa com subtarefas, comentários e eventos. */
+  deleteTask(id: EntityId): Promise<void>;
+  listSubtasks(): Promise<TaskSubtask[]>;
+  /** A tarefa precisa existir. */
+  saveSubtask(subtask: TaskSubtask): Promise<void>;
+  deleteSubtask(taskId: EntityId, id: EntityId): Promise<void>;
+  /** A tarefa precisa existir. Repetir o mesmo comentário não duplica. */
+  addTaskComment(comment: TaskComment): Promise<void>;
+  /** Eventos e comentários de uma tarefa. Falha se a tarefa não existe. */
+  listTaskActivity(taskId: EntityId): Promise<TaskActivity>;
 
   getMascotState(): Promise<MascotState | null>;
   saveMascotState(state: MascotState): Promise<void>;

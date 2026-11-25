@@ -3,7 +3,7 @@
 import { dateKeyOf, addDays } from '../domain/day';
 import { verSequencia } from '../domain/streak';
 import { endedSession, sp } from '../domain/test-utils';
-import type { Repository, User } from '../domain/types';
+import type { Repository, Task, User } from '../domain/types';
 
 /** O que cada teste recebe: um repositório vazio e o id que o `User` desse repositório precisa ter. */
 export interface RepositoryUnderTest {
@@ -38,6 +38,18 @@ const runTag = Math.random().toString(36).slice(2, 8);
 let seq = 0;
 const uid = (prefix: string) => `${prefix}-${runTag}-${(seq += 1)}`;
 
+const task = (id: string, extra: Partial<Task> = {}): Task => ({
+  id,
+  title: 'Estudar',
+  status: 'afazer',
+  position: 1,
+  priority: 'normal',
+  tags: [],
+  pomodorosEstimated: 2,
+  createdAt: 1,
+  ...extra,
+});
+
 export function defineRepositoryContract(
   name: string,
   make: () => RepositoryUnderTest | Promise<RepositoryUnderTest>,
@@ -54,6 +66,8 @@ export function defineRepositoryContract(
       expect(await r.getUser()).toBeNull();
       expect(await r.listBlocks()).toEqual([]);
       expect(await r.listSessions()).toEqual([]);
+      expect(await r.listTasks()).toEqual([]);
+      expect(await r.listSubtasks()).toEqual([]);
       expect(await r.getMascotState()).toBeNull();
     });
 
@@ -134,6 +148,9 @@ export function defineRepositoryContract(
       expect((await r.listProposals())[0].state).toBe('aceita');
       await r.saveHousePurchase({ item: 'cerca', cost: 40, createdAt: 1 });
       await r.saveRoomDecor({ item: 'tapete', cost: 10, createdAt: 1, x: 0, y: 0, rotation: 0 });
+      const taskId = uid('t');
+      await r.saveTask(task(taskId));
+      await r.saveSubtask({ id: uid('s'), taskId, title: 'x', done: false, position: 1 });
       if (!options.mascotIsServerDerived) {
         await r.saveMascotState({ phase: 2, careDays: 4, updatedAt: 9 });
         expect(await r.getMascotState()).toEqual({ phase: 2, careDays: 4, updatedAt: 9 });
@@ -176,6 +193,62 @@ export function defineRepositoryContract(
       expect((await r.listGoals())[0].milestones[0].title).toBe('5 km');
       await r.deleteGoal(goal.id);
       expect(await r.listGoals()).toEqual([]);
+    });
+
+    it('tarefas: criar numera em sequência, mover grava um evento só e apagar leva tudo junto', async () => {
+      const { r } = await subject();
+      const first = uid('t');
+      const second = uid('t');
+      await r.saveTask(task(first));
+      await r.saveTask(task(second, { position: 2, tags: ['Faculdade'] }));
+      const created = await r.listTasks();
+      expect(created.map((t) => t.number).sort()).toEqual([1, 2]);
+
+      const moved = task(first, { status: 'fazendo', createdAt: 99 });
+      await r.saveTask(moved);
+      await r.saveTask(moved);
+      const saved = (await r.listTasks()).find((t) => t.id === first);
+      expect(saved).toEqual({ ...moved, number: 1, createdAt: 1 });
+      const activity = await r.listTaskActivity(first);
+      expect(activity.events.map((e) => [e.kind, e.de, e.para])).toEqual([
+        ['criada', undefined, 'afazer'],
+        ['status', 'afazer', 'fazendo'],
+      ]);
+
+      const sub = { id: uid('s'), taskId: first, title: 'passo', done: false, position: 1 };
+      await r.saveSubtask(sub);
+      await r.saveSubtask({ ...sub, done: true });
+      expect(await r.listSubtasks()).toEqual([{ ...sub, done: true }]);
+      const comment = { id: uid('c'), taskId: first, body: 'anotado', createdAt: 5 };
+      await r.addTaskComment(comment);
+      await r.addTaskComment(comment);
+      expect((await r.listTaskActivity(first)).comments).toEqual([comment]);
+      await r.deleteSubtask(first, sub.id);
+      expect(await r.listSubtasks()).toEqual([]);
+
+      await r.saveSubtask(sub);
+      await r.deleteTask(first);
+      expect((await r.listTasks()).map((t) => t.id)).toEqual([second]);
+      expect(await r.listSubtasks()).toEqual([]);
+      await expect(r.listTaskActivity(first)).rejects.toThrow();
+      // O número apagado não volta.
+      const third = uid('t');
+      await r.saveTask(task(third));
+      expect((await r.listTasks()).find((t) => t.id === third)?.number).toBe(3);
+    });
+
+    it('tarefas: subtarefa e comentário exigem a tarefa, e apagar a meta solta o vínculo', async () => {
+      const { r } = await subject();
+      await expect(r.saveSubtask({ id: uid('s'), taskId: uid('t'), title: 'x', done: false, position: 1 })).rejects.toThrow();
+      await expect(r.addTaskComment({ id: uid('c'), taskId: uid('t'), body: 'x', createdAt: 1 })).rejects.toThrow();
+      expect(await r.listSubtasks()).toEqual([]);
+      const goalId = uid('g');
+      await r.saveGoal({ id: goalId, title: 'm', state: 'ativa', milestones: [], createdAt: 1 });
+      const id = uid('t');
+      await r.saveTask(task(id, { goalId }));
+      expect((await r.listTasks())[0].goalId).toBe(goalId);
+      await r.deleteGoal(goalId);
+      expect((await r.listTasks())[0].goalId).toBeUndefined();
     });
 
     it('ilha: compras por item, sem duplicar', async () => {
@@ -230,6 +303,8 @@ export function defineRepositoryContract(
       expect(await r.listHabits()).toEqual([]);
       expect(await r.listHabitLogs()).toEqual([]);
       expect(await r.listSessions()).toEqual([]);
+      expect(await r.listTasks()).toEqual([]);
+      expect(await r.listSubtasks()).toEqual([]);
       expect(await r.listRestDays()).toEqual([]);
       expect(await r.listProposals()).toEqual([]);
       expect(await r.listGoals()).toEqual([]);
