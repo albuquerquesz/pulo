@@ -35,8 +35,13 @@ function naoAutorizado(config: McpConfig, erro?: 'invalid_token'): Response {
 
 /** A pessoa como a sessão a teria, lida de novo a cada chamada (o perfil muda no meio de uma ferramenta, como no onboarding). */
 export async function lerPessoa(db: Db, id: string): Promise<SessionUser | null> {
-  const row = await db.user.findUnique({ where: { id }, select: { id: true, name: true, email: true, image: true, metadata: true } });
-  return row && { id: row.id, name: row.name, email: row.email, image: row.image, metadata: readUserMetadata(row.metadata) };
+  const row = await db.user.findUnique({
+    where: { id },
+    select: { id: true, name: true, email: true, image: true, createdAt: true, metadata: true },
+  });
+  return (
+    row && { id: row.id, name: row.name, email: row.email, image: row.image, createdAt: row.createdAt.getTime(), metadata: readUserMetadata(row.metadata) }
+  );
 }
 
 /** Lê o `sub` de um access token do nosso servidor OAuth, com `aud` = o recurso `/mcp`. */
@@ -49,9 +54,11 @@ async function pessoaDoToken(deps: McpDeps, autorizacao: string | undefined): Pr
       // Chaves do próprio Better Auth, sem ir à rede (o Worker não busca o próprio endereço).
       jwksFetch: () => deps.auth.api.getJwks(),
     });
-    if (typeof payload.sub !== 'string') return 'token_invalido';
-    const existe = await deps.db.user.count({ where: { id: payload.sub } });
-    return existe === 1 ? payload.sub : 'token_invalido';
+    if (typeof payload.sub !== 'string' || typeof payload.azp !== 'string') return 'token_invalido';
+    // O consentimento é o que dá acesso: some quando a pessoa desconecta o aplicativo ou exclui a conta,
+    // e o token (JWT, ainda dentro do prazo) para de valer na hora.
+    const consentimentos = await deps.db.oauthConsent.count({ where: { userId: payload.sub, clientId: payload.azp } });
+    return consentimentos > 0 ? payload.sub : 'token_invalido';
   } catch {
     return 'token_invalido';
   }

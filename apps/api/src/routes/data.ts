@@ -1,4 +1,6 @@
+import { dateKeyOf } from '@pulo/core/domain/day';
 import { Hono } from 'hono';
+import { exportData } from '../export';
 import { type AppEnv, type RouteDeps, requireSession } from '../http';
 
 /**
@@ -6,8 +8,17 @@ import { type AppEnv, type RouteDeps, requireSession } from '../http';
  * (rotina, hábitos e registros, sessões, descansos, propostas, metas, tarefas (com subtarefas, comentários e histórico), compras com joias, crédito de joias e o sapo). A conta, o login e os
  * metadados (tema, fuso, onboarding) ficam. As posições do quarto saem com as compras (cascade). Onze deletes numa transação.
  */
-export function dataRoutes({ auth, db }: RouteDeps) {
-  return new Hono<AppEnv>().use(requireSession(auth)).delete('/', async (c) => {
+export function dataRoutes({ auth, db, now }: RouteDeps) {
+  return new Hono<AppEnv>()
+    .use(requireSession(auth))
+    .get('/export', async (c) => {
+      const exportedAt = now();
+      const file = await exportData(db, c.var.user, exportedAt);
+      c.header('Content-Disposition', `attachment; filename="pulo-dados-${dateKeyOf(exportedAt, c.var.user.metadata.timezone)}.json"`);
+      c.header('Cache-Control', 'no-store');
+      return c.json(file);
+    })
+    .delete('/', async (c) => {
     const where = { userId: c.var.user.id };
     const [sessions, blocks, habits, restDays, proposals, goals, islandPurchases, mascot, , tasks] = await db.$transaction([
       db.focusSession.deleteMany({ where }),

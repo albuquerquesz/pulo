@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { DEFAULT_DAY_END_HOUR, DEFAULT_DAY_START_HOUR, DEFAULT_TIMEZONE, FOCUS, ROOM_GRID, TASKS } from '@pulo/core/config/decisions';
 import { dateKeyOf, weekdayOf, weekStartOf } from '@pulo/core/domain/day';
+import { preferencesFromMetadata } from '@pulo/core/domain/user-metadata';
 import { concluirFoco, iniciarFoco, interromperFoco, pausarFoco, retomarFoco } from '@pulo/core/domain/foco';
 import {
   adicionarMarco,
@@ -272,11 +273,13 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
 
   server.registerTool(
     'ver_perfil',
-    { title: 'Ver o perfil', description: 'Nome do sapo, início e fim do dia, tema e fuso.', annotations: LEITURA },
+    { title: 'Ver o perfil', description: 'Nome do sapo, início e fim do dia, tema, fuso e preferências.', annotations: LEITURA },
     () =>
       protegido(async () => {
         const user = await pessoa(repo);
+        const { metadata } = await lerJson(await api.api.me.$get());
         return resposta({
+          preferencias: preferencesFromMetadata(metadata),
           nomeDoSapo: user.frogName,
           inicioDoDia: paraHora(user.dayStartMinutes),
           fimDoDia: paraHora(user.dayEndMinutes % (24 * 60)),
@@ -505,7 +508,7 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     'comecar_foco',
     {
       title: 'Começar um foco',
-      description: `Começa uma sessão de foco (Pomodoro), livre ou de um bloco. De ${FOCUS.minMinutes} a ${FOCUS.maxMinutes} minutos, padrão ${FOCUS.defaultMinutes}.`,
+      description: `Começa uma sessão de foco (Pomodoro), livre ou de um bloco. De ${FOCUS.minMinutes} a ${FOCUS.maxMinutes} minutos, padrão a duração escolhida no perfil.`,
       inputSchema: {
         minutos: z.number().int().min(FOCUS.minMinutes).max(FOCUS.maxMinutes).optional(),
         blocoId: idSchema.optional().describe('Bloco de foco da rotina, se for o foco de um bloco'),
@@ -515,7 +518,8 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     ({ minutos, blocoId }) =>
       protegido(async () => {
         const user = await pessoa(repo);
-        const r = await iniciarFoco(repo, clock, user.timezone, { ...(minutos ? { plannedMinutes: minutos } : {}), ...(blocoId ? { blockId: blocoId } : {}) });
+        const plannedMinutes = minutos ?? (await lerJson(await api.api.me.$get())).metadata.focusMinutes;
+        const r = await iniciarFoco(repo, clock, user.timezone, { plannedMinutes, ...(blocoId ? { blockId: blocoId } : {}) });
         return deCaso(r, () => r.ok && { sessao: r.value.session.id, minutos: r.value.session.plannedMinutes });
       }),
   );

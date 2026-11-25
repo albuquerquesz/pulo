@@ -62,7 +62,8 @@ export function proposalRoutes({ auth, db, now, ai, newId }: RouteDeps) {
         summary: summaryFromRows(weekStart, metadata.timezone, { sessions, restDays, habitLogs }),
         blocks: blockRows.map(routineBlockMapper.toDomain),
         proposals: proposalRows.map(weeklyProposalMapper.toDomain),
-        client: ai.client,
+        // IA desligada nas preferências: só a regra, o provedor não é chamado.
+        client: metadata.aiEnabled ? ai.client : null,
         now: serverNow,
         newId: () => newId(serverNow),
         timeoutMs: ai.timeoutMs,
