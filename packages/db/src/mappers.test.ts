@@ -63,25 +63,34 @@ describe('guardas', () => {
 describe('mapeadores', () => {
   it('RoutineBlock, com e sem título', () => {
     const block: RoutineBlock = { id: 'b1', weekday: 2, startMinutes: 540, durationMinutes: 25, kind: 'foco', title: 'Estudar' };
-    const row: RoutineBlockRow = { id: 'b1', userId: USER, weekday: 2, startMinutes: 540, durationMinutes: 25, kind: 'foco', title: 'Estudar' };
-    expect(routineBlockMapper.fromDomain(USER, block)).toStrictEqual(row);
+    const row: RoutineBlockRow = { id: 'b1', userId: USER, weekday: 2, startMinutes: 540, durationMinutes: 25, kind: 'foco', title: 'Estudar', icon: null };
+    const { icon, ...enviado } = row;
+    expect(icon).toBeNull();
+    expect(routineBlockMapper.fromDomain(USER, block)).toStrictEqual(enviado);
     expect(routineBlockMapper.toDomain(row)).toStrictEqual(block);
 
     const semTitulo: RoutineBlock = { id: 'b2', weekday: 0, startMinutes: 60, durationMinutes: 5, kind: 'descanso' };
     const rowSemTitulo: RoutineBlockRow = { ...row, id: 'b2', weekday: 0, startMinutes: 60, durationMinutes: 5, kind: 'descanso', title: null };
-    expect(routineBlockMapper.fromDomain(USER, semTitulo)).toStrictEqual(rowSemTitulo);
+    const { icon: _icon, ...semIcone } = rowSemTitulo;
+    expect(routineBlockMapper.fromDomain(USER, semTitulo)).toStrictEqual(semIcone);
+    expect(routineBlockMapper.toDomain({ ...rowSemTitulo, icon: '🌙' })).toStrictEqual({ ...semTitulo, icon: '🌙' });
     expect(routineBlockMapper.toDomain(rowSemTitulo)).toStrictEqual(semTitulo);
   });
 
   it('Habit', () => {
-    const habit: Habit = { id: 'h1', title: 'Alongar', weekdays: [0, 2, 4], active: true };
-    const row: HabitRow = { id: 'h1', userId: USER, title: 'Alongar', weekdays: [0, 2, 4], active: true, goalId: null };
-    const { goalId, ...semMeta } = row;
-    expect(goalId).toBeNull();
-    expect(habitMapper.fromDomain(USER, habit)).toStrictEqual(semMeta);
+    const habit: Habit = { id: 'h1', title: 'Alongar', weekdays: [0, 2, 4], state: 'ativo' };
+    const row: HabitRow = {
+      id: 'h1', userId: USER, title: 'Alongar', weekdays: [0, 2, 4], active: true, state: 'ativo', goalId: null,
+      icon: null, color: null, period: null, reminderMinutes: null, reminderOn: false, createdAt: null,
+    };
+    const enviado = { id: 'h1', userId: USER, title: 'Alongar', weekdays: [0, 2, 4], state: 'ativo' };
+    expect(habitMapper.fromDomain(USER, habit)).toStrictEqual(enviado);
     expect(habitMapper.toDomain(row)).toStrictEqual(habit);
     expect(habitMapper.toDomain({ ...row, goalId: 'g1' })).toStrictEqual({ ...habit, goalId: 'g1' });
-    expect(habitMapper.fromDomain(USER, { ...habit, goalId: null })).toStrictEqual(row);
+    expect(habitMapper.fromDomain(USER, { ...habit, goalId: null })).toStrictEqual({ ...enviado, goalId: null });
+    const completo: Habit = { ...habit, icon: '📚', color: 'sol', period: 'noite', reminderMinutes: 1200, reminderOn: true };
+    expect(habitMapper.toDomain({ ...row, icon: '📚', color: 'sol', period: 'noite', reminderMinutes: 1200, reminderOn: true })).toStrictEqual(completo);
+    expect(habitMapper.fromDomain(USER, completo)).toStrictEqual({ ...enviado, icon: '📚', color: 'sol', period: 'noite', reminderMinutes: 1200, reminderOn: true });
   });
 
   it('HabitLog', () => {
