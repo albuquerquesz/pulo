@@ -1,9 +1,8 @@
 import { Link } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 
-import type { AccentColor } from '@pulo/core/domain/types';
 import { CasaDaIlha } from '@/mascot/ilha/CasaDaIlha';
-import { Barra, Bau, Foguinho, Joia } from '@/ui';
+import { Barra, Bau, Foguinho, Joia, FUNDO_DA_COR } from '@/ui';
 
 import { fraseDaProximaParte, type DadosDoTrilho, type MetaDoTrilho } from './logic';
 
@@ -90,19 +89,10 @@ export function CartaoDaCasa({ dados }: { dados: DadosDoTrilho }) {
   );
 }
 
-const FUNDO_DA_META: Record<AccentColor, string> = {
-  sapo: 'bg-sapo/25',
-  agua: 'bg-agua/25',
-  foco: 'bg-foco/22',
-  descanso: 'bg-descanso/25',
-  sol: 'bg-sol/25',
-  atencao: 'bg-atencao/25',
-};
-
 function Meta({ meta }: { meta: MetaDoTrilho }) {
   return (
     <li className="grid grid-cols-[48px_minmax(0,1fr)] items-center gap-3.5">
-      <span aria-hidden="true" className={`grid size-12 place-items-center rounded-[14px] text-2xl shadow-[inset_0_-4px_0_rgba(0,0,0,0.1)] ${FUNDO_DA_META[meta.cor]}`}>
+      <span aria-hidden="true" className={`grid size-12 place-items-center rounded-[14px] text-2xl shadow-[inset_0_-4px_0_rgba(0,0,0,0.1)] ${FUNDO_DA_COR[meta.cor]}`}>
         {meta.icone}
       </span>
       <div>

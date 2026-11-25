@@ -2,23 +2,43 @@ import { DEFAULT_TIMEZONE, JOIAS, TASKS } from '@pulo/core/config/decisions';
 import { MINUTE_MS } from '@pulo/core/domain/clock';
 import { addDays, dateKeyOf, weekEndOf } from '@pulo/core/domain/day';
 import type { DemoClock } from '@pulo/core/demo';
-import type { FocusSession, Goal, GoalMilestone, Habit, Repository, RoutineBlock, Task, TaskStatus } from '@pulo/core/domain/types';
+import type { AccentColor, FocusSession, Goal, GoalMilestone, Habit, Period, Repository, RoutineBlock, Task, TaskStatus } from '@pulo/core/domain/types';
 
 /** O instante do rascunho: sábado, 21/11/2026, 14h38, dentro das quatro semanas de exemplo. */
 export const DIA_DO_DEMO = '2026-11-21';
 export const MINUTOS_DO_DEMO = 14 * 60 + 38;
 
 const TODOS_OS_DIAS: Habit['weekdays'] = [0, 1, 2, 3, 4, 5, 6];
+
+function habito(
+  id: string,
+  title: string,
+  weekdays: Habit['weekdays'],
+  icon: string,
+  color: AccentColor,
+  period: Period,
+  reminderMinutes?: number,
+): Habit {
+  const lembrete = reminderMinutes === undefined ? {} : { reminderMinutes, reminderOn: true };
+  return { id, title, weekdays, state: 'ativo', icon, color, period, ...lembrete };
+}
 const SABADO: RoutineBlock['weekday'] = 5;
 const DIA_MS = 24 * 60 * MINUTE_MS;
 
+/** Ícone, cor, período e lembrete da página de Hábitos do rascunho. A meta é atrelada depois que as metas existem. */
 const HABITOS: Habit[] = [
-  { id: 'demo-habito-alongar', title: 'Alongar', weekdays: TODOS_OS_DIAS, state: 'ativo', period: 'manha' },
-  { id: 'demo-habito-ler', title: 'Ler 10 páginas', weekdays: TODOS_OS_DIAS, state: 'ativo', period: 'noite' },
-  { id: 'demo-habito-caminhar', title: 'Caminhar', weekdays: [0, 2, 4, 5], state: 'ativo' },
-  // Não cai no sábado: aparece só como o hábito atrelado ao próximo foco.
-  { id: 'demo-habito-ingles', title: 'Estudar inglês', icon: '🎓', weekdays: [0, 2], state: 'ativo' },
+  habito('demo-habito-agua', 'Beber água', TODOS_OS_DIAS, '💧', 'agua', 'manha', 7 * 60 + 30),
+  habito('demo-habito-alongar', 'Alongar', TODOS_OS_DIAS, '🧘', 'sapo', 'manha', 7 * 60 + 45),
+  habito('demo-habito-ler', 'Ler 10 páginas', TODOS_OS_DIAS, '📖', 'descanso', 'noite', 21 * 60),
+  habito('demo-habito-caminhar', 'Caminhar', [0, 2, 4, 5], '🚶', 'foco', 'manha'),
+  // Não cai no sábado: no Hoje aparece só como o hábito atrelado ao próximo foco.
+  habito('demo-habito-ingles', 'Estudar inglês', [0, 1, 2, 3, 4], '🎓', 'agua', 'tarde', 14 * 60 + 30),
 ];
+const META_DO_HABITO: Record<string, string> = {
+  'demo-habito-caminhar': 'demo-meta-corrida',
+  'demo-habito-ingles': 'demo-meta-ingles',
+  'demo-habito-ler': 'demo-meta-livros',
+};
 const FEITOS_HOJE = ['demo-habito-agua', 'demo-habito-alongar'];
 
 function bloco(id: string, hora: number, minuto: number, durationMinutes: number, title: string, icon: string): RoutineBlock {
@@ -225,5 +245,9 @@ export async function completarDemo(repo: Repository, clock: DemoClock): Promise
     },
   ];
   for (const meta of metas) await repo.saveGoal(meta);
+  for (const h of HABITOS) {
+    const goalId = META_DO_HABITO[h.id];
+    if (goalId) await repo.saveHabit({ ...h, goalId });
+  }
   await repo.saveGoalChest({ goalId: 'demo-meta-corrida', abertoEm: feitoEm, joias: JOIAS.por.goalCompleted });
 }
