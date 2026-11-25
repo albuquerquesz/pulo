@@ -1,6 +1,6 @@
 # Spec 29: Gelo, regras do descanso e métricas do Perfil
 
-Status: a fazer. Origem: conversa com o Victor de 25/11/2026 ("o gelinho e o dia de descanso coexistem; mostrar dados do descanso e mais métricas no Perfil"). Backend. Depende das specs 13, 14, 15 e 18. A tela fica na spec 30.
+Status: feito. Origem: conversa com o Victor de 25/11/2026 ("o gelinho e o dia de descanso coexistem; mostrar dados do descanso e mais métricas no Perfil"). Backend. Depende das specs 13, 14, 15 e 18. A tela fica na spec 30.
 
 ## Problem Statement
 
