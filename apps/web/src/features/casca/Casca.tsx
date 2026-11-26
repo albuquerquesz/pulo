@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 
+import { SapoRosto } from '@/mascot';
 import { useConsultaDeMidia } from '@/theme';
 import { Botao, Modal } from '@/ui';
 
@@ -10,7 +11,6 @@ import { CartaoDoGelo } from './CartaoDoGelo';
 import { Conta } from './Conta';
 import { abaAtiva, carregarTrilho, contaNaTela, telaDeImersao } from './logic';
 import { Navegacao } from './Navegacao';
-import { RostoDoSapo } from './RostoDoSapo';
 import { CartaoDaCasa, CartaoDasMetas, NumerosDoDia } from './Trilho';
 
 /** A partir daqui cabem as três colunas do rascunho (barra 312, conteúdo e trilho 460). */
@@ -19,7 +19,9 @@ export const CONSULTA_DO_TRILHO = '(min-width: 80rem)';
 function Marca() {
   return (
     <div className="flex items-center gap-2.5 px-2 text-[22px] font-extrabold">
-      <RostoDoSapo className="size-[34px]" />
+      <span aria-hidden="true" className="contents">
+        <SapoRosto className="w-10" />
+      </span>
       Pulo
     </div>
   );

@@ -1,5 +1,8 @@
 import { useId } from 'react';
 
+import { rotuloDoSapo } from '../machine';
+import { HUMOR_DO_MOMENTO, type Momento } from '../momentos';
+
 /** Um olho: branco, pupila com brilho e a pálpebra que desce por dentro dele para piscar. */
 function Olho({ cx, pupila, recorte }: { cx: number; pupila: number; recorte: string }) {
   return (
@@ -19,14 +22,20 @@ function Olho({ cx, pupila, recorte }: { cx: number; pupila: number; recorte: st
   );
 }
 
-/** Só o rosto do sapo, espiando por cima do cartão da entrada: respira, olha para os lados e pisca (a cena parado do mascote). */
-export function SapoEspiando({ className = '' }: { className?: string }) {
+type SapoRostoProps = {
+  /** O momento do app: dá o nome do humor ao leitor de tela. */
+  momento?: Momento;
+  className?: string;
+};
+
+/** O rosto do sapo, o mascote do Pulo: respira, olha para os lados e pisca (a cena parado do mascote). */
+export function SapoRosto({ momento, className = '' }: SapoRostoProps) {
   // O id do React traz sinais que não valem dentro de url(#...).
   const id = `sapo${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const esquerdo = `${id}-olho-e`;
   const direito = `${id}-olho-d`;
   return (
-    <svg viewBox="0 28 300 180" role="img" aria-label="Sapo, espiando" className={`sapo-espiando overflow-visible ${className}`}>
+    <svg viewBox="0 28 300 180" role="img" aria-label={momento ? rotuloDoSapo(HUMOR_DO_MOMENTO[momento]) : 'Sapo'} className={`sapo-rosto overflow-visible ${className}`}>
       <defs>
         <clipPath id={esquerdo}>
           <ellipse cx="98" cy="88" rx="27" ry="44" />

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { marcarGeloVisto } from '@pulo/core/domain/gelo';
 import type { DateKey } from '@pulo/core/domain/types';
 
-import { Sapo } from '@/mascot/sapo/Sapo';
+import { SapoRosto } from '@/mascot/sapo/SapoRosto';
 
 import { useApp } from '../app';
 import { DURACAO_DO_AVISO_DO_GELO_MS, textoDoAvisoDoGelo } from './gelo';
@@ -41,7 +41,7 @@ export function AvisoDoGelo({ dias, hoje }: AvisoDoGeloProps) {
         onClick={dispensar}
         className="pointer-events-auto flex max-w-md cursor-pointer items-center gap-3 rounded-[22px] border-4 border-contorno bg-surface px-4 py-3 text-left font-extrabold text-ink shadow-[inset_0_-5px_0_var(--pulo-agua)]"
       >
-        <Sapo fase={4} momento="gelo-gasto" tamanho={72} semSombra className="shrink-0" />
+        <SapoRosto momento="gelo-gasto" className="w-[72px] shrink-0" />
         <span>{textoDoAvisoDoGelo(dias, hoje)}</span>
       </button>
     </div>

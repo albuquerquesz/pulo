@@ -1,7 +1,7 @@
 import type { FrogEvent } from '@pulo/core/domain/types';
 
 import type { Momento } from '@/mascot/momentos';
-import { Sapo } from '@/mascot/sapo/Sapo';
+import { SapoRosto } from '@/mascot/sapo/SapoRosto';
 import { useTheme } from '@/theme';
 
 import { useApp } from '../app';
@@ -21,7 +21,7 @@ export function ReacaoDoSapo() {
   return (
     <div className="pointer-events-none fixed right-2 bottom-44 z-30 md:right-8 md:bottom-28">
       <div key={momento} className={movimento.saltos ? 'sapo-chegando' : undefined}>
-        <Sapo fase={4} momento={momento} tamanho={160} />
+        <SapoRosto momento={momento} className="w-[160px]" />
       </div>
     </div>
   );

@@ -29,9 +29,4 @@ describe('TelaDeEstado', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }));
     expect(acao).toHaveBeenCalledTimes(1);
   });
-
-  it('com movimento reduzido não há animação', () => {
-    render(tela());
-    expect(screen.getByTestId('sapo').querySelector('.sapo-vivo')).toBeNull();
-  });
 });

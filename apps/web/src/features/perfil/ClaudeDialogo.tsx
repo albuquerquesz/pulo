@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { Sapo } from '@/mascot/sapo/Sapo';
+import { SapoRosto } from '@/mascot/sapo/SapoRosto';
 
 import { ambienteDoApp, apiUrl } from '../sessao/config';
 import { BOTAO_DO_DIALOGO, Dialogo } from './Dialogo';
@@ -33,7 +33,7 @@ function MarcaDoClaude() {
 function SapoComClaude() {
   return (
     <div role="img" aria-label="O sapo do Pulo e o Claude" className="flex items-center gap-3">
-      <Sapo fase={1} momento="conectando-conta" tamanho={88} />
+      <SapoRosto momento="conectando-conta" className="w-[88px]" />
       <span aria-hidden="true" className="flex items-center gap-1.5">
         <i className="size-2 rounded-full bg-contorno/40" />
         <i className="size-2 rounded-full bg-contorno/60" />
