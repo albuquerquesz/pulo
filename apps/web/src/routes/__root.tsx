@@ -81,7 +81,7 @@ function Conteudo() {
       ) : null}
       <Outlet />
       {aviso ? (
-        <div className="pointer-events-none fixed inset-x-4 bottom-26 z-20 mx-auto max-w-xl md:bottom-6">
+        <div className="pointer-events-none fixed inset-x-4 bottom-26 z-40 mx-auto max-w-xl md:bottom-6">
           <div className="pointer-events-auto">
             <Toast
               key={aviso.id}
