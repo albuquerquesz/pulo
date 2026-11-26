@@ -239,11 +239,19 @@ export function planoInicial(now: number): { blocks: RoutineBlock[]; habits: Hab
 }
 
 /**
- * Grava o plano de exemplo. Com repositório em lote (o remoto) são só 2 chamadas em paralelo, blocos e hábitos, cada uma
- * atômica no servidor; senão, os blocos vão em paralelo e os hábitos um a um (o limite por dia é conferido a cada gravação).
+ * Grava o plano de exemplo sem duplicar: não grava blocos se a pessoa já tiver algum, nem hábito com o título de um que
+ * já existe. Devolve só o que gravou. Com repositório em lote (o remoto) são até 2 chamadas em paralelo, blocos e hábitos,
+ * cada uma atômica no servidor; senão, os blocos vão em paralelo e os hábitos um a um (o limite por dia é conferido a
+ * cada gravação).
  */
 export async function criarPlanoInicial(repo: Repository, now: number): Promise<{ blocks: RoutineBlock[]; habits: Habit[] }> {
-  const plan = planoInicial(now);
+  const sample = planoInicial(now);
+  const [existingBlocks, existingHabits] = await Promise.all([repo.listBlocks(), repo.listHabits()]);
+  const existingTitles = new Set(existingHabits.map((h) => h.title));
+  const plan = {
+    blocks: existingBlocks.length > 0 ? [] : sample.blocks,
+    habits: sample.habits.filter((h) => !existingTitles.has(h.title)),
+  };
   if (supportsBatch(repo)) {
     await Promise.all([repo.saveBlocks(plan.blocks), repo.saveHabits(plan.habits)]);
     return plan;
