@@ -142,6 +142,7 @@ export function roomRoutes({ auth, db, now }: RouteDeps) {
         await tx.islandPurchase.create({ data: { ...islandPurchaseMapper.fromDomain(userId, purchase), kind: 'decoracao' }, select: { item: true } });
         await tx.roomPlacement.create({ data: { userId, item, x, y, rotation, comodo: comodoDe(decor) }, select: { item: true } });
       });
+      const newAchievements = await unlockAchievements(db, c.var.user, now());
       // Numa repetição, a posição que vale é a gravada (o item pode ter mudado de lugar depois da compra).
       const row = await db.islandPurchase.findUniqueOrThrow({
         where: { userId_item: { userId, item } },
@@ -150,11 +151,11 @@ export function roomRoutes({ auth, db, now }: RouteDeps) {
       });
       const gravada = roomPlacementMapper.toDomain(row);
       // Repetir a compra com outro cômodo muda o item de cômodo, sem pagar de novo.
-      if (comodo === undefined || comodo === gravada.comodo) return c.json({ decor: gravada });
+      if (comodo === undefined || comodo === gravada.comodo) return c.json({ decor: gravada, newAchievements });
       await conferirComodo(db, userId, comodo);
       const spot = { x, y, rotation, comodo };
       await db.roomPlacement.update({ where: { userId_item: { userId, item } }, data: spot, select: { item: true } });
-      return c.json({ decor: { ...gravada, ...spot } });
+      return c.json({ decor: { ...gravada, ...spot }, newAchievements });
     })
     .patch('/:item', pathParams(islandItemParamSchema), jsonBody(roomSpotSchema), async (c) => {
       const { item } = c.req.valid('param');

@@ -1,6 +1,5 @@
-import { HOUSE } from '@pulo/core/config/decisions';
 // Conquistas (spec 14): destravadas pelas escritas, mostradas no sync e em GET /api/achievements.
-import { ACHIEVEMENTS } from '@pulo/core/config/decisions';
+import { ACHIEVEMENTS, HOUSE, ROOM_DECOR } from '@pulo/core/config/decisions';
 import { addDays } from '@pulo/core/domain/day';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
 import { type TestUser, TEST_NOW, createHarness, queriesOf } from '../testing';
@@ -84,7 +83,7 @@ describe('escritas que destravam', () => {
     expect((await putSession(me, session(49, 'interrompida'))).newAchievements).toEqual([]);
     expect(await find(me, 'foco-profundo')).toMatchObject({ conquistada: false, progresso: 49, meta: 50 });
     const full = session(50);
-    expect(ids((await putSession(me, full)).newAchievements)).toEqual(['foco-profundo']);
+    expect(ids((await putSession(me, full)).newAchievements)).toEqual(['foco-profundo', 'primeiro-foco']);
     expect((await putSession(me, full)).newAchievements).toEqual([]);
   });
 
@@ -95,6 +94,41 @@ describe('escritas que destravam', () => {
     expect(await (await me.call('PUT', `/api/sessions/${running.id}`, running)).json()).toMatchObject({ newAchievements: [] });
     // Já passa, mas ainda não está gravada.
     expect(await find(me, 'primeira-semana')).toMatchObject({ conquistada: false, progresso: 7 });
+  });
+
+  it('tarefa feita, meta concluída, baú e decoração destravam as delas', async () => {
+    const me = await h.newUser();
+    await database.db.task.createMany({
+      data: Array.from({ length: 9 }, (_, i) => ({
+        id: uuid(), userId: me.id, title: 'Feita', status: 'feito' as const, position: i, createdAt: new Date(TEST_NOW - MIN), completedAt: new Date(TEST_NOW - MIN), priority: 'normal' as const, pomodorosEstimated: 1,
+      })),
+    });
+    const task = { id: uuid(), title: 'Ler', status: 'afazer', position: 10, priority: 'normal', tags: [], pomodorosEstimated: 1, createdAt: TEST_NOW - MIN };
+    const aberta = await (await me.call('PUT', `/api/tasks/${task.id}`, task)).json();
+    expect(aberta.newAchievements).toEqual([]);
+    const feita = await (await me.call('PUT', `/api/tasks/${task.id}`, { ...task, status: 'feito', completedAt: TEST_NOW - MIN })).json();
+    expect(ids(feita.newAchievements)).toEqual(['dez-tarefas']);
+
+    const marcos = Array.from({ length: 10 }, () => ({ id: uuid(), title: 'Passo', doneAt: TEST_NOW - MIN }));
+    const goal = { id: uuid(), title: 'Correr', state: 'concluida', milestones: marcos, createdAt: TEST_NOW - MIN, completedAt: TEST_NOW - MIN };
+    const concluida = await (await me.call('PUT', `/api/goals/${goal.id}`, goal)).json();
+    expect(ids(concluida.newAchievements)).toEqual(['primeira-meta', 'dez-marcos']);
+
+    await database.db.joiaCredit.create({ data: { userId: me.id, amount: 1000 } });
+    const bau = await (await me.call('POST', `/api/goals/${goal.id}/chest`)).json();
+    expect(ids(bau.newAchievements)).toEqual(['quinhentas-joias']);
+
+    const itens = Object.entries(ROOM_DECOR.itemCost).slice(0, 5);
+    const unlocked: string[][] = [];
+    for (const [x, [item, cost]] of itens.entries()) {
+      const body = { item, cost, createdAt: TEST_NOW - MIN, x, y: 0, rotation: 0 };
+      const res = await (await me.call('PUT', `/api/room/${item}`, body)).json();
+      unlocked.push(ids(res.newAchievements));
+    }
+    expect(unlocked).toEqual([[], [], [], [], ['quarto-decorado']]);
+
+    const sync = await (await me.call('GET', '/api/sync?from=2026-11-01&to=2026-11-30')).json();
+    expect(sync.achievements).toEqual(await list(me));
   });
 
   it('quarto dia de descanso', async () => {
@@ -114,7 +148,7 @@ describe('escritas que destravam', () => {
     await history(me, habitId, 15, 16);
     await database.db.restDay.create({ data: { userId: me.id, date: dayOf(addDays(TODAY, -15)) } });
     const res = await markDay(me, habitId, TODAY);
-    expect(ids(res.newAchievements)).toEqual(['primeira-semana', 'mes-de-fogo']);
+    expect(ids(res.newAchievements)).toEqual(['primeira-semana', 'mes-de-fogo', 'habito-firme']);
   });
 
   it('a última parte da casa destrava casa inteira', async () => {
@@ -135,6 +169,8 @@ describe('escritas que destravam', () => {
       if (res.newAchievements.length > 0) unlocked[item] = ids(res.newAchievements);
     }
     expect(unlocked).toEqual({
+      // O crédito de joias do teste já passa de 500: sai na primeira compra.
+      cozinha: ['quinhentas-joias'],
       'segundo-andar': ['dois-andares'],
       escritorio: ['cinco-comodos'],
       piscina: ['casa-inteira'],
@@ -155,9 +191,9 @@ describe('escritas que destravam', () => {
   it('cada pessoa só vê as dela, e apagar os dados leva as conquistas', async () => {
     const me = await h.newUser();
     const other = await h.newUser();
-    expect(ids((await putSession(me, session(50))).newAchievements)).toEqual(['foco-profundo']);
+    expect(ids((await putSession(me, session(50))).newAchievements)).toEqual(['foco-profundo', 'primeiro-foco']);
     expect(await find(other, 'foco-profundo')).toMatchObject({ conquistada: false, progresso: 0 });
-    expect((await (await me.call('DELETE', '/api/data')).json()).deleted).toMatchObject({ achievements: 1 });
+    expect((await (await me.call('DELETE', '/api/data')).json()).deleted).toMatchObject({ achievements: 2 });
     expect(await find(me, 'foco-profundo')).toMatchObject({ conquistada: false, progresso: 0 });
   });
 
@@ -175,15 +211,15 @@ describe('escritas que destravam', () => {
 
     const get = await queriesOf(database, small, 'GET', '/api/achievements');
     expect(await queriesOf(database, big, 'GET', '/api/achievements')).toBe(get);
-    expect(get).toBe(8);
+    expect(get).toBe(14);
 
     const put = await queriesOf(database, small, 'PUT', logPath(smallHabit, TODAY), logBody(smallHabit, TODAY));
     expect(await queriesOf(database, big, 'PUT', logPath(bigHabit, TODAY), logBody(bigHabit, TODAY))).toBe(put);
-    expect(put).toBe(12);
+    expect(put).toBe(18);
 
     const fresh = await h.newUser();
     const freshHabit = await newHabit(fresh);
     await history(fresh, freshHabit, 40);
-    expect(await queriesOf(database, fresh, 'PUT', logPath(freshHabit, TODAY), logBody(freshHabit, TODAY))).toBe(14);
+    expect(await queriesOf(database, fresh, 'PUT', logPath(freshHabit, TODAY), logBody(freshHabit, TODAY))).toBe(20);
   });
 });

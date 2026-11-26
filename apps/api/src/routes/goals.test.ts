@@ -37,7 +37,7 @@ describe('/api/goals', () => {
     const id = uuid();
     const res = await me.call('PUT', `/api/goals/${id}`, goal(id));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ goal: goal(id) });
+    expect(await res.json()).toEqual({ goal: goal(id), newAchievements: [] });
 
     const done = goal(id, { state: 'concluida', completedAt: 9, why: undefined, targetDate: undefined });
     await me.call('PUT', `/api/goals/${id}`, done);
@@ -107,9 +107,12 @@ describe('/api/goals', () => {
     expect(get).toBe(4);
 
     const bigId = uuid();
+    // Grava o que o histórico já destrava, para a contagem abaixo não incluir o INSERT de uma conquista.
+    await big.call('PUT', `/api/goals/${bigId}`, goal(bigId));
     const put = await queriesOf(database, small, 'PUT', `/api/goals/${id}`, goal(id));
     expect(await queriesOf(database, big, 'PUT', `/api/goals/${bigId}`, goal(bigId))).toBe(put);
-    expect(put).toBe(4);
+    // 4 da escrita + 14 leituras das conquistas (a meta do teste tem marco riscado).
+    expect(put).toBe(18);
     expect(await queriesOf(database, small, 'DELETE', `/api/goals/${id}`)).toBe(3);
   });
 });
