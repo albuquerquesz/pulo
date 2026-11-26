@@ -2,6 +2,7 @@ import type {
   DateKey,
   DateRange,
   FocusSession,
+  FreezeUse,
   Goal,
   GoalChest,
   IslandPurchase,
@@ -25,6 +26,7 @@ import { systemClock } from '../domain/clock';
 import { newId } from '../domain/ids';
 import { taskChanges } from '../domain/tasks';
 import type { LinkKey } from '../domain/foco/targets';
+import type { FreezeStore } from '../domain/gelo-store';
 
 /** Formato persistido. Versionado para migrações futuras. */
 export interface Database {
@@ -42,6 +44,10 @@ export interface Database {
   housePurchases: Purchase[];
   roomDecor: RoomDecor[];
   joiaCredit: number;
+  freezePurchases: Purchase[];
+  freezeUses: FreezeUse[];
+  /** Último dia lógico já resolvido pelo gelo. */
+  freezeResolvedUntil: DateKey | null;
   tasks: Task[];
   subtasks: TaskSubtask[];
   taskComments: TaskComment[];
@@ -65,6 +71,9 @@ export function emptyDatabase(): Database {
     housePurchases: [],
     roomDecor: [],
     joiaCredit: 0,
+    freezePurchases: [],
+    freezeUses: [],
+    freezeResolvedUntil: null,
     tasks: [],
     subtasks: [],
     taskComments: [],
@@ -106,7 +115,7 @@ function requireTask(db: Database, taskId: string): void {
 
 /** Implementação única do contrato Repository sobre qualquer DatabaseStore. Escritas são serializadas. */
 /** `clock` marca os eventos do histórico das tarefas. */
-export function createRepository(store: DatabaseStore, clock: Clock = systemClock): Repository {
+export function createRepository(store: DatabaseStore, clock: Clock = systemClock): Repository & FreezeStore {
   let queue: Promise<unknown> = Promise.resolve();
 
   function write<T>(fn: (db: Database) => T): Promise<T> {
@@ -244,6 +253,16 @@ export function createRepository(store: DatabaseStore, clock: Clock = systemCloc
     moveRoomDecor: (item, spot) =>
       write((db) => void (db.roomDecor = db.roomDecor.map((d) => (d.item === item ? { ...d, ...spot } : d)))),
     getJoiaCredit: () => read((db) => db.joiaCredit),
+
+    listFreezePurchases: () => read((db) => db.freezePurchases),
+    saveFreezePurchase: (purchase) => write((db) => upsert(db.freezePurchases, clone(purchase), (p) => p.item === purchase.item)),
+    listFreezeUses: () => read((db) => db.freezeUses),
+    saveFreezeUses: (uses) =>
+      write((db) => {
+        for (const use of uses) upsert(db.freezeUses, clone(use), (u) => u.date === use.date);
+      }),
+    getFreezeResolvedUntil: () => read((db) => db.freezeResolvedUntil),
+    saveFreezeResolvedUntil: (date) => write((db) => void (db.freezeResolvedUntil = date)),
 
     getMascotState: () => read((db) => db.mascot),
     saveMascotState: (state) => write((db) => void (db.mascot = clone(state))),

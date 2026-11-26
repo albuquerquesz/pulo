@@ -1,5 +1,6 @@
-import type { FrogMood, Phase } from '@pulo/core/domain/types';
+import type { Phase } from '@pulo/core/domain/types';
 
+import type { Momento } from '@/mascot/momentos';
 import { Sapo } from '@/mascot/sapo/Sapo';
 
 import { Botao } from './Botao';
@@ -12,16 +13,16 @@ export type EstadoVazioProps = {
   acao?: string;
   onAcao?: () => void;
   fase?: Phase;
-  estadoDoSapo?: FrogMood;
+  momento?: Momento;
   className?: string;
   testID?: string;
 };
 
-/** Tela vazia com o sapo, uma frase e um botão. */
-export function EstadoVazio({ titulo, texto, acao, onAcao, fase = 1, estadoDoSapo = 'parado', className = '', testID }: EstadoVazioProps) {
+/** Vazio de dentro de uma tela, com o sapo, uma frase e um botão. */
+export function EstadoVazio({ titulo, texto, acao, onAcao, fase = 1, momento = 'lista-vazia', className = '', testID }: EstadoVazioProps) {
   return (
     <div className={`flex flex-col items-center gap-3 p-6 text-center ${className}`} data-testid={testID}>
-      <Sapo fase={fase} estado={estadoDoSapo} tamanho={160} />
+      <Sapo fase={fase} momento={momento} tamanho={160} />
       <Texto como="h2" variante="titulo">
         {titulo}
       </Texto>

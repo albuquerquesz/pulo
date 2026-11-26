@@ -1,237 +1,112 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 
-import { JOIAS } from '@pulo/core/config/decisions';
-import { AREAS, comprarNaIlha, verIlha, type AreaId, type AreaNoMapa, type EstadoDaIlha } from '@pulo/core/domain/ilha';
-import type { Phase } from '@pulo/core/domain/types';
-import { MapaDaIlha } from '@/mascot/ilha/MapaDaIlha';
-import { Botao, Cartao, EstadoVazio, Texto } from '@/ui';
+import { isRemoteError, mensagemDeErro } from '@pulo/client';
+import { verConquistas } from '@pulo/core/domain/achievements';
+import { comprarParte, type ParteId } from '@pulo/core/domain/casa';
+import { CasaDaIlha } from '@/mascot/ilha/CasaDaIlha';
+import { BarraValor, BotaoCanto, Joia, Nuvens, useCamera, type LimitesDaCamera } from '@/ui';
 
-import { Secao, useApp, useCarregar } from '../app';
+import { useApp, useCarregar } from '../app';
+import { carregarIlha, conquistasNovas, ilhaNaTela, textoDaConquista, textoDoPortal } from './logic';
+import { Partes } from './Partes';
 
-export const TEXTO_DE_ERRO = 'A ilha ficou sem sinal. Suas moscas estão guardadas.';
+/** A câmera da ilha: abre mostrando a mansão toda. */
+const CAMERA: LimitesDaCamera = { cx: 500, cy: 470, w: 1450, wEstreito: 1050, min: 350, max: 2400, x0: -150, x1: 1150, y0: 0, y1: 900 };
 
-/** Ícone da moeda: uma mosquinha numa moeda amarela (legível nos dois temas). */
-export function Mosca({ tamanho = 18 }: { tamanho?: number }) {
-  return (
-    <svg width={tamanho} height={tamanho} viewBox="0 0 24 24" aria-hidden>
-      <circle cx={12} cy={12} r={11.5} fill="#FFD166" />
-      <circle cx={12} cy={12} r={11.5} fill="none" stroke="#E0A93A" strokeWidth={1.5} />
-      <ellipse cx={8.6} cy={9.6} rx={3.6} ry={2.3} fill="#FFFFFF" fillOpacity={0.9} transform="rotate(-25 8.6 9.6)" />
-      <ellipse cx={15.4} cy={9.6} rx={3.6} ry={2.3} fill="#FFFFFF" fillOpacity={0.9} transform="rotate(25 15.4 9.6)" />
-      <ellipse cx={12} cy={13.6} rx={3} ry={4.2} fill="#1F2A24" />
-      <circle cx={10.9} cy={10.6} r={1} fill="#E5484D" />
-      <circle cx={13.1} cy={10.6} r={1} fill="#E5484D" />
-    </svg>
-  );
-}
+const AVISO = 'absolute top-[150px] left-1/2 z-3 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-3xl bg-white/90 px-7 py-3 text-center font-black text-contorno';
 
-function Preco({ valor }: { valor: number }) {
-  return (
-    <span className="inline-flex items-center gap-1 font-extrabold">
-      <Mosca tamanho={16} />
-      {valor}
-    </span>
-  );
-}
-
-const GANHOS: { chave: keyof EstadoDaIlha['ganhas']; texto: string; por: number }[] = [
-  { chave: 'habitos', texto: 'Hábito feito', por: JOIAS.por.habitDone },
-  { chave: 'focos', texto: `${JOIAS.focusMinutesPerJoia} minutos de foco`, por: 1 },
-  { chave: 'descansos', texto: 'Dia de descanso', por: JOIAS.por.restDay },
-  { chave: 'marcos', texto: 'Marco de meta', por: JOIAS.por.milestoneDone },
-  { chave: 'metas', texto: 'Meta concluída', por: JOIAS.por.goalCompleted },
-];
-
-type Dados = { ilha: EstadoDaIlha; fase: Phase };
-
-const ehAreaId = (item: string): item is AreaId => AREAS.some((a) => a.id === item);
-
+/** A Ilha: a casa do sapo por partes, compradas com joias. */
 export function IlhaScreen() {
-  const { repo, clock, user, mostrarAviso, emitirEvento, refresh } = useApp();
-  const [escolhida, setEscolhida] = useState<AreaId | null>(null);
-  const [comprando, setComprando] = useState<string | null>(null);
-  const { estado, recarregar } = useCarregar(async (): Promise<Dados> => {
-    const [ilha, mascote] = await Promise.all([verIlha(repo), repo.getMascotState()]);
-    return { ilha, fase: mascote?.phase ?? 1 };
+  const { repo, clock, user, refresh, emitirEvento, mostrarAviso } = useApp();
+  const navegar = useNavigate();
+  const { estado, recarregar } = useCarregar(async () => {
+    if (!user) throw new Error('sem usuário');
+    return carregarIlha(repo, clock);
   });
+  const { viewBox, arrastando, props: gestos } = useCamera(CAMERA);
+  const [comprando, setComprando] = useState<ParteId | null>(null);
+  const [nova, setNova] = useState<ParteId | null>(null);
+  const ocupado = useRef(false);
 
-  if (!user) return null;
+  const dados = estado.tipo === 'ok' ? estado.dados : null;
+  const ilha = dados ? ilhaNaTela(dados.casa, comprando) : null;
+  const irParaCasa = () => void navegar({ to: '/casa' });
 
-  if (estado.tipo !== 'ok') {
-    return (
-      <main className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 pt-4 pb-28">
-        <Texto como="h1" variante="titulo">
-          Ilha
-        </Texto>
-        {estado.tipo === 'erro' ? (
-          <EstadoVazio titulo="Sem sinal por aqui" texto={TEXTO_DE_ERRO} acao="Tentar de novo" onAcao={() => void recarregar()} />
-        ) : (
-          <div aria-label="Carregando a ilha" role="progressbar" className="aspect-[530/536] rounded-lg bg-line opacity-60" />
-        )}
-      </main>
-    );
-  }
-
-  const { ilha, fase } = estado.dados;
-  // Sem escolha, mostra a próxima área a abrir (ou a última, com tudo aberto).
-  const padrao = ilha.areas.find((a) => a.estado === 'proxima')?.id ?? ilha.areas[ilha.areas.length - 1].id;
-  const area = ilha.areas.find((a) => a.id === (escolhida ?? padrao)) ?? ilha.areas[0];
-
-  const comprar = async (item: string, nome: string, ehArea: boolean) => {
-    setComprando(item);
+  /** Uma compra de cada vez. A parte cai na hora e volta a ficar apagada se o servidor recusar. */
+  const comprar = async (parte: ParteId) => {
+    if (ocupado.current || !dados) return;
+    ocupado.current = true;
+    setComprando(parte);
+    setNova(parte);
     try {
-      const r = await comprarNaIlha(repo, clock, item);
-      if (!r.ok) {
-        mostrarAviso({ mensagem: r.error.message, variante: 'atencao' });
+      const compra = await comprarParte(repo, clock, parte);
+      if (!compra.ok) {
+        mostrarAviso({ mensagem: compra.error.message, variante: 'atencao' });
+        setComprando(null);
+        setNova(null);
         return;
       }
-      emitirEvento('feliz');
-      // Área nova: o painel passa a mostrar os enfeites dela.
-      if (ehArea && ehAreaId(item)) setEscolhida(item);
-      mostrarAviso({ mensagem: ehArea ? `${nome} aberta! Seu sapo já está explorando.` : `${nome} na ilha!`, variante: 'sucesso' });
-      refresh();
-    } catch {
-      refresh();
-    } finally {
+      emitirEvento('construindo');
+      // A última parte fecha a casa: é festa, com ou sem conquista nova.
+      if (dados.casa.construidas + 1 === dados.casa.total) emitirEvento('comemorando');
+      const [conquista] = conquistasNovas(dados.conquistas, await verConquistas(repo, clock));
+      if (conquista) {
+        emitirEvento('comemorando');
+        mostrarAviso({ mensagem: textoDaConquista(conquista), variante: 'sucesso' });
+      }
+    } catch (erro) {
+      // Os outros erros o repositório já avisou (e a sessão vencida volta ao login).
+      if (isRemoteError(erro) && erro.code === 'joias_insuficientes') mostrarAviso({ mensagem: mensagemDeErro(erro), variante: 'atencao' });
       setComprando(null);
+      setNova(null);
+    } finally {
+      ocupado.current = false;
+      refresh();
     }
   };
 
+  if (!user) return null;
+
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-28 md:max-w-6xl md:px-8 md:pt-8 md:pb-10">
-      <header className="flex items-center justify-between gap-3">
-        <div className="flex flex-col">
-          <Texto como="h1" variante="titulo">
-            Ilha
-          </Texto>
-          <Texto variante="legenda" cor="muted">
-            Nível {ilha.nivel} de {AREAS.length}
-          </Texto>
-        </div>
-        <div
-          className="flex items-center gap-2 rounded-full border-b-4 border-line bg-surface px-4 py-2"
-          aria-label={`${ilha.saldo} moscas`}
-          data-testid="saldo-de-moscas"
-        >
-          <Mosca tamanho={22} />
-          <Texto como="span" variante="subtitulo">
-            {ilha.saldo}
-          </Texto>
-        </div>
-      </header>
+    <main className="md:px-10 md:pt-8 md:pb-12">
+      <h1 className="sr-only">Ilha</h1>
+      <div data-testid="cena-da-ilha" className="cena-ilha relative h-[calc(100dvh-5rem)] min-h-[520px] overflow-hidden bg-ceu md:min-h-[620px] md:rounded-lg">
+        <Nuvens />
+        <CasaDaIlha
+          {...gestos}
+          construidas={ilha?.construidas ?? []}
+          nova={nova}
+          onPortal={ilha ? () => mostrarAviso({ mensagem: textoDoPortal(ilha.construidas.length, ilha.total), variante: 'atencao' }) : undefined}
+          viewBox={viewBox}
+          className={`relative z-1 block size-full touch-none select-none ${arrastando ? 'cursor-grabbing' : 'cursor-grab'}`}
+        />
 
-      <div className="flex flex-col gap-4 md:grid md:grid-cols-[minmax(0,1.5fr)_minmax(320px,1fr)] md:items-start md:gap-8">
-        <div className="md:sticky md:top-8">
-          <MapaDaIlha areas={ilha.areas} selecionada={area.id} onSelecionar={setEscolhida} faseDoSapo={fase} />
+        <div className="absolute inset-x-0 top-7 z-3 flex justify-center pl-5">
+          <BarraValor icone={<Joia largura={46} altura={54} />} valor={ilha?.saldo ?? '…'} rotulo="joias" onMais={irParaCasa} />
         </div>
+        {ilha ? (
+          <p className="absolute top-24 left-1/2 z-3 -translate-x-1/2 rounded-3xl bg-white/75 px-[26px] py-2.5 text-base font-extrabold whitespace-nowrap text-contorno">
+            <b>
+              {ilha.construidas.length} de {ilha.total}
+            </b>{' '}
+            partes da casa
+          </p>
+        ) : null}
+        {estado.tipo === 'erro' ? (
+          <div role="alert" className={`${AVISO} flex flex-col items-center gap-2`}>
+            Não consegui abrir a ilha.
+            <button type="button" onClick={() => void recarregar()} className="cursor-pointer underline">
+              Tentar de novo
+            </button>
+          </div>
+        ) : null}
 
-        <div className="flex flex-col gap-4">
-          <PainelDaArea area={area} ilha={ilha} comprando={comprando} onComprar={(item, nome, ehArea) => void comprar(item, nome, ehArea)} />
-
-          <Secao titulo="Como ganhar moscas" extra={<Texto variante="legenda" cor="muted">{ilha.ganhas.total} no total</Texto>}>
-            <Cartao>
-              <ul className="flex flex-col gap-2">
-                {GANHOS.map((g) => (
-                  <li key={g.chave} className="flex items-center justify-between gap-3">
-                    <Texto>{g.texto}</Texto>
-                    <span className="flex items-center gap-3">
-                      <Texto variante="legenda" cor="muted">
-                        {ilha.ganhas[g.chave]} ganhas
-                      </Texto>
-                      <span className="rounded-full bg-sapo px-2.5 py-0.5 text-sm font-extrabold text-ink-sobre-acao">+{g.por}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </Cartao>
-          </Secao>
+        <div className="absolute right-3 bottom-4 left-3 z-3 flex flex-col items-end gap-3 md:right-6 md:bottom-6 md:left-6 md:flex-row md:gap-4">
+          <div className="w-full min-w-0 md:w-auto md:flex-1">{ilha ? <Partes ilha={ilha} onComprar={(id) => void comprar(id)} /> : null}</div>
+          <BotaoCanto icone="🏠" rotulo="Entrar em casa" onPress={irParaCasa} />
         </div>
       </div>
     </main>
-  );
-}
-
-function PainelDaArea({
-  area,
-  ilha,
-  comprando,
-  onComprar,
-}: {
-  area: AreaNoMapa;
-  ilha: EstadoDaIlha;
-  comprando: string | null;
-  onComprar: (item: string, nome: string, ehArea: boolean) => void;
-}) {
-  const anterior = ilha.areas[ilha.areas.findIndex((a) => a.id === area.id) - 1];
-  const comprados = area.enfeitesNoMapa.filter((e) => e.comprado).length;
-
-  return (
-    <Cartao className="gap-3" testID="painel-da-area">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex flex-col">
-          <Texto como="h2" variante="subtitulo">
-            {area.nome}
-          </Texto>
-          <Texto cor="muted">{area.descricao}</Texto>
-        </div>
-        {area.estado === 'aberta' ? (
-          <span className="shrink-0 rounded-full bg-sapo px-3 py-1 text-sm font-extrabold text-ink-sobre-acao">
-            {comprados} de {area.enfeitesNoMapa.length}
-          </span>
-        ) : null}
-      </div>
-
-      {area.estado === 'proxima' ? (
-        <div className="flex flex-col gap-2">
-          <Botao
-            titulo={`Abrir por ${area.custo} moscas`}
-            desativado={ilha.saldo < area.custo}
-            carregando={comprando === area.id}
-            onPress={() => onComprar(area.id, area.nome, true)}
-            testID="abrir-area"
-          />
-          {ilha.saldo < area.custo ? (
-            <Texto variante="legenda" cor="muted">
-              Faltam {area.custo - ilha.saldo} moscas. Cada hábito feito ajuda.
-            </Texto>
-          ) : null}
-        </div>
-      ) : null}
-
-      {area.estado === 'fechada' && anterior ? <Texto cor="muted">Abra a área {anterior.nome} primeiro.</Texto> : null}
-
-      <ul className="flex flex-col gap-2">
-        {area.enfeitesNoMapa.map((e) => {
-          const falta = e.custo - ilha.saldo;
-          return (
-            <li key={e.id} className="flex min-h-12 items-center justify-between gap-3 rounded-sm border border-line px-3 py-2">
-              <span className="flex flex-col">
-                <Texto className="font-bold">{e.nome}</Texto>
-                <Preco valor={e.custo} />
-              </span>
-              {e.comprado ? (
-                <Texto variante="legenda" cor="muted">
-                  Na ilha
-                </Texto>
-              ) : area.estado === 'aberta' ? (
-                <Botao
-                  titulo="Comprar"
-                  rotulo={`Comprar ${e.nome} por ${e.custo} moscas`}
-                  largura="auto"
-                  desativado={falta > 0}
-                  carregando={comprando === e.id}
-                  onPress={() => onComprar(e.id, e.nome, false)}
-                  className="min-h-10"
-                />
-              ) : (
-                <Texto variante="legenda" cor="muted">
-                  Fechado
-                </Texto>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </Cartao>
   );
 }

@@ -7,9 +7,9 @@ import type { UserMetadata } from '@pulo/core/domain/user-metadata';
 import type { MascotState, ProfileStats, Streak, WeekSummary } from '@pulo/core/domain/types';
 import { computeMascotState } from '@pulo/core/domain/phase';
 import { buildWeekSummary } from '@pulo/core/domain/week-summary';
-import { type Db, type Prisma, dateKeyToDate, focusSessionMapper, habitLogMapper, islandPurchaseMapper, mascotStateMapper, restDayMapper } from '@pulo/db';
+import { type Db, type Prisma, dateKeyToDate, focusSessionMapper, freezeUseMapper, habitLogMapper, islandPurchaseMapper, mascotStateMapper, restDayMapper } from '@pulo/db';
 import type { Client } from './http';
-import { achievementSelect, habitLogSelect, islandPurchaseSelect, mascotSelect, restDaySelect, sessionSelect } from './selects';
+import { achievementSelect, freezeUseSelect, habitLogSelect, islandPurchaseSelect, mascotSelect, restDaySelect, sessionSelect } from './selects';
 
 /** Filtro de uma coluna `date` por intervalo de DateKey (extremos incluídos); sem extremos, sem filtro. */
 export function dateFilter(range: DateRangeQuery): { gte?: Date; lte?: Date } | undefined {
@@ -95,33 +95,49 @@ export function summaryFromRows(weekStart: string, timeZone: string, rows: WeekS
 }
 
 /**
- * As três leituras da sequência, para entrar numa `db.$transaction([...])`. Todo o histórico (o recorde é calculado, nunca
- * gravado), mas os hábitos feitos já vêm agrupados em uma linha por dia.
+ * As quatro leituras da sequência, para entrar numa `db.$transaction([...])`. Todo o histórico (o recorde é calculado,
+ * nunca gravado), mas os hábitos feitos já vêm agrupados em uma linha por dia.
  */
 export function streakReads(db: Db, userId: string) {
   return [
     db.habitLog.groupBy({ by: ['date'], where: { userId }, orderBy: { date: 'asc' }, _count: { habitId: true } }),
     db.focusSession.findMany({ where: { userId, state: { not: 'em_andamento' } }, select: sessionSelect }),
     db.restDay.findMany({ where: { userId }, select: restDaySelect }),
+    db.freezeUse.findMany({ where: { userId }, select: freezeUseSelect, orderBy: { date: 'asc' } }),
   ] as const;
 }
 
-type StreakRows = {
+/** O que o acerto do gelo lê além da sequência (ordem: gelos comprados, último dia resolvido). */
+export function freezeReads(db: Db, userId: string) {
+  return [
+    db.islandPurchase.count({ where: { userId, kind: 'gelo' } }),
+    db.mascotState.findUnique({ where: { userId }, select: { geloResolvidoAte: true } }),
+  ] as const;
+}
+
+export type StreakRows = {
   habitDays: { date: Date }[];
   sessions: Parameters<typeof focusSessionMapper.toDomain>[0][];
   restDays: Parameters<typeof restDayMapper.toDomain>[0][];
+  freezeUses: Parameters<typeof freezeUseMapper.toDomain>[0][];
 };
 
-export function streakFromRows(metadata: UserMetadata, now: number, rows: StreakRows): Streak {
-  return computeStreak({
+/** As linhas do histórico no formato das regras de sequência e de gelo do core. */
+export function streakInput(metadata: UserMetadata, now: number, rows: StreakRows) {
+  return {
     habitLogs: rows.habitDays.map(restDayMapper.toDomain),
     sessions: rows.sessions.map(focusSessionMapper.toDomain),
     restDays: rows.restDays.map(restDayMapper.toDomain),
+    freezes: rows.freezeUses.map((row) => freezeUseMapper.toDomain(row).date),
     vacation: metadata.vacation,
     timeZone: metadata.timezone,
     dayStartMinutes: metadata.profile?.dayStartMinutes,
     now,
-  });
+  };
+}
+
+export function streakFromRows(metadata: UserMetadata, now: number, rows: StreakRows): Streak {
+  return computeStreak(streakInput(metadata, now, rows));
 }
 
 /**
@@ -144,6 +160,7 @@ export function achievementSummaryFromRows(streak: Streak, rows: AchievementRows
     sessions: rows.sessions.map(focusSessionMapper.toDomain),
     descansos: rows.restDays.length,
     casa: rows.casa.map(islandPurchaseMapper.toDomain),
+    gelosUsados: rows.freezeUses.length,
   });
 }
 

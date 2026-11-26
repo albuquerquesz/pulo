@@ -8,6 +8,10 @@
  * - Nenhuma função de domínio chama Date.now(): recebem `Clock` ou `now`.
  */
 
+import type { ComodoId } from '../config/decisions';
+
+export type { ComodoId };
+
 export type DateKey = string;
 export type EntityId = string;
 
@@ -242,11 +246,13 @@ export type IslandPurchase = Purchase;
 /** Giro de um item no chão do quarto, em graus (`ROOM_GRID.rotations`). */
 export type RoomRotation = 0 | 90 | 180 | 270;
 
-/** Lugar de um item no chão do quarto. Mover é grátis. */
+/** Lugar de um item num cômodo (grade do chão). Mover é grátis. */
 export interface RoomSpot {
   x: number;
   y: number;
   rotation: RoomRotation;
+  /** Cômodo onde o item está (spec 31). Ausente: no quarto ao comprar, e o mesmo cômodo ao mover. */
+  comodo?: ComodoId;
 }
 
 /** Decoração comprada, onde está no quarto. */
@@ -318,8 +324,11 @@ export interface TaskActivity {
 
 // ---------- Sequência ----------
 
-/** `hoje` é o dia de hoje ainda vazio; com algo feito ou descanso marcado, ele aparece como tal. */
-export type StreakDayState = 'feito' | 'descanso' | 'vazio' | 'hoje' | 'futuro';
+/**
+ * `hoje` é o dia de hoje ainda vazio; com algo feito ou descanso marcado, ele aparece como tal.
+ * `gelo` é um dia vazio protegido por um gelo (spec 29).
+ */
+export type StreakDayState = 'feito' | 'descanso' | 'gelo' | 'vazio' | 'hoje' | 'futuro';
 
 export interface StreakDay {
   date: DateKey;
@@ -328,12 +337,64 @@ export interface StreakDay {
 
 /** Sequência com foguinho. Calculada a partir dos registros, nunca gravada. */
 export interface Streak {
-  /** Dias feitos seguidos até hoje (descanso não quebra nem soma). */
+  /** Dias feitos seguidos até hoje (descanso e gelo não quebram nem somam). */
   atual: number;
   /** Maior sequência de todo o histórico. */
   recorde: number;
   /** Os 7 dias da semana corrente, na ordem (veja `STREAK.weekStartsOn`). */
   semana: StreakDay[];
+}
+
+// ---------- Gelo e descanso (spec 29) ----------
+
+/** Um dia protegido por um gelo. `vistoEm` falta enquanto a pessoa não viu o aviso. */
+export interface FreezeUse {
+  date: DateKey;
+  vistoEm?: number;
+}
+
+/** O que a abertura do app mostra do gelo. O saldo é calculado (presente mais compras menos usos), nunca gravado. */
+export interface FreezeSummary {
+  guardados: number;
+  max: number;
+  /** Dias protegidos que a pessoa ainda não viu, do mais antigo ao mais novo. */
+  recentes: DateKey[];
+}
+
+export interface FreezeStatus extends FreezeSummary {
+  /** Todos os dias já protegidos, do mais antigo ao mais novo. */
+  usados: DateKey[];
+}
+
+/** Quantos descansos ainda cabem na semana corrente. */
+export interface RestStatus {
+  restantesNaSemana: number;
+  maxPorSemana: number;
+}
+
+// ---------- Métricas do Perfil (spec 29) ----------
+
+export interface ProfileMetrics {
+  descanso: {
+    total: number;
+    /** No mês corrente do calendário. */
+    noMes: number;
+    semanasComDescanso: number;
+    /** Minutos de foco por semana fechada; `null` os dois enquanto não há semanas suficientes de cada tipo. */
+    focoMedioSemanaComDescanso: number | null;
+    focoMedioSemanaSem: number | null;
+  };
+  gelo: { usadosTotal: number; guardados: number };
+  /** Dos últimos dias lógicos (`METRICAS.janelaDias`), nunca antes de a conta existir. */
+  ritmo: {
+    focoMedioPorDia30: number;
+    /** De 0 a 1; `null` sem nenhum dia de hábito que conte. */
+    taxaHabitos30: number | null;
+    melhorPeriodo: Period | null;
+    melhorDiaDaSemana: Weekday | null;
+    sessoesTerminadas: number;
+  };
+  feitos: { tarefasConcluidas: number; metasConcluidas: number; joiasGanhas: number };
 }
 
 // ---------- Estatísticas do hábito (spec 17) ----------
@@ -366,7 +427,10 @@ export type AchievementId =
   | 'foco-profundo'
   | 'descanso-sabido'
   | 'mes-de-fogo'
+  | 'dois-andares'
+  | 'cinco-comodos'
   | 'casa-inteira'
+  | 'gelo-na-hora'
   | 'segredo';
 
 /** Uma conquista gravada. `id` é o que está no banco (do catálogo). */
@@ -512,10 +576,19 @@ export type FrogMood =
   | 'surpreso'
   | 'focado'
   | 'dormindo'
-  | 'pouso';
+  | 'pouso'
+  | 'triste'
+  | 'preocupado'
+  | 'sem-sinal'
+  | 'confuso'
+  | 'comemorando'
+  | 'orgulhoso'
+  | 'acenando'
+  | 'congelado'
+  | 'construindo';
 
 /** Eventos transitórios, do mais prioritário ao menos. */
-export type FrogEvent = 'pouso' | 'surpreso' | 'feliz';
+export type FrogEvent = 'pouso' | 'surpreso' | 'comemorando' | 'construindo' | 'feliz';
 
 /**
  * Entradas da máquina de estados do sapo (função pura em src/mascot/machine.ts).

@@ -8,12 +8,14 @@ import type {
   HabitLog,
   IslandPurchase,
   RoomDecor,
+  ComodoId,
   RoomRotation,
   RoomSpot,
   MascotState,
   Phase,
   ProposalChange,
   RestDay,
+  FreezeUse,
   RoutineBlock,
   Task,
   TaskComment,
@@ -23,6 +25,7 @@ import type {
   Weekday,
   WeeklyProposal,
 } from '@pulo/core/domain/types';
+import { ehComodo } from '@pulo/core/domain/comodos';
 import { z } from 'zod';
 import { dateKeyToDate, dateToDateKey, dateToMs, msToDate } from './dates';
 import type {
@@ -36,6 +39,7 @@ import type {
   IslandPurchase as IslandPurchaseRow,
   MascotState as MascotStateRow,
   RestDay as RestDayRow,
+  FreezeUse as FreezeUseRow,
   RoutineBlock as RoutineBlockRow,
   Task as TaskRow,
   TaskComment as TaskCommentRow,
@@ -323,6 +327,14 @@ export const achievementMapper = {
   },
 };
 
+// ---------- FreezeUse ----------
+
+export const freezeUseMapper = {
+  toDomain(row: Omit<FreezeUseRow, 'userId'>): FreezeUse {
+    return { date: dateToDateKey(row.date), ...(row.vistoEm === null ? {} : { vistoEm: dateToMs(row.vistoEm) }) };
+  },
+};
+
 // ---------- IslandPurchase ----------
 
 export const islandPurchaseMapper = {
@@ -341,11 +353,17 @@ function toRotation(value: number): RoomRotation {
   throw new RangeError(`Giro fora do domínio: ${value}`);
 }
 
-type RoomDecorRow = Omit<IslandPurchaseRow, 'userId' | 'kind'> & { placement: { x: number; y: number; rotation: number } | null };
+type SpotRow = { x: number; y: number; rotation: number; comodo: string };
+type RoomDecorRow = Omit<IslandPurchaseRow, 'userId' | 'kind'> & { placement: SpotRow | null };
+
+function toComodo(value: string): ComodoId {
+  if (!ehComodo(value)) throw new RangeError(`Cômodo desconhecido: ${value}`);
+  return value;
+}
 
 export const roomPlacementMapper = {
-  toSpot(row: { x: number; y: number; rotation: number }): RoomSpot {
-    return { x: row.x, y: row.y, rotation: toRotation(row.rotation) };
+  toSpot(row: SpotRow): RoomSpot {
+    return { x: row.x, y: row.y, rotation: toRotation(row.rotation), comodo: toComodo(row.comodo) };
   },
   /** A compra de uma decoração junto com a posição. Sem posição o dado está quebrado. */
   toDomain(row: RoomDecorRow): RoomDecor {
@@ -357,7 +375,7 @@ export const roomPlacementMapper = {
 // ---------- MascotState ----------
 
 export const mascotStateMapper = {
-  toDomain(row: Omit<MascotStateRow, 'userId'>): MascotState {
+  toDomain(row: Omit<MascotStateRow, 'userId' | 'geloResolvidoAte'>): MascotState {
     return { phase: toPhase(row.phase), careDays: row.careDays, updatedAt: dateToMs(row.updatedAt) };
   },
   fromDomain(userId: string, state: MascotState): Prisma.MascotStateUncheckedCreateInput {

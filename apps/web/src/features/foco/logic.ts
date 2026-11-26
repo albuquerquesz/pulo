@@ -67,8 +67,11 @@ async function rodar(
   return doResultado(r.value, fora);
 }
 
-export const iniciar = (repo: Repository, clock: Clock, user: User, minutos: number = FOCUS.defaultMinutes) =>
-  rodar(repo, clock, user, () => iniciarFoco(repo, clock, user.timezone, { plannedMinutes: minutos }));
+/** O bloco da rotina e o alvo (no máximo um) com que o foco começa (spec 19). */
+export type ExtrasDoFoco = Pick<FocusSession, 'blockId' | 'habitId' | 'goalId' | 'taskId'>;
+
+export const iniciar = (repo: Repository, clock: Clock, user: User, minutos: number = FOCUS.defaultMinutes, extras: ExtrasDoFoco = {}) =>
+  rodar(repo, clock, user, () => iniciarFoco(repo, clock, user.timezone, { plannedMinutes: minutos, ...extras }));
 export const pausar = (repo: Repository, clock: Clock, user: User) => rodar(repo, clock, user, () => pausarFoco(repo, clock, user.timezone));
 export const retomar = (repo: Repository, clock: Clock, user: User) => rodar(repo, clock, user, () => retomarFoco(repo, clock, user.timezone));
 export const parar = (repo: Repository, clock: Clock, user: User) => rodar(repo, clock, user, () => interromperFoco(repo, clock, user.timezone));

@@ -1,6 +1,19 @@
 import { HOUSE, ROOM_DECOR, ROOM_GRID } from '../config/decisions';
 import { createMemoryRepository } from '../data/memory-repository';
-import { DECORACOES, PARTES, comprarDecoracao, comprarParte, estadoDaCasa, moverDecoracao, verCasa } from './casa';
+import {
+  COMODOS,
+  DECORACOES,
+  PARTES,
+  casaCompleta,
+  comprarDecoracao,
+  comprarParte,
+  estadoDaCasa,
+  moverDecoracao,
+  podeComprar,
+  progressoPorCamada,
+  textoDoRequisito,
+  verCasa,
+} from './casa';
 import { joiasDoFoco, type FontesDeJoias } from './joias';
 import { endedSession, sp } from './test-utils';
 
@@ -29,21 +42,22 @@ describe('joias do foco', () => {
 });
 
 describe('casa', () => {
-  it('começa só com o quarto, 1 de 6, quarto vazio e a próxima é a mais barata', () => {
+  it('começa só com o quarto, 1 de 24, vazio, e a próxima é a mais barata liberada', () => {
     const casa = estadoDaCasa(nada, [], []);
-    expect([casa.construidas, casa.total, casa.completa]).toEqual([1, 6, false]);
-    expect(casa.proxima).toEqual({ id: 'cerca', nome: 'Cerca', custo: HOUSE.partCost.cerca, faltam: 40, horasDeFoco: 4 });
+    expect([casa.construidas, casa.total, casa.completa]).toEqual([1, 24, false]);
+    expect(casa.comodos).toEqual(['quarto']);
+    expect(casa.proxima).toEqual({ id: 'caixa-correio', nome: 'Caixa de correio', custo: 30, faltam: 30, horasDeFoco: 3 });
     expect(casa.decoracoes.every((d) => d.posicao === null)).toBe(true);
   });
 
   it('compra fora de qualquer ordem e recusa saldo negativo, repetida e inexistente', async () => {
     const repo = createMemoryRepository({ habitLogs: habitos(HOUSE.partCost.varanda) });
-    expect(await comprarParte(repo, clock, 'cozinha')).toMatchObject({ ok: false, error: { code: 'joias_insuficientes', message: 'Faltam 40 joias.' } });
+    expect(await comprarParte(repo, clock, 'cozinha')).toMatchObject({ ok: false, error: { code: 'joias_insuficientes', message: 'Faltam 80 joias.' } });
     expect(await comprarParte(repo, clock, 'varanda')).toMatchObject({ ok: true, value: { saldo: 0, construidas: 2 } });
     expect(await comprarParte(repo, clock, 'varanda')).toMatchObject({ ok: false, error: { code: 'ja_comprado' } });
     expect(await comprarParte(repo, clock, 'quarto')).toMatchObject({ ok: false, error: { code: 'ja_comprado' } });
     expect(await comprarParte(repo, clock, 'praia')).toMatchObject({ ok: false, error: { code: 'item_inexistente' } });
-    expect(await repo.listHousePurchases()).toEqual([{ item: 'varanda', cost: 80, createdAt: 5 }]);
+    expect(await repo.listHousePurchases()).toEqual([{ item: 'varanda', cost: 120, createdAt: 5 }]);
   });
 
   it('desfazer hábito depois da compra deixa o saldo em zero e não tira a compra', async () => {
@@ -64,8 +78,81 @@ describe('casa', () => {
     expect(await repo.listRoomDecor()).toEqual([{ item: 'tapete', cost: 10, createdAt: 5, x: 2, y: 3, rotation: 90 }]);
   });
 
+  it('decorar um cômodo pede que ele esteja construído, e mover leva o item de um para outro', async () => {
+    const repo = createMemoryRepository({ habitLogs: habitos(220) });
+    const naCozinha = { ...canto, comodo: 'cozinha' } as const;
+    expect(await comprarDecoracao(repo, clock, 'tapete', naCozinha)).toMatchObject({ ok: false, error: { code: 'comodo_nao_comprado' } });
+    await comprarDecoracao(repo, clock, 'tapete', canto);
+    expect(await moverDecoracao(repo, 'tapete', naCozinha)).toMatchObject({ ok: false, error: { code: 'comodo_nao_comprado' } });
+    await comprarParte(repo, clock, 'cozinha');
+    expect(await moverDecoracao(repo, 'tapete', naCozinha)).toMatchObject({ ok: true, value: { comodos: ['quarto', 'cozinha'] } });
+    // Mover sem dizer o cômodo mantém o atual.
+    await moverDecoracao(repo, 'tapete', { x: 1, y: 1, rotation: 0 });
+    expect((await repo.listRoomDecor())[0]).toMatchObject({ x: 1, comodo: 'cozinha' });
+  });
+
   it('o catálogo tem nome e preço para tudo', () => {
     expect(PARTES.map((p) => p.id)).toEqual(Object.keys(HOUSE.partCost));
     expect(DECORACOES.map((d) => d.id)).toEqual(Object.keys(ROOM_DECOR.itemCost));
+  });
+});
+
+describe('acesso à próxima ilha', () => {
+  it('só abre com todas as partes prontas', () => {
+    const todas = PARTES.map((p) => p.id);
+    expect(casaCompleta(todas)).toBe(true);
+    expect(casaCompleta(todas.filter((id) => id !== 'piscina'))).toBe(false);
+    // O quarto vem de graça e conta mesmo sem compra.
+    expect(casaCompleta(todas.filter((id) => id !== 'quarto'))).toBe(true);
+  });
+});
+
+describe('catálogo da mansão', () => {
+  const idsDe = (camada: string) => PARTES.filter((p) => p.camada === camada).length;
+
+  it('bate com a tabela da spec: partes por camada e total em joias', () => {
+    expect([idsDe('comodo'), idsDe('estrutura'), idsDe('exterior')]).toEqual([8, 4, 12]);
+    expect(PARTES.reduce((total, p) => total + p.custo, 0)).toBe(9855);
+    expect(HOUSE.partCost).toMatchObject({ quarto: 0, cozinha: 200, varanda: 120, jardim: 80, arvore: 120, cerca: 50 });
+    expect(COMODOS).toHaveLength(8);
+  });
+
+  it('todo requisito existe e não há ciclo', () => {
+    for (const parte of PARTES) {
+      const visitadas = new Set<string>();
+      let atual: string | undefined = parte.id;
+      while (atual) {
+        expect(visitadas.has(atual)).toBe(false);
+        visitadas.add(atual);
+        const achada = PARTES.find((p) => p.id === atual);
+        expect(achada).toBeDefined();
+        atual = achada?.requer;
+      }
+    }
+  });
+
+  it('podeComprar dá cada resultado', () => {
+    expect(podeComprar('quarto', [], 0)).toEqual({ situacao: 'ja_tem' });
+    expect(podeComprar('cerca', ['cerca'], 100)).toEqual({ situacao: 'ja_tem' });
+    expect(podeComprar('cerca', [], 50)).toEqual({ situacao: 'ok' });
+    expect(podeComprar('cerca', [], 49)).toEqual({ situacao: 'joias_insuficientes', faltam: 1 });
+    expect(podeComprar('torre', [], 9999)).toEqual({ situacao: 'falta_requisito', requer: 'segundo-andar' });
+  });
+
+  it('a cadeia de requisitos libera um passo de cada vez', () => {
+    expect(podeComprar('observatorio', [], 9999)).toEqual({ situacao: 'falta_requisito', requer: 'torre' });
+    expect(podeComprar('segundo-andar', [], 9999)).toEqual({ situacao: 'falta_requisito', requer: 'sala' });
+    expect(podeComprar('segundo-andar', ['sala'], 9999)).toEqual({ situacao: 'ok' });
+    expect(podeComprar('torre', ['sala', 'segundo-andar'], 9999)).toEqual({ situacao: 'ok' });
+    expect(textoDoRequisito('segundo-andar')).toBe('Precisa do Segundo andar');
+    expect(textoDoRequisito('sala')).toBe('Precisa da Sala de estar');
+  });
+
+  it('conta o progresso por camada', () => {
+    expect(progressoPorCamada(['sala', 'segundo-andar', 'cerca'])).toEqual({
+      comodo: { feitas: 2, total: 8 },
+      estrutura: { feitas: 1, total: 4 },
+      exterior: { feitas: 1, total: 12 },
+    });
   });
 });

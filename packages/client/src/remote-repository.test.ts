@@ -7,6 +7,10 @@ import { verConquistas } from '@pulo/core/domain/achievements';
 import { verSequencia } from '@pulo/core/domain/streak';
 import { verEstatisticasDoHabito } from '@pulo/core/domain/habit-stats';
 import { comprarNaIlha } from '@pulo/core/domain/ilha';
+import { verCasa } from '@pulo/core/domain/casa';
+import { verDescanso } from '@pulo/core/domain/descanso';
+import { comprarGelo, marcarGeloVisto, verGelo } from '@pulo/core/domain/gelo';
+import { verMetricas } from '@pulo/core/domain/metricas';
 import { criarPlanoInicial } from '@pulo/core/domain/routine';
 import { defineRepositoryContract } from '@pulo/core/data/repository-contract';
 import type { Habit, RoutineBlock, Task, FocusSession, User } from '@pulo/core/domain/types';
@@ -25,6 +29,7 @@ afterAll(async () => {
 });
 
 const clock = { now: () => TEST_NOW };
+const HOJE = dateKeyOf(TEST_NOW, DEFAULT_TIMEZONE);
 
 /** `fetch` que anota cada chamada e repassa para a API real. */
 function recordingFetch(): { fetch: FetchLike; calls: string[] } {
@@ -71,7 +76,7 @@ const habito = (extra: Partial<Habit> = {}): Habit => ({ id: uuid(), title: 'Ler
  */
 async function joiasForaDaJanela(me: TestUser) {
   await database.db.restDay.createMany({
-    data: Array.from({ length: 50 }, (_, i) => ({ userId: me.id, date: new Date(Date.UTC(2024, 0, 1 + i)) })),
+    data: Array.from({ length: 150 }, (_, i) => ({ userId: me.id, date: new Date(Date.UTC(2024, 0, 1 + i)) })),
   });
 }
 
@@ -178,9 +183,54 @@ describe('RemoteRepository: sequência', () => {
       if (caiu) throw new TypeError('Network request failed');
       return h.app.fetch(request);
     });
-    await repo.saveRestDay({ date: '2026-11-10' });
+    await repo.saveRestDay({ date: HOJE });
     caiu = true;
     expect(await repo.getStreak()).toMatchObject({ atual: 0, recorde: 0 });
+  });
+});
+
+describe('RemoteRepository: gelo, descanso e métricas', () => {
+  it('vem no sync, compra com joias, entra no saldo e o use case do core funciona', async () => {
+    const me = await h.newUser();
+    await database.db.joiaCredit.create({ data: { userId: me.id, amount: 60 } });
+    const { fetch, calls } = recordingFetch();
+    const repo = await open(me, fetch);
+    expect(await verGelo(repo, clock)).toEqual({ guardados: 1, max: 2, recentes: [] });
+    expect(calls).toEqual(['GET /api/sync']);
+
+    expect(await comprarGelo(repo, clock)).toMatchObject({ ok: true, value: { guardados: 2 } });
+    expect((await verCasa(repo)).saldo).toBe(10);
+    await expect(repo.buyFreeze()).rejects.toMatchObject({ code: 'gelo_no_maximo', mensagem: MENSAGENS_DA_API.gelo_no_maximo });
+    expect((await verCasa(await open(me))).saldo).toBe(10);
+  });
+
+  it('aviso do gelo gasto: aparece, é marcado como visto e volta se a rede cair', async () => {
+    const me = await h.newUser();
+    await database.db.freezeUse.create({ data: { userId: me.id, date: new Date('2026-11-16') } });
+    let caiu = false;
+    const repo = await open(me, (request) => {
+      if (caiu) throw new TypeError('Network request failed');
+      return h.app.fetch(request);
+    });
+    expect((await repo.getFreezes()).recentes).toEqual(['2026-11-16']);
+    expect(await repo.getFreezeDates()).toEqual(['2026-11-16']);
+    caiu = true;
+    await expect(repo.markFreezesSeen()).rejects.toMatchObject({ kind: 'rede' });
+    expect((await repo.getFreezes()).recentes).toEqual(['2026-11-16']);
+    caiu = false;
+    await marcarGeloVisto(repo, clock);
+    expect((await repo.getFreezes()).recentes).toEqual([]);
+    expect((await (await open(me)).getFreezes()).recentes).toEqual([]);
+  });
+
+  it('descanso fora de hoje é recusado e o cache volta; métricas vêm do servidor', async () => {
+    const me = await h.newUser();
+    const repo = await open(me);
+    await expect(repo.saveRestDay({ date: '2026-11-10' })).rejects.toMatchObject({ code: 'descanso_so_hoje' });
+    expect(await repo.listRestDays()).toEqual([]);
+    await repo.saveRestDay({ date: HOJE });
+    expect((await verDescanso(repo, clock)).restantesNaSemana).toBe(1);
+    expect((await verMetricas(repo, clock))?.descanso).toMatchObject({ total: 1 });
   });
 });
 
@@ -188,14 +238,18 @@ describe('RemoteRepository: conquistas', () => {
   it('vêm no sync, avisam ao destravar e só voltam ao servidor depois de uma escrita que pode mudá-las', async () => {
     const me = await h.newUser();
     const { fetch, calls } = recordingFetch();
+    // Três descansos de antes entram direto no banco: pela API só dá para marcar o de hoje.
+    await database.db.restDay.createMany({
+      data: ['2026-11-01', '2026-11-03', '2026-11-05'].map((date) => ({ userId: me.id, date: new Date(date) })),
+    });
     const repo = await open(me, fetch);
     const avisos: string[][] = [];
     const cancelar = repo.onNewAchievements((novas) => avisos.push(novas.map((item) => item.id)));
     expect((await verConquistas(repo, clock)).filter((item) => item.conquistada)).toEqual([]);
     expect(calls).toEqual(['GET /api/sync']);
 
-    for (const date of ['2026-11-01', '2026-11-03', '2026-11-05', '2026-11-07']) await repo.saveRestDay({ date });
-    await repo.saveRestDay({ date: '2026-11-07' });
+    await repo.saveRestDay({ date: HOJE });
+    await repo.saveRestDay({ date: HOJE });
     expect(avisos).toEqual([['descanso-sabido']]);
 
     const depois = await repo.getAchievements();

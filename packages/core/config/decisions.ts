@@ -27,6 +27,30 @@ export const STREAK = {
   weekStartsOn: 6,
 } as const;
 
+/**
+ * Gelo da sequência (spec 29): comprado com joias e gasto sozinho num dia que termina vazio.
+ * `presenteInicial` é o gelo que toda pessoa já tem sem comprar. Proposta.
+ */
+export const GELO = {
+  preco: 50,
+  maxGuardados: 2,
+  presenteInicial: 1,
+} as const;
+
+/** Dia de descanso (spec 29): só o de hoje, até este número por semana do app (`STREAK.weekStartsOn`). Proposta. */
+export const DESCANSO = {
+  maxPorSemana: 2,
+} as const;
+
+/**
+ * Métricas do Perfil (spec 29): as médias olham os últimos `janelaDias` dias lógicos, e a comparação entre semanas com e
+ * sem descanso só aparece com `minSemanasPorTipo` semanas de cada tipo. Proposta.
+ */
+export const METRICAS = {
+  janelaDias: 30,
+  minSemanasPorTipo: 2,
+} as const;
+
 /** Períodos do dia, em horas locais [início, fim). Proposta. */
 export const PERIODS = {
   manha: { startHour: 5, endHour: 12 },
@@ -122,10 +146,75 @@ export const JOIAS = {
   focusMinutesPerJoia: 5,
 } as const;
 
-/** Casa do sapo (spec 18): preço de cada parte, em joias. O quarto (preço 0) já vem pronto. Sem ordem obrigatória. Proposta. */
-export const HOUSE = {
-  partCost: { quarto: 0, cozinha: 120, varanda: 80, jardim: 60, arvore: 90, cerca: 40 },
-} as const;
+/** As camadas da casa (spec 31), na ordem em que aparecem. */
+export const CAMADAS_DA_CASA = ['comodo', 'estrutura', 'exterior'] as const;
+export type CamadaDaCasa = (typeof CAMADAS_DA_CASA)[number];
+
+interface ParteDoCatalogo {
+  id: string;
+  nome: string;
+  emoji: string;
+  camada: CamadaDaCasa;
+  /** Preço em joias; 0 já vem pronta. */
+  custo: number;
+  /** A parte que precisa estar pronta antes. */
+  requer?: string;
+}
+
+const CATALOGO_DA_CASA = [
+  { id: 'quarto', nome: 'Quarto', emoji: '🛏️', camada: 'comodo', custo: 0 },
+  { id: 'cozinha', nome: 'Cozinha', emoji: '🍳', camada: 'comodo', custo: 200 },
+  { id: 'sala', nome: 'Sala de estar', emoji: '🛋️', camada: 'comodo', custo: 300 },
+  { id: 'banheiro', nome: 'Banheiro', emoji: '🛁', camada: 'comodo', custo: 180 },
+  { id: 'escritorio', nome: 'Escritório', emoji: '💻', camada: 'comodo', custo: 500, requer: 'segundo-andar' },
+  { id: 'biblioteca', nome: 'Biblioteca', emoji: '📚', camada: 'comodo', custo: 700, requer: 'segundo-andar' },
+  { id: 'estudio', nome: 'Estúdio de música', emoji: '🎹', camada: 'comodo', custo: 850, requer: 'segundo-andar' },
+  { id: 'observatorio', nome: 'Observatório', emoji: '🔭', camada: 'comodo', custo: 1500, requer: 'torre' },
+  { id: 'segundo-andar', nome: 'Segundo andar', emoji: '🏠', camada: 'estrutura', custo: 800, requer: 'sala' },
+  { id: 'sotao', nome: 'Sótão', emoji: '📦', camada: 'estrutura', custo: 450, requer: 'segundo-andar' },
+  { id: 'torre', nome: 'Torre', emoji: '🏰', camada: 'estrutura', custo: 1200, requer: 'segundo-andar' },
+  { id: 'chamine', nome: 'Chaminé', emoji: '🧱', camada: 'estrutura', custo: 90, requer: 'cozinha' },
+  { id: 'varanda', nome: 'Varanda', emoji: '🪑', camada: 'exterior', custo: 120 },
+  { id: 'jardim', nome: 'Jardim', emoji: '🌷', camada: 'exterior', custo: 80 },
+  { id: 'arvore', nome: 'Árvore', emoji: '🌳', camada: 'exterior', custo: 120 },
+  { id: 'cerca', nome: 'Cerca', emoji: '🪵', camada: 'exterior', custo: 50 },
+  { id: 'horta', nome: 'Horta', emoji: '🥕', camada: 'exterior', custo: 110, requer: 'jardim' },
+  { id: 'caixa-correio', nome: 'Caixa de correio', emoji: '📮', camada: 'exterior', custo: 30 },
+  { id: 'poste', nome: 'Poste de luz', emoji: '🏮', camada: 'exterior', custo: 45 },
+  { id: 'balanco', nome: 'Balanço', emoji: '🌿', camada: 'exterior', custo: 80, requer: 'arvore' },
+  { id: 'lago', nome: 'Lago com deque', emoji: '🪷', camada: 'exterior', custo: 400 },
+  { id: 'ponte', nome: 'Ponte', emoji: '🌉', camada: 'exterior', custo: 300, requer: 'lago' },
+  { id: 'estufa', nome: 'Estufa', emoji: '🪴', camada: 'exterior', custo: 650, requer: 'horta' },
+  { id: 'piscina', nome: 'Piscina', emoji: '🏊', camada: 'exterior', custo: 1100, requer: 'varanda' },
+] as const satisfies readonly ParteDoCatalogo[];
+
+export type ParteId = (typeof CATALOGO_DA_CASA)[number]['id'];
+/** As partes que viram um cômodo decorável. */
+export type ComodoId = Extract<(typeof CATALOGO_DA_CASA)[number], { camada: 'comodo' }>['id'];
+
+export interface ParteDaCasa extends ParteDoCatalogo {
+  id: ParteId;
+  requer?: ParteId;
+}
+
+const PARTES_DA_CASA: readonly ParteDaCasa[] = CATALOGO_DA_CASA;
+
+function ehPrecoCompleto(precos: Partial<Record<ParteId, number>>): precos is Record<ParteId, number> {
+  return PARTES_DA_CASA.every(({ id }) => precos[id] !== undefined);
+}
+
+function precosDaCasa(): Record<ParteId, number> {
+  const precos: Partial<Record<ParteId, number>> = {};
+  for (const { id, custo } of PARTES_DA_CASA) precos[id] = custo;
+  if (!ehPrecoCompleto(precos)) throw new RangeError('catálogo da casa sem preço');
+  return precos;
+}
+
+/**
+ * Casa do sapo (specs 18 e 31): o catálogo na ordem em que aparece. O quarto (preço 0) já vem pronto;
+ * algumas partes pedem outra antes (`requer`). `partCost` sai do catálogo. Proposta.
+ */
+export const HOUSE = { parts: PARTES_DA_CASA, partCost: precosDaCasa() } as const;
 
 /** Decorações do quarto (spec 18): preço em joias. O quarto começa vazio. Proposta. */
 export const ROOM_DECOR = {
@@ -137,7 +226,8 @@ export const ROOM_GRID = { columns: 6, rows: 6, rotations: [0, 90, 180, 270] } a
 
 /**
  * Conquistas (spec 14): catálogo na ordem em que aparecem. `meta` é o alvo numérico de cada regra
- * (`@pulo/core/domain/achievements`): dias seguidos, minutos de uma sessão de foco, dias de descanso ou partes da casa.
+ * (`@pulo/core/domain/achievements`): dias seguidos, minutos de uma sessão de foco, dias de descanso, partes da casa,
+ * cômodos, o segundo andar ou gelos usados.
  * A regra da secreta ainda não foi escolhida: ela não é concedida a ninguém. Proposta.
  */
 export const ACHIEVEMENTS = [
@@ -145,7 +235,10 @@ export const ACHIEVEMENTS = [
   { id: 'foco-profundo', nome: 'Foco profundo', emoji: '⏱️', secreta: false, meta: 50 },
   { id: 'descanso-sabido', nome: 'Descanso sabido', emoji: '🌙', secreta: false, meta: 4 },
   { id: 'mes-de-fogo', nome: 'Mês de fogo', emoji: '🏆', secreta: false, meta: 30 },
-  { id: 'casa-inteira', nome: 'Casa inteira', emoji: '🏡', secreta: false, meta: Object.keys(HOUSE.partCost).length },
+  { id: 'dois-andares', nome: 'Dois andares', emoji: '🏘️', secreta: false, meta: 1 },
+  { id: 'cinco-comodos', nome: 'Cinco cômodos', emoji: '🚪', secreta: false, meta: 5 },
+  { id: 'casa-inteira', nome: 'Casa inteira', emoji: '🏡', secreta: false, meta: HOUSE.parts.length },
+  { id: 'gelo-na-hora', nome: 'Gelo na hora certa', emoji: '🧊', secreta: false, meta: 1 },
   { id: 'segredo', nome: 'Segredo', emoji: '✨', secreta: true, meta: 1 },
 ] as const;
 
@@ -219,6 +312,8 @@ export const ACCOUNT = {
 export const FROG_EVENT_MS = {
   pouso: 1200,
   surpreso: 3000,
+  comemorando: 4000,
+  construindo: 3000,
   feliz: 4000,
 } as const;
 

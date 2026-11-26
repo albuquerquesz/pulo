@@ -56,6 +56,8 @@ export function defineRepositoryContract(
   make: () => RepositoryUnderTest | Promise<RepositoryUnderTest>,
   options: ContractOptions = {},
 ): void {
+  // O servidor só aceita descanso para hoje.
+  const restDate = dateKeyOf(options.now ?? sp(2026, 11, 18), baseUser.timezone);
   const subject = async () => {
     const { repository, userId } = await make();
     return { r: repository, user: { ...baseUser, id: userId } };
@@ -69,7 +71,8 @@ export function defineRepositoryContract(
       expect(await r.listSessions()).toEqual([]);
       expect(await r.listTasks()).toEqual([]);
       expect(await r.listSubtasks()).toEqual([]);
-      expect(await r.getMascotState()).toBeNull();
+      // No remoto o servidor deriva o sapo do histórico que a conta já tenha.
+      if (!options.mascotIsServerDerived) expect(await r.getMascotState()).toBeNull();
     });
 
     it('usuário e blocos: salvar, atualizar por id e apagar', async () => {
@@ -147,10 +150,10 @@ export function defineRepositoryContract(
 
     it('descanso, propostas e estado do mascote', async () => {
       const { r } = await subject();
-      await r.saveRestDay({ date: '2026-11-10' });
-      await r.saveRestDay({ date: '2026-11-10' });
+      await r.saveRestDay({ date: restDate });
+      await r.saveRestDay({ date: restDate });
       expect(await r.listRestDays()).toHaveLength(1);
-      await r.deleteRestDay('2026-11-10');
+      await r.deleteRestDay(restDate);
       expect(await r.listRestDays()).toEqual([]);
       const p = {
         id: uid('p'), weekStart: '2026-11-09', state: 'pendente' as const, patternText: 'x', changes: [],
@@ -180,7 +183,9 @@ export function defineRepositoryContract(
       const h = uid('h');
       await r.saveHabit({ id: h, title: 'x', weekdays: [0], state: 'ativo' as const });
       await r.saveHabitLog({ habitId: h, date: addDays(today, -2), doneAt: 1 });
-      await r.saveRestDay({ date: addDays(today, -1) });
+      await r.saveHabitLog({ habitId: h, date: addDays(today, -1), doneAt: 1 });
+      await r.deleteHabitLog(h, addDays(today, -2));
+      await r.saveRestDay({ date: today });
       await r.saveHabitLog({ habitId: h, date: today, doneAt: 2 });
       const streak = await verSequencia(r, clock);
       expect(streak).toMatchObject({ atual: 2, recorde: 2 });
@@ -294,12 +299,15 @@ export function defineRepositoryContract(
     it('casa e quarto: compras por item, mover muda só a posição', async () => {
       const { r } = await subject();
       const parte = { item: 'cerca', cost: 40, createdAt: 1 };
-      const tapete = { item: 'tapete', cost: 10, createdAt: 2, x: 0, y: 0, rotation: 0 as const };
+      const tapete = { item: 'tapete', cost: 10, createdAt: 2, x: 0, y: 0, rotation: 0 as const, comodo: 'quarto' as const };
       await r.saveHousePurchase(parte);
       await r.saveRoomDecor(tapete);
       await r.moveRoomDecor('tapete', { x: 1, y: 2, rotation: 180 });
       expect(await r.listHousePurchases()).toEqual([parte]);
       expect(await r.listRoomDecor()).toEqual([{ ...tapete, x: 1, y: 2, rotation: 180 }]);
+      await r.saveHousePurchase({ item: 'banheiro', cost: 100, createdAt: 3 });
+      await r.moveRoomDecor('tapete', { x: 1, y: 2, rotation: 180, comodo: 'banheiro' });
+      expect(await r.listRoomDecor()).toEqual([{ ...tapete, x: 1, y: 2, rotation: 180, comodo: 'banheiro' }]);
       expect(await r.getJoiaCredit()).toBe(0);
     });
 
@@ -321,7 +329,7 @@ export function defineRepositoryContract(
       await r.saveHabit({ id: h, title: 'x', weekdays: [0], state: 'ativo' as const });
       await r.saveHabitLog({ habitId: h, date: '2026-11-10', doneAt: 1 });
       await r.saveSession({ ...endedSession(1, 25, 'concluida'), id: uid('s') });
-      await r.saveRestDay({ date: '2026-11-10' });
+      await r.saveRestDay({ date: restDate });
       await r.saveProposal({ id: uid('p'), weekStart: '2026-11-09', state: 'pendente', patternText: 'x', changes: [], origin: 'ia', createdAt: 1 });
       await r.saveGoal({ id: uid('g'), title: 'x', state: 'ativa', milestones: [], createdAt: 1 });
       await r.saveIslandPurchase({ item: 'banco', cost: 8, createdAt: 1 });

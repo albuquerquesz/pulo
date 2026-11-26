@@ -36,10 +36,12 @@ export async function seedEverything({ db }: TestDatabase, userId: string, mark:
       { userId, item: 'banco', kind: 'antiga', cost: 8, createdAt: at },
       { userId, item: 'cerca', kind: 'casa', cost: 40, createdAt: at },
       { userId, item: 'tapete', kind: 'decoracao', cost: 10, createdAt: at },
+      { userId, item: 'gelo-1', kind: 'gelo', cost: 50, createdAt: at },
     ],
   });
   await db.roomPlacement.create({ data: { userId, item: 'tapete', x: 1, y: 2, rotation: 90 } });
   await db.joiaCredit.create({ data: { userId, amount: 7 } });
+  await db.freezeUse.createMany({ data: list.map((i) => ({ userId, date: new Date(Date.UTC(2025, 0, 1 + i)) })) });
   await db.achievement.create({ data: { userId, achievement: 'primeira-semana', conquistadaEm: at } });
   await db.mascotState.create({ data: { userId, phase: 2, careDays: 4, updatedAt: at } });
 

@@ -1,4 +1,5 @@
 import { apiErrorSchema } from '@pulo/core/api/schemas';
+import type { FreezePurchaseList } from '@pulo/core/domain/joias';
 import type { Repository } from '@pulo/core/domain/types';
 import { metadataPatchFromUser, userFromMetadata } from '@pulo/core/domain/user-metadata';
 import { hc } from 'hono/client';
@@ -42,8 +43,11 @@ export type ClienteInterno = ReturnType<typeof clienteInterno>;
  * limites e transações que o app usa, então as ferramentas do MCP rodam os casos de uso do core sem atalhos.
  * Sem cache: uma chamada de ferramenta é curta e sempre lê o estado atual.
  */
-export function repositorioInterno(api: ClienteInterno): Repository {
+export function repositorioInterno(api: ClienteInterno): Repository & FreezePurchaseList {
   return {
+    // As compras de gelo entram no saldo de joias das ferramentas da casa.
+    listFreezePurchases: async () => (await lerJson(await api.api.gelo.$get())).compras,
+
     getUser: async () => {
       const { user, metadata } = await lerJson(await api.api.me.$get());
       return userFromMetadata(user.id, metadata);

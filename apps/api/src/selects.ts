@@ -46,6 +46,8 @@ export const sessionSelect = {
 
 export const restDaySelect = { date: true } as const satisfies Prisma.RestDaySelect;
 
+export const freezeUseSelect = { date: true, vistoEm: true } as const satisfies Prisma.FreezeUseSelect;
+
 export const proposalSelect = {
   id: true,
   weekStart: true,
@@ -79,7 +81,7 @@ export const goalChestSelect = { goalId: true, abertoEm: true, joias: true } as 
 
 export const islandPurchaseSelect = { item: true, cost: true, createdAt: true } as const satisfies Prisma.IslandPurchaseSelect;
 
-export const roomSpotSelect = { x: true, y: true, rotation: true } as const satisfies Prisma.RoomPlacementSelect;
+export const roomSpotSelect = { x: true, y: true, rotation: true, comodo: true } as const satisfies Prisma.RoomPlacementSelect;
 
 export const roomDecorSelect = { ...islandPurchaseSelect, placement: { select: roomSpotSelect } } as const satisfies Prisma.IslandPurchaseSelect;
 

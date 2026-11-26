@@ -58,6 +58,46 @@ export const darkColors: ColorTokens = {
   ...acao,
 };
 
+/** Cores próprias do rascunho (spec 21): contorno grosso, joia, madeira e números do trilho. Iguais nos dois temas. */
+export const drawingColors = {
+  contorno: '#3B2A2F',
+  joiaClara: '#EBDDFF',
+  joia: '#B583FF',
+  joiaEscura: '#7B3FE4',
+  creme: '#FFF3DA',
+  madeira: '#C98B5E',
+  madeiraClara: '#E7B07E',
+  folha: '#FBF4EE',
+  sombraBranca: '#E4DCCB',
+  lima: '#C7E36B',
+  limaClara: '#E6F6A8',
+  ceu: '#CBF1F6',
+  cancelar: '#F08A7A',
+  cancelarBorda: '#D0644F',
+  numeroFoco: '#FF9B7A',
+  numeroJoia: '#C29BFF',
+  /** Ponta quente da barra da sequência. */
+  solQuente: '#FFB347',
+  /** Caixa do timer e mostradores (spec 23). */
+  timerVerde: '#6FCB55',
+  timerVerdeBorda: '#4FA83C',
+  timerOuro: '#E9B85A',
+  timerTrilho: '#2F5E2A',
+  madeiraEscura: '#A86F43',
+  /** Escolhido e botões da loja do quarto. */
+  limaForte: '#D3E36B',
+  bege: '#EFEACB',
+  begeBorda: '#D9D2A8',
+  /** Parte da casa já construída, na Ilha (spec 24). */
+  prontaFundo: '#E9F8D9',
+  prontaBorda: '#C6E6A6',
+  prontaTexto: '#3F8F23',
+  /** Bolinhas das etiquetas de tarefa (spec 25). */
+  etiquetaAzul: '#5CA8FF',
+  etiquetaRosa: '#FF9DB4',
+  etiquetaCinza: '#9DB3A5',
+} as const;
+
 /** Céu noturno da lagoa (spec 04). */
 export const nightSky = '#243A6B';
 

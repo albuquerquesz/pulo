@@ -3,9 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 import { GETTING_TO_KNOW_TEXT, proposalLabel } from '@pulo/core/domain/ia';
 import type { BlockSlot, Period, WeeklyProposal } from '@pulo/core/domain/types';
 import { estadoDoSapo, Lagoa } from '@/mascot';
-import { Botao, Cartao, EstadoVazio, Texto } from '@/ui';
+import { Botao, Cartao, Texto } from '@/ui';
 
-import { agoraDaLagoa, dentroDoDiaDoUsuario, Secao, slotTexto, Tela, useApp, useCarregar, useLadoDoConteudo } from '../app';
+import { agoraDaLagoa, dentroDoDiaDoUsuario, Secao, slotTexto, Tela, useApp, useCarregar, useLadoDoConteudo, ErroDeCarga } from '../app';
 import { mensagemDeErro } from '@pulo/client';
 
 import type { DecisaoFeita } from './fonte';
@@ -33,7 +33,7 @@ export function SemanaScreen() {
   const gerando = useRef(false);
   const timerDesfazer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  const { estado } = useCarregar(async () => {
+  const { estado, recarregar } = useCarregar(async () => {
     if (!user) throw new Error('sem usuário');
     const dados = await carregarSemana(repo, clock, user);
     setProposta(dados.proposta);
@@ -78,8 +78,8 @@ export function SemanaScreen() {
   }
   if (estado.tipo === 'erro') {
     return (
-      <Tela titulo="Semana">
-        <EstadoVazio titulo="Sem sinal por aqui" texto="A lagoa ficou sem sinal. Seus dados estão salvos aqui." />
+      <Tela>
+        <ErroDeCarga falha={estado.falha} guardado="Seus dados estão salvos." onTentar={() => void recarregar()} />
       </Tela>
     );
   }

@@ -18,6 +18,7 @@ import {
   sortGoals,
 } from '@pulo/core/domain/goals';
 import {
+  COMODOS,
   type EstadoDaCasa,
   comprarDecoracao,
   comprarParte,
@@ -148,7 +149,7 @@ const ilha = (e: EstadoDaCasa) => ({
   moeda: 'joias',
   ganhas: e.ganhas,
   gastas: e.gastas,
-  casa: { construidas: e.construidas, total: e.total, completa: e.completa, proxima: e.proxima, partes: e.partes },
+  casa: { construidas: e.construidas, total: e.total, completa: e.completa, proxima: e.proxima, partes: e.partes, comodos: e.comodos },
   quarto: {
     grade: { colunas: ROOM_GRID.columns, linhas: ROOM_GRID.rows, giros: ROOM_GRID.rotations },
     decoracoes: e.decoracoes.map((d) => ({
@@ -156,7 +157,7 @@ const ilha = (e: EstadoDaCasa) => ({
       nome: d.nome,
       custo: d.custo,
       comprado: d.posicao !== null,
-      ...(d.posicao ? { x: d.posicao.x, y: d.posicao.y, giro: d.posicao.rotation } : {}),
+      ...(d.posicao ? { x: d.posicao.x, y: d.posicao.y, giro: d.posicao.rotation, comodo: d.posicao.comodo } : {}),
     })),
   },
 });
@@ -164,6 +165,8 @@ const ilha = (e: EstadoDaCasa) => ({
 const xSchema = z.number().int().min(0).max(ROOM_GRID.columns - 1).describe('Coluna no chão do quarto, a partir de 0');
 const ySchema = z.number().int().min(0).max(ROOM_GRID.rows - 1).describe('Linha no chão do quarto, a partir de 0');
 const giroSchema = z.union(ROOM_GRID.rotations.map((r) => z.literal(r))).describe('Giro em graus');
+
+const comodoSchema = z.enum(COMODOS.map((c) => c.id)).describe('Cômodo da decoração, entre os de ver_ilha');
 
 // ---------- Respostas ----------
 
@@ -294,7 +297,7 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     'ver_sequencia',
     {
       title: 'Ver a sequência',
-      description: 'Dias seguidos com hábito feito ou foco (descanso não quebra nem soma), o recorde e a semana, de domingo a sábado.',
+      description: 'Dias seguidos com hábito feito ou foco (descanso e gelo não quebram nem somam), o recorde e a semana, de domingo a sábado.',
       annotations: LEITURA,
     },
     () =>
@@ -302,6 +305,40 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
         await pessoa(repo);
         const { streak } = await lerJson(await api.api.streak.$get());
         return resposta(streak);
+      }),
+  );
+
+  server.registerTool(
+    'ver_gelo',
+    {
+      title: 'Ver o gelo',
+      description:
+        'O gelo protege a sequência num dia esquecido: quantos estão guardados, o máximo, os dias já protegidos e os que a pessoa ainda não viu. Comprar só no app.',
+      annotations: LEITURA,
+    },
+    () =>
+      protegido(async () => {
+        await pessoa(repo);
+        const { guardados, max, usados, recentes } = await lerJson(await api.api.gelo.$get());
+        return resposta({ guardados, max, usados, recentes });
+      }),
+  );
+
+  server.registerTool(
+    'ver_metricas',
+    {
+      title: 'Ver as métricas',
+      description:
+        'Os números do Perfil: descanso, gelo, ritmo dos últimos 30 dias (foco médio por dia, taxa de hábitos, melhor período e melhor dia da semana) e o que foi concluído.',
+      annotations: LEITURA,
+    },
+    () =>
+      protegido(async () => {
+        await pessoa(repo);
+        const { metrics } = await lerJson(await api.api.profile.metrics.$get());
+        const { melhorDiaDaSemana } = metrics.ritmo;
+        const melhorDia = melhorDiaDaSemana === null ? null : nomeDoDia(melhorDiaDaSemana);
+        return resposta({ ...metrics, ritmo: { ...metrics.ritmo, melhorDiaDaSemana: melhorDia } });
       }),
   );
 
@@ -622,7 +659,8 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     'dia_de_descanso',
     {
       title: 'Dia de descanso',
-      description: 'Marca (ou desfaz, com descanso = false) um dia de descanso. Padrão: hoje. Descanso também conta como cuidado.',
+      description:
+        'Marca (ou desfaz, com descanso = false) o descanso de hoje. Só vale para hoje, com limite por semana. Descanso também conta como cuidado.',
       inputSchema: { descanso: z.boolean().default(true), data: dataSchema.optional() },
       annotations: ESCRITA,
     },
@@ -887,22 +925,23 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     {
       title: 'Comprar na ilha',
       description:
-        'Gasta joias para construir uma parte da casa ou comprar uma decoração do quarto. Use os ids de ver_ilha. Para decoração, x, y e giro dizem onde colocar (padrão 0). Compras não podem ser desfeitas.',
+        'Gasta joias para construir uma parte da casa (algumas pedem outra antes, em requer) ou comprar uma decoração. Use os ids de ver_ilha. Para decoração, comodo (padrão quarto), x, y e giro dizem onde colocar (padrão 0). Compras não podem ser desfeitas.',
       inputSchema: {
         item: idSchema.describe('Id da parte ou da decoração, como aparece em ver_ilha'),
         x: xSchema.optional(),
         y: ySchema.optional(),
         giro: giroSchema.optional(),
+        comodo: comodoSchema.optional(),
       },
       annotations: ESCRITA,
     },
-    ({ item, x = 0, y = 0, giro = 0 }) =>
+    ({ item, x = 0, y = 0, giro = 0, comodo }) =>
       protegido(async () => {
         await pessoa(repo);
         const r =
           precoDaDecoracao(item) === null
             ? await comprarParte(repo, clock, item)
-            : await comprarDecoracao(repo, clock, item, { x, y, rotation: giro });
+            : await comprarDecoracao(repo, clock, item, { x, y, rotation: giro, comodo });
         return deCaso(r, () => r.ok && ilha(r.value));
       }),
   );
@@ -912,13 +951,19 @@ export function registrarFerramentas(server: McpServer, { repo, api, clock }: Co
     {
       title: 'Mover decoração',
       description: 'Muda de lugar uma decoração já comprada, sem custo. Use os ids de ver_ilha.',
-      inputSchema: { item: idSchema.describe('Id da decoração'), x: xSchema, y: ySchema, giro: giroSchema.optional() },
+      inputSchema: {
+        item: idSchema.describe('Id da decoração'),
+        x: xSchema,
+        y: ySchema,
+        giro: giroSchema.optional(),
+        comodo: comodoSchema.optional(),
+      },
       annotations: ESCRITA,
     },
-    ({ item, x, y, giro = 0 }) =>
+    ({ item, x, y, giro = 0, comodo }) =>
       protegido(async () => {
         await pessoa(repo);
-        const r = await moverDecoracao(repo, item, { x, y, rotation: giro });
+        const r = await moverDecoracao(repo, item, { x, y, rotation: giro, comodo });
         return deCaso(r, () => r.ok && ilha(r.value));
       }),
   );

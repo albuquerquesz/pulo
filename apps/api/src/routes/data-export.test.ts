@@ -32,6 +32,7 @@ const WHERE_IN_FILE: Record<string, string | null> = {
   joia_credit: 'joiaCredit',
   mascot_state: 'mascot',
   achievement: 'achievements',
+  freeze_use: 'freezeUses',
   oauth_consent: 'connections',
   session: null,
   account: null,
@@ -73,6 +74,7 @@ describe('GET /api/data/export', () => {
       joiaCredit: 7,
       islandPurchases: [{ item: 'banco' }],
       housePurchases: [{ item: 'cerca' }],
+      freezePurchases: [{ item: 'gelo-1' }],
       roomDecor: [{ item: 'tapete', x: 1, y: 2, rotation: 90 }],
       connections: [{ name: 'Claude', scopes: ['openid'] }],
     });
@@ -90,7 +92,7 @@ describe('GET /api/data/export', () => {
     await seedEverything(database, big.id, 'cinquenta', 50);
     const one = await queriesOf(database, small, 'GET', '/api/data/export');
     expect(await queriesOf(database, big, 'GET', '/api/data/export')).toBe(one);
-    // 2 de sessão, 17 leituras numa transação e as conexões.
-    expect(one).toBe(20);
+    // 2 de sessão, 18 leituras numa transação e as conexões.
+    expect(one).toBe(21);
   });
 });

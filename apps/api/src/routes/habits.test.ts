@@ -117,6 +117,7 @@ describe('/api/habits', () => {
 
     const del = await queriesOf(database, small, 'DELETE', `/api/habits/${id}`);
     expect(await queriesOf(database, big, 'DELETE', `/api/habits/${bigId}`)).toBe(del);
-    expect(del).toBe(3);
+    // 2 de sessão + o acerto do gelo (6 leituras) + o delete.
+    expect(del).toBe(9);
   });
 });

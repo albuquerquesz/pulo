@@ -99,7 +99,7 @@ describe('/api/streak', () => {
     }
     const one = await queriesOf(database, small, 'GET', '/api/streak');
     expect(await queriesOf(database, big, 'GET', '/api/streak')).toBe(one);
-    // 2 de sessão + 3 leituras numa transação.
-    expect(one).toBe(5);
+    // 2 de sessão + 6 leituras numa transação + a gravação do primeiro acerto do gelo no dia.
+    expect(one).toBe(9);
   });
 });

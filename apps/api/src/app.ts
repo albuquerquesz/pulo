@@ -13,12 +13,14 @@ import { achievementRoutes } from './routes/achievements';
 import { blockRoutes } from './routes/blocks';
 import { connectionRoutes } from './routes/connections';
 import { dataRoutes } from './routes/data';
+import { freezeRoutes } from './routes/gelo';
 import { goalRoutes } from './routes/goals';
 import { habitLogRoutes } from './routes/habit-logs';
 import { habitRoutes } from './routes/habits';
 import { houseRoutes, roomRoutes } from './routes/house';
 import { islandRoutes } from './routes/island';
 import { mascotRoutes } from './routes/mascot';
+import { profileRoutes } from './routes/profile';
 import { proposalRoutes } from './routes/proposals';
 import { restDayRoutes } from './routes/rest-days';
 import { sessionRoutes } from './routes/sessions';
@@ -87,6 +89,8 @@ export function createApp(env: ApiEnv, db: Db, now = Date.now, options: AppOptio
     .route('/api/sessions', sessionRoutes(deps))
     .route('/api/rest-days', restDayRoutes(deps))
     .route('/api/proposals', proposalRoutes(deps))
+    .route('/api/gelo', freezeRoutes(deps))
+    .route('/api/profile', profileRoutes(deps))
     .route('/api/goals', goalRoutes(deps))
     .route('/api/tasks', taskRoutes(deps))
     .route('/api/island', islandRoutes(deps))

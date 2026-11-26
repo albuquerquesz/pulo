@@ -2,6 +2,7 @@ import { dateRangeQuerySchema, habitLogParamSchema, habitLogSchema } from '@pulo
 import { dateKeyToDate, habitLogMapper } from '@pulo/db';
 import { Hono } from 'hono';
 import { unlockAchievements } from '../achievements';
+import { acertarGeloDaPessoa } from '../gelo';
 import {
   ApiError,
   type AppEnv,
@@ -50,6 +51,8 @@ export function habitLogRoutes({ auth, db, now }: RouteDeps) {
     })
     .delete('/:habitId/:date', pathParams(habitLogParamSchema), async (c) => {
       const { habitId, date } = c.req.valid('param');
+      // Acerta o gelo antes de apagar: o gelo vê os dias como estavam.
+      await acertarGeloDaPessoa(db, c.var.user, now());
       const { count } = await db.habitLog.deleteMany({ where: { userId: c.var.user.id, habitId, date: dateKeyToDate(date) } });
       return c.json({ deleted: count });
     });

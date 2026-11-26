@@ -28,9 +28,9 @@ export function OnboardingScreen() {
   };
 
   return (
-    <Tela semBarra>
+    <Tela>
       <div className="flex justify-center">
-        <Sapo fase={1} estado="feliz" tamanho={180} />
+        <Sapo fase={1} momento="boas-vindas" tamanho={180} />
       </div>
       <Texto como="h1" variante="display">
         Oi, eu sou o Pulo

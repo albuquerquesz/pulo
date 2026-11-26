@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { render } from '@testing-library/react';
 
-import { darkColors, lightColors, motion } from './tokens';
+import { darkColors, drawingColors, lightColors, motion } from './tokens';
 import { montarTema, resolverEsquema, resolverMovimento, resolverReduzirMovimento } from './tema';
 import { TemaProvider, useTheme, type TemaProviderProps } from './useTheme';
 
@@ -84,6 +84,11 @@ describe('styles.css', () => {
 
   test('cores claras e de ação batem com os tokens', () => {
     for (const [nome, valor] of Object.entries(lightColors)) {
+      expect(css).toContain(`--pulo-${nomeCss(nome)}: ${valor.toLowerCase()};`);
+    }
+  });
+  test('cores do rascunho batem com os tokens', () => {
+    for (const [nome, valor] of Object.entries(drawingColors)) {
       expect(css).toContain(`--pulo-${nomeCss(nome)}: ${valor.toLowerCase()};`);
     }
   });

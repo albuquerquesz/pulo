@@ -2,6 +2,12 @@ import { RemoteError } from '@pulo/client';
 import { type BatchRepository, supportsBatch } from '@pulo/core/data/batch';
 import { createMemoryRepository } from '@/data';
 
+import { providesAchievements } from '@pulo/core/domain/achievements';
+import { providesStats } from '@pulo/core/domain/stats';
+import { providesStreak } from '@pulo/core/domain/streak';
+
+import { temAvisosDeConquista, temConta, temPreferencias } from '../app/conta';
+import { criarSessaoDemo } from '../app/demo';
 import { escolherOrigem } from '../app/origem';
 import { comAvisosDeErro, repositorioFechado } from '../app/repositorio';
 import { API_LOCAL, apiUrl, endpointDaIa } from './config';
@@ -72,5 +78,25 @@ describe('repositório fechado e avisos de erro', () => {
     await comLote.saveHabits([]);
     expect(avisos).toEqual(['A lagoa ficou sem sinal.']);
     expect(supportsBatch(comAvisosDeErro(base, opcoes))).toBe(false);
+  });
+
+  test('repassa o que vai além do contrato: sequência, estatísticas, conquistas, preferências e conta', async () => {
+    const avisos: string[] = [];
+    const falha = new RemoteError({ kind: 'rede', mensagem: 'A lagoa ficou sem sinal.' });
+    const { repo: demo } = await criarSessaoDemo();
+    if (!temPreferencias(demo) || !temConta(demo)) throw new Error('o demo precisa de preferências e conta');
+    const cancelar = () => undefined;
+    const completo = { ...demo, onNewAchievements: () => cancelar, savePreferences: () => Promise.reject(falha) };
+    const repo = comAvisosDeErro(completo, { avisar: (m) => avisos.push(m), sessaoExpirou: () => undefined });
+    expect(providesStreak(repo) && providesStats(repo) && providesAchievements(repo)).toBe(true);
+    if (!temAvisosDeConquista(repo) || !temPreferencias(repo) || !temConta(repo)) throw new Error('capacidade perdida');
+    expect(repo.onNewAchievements(() => undefined)).toBe(cancelar);
+    expect((await repo.getPreferences()).focusMinutes).toBe(25);
+    expect(await repo.listConnections()).toHaveLength(1);
+    expect(await repo.exportData()).toMatchObject({ demo: true });
+    await expect(repo.savePreferences({ sounds: false })).rejects.toBe(falha);
+    expect(avisos).toEqual(['A lagoa ficou sem sinal.']);
+    const simples = comAvisosDeErro(createMemoryRepository(), { avisar: () => undefined, sessaoExpirou: () => undefined });
+    expect(temPreferencias(simples) || temConta(simples) || providesAchievements(simples)).toBe(false);
   });
 });

@@ -27,6 +27,38 @@
   --pulo-on-descanso: #ffffff;
   /* Texto sobre cores de ação: sempre o ink do tema claro. */
   --pulo-ink-sobre-acao: #1f2a24;
+  /* Cores do rascunho (drawingColors). */
+  --pulo-contorno: #3b2a2f;
+  --pulo-joia-clara: #ebddff;
+  --pulo-joia: #b583ff;
+  --pulo-joia-escura: #7b3fe4;
+  --pulo-creme: #fff3da;
+  --pulo-madeira: #c98b5e;
+  --pulo-madeira-clara: #e7b07e;
+  --pulo-folha: #fbf4ee;
+  --pulo-sombra-branca: #e4dccb;
+  --pulo-lima: #c7e36b;
+  --pulo-lima-clara: #e6f6a8;
+  --pulo-ceu: #cbf1f6;
+  --pulo-cancelar: #f08a7a;
+  --pulo-cancelar-borda: #d0644f;
+  --pulo-numero-foco: #ff9b7a;
+  --pulo-numero-joia: #c29bff;
+  --pulo-sol-quente: #ffb347;
+  --pulo-timer-verde: #6fcb55;
+  --pulo-timer-verde-borda: #4fa83c;
+  --pulo-timer-ouro: #e9b85a;
+  --pulo-timer-trilho: #2f5e2a;
+  --pulo-madeira-escura: #a86f43;
+  --pulo-lima-forte: #d3e36b;
+  --pulo-bege: #efeacb;
+  --pulo-bege-borda: #d9d2a8;
+  --pulo-pronta-fundo: #e9f8d9;
+  --pulo-pronta-borda: #c6e6a6;
+  --pulo-pronta-texto: #3f8f23;
+  --pulo-etiqueta-azul: #5ca8ff;
+  --pulo-etiqueta-rosa: #ff9db4;
+  --pulo-etiqueta-cinza: #9db3a5;
   color-scheme: light;
 }
 
@@ -69,6 +101,37 @@
   --color-atencao: var(--pulo-atencao);
   --color-on-descanso: var(--pulo-on-descanso);
   --color-ink-sobre-acao: var(--pulo-ink-sobre-acao);
+  --color-contorno: var(--pulo-contorno);
+  --color-joia-clara: var(--pulo-joia-clara);
+  --color-joia: var(--pulo-joia);
+  --color-joia-escura: var(--pulo-joia-escura);
+  --color-creme: var(--pulo-creme);
+  --color-madeira: var(--pulo-madeira);
+  --color-madeira-clara: var(--pulo-madeira-clara);
+  --color-folha: var(--pulo-folha);
+  --color-sombra-branca: var(--pulo-sombra-branca);
+  --color-lima: var(--pulo-lima);
+  --color-lima-clara: var(--pulo-lima-clara);
+  --color-ceu: var(--pulo-ceu);
+  --color-cancelar: var(--pulo-cancelar);
+  --color-cancelar-borda: var(--pulo-cancelar-borda);
+  --color-numero-foco: var(--pulo-numero-foco);
+  --color-numero-joia: var(--pulo-numero-joia);
+  --color-sol-quente: var(--pulo-sol-quente);
+  --color-timer-verde: var(--pulo-timer-verde);
+  --color-timer-verde-borda: var(--pulo-timer-verde-borda);
+  --color-timer-ouro: var(--pulo-timer-ouro);
+  --color-timer-trilho: var(--pulo-timer-trilho);
+  --color-madeira-escura: var(--pulo-madeira-escura);
+  --color-lima-forte: var(--pulo-lima-forte);
+  --color-bege: var(--pulo-bege);
+  --color-bege-borda: var(--pulo-bege-borda);
+  --color-pronta-fundo: var(--pulo-pronta-fundo);
+  --color-pronta-borda: var(--pulo-pronta-borda);
+  --color-pronta-texto: var(--pulo-pronta-texto);
+  --color-etiqueta-azul: var(--pulo-etiqueta-azul);
+  --color-etiqueta-rosa: var(--pulo-etiqueta-rosa);
+  --color-etiqueta-cinza: var(--pulo-etiqueta-cinza);
 
   --font-sans: 'Nunito', ui-rounded, system-ui, sans-serif;
 
@@ -110,7 +173,395 @@ body {
   color: var(--pulo-ink);
   font-family: var(--font-sans);
   font-weight: 600;
+  font-size: 15px;
+  line-height: 1.45;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Peças do rascunho (spec 21). */
+@utility gema {
+  background: linear-gradient(135deg, var(--pulo-joia-clara) 0 22%, var(--pulo-joia) 23% 55%, var(--pulo-joia-escura) 56%);
+  clip-path: polygon(50% 0, 100% 28%, 100% 72%, 50% 100%, 0 72%, 0 28%);
+}
+@utility contorno-branco {
+  filter: drop-shadow(1.5px 0 0 #fff) drop-shadow(-1.5px 0 0 #fff) drop-shadow(0 1.5px 0 #fff) drop-shadow(0 -1.5px 0 #fff);
+}
+@utility contorno-grosso {
+  filter: drop-shadow(2.5px 0 0 var(--pulo-contorno)) drop-shadow(-2.5px 0 0 var(--pulo-contorno))
+    drop-shadow(0 2.5px 0 var(--pulo-contorno)) drop-shadow(0 -2.5px 0 var(--pulo-contorno));
+}
+
+/* A chama grande da sequência tremula (use `animate-tremula` com `origin-[50%_90%]`). */
+@theme inline {
+  --animate-tremula: tremula 1.6s ease-in-out infinite;
+  @keyframes tremula {
+    0%,
+    100% {
+      transform: scale(1) rotate(-2deg);
+    }
+    50% {
+      transform: scale(1.06, 1.1) rotate(2deg);
+    }
+  }
+}
+
+/* O brilho na ponta da barra da sequência pulsa. */
+@theme inline {
+  --animate-brilha: brilha 1.8s ease-in-out infinite;
+  @keyframes brilha {
+    0%,
+    100% {
+      opacity: 0.7;
+      transform: scale(0.85);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.15);
+    }
+  }
+}
+
+/* As joias saem do baú, se espalham e entram no saldo. */
+@theme inline {
+  --animate-joia-entra: joia-entra 0.9s ease-in forwards;
+  @keyframes joia-entra {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.4);
+    }
+    25% {
+      opacity: 1;
+      transform: translate(calc(-50% + var(--abre)), calc(-50% - 56px)) scale(1.15);
+    }
+    100% {
+      opacity: 0.2;
+      transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.7);
+    }
+  }
+}
+
+/* Nuvens: quatro faixas que não se cruzam. */
+.nv {
+  position: absolute;
+  left: -760px;
+  width: var(--w, 420px);
+  height: auto;
+  opacity: var(--o, 1);
+  animation: voa var(--t, 90s) linear infinite;
+  animation-delay: var(--d, 0s);
+  overflow: visible;
+}
+.n1 {
+  top: 0%;
+  --w: min(520px, 44vh);
+  --t: 120s;
+  --d: -15s;
+}
+.n2 {
+  top: 28%;
+  --w: min(360px, 31vh);
+  --t: 95s;
+  --d: -60s;
+  --o: 0.9;
+}
+.n4 {
+  top: 48%;
+  --w: min(380px, 31vh);
+  --t: 110s;
+  --d: -30s;
+  --o: 0.95;
+}
+.n3 {
+  top: 70%;
+  --w: min(560px, 47vh);
+  --t: 150s;
+  --d: -95s;
+  --o: 0.85;
+}
+.n5 {
+  display: none;
+}
+@keyframes voa {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(100vw + 800px));
+  }
+}
+
+/* Paradas, espalhadas pelo céu, quando a pessoa reduz o movimento (sistema ou Perfil). */
+:root[data-reduzir-movimento='true'] .nv {
+  animation: none !important;
+  left: auto;
+}
+:root[data-reduzir-movimento='true'] .n1 {
+  left: 8%;
+}
+:root[data-reduzir-movimento='true'] .n2 {
+  left: 70%;
+}
+:root[data-reduzir-movimento='true'] .n3 {
+  left: 20%;
+}
+:root[data-reduzir-movimento='true'] .n4 {
+  left: 78%;
+}
+
+/* Parte da casa ainda não construída: apagada e tracejada. */
+.parte-da-casa {
+  transition: opacity 0.4s;
+}
+.parte-da-casa:not(.feita) {
+  opacity: 0.28;
+}
+.parte-da-casa:not(.feita) :is(polygon, circle, path, ellipse, rect) {
+  stroke-dasharray: 8 7;
+}
+/* A parte recém comprada cai do alto. */
+.parte-da-casa.nova {
+  animation: constroi 0.6s ease-out;
+}
+@keyframes constroi {
+  from {
+    opacity: 0.2;
+    transform: translateY(-30px);
+  }
+}
+
+/* O cais para a próxima ilha: a ilha de lá fica apagada e tracejada até a casa ficar inteira. */
+.portal-da-ilha {
+  cursor: pointer;
+  outline: none;
+}
+.portal-da-ilha.trancado .proxima-ilha {
+  opacity: 0.3;
+}
+.portal-da-ilha.trancado .proxima-ilha polygon {
+  stroke-dasharray: 8 7;
+}
+.portal-da-ilha:focus-visible polygon {
+  stroke: var(--pulo-joia);
+}
+
+/* Detalhes vivos da mansão (spec 31): só nas partes prontas. */
+.parte-da-casa.feita .fumaca circle {
+  animation: fumaca 3.6s ease-out infinite;
+}
+@keyframes fumaca {
+  from {
+    opacity: 0;
+    transform: translate(-6px, 18px);
+  }
+  30% {
+    opacity: 0.95;
+  }
+  to {
+    opacity: 0;
+    transform: translate(14px, -34px);
+  }
+}
+.parte-da-casa.feita .onda {
+  animation: onda 3s ease-in-out infinite;
+}
+@keyframes onda {
+  50% {
+    transform: translateX(9px);
+    opacity: 0.55;
+  }
+}
+.parte-da-casa.feita .balanca {
+  animation: balanca 3.2s ease-in-out infinite;
+}
+@keyframes balanca {
+  0%,
+  100% {
+    transform: rotate(13deg);
+  }
+  50% {
+    transform: rotate(-13deg);
+  }
+}
+@keyframes luz {
+  50% {
+    opacity: 0.82;
+  }
+}
+
+/* Noite na lagoa: o céu da ilha escurece, as janelas e o poste acendem. */
+:root[data-esquema='escuro'] .cena-ilha {
+  background: color-mix(in srgb, var(--pulo-descanso-borda) 55%, var(--pulo-contorno));
+}
+:root[data-esquema='escuro'] .cena-ilha .nv {
+  opacity: 0.18;
+}
+:root[data-esquema='escuro'] .parte-da-casa.feita .janela-vidro {
+  fill: var(--pulo-sol);
+  animation: luz 4s ease-in-out infinite;
+}
+:root[data-esquema='escuro'] .parte-da-casa.feita .halo {
+  opacity: 0.35;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-esquema]) .cena-ilha {
+    background: color-mix(in srgb, var(--pulo-descanso-borda) 55%, var(--pulo-contorno));
+  }
+  :root:not([data-esquema]) .cena-ilha .nv {
+    opacity: 0.18;
+  }
+  :root:not([data-esquema]) .parte-da-casa.feita .janela-vidro {
+    fill: var(--pulo-sol);
+    animation: luz 4s ease-in-out infinite;
+  }
+  :root:not([data-esquema]) .parte-da-casa.feita .halo {
+    opacity: 0.35;
+  }
+}
+
+/* Menos movimento: a mansão fica parada. */
+@media (prefers-reduced-motion: reduce) {
+  .parte-da-casa :is(.fumaca circle, .onda, .balanca, .janela-vidro) {
+    animation: none !important;
+  }
+}
+:root[data-reduzir-movimento='true'] .parte-da-casa :is(.fumaca circle, .onda, .balanca, .janela-vidro) {
+  animation: none !important;
+}
+
+/* Quarto da Casa (spec 23): sapo, lugares da decoração e o +1 do foco. */
+.cena-casa:fullscreen {
+  height: 100vh;
+  min-height: 0;
+  border-radius: 0;
+}
+.sapo-casa .corpo-q {
+  animation: respira-q 3s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+.cena-casa.focando .anda {
+  animation: passeia 26s ease-in-out infinite;
+}
+.cena-casa.focando .corpo-q {
+  animation: pulinho 0.5s ease-in-out infinite;
+}
+.cena-casa.decorando .sapo-casa {
+  opacity: 0.55;
+}
+@keyframes passeia {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  14%,
+  24% {
+    transform: translate(-150px, -55px);
+  }
+  40%,
+  50% {
+    transform: translate(120px, -80px);
+  }
+  66%,
+  76% {
+    transform: translate(170px, 30px);
+  }
+  90% {
+    transform: translate(-90px, 40px);
+  }
+}
+@keyframes pulinho {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes respira-q {
+  50% {
+    transform: scale(1.03, 0.97);
+  }
+}
+.ganho-pop {
+  animation: sobe 1.6s ease-out forwards;
+}
+@keyframes sobe {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-60px);
+  }
+}
+.deco-item {
+  pointer-events: none;
+  animation: brota 0.45s ease-out;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+@keyframes brota {
+  from {
+    scale: 0;
+  }
+}
+.lugar {
+  cursor: pointer;
+  outline: none;
+}
+.lugar circle {
+  fill: var(--pulo-lima);
+  stroke: var(--pulo-contorno);
+  stroke-width: 3.5;
+}
+.lugar path {
+  stroke: var(--pulo-contorno);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+.lugar .pulso {
+  animation: pulso-lugar 1.6s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.lugar.tem circle {
+  fill: #fff;
+}
+.lugar:hover circle,
+.lugar:focus-visible circle {
+  fill: var(--pulo-lima-clara);
+}
+.lugar:focus-visible circle {
+  stroke-width: 6;
+}
+@keyframes pulso-lugar {
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+/* Controle deslizante dos minutos: o preenchido vem de --p. */
+.controle-do-timer {
+  appearance: none;
+  height: 16px;
+  border: 3.5px solid var(--pulo-contorno);
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--pulo-timer-ouro) var(--p, 28%), var(--pulo-timer-trilho) var(--p, 28%));
+  cursor: pointer;
+}
+.controle-do-timer::-webkit-slider-thumb {
+  appearance: none;
+  width: 26px;
+  height: 38px;
+  border: 3.5px solid var(--pulo-contorno);
+  border-radius: 9px;
+  background: var(--pulo-madeira);
+  box-shadow: inset 0 -4px 0 var(--pulo-madeira-escura);
+}
+.controle-do-timer::-moz-range-thumb {
+  width: 22px;
+  height: 34px;
+  border: 3.5px solid var(--pulo-contorno);
+  border-radius: 9px;
+  background: var(--pulo-madeira);
 }
 
 /* Reduzir movimento do sistema ou do Perfil: sem transições nem animações. */

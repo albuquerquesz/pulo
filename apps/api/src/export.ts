@@ -2,6 +2,7 @@ import {
   type Db,
   achievementMapper,
   focusSessionMapper,
+  freezeUseMapper,
   goalChestMapper,
   goalMapper,
   habitLogMapper,
@@ -22,6 +23,7 @@ import { listConnections } from './connections';
 import {
   achievementSelect,
   blockSelect,
+  freezeUseSelect,
   goalChestSelect,
   goalSelect,
   habitLogSelect,
@@ -49,7 +51,7 @@ export const EXPORT_VERSION = 1;
 export async function exportData(db: Db, person: SessionUser, exportedAt: number) {
   const { id: userId, name, email, image, createdAt, metadata } = person;
   const where = { userId };
-  const [blocks, habits, habitLogs, sessions, restDays, proposals, goals, goalChests, tasks, subtasks, comments, events, purchases, roomDecor, joiaCredit, mascot, achievements] =
+  const [blocks, habits, habitLogs, sessions, restDays, proposals, goals, goalChests, tasks, subtasks, comments, events, purchases, roomDecor, joiaCredit, mascot, achievements, freezeUses] =
     await db.$transaction([
       db.routineBlock.findMany({ where, select: blockSelect, orderBy: [{ weekday: 'asc' }, { startMinutes: 'asc' }] }),
       db.habit.findMany({ where, select: { ...habitSelect, createdAt: true }, orderBy: { id: 'asc' } }),
@@ -73,6 +75,7 @@ export async function exportData(db: Db, person: SessionUser, exportedAt: number
       db.joiaCredit.findUnique({ where, select: { amount: true } }),
       db.mascotState.findUnique({ where, select: mascotSelect }),
       db.achievement.findMany({ where, select: achievementSelect, orderBy: { conquistadaEm: 'asc' } }),
+      db.freezeUse.findMany({ where, select: freezeUseSelect, orderBy: { date: 'asc' } }),
     ]);
   const connections = await listConnections(db, userId);
 
@@ -102,6 +105,8 @@ export async function exportData(db: Db, person: SessionUser, exportedAt: number
     joiaCredit: joiaCredit?.amount ?? 0,
     mascot: mascot === null ? null : mascotStateMapper.toDomain(mascot),
     achievements: achievements.map(achievementMapper.toDomain),
+    freezeUses: freezeUses.map(freezeUseMapper.toDomain),
+    freezePurchases: purchasesOf('gelo'),
     connections,
   };
 }

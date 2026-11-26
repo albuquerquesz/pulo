@@ -1,4 +1,4 @@
-import { ACHIEVEMENTS } from '../config/decisions';
+import { ACHIEVEMENTS, HOUSE } from '../config/decisions';
 import { createDemoClock, seedRepository } from '../demo';
 import { createMemoryRepository } from '../data/memory-repository';
 import { type AchievementSources, computeAchievements, passingAchievements, summarizeForAchievements, verConquistas } from './achievements';
@@ -7,7 +7,7 @@ import type { AchievementId, Purchase } from './types';
 
 const parts = (...items: string[]): Purchase[] => items.map((item) => ({ item, cost: 1, createdAt: 1 }));
 const summary = (extra: Partial<AchievementSources> = {}) =>
-  summarizeForAchievements({ sequencia: { atual: 0, recorde: 0 }, sessions: [], descansos: 0, casa: [], ...extra });
+  summarizeForAchievements({ sequencia: { atual: 0, recorde: 0 }, sessions: [], descansos: 0, casa: [], gelosUsados: 0, ...extra });
 const one = (id: AchievementId, extra: Partial<AchievementSources> = {}) =>
   computeAchievements(summary(extra), []).find((item) => item.id === id);
 const passes = (id: AchievementId, extra: Partial<AchievementSources>) => passingAchievements(summary(extra)).includes(id);
@@ -18,7 +18,7 @@ describe('conquistas', () => {
     const all = computeAchievements(summary(), []);
     expect(all.map((item) => item.id)).toEqual(ACHIEVEMENTS.map((item) => item.id));
     expect(all.some((item) => item.conquistada)).toBe(false);
-    expect(all.map((item) => item.progresso)).toEqual([0, 0, 0, 0, 1, 0]);
+    expect(all.map((item) => item.progresso)).toEqual([0, 0, 0, 0, 0, 1, 1, 0, 0]);
   });
 
   it.each([
@@ -52,10 +52,26 @@ describe('conquistas', () => {
     expect(passes('descanso-sabido', { descansos: 4 })).toBe(true);
   });
 
-  it('casa inteira: precisa de todas as partes', () => {
-    const almost = { casa: parts('cozinha', 'varanda', 'jardim', 'arvore') };
-    expect(one('casa-inteira', almost)).toMatchObject({ conquistada: false, progresso: 5, meta: 6 });
-    expect(passes('casa-inteira', { casa: parts('cozinha', 'varanda', 'jardim', 'arvore', 'cerca') })).toBe(true);
+  it('gelo na hora certa: o primeiro gelo usado conquista', () => {
+    expect(passes('gelo-na-hora', { gelosUsados: 0 })).toBe(false);
+    expect(passes('gelo-na-hora', { gelosUsados: 1 })).toBe(true);
+  });
+
+  it('casa inteira: precisa do catálogo inteiro', () => {
+    const todas = HOUSE.parts.filter((p) => p.custo > 0).map((p) => p.id);
+    expect(one('casa-inteira', { casa: parts(...todas.slice(1)) })).toMatchObject({ conquistada: false, progresso: 23, meta: 24 });
+    expect(passes('casa-inteira', { casa: parts(...todas) })).toBe(true);
+  });
+
+  it('dois andares: comprar o segundo andar', () => {
+    expect(passes('dois-andares', { casa: parts('sala') })).toBe(false);
+    expect(passes('dois-andares', { casa: parts('sala', 'segundo-andar') })).toBe(true);
+  });
+
+  it('cinco cômodos: o quarto conta e o quintal não', () => {
+    const quatro = parts('cozinha', 'sala', 'banheiro', 'cerca', 'torre');
+    expect(one('cinco-comodos', { casa: quatro })).toMatchObject({ conquistada: false, progresso: 4, meta: 5 });
+    expect(passes('cinco-comodos', { casa: [...quatro, ...parts('escritorio')] })).toBe(true);
   });
 
   it('a gravada continua conquistada sem os registros, com a data', () => {

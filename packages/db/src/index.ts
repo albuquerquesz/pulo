@@ -3,6 +3,7 @@ export { dateKeyToDate, dateToDateKey, dateToMs, msToDate } from './dates';
 export {
   achievementMapper,
   focusSessionMapper,
+  freezeUseMapper,
   goalChestMapper,
   goalMapper,
   goalMilestonesSchema,

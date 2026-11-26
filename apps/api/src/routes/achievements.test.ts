@@ -1,3 +1,4 @@
+import { HOUSE } from '@pulo/core/config/decisions';
 // Conquistas (spec 14): destravadas pelas escritas, mostradas no sync e em GET /api/achievements.
 import { ACHIEVEMENTS } from '@pulo/core/config/decisions';
 import { addDays } from '@pulo/core/domain/day';
@@ -98,10 +99,11 @@ describe('escritas que destravam', () => {
 
   it('quarto dia de descanso', async () => {
     const me = await h.newUser();
-    for (const date of ['2026-11-01', '2026-11-03', '2026-11-05']) {
-      expect((await (await me.call('PUT', `/api/rest-days/${date}`)).json()).newAchievements).toEqual([]);
-    }
-    const fourth = await (await me.call('PUT', '/api/rest-days/2026-11-07')).json();
+    // Os três de antes entram direto no banco: pela API só dá para marcar o de hoje.
+    await database.db.restDay.createMany({
+      data: ['2026-11-01', '2026-11-03', '2026-11-05'].map((date) => ({ userId: me.id, date: dayOf(date) })),
+    });
+    const fourth = await (await me.call('PUT', `/api/rest-days/${TODAY}`)).json();
     expect(ids(fourth.newAchievements)).toEqual(['descanso-sabido']);
   });
 
@@ -110,25 +112,40 @@ describe('escritas que destravam', () => {
     const habitId = await newHabit(me);
     await history(me, habitId, 15, 0);
     await history(me, habitId, 15, 16);
-    const res = await (await me.call('PUT', `/api/rest-days/${addDays(TODAY, -15)}`)).json();
+    await database.db.restDay.create({ data: { userId: me.id, date: dayOf(addDays(TODAY, -15)) } });
+    const res = await markDay(me, habitId, TODAY);
     expect(ids(res.newAchievements)).toEqual(['primeira-semana', 'mes-de-fogo']);
   });
 
   it('a última parte da casa destrava casa inteira', async () => {
     const me = await h.newUser();
     await database.db.joiaCredit.create({ data: { userId: me.id, amount: 1000 } });
-    const costs = { cozinha: 120, varanda: 80, jardim: 60, arvore: 90, cerca: 40 };
-    const unlocked: string[][] = [];
-    for (const [item, cost] of Object.entries(costs)) {
+    await database.db.joiaCredit.update({ where: { userId: me.id }, data: { amount: 12000 } });
+    const unlocked: Record<string, string[]> = {};
+    // A ordem do catálogo não respeita os requisitos: compra o que já está liberado, em voltas.
+    const faltam = HOUSE.parts.filter((p) => p.custo > 0);
+    const prontas = new Set(['quarto']);
+    while (faltam.length > 0) {
+      const indice = faltam.findIndex((p) => !p.requer || prontas.has(p.requer));
+      const [parte] = faltam.splice(indice, 1);
+      if (!parte) throw new Error('requisito sem saída');
+      const { id: item, custo: cost } = parte;
       const res = await (await me.call('PUT', `/api/house/${item}`, { item, cost, createdAt: TEST_NOW - MIN })).json();
-      unlocked.push(ids(res.newAchievements));
+      prontas.add(item);
+      if (res.newAchievements.length > 0) unlocked[item] = ids(res.newAchievements);
     }
-    expect(unlocked).toEqual([[], [], [], [], ['casa-inteira']]);
+    expect(unlocked).toEqual({
+      'segundo-andar': ['dois-andares'],
+      escritorio: ['cinco-comodos'],
+      piscina: ['casa-inteira'],
+    });
   });
 
   it('duas escritas simultâneas comemoram uma vez só', async () => {
     const me = await h.newUser();
-    for (const date of ['2026-11-01', '2026-11-03', '2026-11-05']) await me.call('PUT', `/api/rest-days/${date}`);
+    await database.db.restDay.createMany({
+      data: ['2026-11-01', '2026-11-03', '2026-11-05'].map((date) => ({ userId: me.id, date: dayOf(date) })),
+    });
     const habitId = await newHabit(me);
     await database.db.restDay.create({ data: { userId: me.id, date: dayOf('2026-11-07') } });
     const results = await Promise.all([markDay(me, habitId, TODAY), markDay(me, habitId, addDays(TODAY, -1))]);
@@ -153,18 +170,20 @@ describe('escritas que destravam', () => {
     await history(big, bigHabit, 50);
     // Grava o que o histórico já dá, para os dois ficarem sem nada novo.
     await markDay(big, bigHabit, addDays(TODAY, -1));
+    // E acerta o gelo dos dois, que só grava na primeira vez do dia.
+    await markDay(small, smallHabit, addDays(TODAY, 0));
 
     const get = await queriesOf(database, small, 'GET', '/api/achievements');
     expect(await queriesOf(database, big, 'GET', '/api/achievements')).toBe(get);
-    expect(get).toBe(7);
+    expect(get).toBe(8);
 
     const put = await queriesOf(database, small, 'PUT', logPath(smallHabit, TODAY), logBody(smallHabit, TODAY));
     expect(await queriesOf(database, big, 'PUT', logPath(bigHabit, TODAY), logBody(bigHabit, TODAY))).toBe(put);
-    expect(put).toBe(9);
+    expect(put).toBe(12);
 
     const fresh = await h.newUser();
     const freshHabit = await newHabit(fresh);
     await history(fresh, freshHabit, 40);
-    expect(await queriesOf(database, fresh, 'PUT', logPath(freshHabit, TODAY), logBody(freshHabit, TODAY))).toBe(10);
+    expect(await queriesOf(database, fresh, 'PUT', logPath(freshHabit, TODAY), logBody(freshHabit, TODAY))).toBe(14);
   });
 });

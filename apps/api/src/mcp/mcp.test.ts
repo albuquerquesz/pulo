@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
+import { HOUSE } from '@pulo/core/config/decisions';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
 import { TEST_ORIGIN, type TestUser, createHarness } from '../testing';
 
@@ -144,8 +145,9 @@ describe('servidor MCP', () => {
     const token = await tokenDe(me);
 
     const lista = await (await rpc(token, 'tools/list')).json();
+    expect(JSON.stringify(lista)).not.toContain('comprar_gelo');
     const nomes = lista.result.tools.map((t: { name: string }) => t.name);
-    expect(nomes).toEqual(expect.arrayContaining(['ver_hoje', 'ver_sequencia', 'criar_habito', 'marcar_habito', 'comecar_foco', 'criar_meta', 'decidir_proposta', 'ver_ilha', 'comprar_na_ilha', 'mover_decoracao', 'ver_tarefas', 'criar_tarefa', 'mover_tarefa']));
+    expect(nomes).toEqual(expect.arrayContaining(['ver_hoje', 'ver_sequencia', 'criar_habito', 'marcar_habito', 'comecar_foco', 'criar_meta', 'decidir_proposta', 'ver_ilha', 'comprar_na_ilha', 'mover_decoracao', 'ver_tarefas', 'criar_tarefa', 'mover_tarefa', 'ver_gelo', 'ver_metricas']));
 
     // Conta nova: precisa criar o sapo primeiro, como no onboarding.
     expect((await ferramenta(token, 'ver_hoje')).erro).toBe(true);
@@ -164,8 +166,8 @@ describe('servidor MCP', () => {
 
     // Ilha: conta nova não tem joias, então a compra é recusada com a mensagem da tela.
     const mapa = await ferramenta(token, 'ver_ilha');
-    expect(mapa.dados).toMatchObject({ saldo: 0, moeda: 'joias', casa: { construidas: 1, total: 6 } });
-    expect(await ferramenta(token, 'comprar_na_ilha', { item: 'cerca' })).toMatchObject({ erro: true, texto: 'Faltam 40 joias.' });
+    expect(mapa.dados).toMatchObject({ saldo: 0, moeda: 'joias', casa: { construidas: 1, total: 24 } });
+    expect(await ferramenta(token, 'comprar_na_ilha', { item: 'cerca' })).toMatchObject({ erro: true, texto: `Faltam ${HOUSE.partCost.cerca} joias.` });
     expect(await ferramenta(token, 'comprar_na_ilha', { item: 'tapete', x: 1, y: 1 })).toMatchObject({ erro: true, texto: 'Faltam 10 joias.' });
     expect(await ferramenta(token, 'mover_decoracao', { item: 'tapete', x: 1, y: 1 })).toMatchObject({ erro: true });
 
@@ -176,6 +178,9 @@ describe('servidor MCP', () => {
     expect(hoje.dados.habitos).toEqual(expect.arrayContaining([{ id: habito.dados.id, titulo: 'Ler 10 páginas', feito: true }]));
     expect(hoje.dados.sapo.nome).toBe('Juca');
     expect((await ferramenta(token, 'ver_sequencia')).dados).toMatchObject({ atual: 1, recorde: 1 });
+    expect((await ferramenta(token, 'ver_gelo')).dados).toEqual({ guardados: 1, max: 2, usados: [], recentes: [] });
+    expect((await ferramenta(token, 'ver_metricas')).dados).toMatchObject({ gelo: { guardados: 1 }, descanso: { total: 0 } });
+    expect(await ferramenta(token, 'dia_de_descanso', { data: '2020-01-01' })).toMatchObject({ erro: true });
 
     // Spec 17: aparência, lembrete, pausa e arquivo.
     const id = habito.dados.id;

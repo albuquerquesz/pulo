@@ -20,6 +20,8 @@ import type {
   BlockSlot,
   DateKey,
   FocusSession,
+  FreezeStatus,
+  FreezeSummary,
   Goal,
   GoalMilestone,
   Habit,
@@ -27,11 +29,14 @@ import type {
   HabitStats,
   IslandPurchase,
   RoomDecor,
+  ComodoId,
   RoomRotation,
   RoomSpot,
   MascotState,
   Phase,
+  ProfileMetrics,
   ProfileStats,
+  Purchase,
   ProposalChange,
   RestDay,
   RoutineBlock,
@@ -44,6 +49,7 @@ import type {
   WeeklyProposal,
 } from '../domain/types';
 import { linkCount } from '../domain/foco/targets';
+import { ehComodo } from '../domain/comodos';
 
 /**
  * Contrato da API REST do Pulo: os mesmos schemas validam o corpo no servidor (apps/api) e servem
@@ -344,7 +350,7 @@ export const streakSchema = z.object({
   atual: z.number().int().min(0),
   recorde: z.number().int().min(0),
   semana: z
-    .array(z.object({ date: dateKeySchema, estado: z.enum(['feito', 'descanso', 'vazio', 'hoje', 'futuro']) }))
+    .array(z.object({ date: dateKeySchema, estado: z.enum(['feito', 'descanso', 'gelo', 'vazio', 'hoje', 'futuro']) }))
     .length(7),
 }) satisfies z.ZodType<Streak, unknown>;
 
@@ -372,6 +378,47 @@ export const achievementSchema = z.object({
 
 /** Resposta de `GET /api/achievements`. */
 export const achievementsResponseSchema = z.object({ achievements: z.array(achievementSchema) });
+
+// ---------- Gelo e métricas (spec 29) ----------
+
+const countSchema = z.number().int().min(0);
+
+export const freezeSummarySchema = z.object({
+  guardados: countSchema,
+  max: countSchema,
+  recentes: z.array(dateKeySchema),
+}) satisfies z.ZodType<FreezeSummary, unknown>;
+
+/** Resposta de `GET /api/gelo`. `compras` entram na conta do saldo de joias. */
+export const freezeStatusResponseSchema = freezeSummarySchema.extend({
+  usados: z.array(dateKeySchema),
+  compras: z.array(z.object({ item: z.string(), cost: countSchema, createdAt: msSchema })),
+}) satisfies z.ZodType<FreezeStatus & { compras: Purchase[] }, unknown>;
+export type FreezeStatusResponse = z.infer<typeof freezeStatusResponseSchema>;
+
+const minutesOrNullSchema = countSchema.nullable();
+
+export const profileMetricsSchema = z.object({
+  descanso: z.object({
+    total: countSchema,
+    noMes: countSchema,
+    semanasComDescanso: countSchema,
+    focoMedioSemanaComDescanso: minutesOrNullSchema,
+    focoMedioSemanaSem: minutesOrNullSchema,
+  }),
+  gelo: z.object({ usadosTotal: countSchema, guardados: countSchema }),
+  ritmo: z.object({
+    focoMedioPorDia30: countSchema,
+    taxaHabitos30: z.number().min(0).max(1).nullable(),
+    melhorPeriodo: periodSchema.nullable(),
+    melhorDiaDaSemana: weekdaySchema.nullable(),
+    sessoesTerminadas: countSchema,
+  }),
+  feitos: z.object({ tarefasConcluidas: countSchema, metasConcluidas: countSchema, joiasGanhas: countSchema }),
+});
+
+/** Resposta de `GET /api/profile/metrics`. */
+export const metricsResponseSchema = z.object({ metrics: profileMetricsSchema }) satisfies z.ZodType<{ metrics: ProfileMetrics }, unknown>;
 
 // ---------- Conta (spec 15) ----------
 
@@ -489,7 +536,9 @@ export const islandPurchaseSchema = z.object({
 }) satisfies z.ZodType<IslandPurchase, unknown>;
 
 const rotationSchema = z.custom<RoomRotation>((v) => ROOM_GRID.rotations.some((r) => r === v), { message: 'giro inválido' });
+const comodoSchema = z.custom<ComodoId>((v) => typeof v === 'string' && ehComodo(v), { message: 'cômodo inválido' });
 const spotShape = {
+  comodo: comodoSchema.optional(),
   x: z.number().int().min(0).max(ROOM_GRID.columns - 1),
   y: z.number().int().min(0).max(ROOM_GRID.rows - 1),
   rotation: rotationSchema,
@@ -567,6 +616,11 @@ export const API_ERROR_CODES = [
   'area_fechada',
   'fora_de_ordem',
   'joias_insuficientes',
+  'falta_requisito',
+  'comodo_nao_comprado',
+  'gelo_no_maximo',
+  'descanso_so_hoje',
+  'limite_de_descanso',
   'sessao_em_andamento',
   'sessao_encerrada',
   'sessao_imutavel',
@@ -583,6 +637,8 @@ export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
 export const apiErrorSchema = z.object({
   error: z.enum(API_ERROR_CODES),
   message: z.string().optional(),
+  /** Em `falta_requisito`: o id da parte que falta. */
+  requer: z.string().optional(),
   /** Campos inválidos, só nos erros 400 de validação. */
   issues: z.array(z.object({ path: z.string(), message: z.string() })).optional(),
 });

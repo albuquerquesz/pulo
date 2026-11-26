@@ -1,6 +1,7 @@
 import { ACHIEVEMENTS, DEFAULT_TIMEZONE } from '../config/decisions';
-import { partesDaCasa } from './casa';
+import { comodosProntos, partesDaCasa } from './casa';
 import { MINUTE_MS } from './clock';
+import { listFreezeDatesOf } from './gelo-store';
 import { focusedMs } from './joias';
 import { computeStreak } from './streak';
 import type { Achievement, AchievementId, Clock, FocusSession, Purchase, Repository, Streak, UnlockedAchievement } from './types';
@@ -12,6 +13,11 @@ export interface AchievementSummary {
   maiorFocoMinutos: number;
   descansos: number;
   partesConstruidas: number;
+  /** Cômodos prontos (o quarto conta). */
+  comodos: number;
+  temSegundoAndar: boolean;
+  /** Gelos já gastos (spec 29). */
+  gelosUsados: number;
 }
 
 /** Quanto a pessoa já andou rumo à `meta`. Chegar nela conquista. */
@@ -25,7 +31,10 @@ const RULES: Record<AchievementId, Rule> = {
   'foco-profundo': (summary) => summary.maiorFocoMinutos,
   'descanso-sabido': (summary) => summary.descansos,
   'mes-de-fogo': streakDays,
+  'dois-andares': (summary) => Number(summary.temSegundoAndar),
+  'cinco-comodos': (summary) => summary.comodos,
   'casa-inteira': (summary) => summary.partesConstruidas,
+  'gelo-na-hora': (summary) => summary.gelosUsados,
   // Sem regra escolhida ainda.
   segredo: () => 0,
 };
@@ -36,15 +45,20 @@ export interface AchievementSources {
   sessions: readonly FocusSession[];
   descansos: number;
   casa: readonly Purchase[];
+  gelosUsados: number;
 }
 
-export function summarizeForAchievements({ sequencia, sessions, descansos, casa }: AchievementSources): AchievementSummary {
+export function summarizeForAchievements({ sequencia, sessions, descansos, casa, gelosUsados }: AchievementSources): AchievementSummary {
   const longest = sessions.reduce((max, session) => Math.max(max, focusedMs(session)), 0);
+  const partes = partesDaCasa(casa);
   return {
     sequencia,
     maiorFocoMinutos: Math.floor(longest / MINUTE_MS),
     descansos,
-    partesConstruidas: partesDaCasa(casa).filter((parte) => parte.construida).length,
+    partesConstruidas: partes.filter((parte) => parte.construida).length,
+    comodos: comodosProntos(partes).length,
+    temSegundoAndar: partes.some((parte) => parte.id === 'segundo-andar' && parte.construida),
+    gelosUsados,
   };
 }
 
@@ -95,22 +109,24 @@ export function providesAchievements(repo: Repository): repo is Repository & Ach
 /** As conquistas de um repositório: as do servidor, quando ele as fornece; senão (demo, memória), calculadas dos registros, sem data. */
 export async function verConquistas(repo: Repository, clock: Clock): Promise<Achievement[]> {
   if (providesAchievements(repo)) return repo.getAchievements();
-  const [user, habitLogs, sessions, restDays, casa] = await Promise.all([
+  const [user, habitLogs, sessions, restDays, casa, freezes] = await Promise.all([
     repo.getUser(),
     repo.listHabitLogs(),
     repo.listSessions(),
     repo.listRestDays(),
     repo.listHousePurchases(),
+    listFreezeDatesOf(repo),
   ]);
   const sequencia = computeStreak({
     habitLogs,
     sessions,
     restDays,
+    freezes,
     timeZone: user?.timezone ?? DEFAULT_TIMEZONE,
     dayStartMinutes: user?.dayStartMinutes,
     now: clock.now(),
   });
-  const summary = summarizeForAchievements({ sequencia, sessions, descansos: restDays.length, casa });
+  const summary = summarizeForAchievements({ sequencia, sessions, descansos: restDays.length, casa, gelosUsados: freezes.length });
   const passing = new Set(passingAchievements(summary));
   return ACHIEVEMENTS.map(({ id }) => (passing.has(id) ? earnedAchievement(id) : pending(id, summary)));
 }

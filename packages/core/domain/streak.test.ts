@@ -42,6 +42,12 @@ describe('computeStreak', () => {
     expect(streak({ sessions: [endedSession(sp(2026, 11, 18, 9), 30, 'interrompida', 5)] }).atual).toBe(0);
   });
 
+  it('dia protegido por gelo mantém a chama sem somar e aparece como gelo', () => {
+    const extra = { habitLogs: days(15, 17), freezes: ['2026-11-16'] };
+    expect(streak(extra)).toMatchObject({ atual: 2, recorde: 2 });
+    expect(states(extra).slice(0, 4)).toEqual(['feito', 'gelo', 'feito', 'hoje']);
+  });
+
   it('descanso no meio não quebra nem soma', () => {
     const extra = { habitLogs: days(15, 17), restDays: days(16, 18) };
     expect(streak(extra)).toMatchObject({ atual: 2, recorde: 2 });
