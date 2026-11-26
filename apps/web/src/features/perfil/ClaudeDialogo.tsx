@@ -29,16 +29,14 @@ function MarcaDoClaude() {
   );
 }
 
-/** O sapo e a marca do Claude lado a lado, ligados por um tracinho. */
+/** O sapo e a marca do Claude lado a lado, com uma seta do sapo para o Claude. */
 function SapoComClaude() {
   return (
     <div role="img" aria-label="O sapo do Pulo e o Claude" className="flex items-center gap-3">
       <SapoRosto momento="conectando-conta" className="w-[88px]" />
-      <span aria-hidden="true" className="flex items-center gap-1.5">
-        <i className="size-2 rounded-full bg-contorno/40" />
-        <i className="size-2 rounded-full bg-contorno/60" />
-        <i className="size-2 rounded-full bg-contorno/40" />
-      </span>
+      <svg viewBox="0 0 48 24" aria-hidden="true" className="w-12 text-contorno">
+        <path d="M4 12 H40 M30 4 L42 12 L30 20" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
       <MarcaDoClaude />
     </div>
   );
