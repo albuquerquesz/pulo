@@ -10,7 +10,7 @@ type SeletorDeComodoProps = {
 /** Os cômodos da pessoa no topo da Casa, numa faixa que rola de lado. */
 export function SeletorDeComodo({ meus, atual, onEscolher }: SeletorDeComodoProps) {
   return (
-    <div role="group" aria-label="Cômodo" className="pointer-events-auto flex max-w-full min-w-0 gap-2 overflow-x-auto p-1">
+    <div role="group" aria-label="Cômodo" className="pointer-events-auto flex max-w-full min-w-0 gap-2 py-1 max-md:faixa-lateral md:overflow-x-auto md:px-1">
       {COMODOS.filter((c) => meus.includes(c.id)).map((c) => (
         <button
           key={c.id}

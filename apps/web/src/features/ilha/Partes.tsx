@@ -73,7 +73,7 @@ function emOrdem(partes: readonly ParteAVenda[], alvo: ParteId | null): ParteAVe
 
 type PartesProps = { ilha: IlhaNaTela; onComprar: (id: ParteId) => void };
 
-/** As partes à venda no pé da ilha, por camada, numa grade que quebra em linhas. Só a que o saldo paga responde ao toque. */
+/** As partes à venda no pé da ilha, por camada: uma faixa no celular e uma grade do md para cima. Só a que o saldo paga responde ao toque. */
 export function Partes({ ilha, onComprar }: PartesProps) {
   // Abre na camada do próximo alvo.
   const [escolhida, setEscolhida] = useState<CamadaDaCasa | null>(null);
@@ -98,13 +98,13 @@ export function Partes({ ilha, onComprar }: PartesProps) {
           </button>
         ))}
       </div>
-      {/* Quebra em linhas em vez de rolar de lado; no celular, a grade rola dentro dela mesma. */}
-      <ul aria-label="Partes da casa" className="flex max-h-[34dvh] flex-wrap items-center gap-2 overflow-y-auto overscroll-contain p-1 md:max-h-none md:overflow-visible">
+      {/* No celular, uma linha só que rola de lado, para a ilha continuar à vista. A chave volta ao começo ao trocar de camada. */}
+      <ul key={camada} aria-label="Partes da casa" className="flex items-center gap-2 py-1 max-md:-mx-3 max-md:faixa-lateral md:flex-wrap md:px-1">
         {emOrdem(
           ilha.partes.filter((p) => p.camada === camada),
           ilha.alvo,
         ).map((p) => (
-          <li key={p.id}>{p.situacao === 'feita' ? <Selo parte={p} /> : <Cartao parte={p} alvo={p.id === ilha.alvo} onComprar={onComprar} />}</li>
+          <li key={p.id} className="shrink-0">{p.situacao === 'feita' ? <Selo parte={p} /> : <Cartao parte={p} alvo={p.id === ilha.alvo} onComprar={onComprar} />}</li>
         ))}
       </ul>
     </div>
