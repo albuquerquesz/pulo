@@ -73,7 +73,7 @@ function emOrdem(partes: readonly ParteAVenda[], alvo: ParteId | null): ParteAVe
 
 type PartesProps = { ilha: IlhaNaTela; onComprar: (id: ParteId) => void };
 
-/** As partes à venda no pé da ilha, por camada: uma faixa no celular e uma grade do md para cima. Só a que o saldo paga responde ao toque. */
+/** As partes à venda no pé da ilha, por camada: uma faixa no celular e uma grade com rolagem, abaixo do desenho, do md para cima. Só a que o saldo paga responde ao toque. */
 export function Partes({ ilha, onComprar }: PartesProps) {
   // Abre na camada do próximo alvo.
   const [escolhida, setEscolhida] = useState<CamadaDaCasa | null>(null);
@@ -99,7 +99,7 @@ export function Partes({ ilha, onComprar }: PartesProps) {
         ))}
       </div>
       {/* No celular, uma linha só que rola de lado, para a ilha continuar à vista. A chave volta ao começo ao trocar de camada. */}
-      <ul key={camada} aria-label="Partes da casa" className="flex items-center gap-2 py-1 max-md:-mx-3 max-md:faixa-lateral md:flex-wrap md:px-1">
+      <ul key={camada} aria-label="Partes da casa" className="flex items-center gap-2 py-1 max-md:-mx-3 max-md:faixa-lateral md:max-h-36 md:flex-wrap md:overflow-y-auto md:px-1">
         {emOrdem(
           ilha.partes.filter((p) => p.camada === camada),
           ilha.alvo,

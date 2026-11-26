@@ -7,6 +7,7 @@ import type { EntityId, Repository } from '@pulo/core/domain/types';
 
 import { AppProvider, useApp } from '../app';
 import { criarSessaoDemo } from '../app/demo';
+import { TEXTO_SEM_NOME_DA_META } from './FormularioDeMeta';
 import { MetasScreen, TEXTO_DO_LIMITE } from './MetasScreen';
 
 function Pagina({ meta }: { meta?: EntityId }) {
@@ -130,6 +131,20 @@ describe('Tela de Metas', () => {
     await clicar(screen.getByRole('button', { name: '+ Nova meta' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.getByText(TEXTO_DO_LIMITE)).toBeTruthy();
+  });
+
+  test('meta sem nome mostra o erro no formulário e não grava', async () => {
+    const repo = await abrir();
+    const gravar = vi.spyOn(repo, 'saveGoal');
+    await clicar(screen.getByRole('button', { name: '+ Nova meta' }));
+    const form = within(screen.getByRole('dialog', { name: 'Nova meta' }));
+    expect(form.getByRole('button', { name: 'Cor água' })).toBeTruthy();
+    expect(form.getByRole('button', { name: 'Cor atenção' })).toBeTruthy();
+    await clicar(form.getByRole('button', { name: 'Criar meta' }));
+    expect(form.getByRole('alert').textContent).toBe(TEXTO_SEM_NOME_DA_META);
+    expect(gravar).not.toHaveBeenCalled();
+    fireEvent.change(form.getByLabelText('Qual é a meta?'), { target: { value: 'Ler mais' } });
+    expect(form.queryByRole('alert')).toBeNull();
   });
 
   test('concluir pede confirmação e deixa o baú esperando', async () => {

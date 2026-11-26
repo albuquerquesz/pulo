@@ -10,6 +10,15 @@ const COR: Record<AccentColor, string> = {
   atencao: 'bg-atencao',
 };
 
+const NOME_DA_COR: Record<AccentColor, string> = {
+  sapo: 'sapo',
+  agua: 'água',
+  foco: 'foco',
+  descanso: 'descanso',
+  sol: 'sol',
+  atencao: 'atenção',
+};
+
 export type SeletorDeCorProps = { cor: AccentColor; onEscolher: (cor: AccentColor) => void };
 
 /** As bolinhas de cor dos formulários de hábito e de meta. */
@@ -20,7 +29,7 @@ export function SeletorDeCor({ cor, onEscolher }: SeletorDeCorProps) {
         <button
           key={c}
           type="button"
-          aria-label={`Cor ${c}`}
+          aria-label={`Cor ${NOME_DA_COR[c]}`}
           aria-pressed={c === cor}
           onClick={() => onEscolher(c)}
           className={`size-11 cursor-pointer rounded-full border-contorno ${COR[c]} ${c === cor ? 'border-4' : 'border-2'}`}

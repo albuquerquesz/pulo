@@ -18,8 +18,10 @@ const meio = (a: Ponto, b: Ponto): Ponto => ({ x: (a.x + b.x) / 2, y: (a.y + b.y
  * `limites` deve ser uma constante. `viewBox` é `undefined` enquanto o elemento não foi medido.
  */
 export function useCamera(limites: LimitesDaCamera) {
-  const [camera, setCamera] = useState<Camera | null>(null);
+  // Até o primeiro gesto, a câmera é a de abertura e acompanha o tamanho do contêiner.
+  const [movida, setMovida] = useState<Camera | null>(null);
   const [tamanho, setTamanho] = useState<Tamanho | null>(null);
+  const camera = movida ?? (tamanho ? cameraInicial(limites, tamanho) : null);
   const [arrastando, setArrastando] = useState(false);
   const dedos = useRef(new Map<number, Ponto>());
   const arrasto = useRef<Arrasto | null>(null);
@@ -30,16 +32,15 @@ export function useCamera(limites: LimitesDaCamera) {
       const medir = () => {
         const { width, height } = svg.getBoundingClientRect();
         if (!width || !height) return;
-        const novo = { largura: width, altura: height };
-        setTamanho(novo);
-        setCamera((c) => c ?? cameraInicial(limites, novo));
+        setTamanho({ largura: width, altura: height });
       };
       // Ouvinte próprio porque o `onWheel` do React é passivo e não segura a rolagem da página.
       const rodar = (e: WheelEvent) => {
         e.preventDefault();
         const caixa = svg.getBoundingClientRect();
         const fator = e.deltaY > 0 ? PASSO_DA_RODINHA : 1 / PASSO_DA_RODINHA;
-        setCamera((c) => c && zoomNoPonto(c, limites, caixa, { x: e.clientX, y: e.clientY }, fator));
+        const abertura = cameraInicial(limites, { largura: caixa.width, altura: caixa.height });
+        setMovida((c) => zoomNoPonto(c ?? abertura, limites, caixa, { x: e.clientX, y: e.clientY }, fator));
       };
       svg.addEventListener('wheel', rodar, { passive: false });
       const observador = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(medir);
@@ -71,7 +72,7 @@ export function useCamera(limites: LimitesDaCamera) {
       svg.setPointerCapture?.(e.pointerId);
       const anterior = distancia(antes, outro);
       const atual = distancia(agora, outro);
-      if (anterior && atual) setCamera((c) => c && zoomNoPonto(c, limites, caixa, meio(agora, outro), anterior / atual));
+      if (camera && anterior && atual) setMovida((c) => zoomNoPonto(c ?? camera, limites, caixa, meio(agora, outro), anterior / atual));
       return;
     }
     const inicio = arrasto.current;
@@ -81,7 +82,7 @@ export function useCamera(limites: LimitesDaCamera) {
       svg.setPointerCapture?.(e.pointerId);
       setArrastando(true);
     }
-    setCamera(arrastar(inicio.camera, limites, caixa.width, agora.x - inicio.de.x, agora.y - inicio.de.y));
+    setMovida(arrastar(inicio.camera, limites, caixa.width, agora.x - inicio.de.x, agora.y - inicio.de.y));
   };
 
   const soltar = (e: PonteiroNoReact<SVGSVGElement>) => {
