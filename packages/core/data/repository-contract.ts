@@ -1,6 +1,6 @@
 // Suíte de contrato do `Repository`, reutilizável por qualquer implementação (memória, armazenamento,
 // cliente remoto). Usa `describe`, `it` e `expect` globais: roda no Jest do core e no Vitest (`globals: true`).
-import { JOIAS } from '../config/decisions';
+import { HOUSE, JOIAS } from '../config/decisions';
 import { dateKeyOf, addDays } from '../domain/day';
 import { verSequencia } from '../domain/streak';
 import { endedSession, sp } from '../domain/test-utils';
@@ -162,7 +162,7 @@ export function defineRepositoryContract(
       await r.saveProposal(p);
       await r.saveProposal({ ...p, state: 'aceita', decidedAt: 2 });
       expect((await r.listProposals())[0].state).toBe('aceita');
-      await r.saveHousePurchase({ item: 'cerca', cost: 40, createdAt: 1 });
+      await r.saveHousePurchase({ item: 'cerca', cost: HOUSE.partCost.cerca, createdAt: 1 });
       await r.saveRoomDecor({ item: 'tapete', cost: 10, createdAt: 1, x: 0, y: 0, rotation: 0 });
       const taskId = uid('t');
       await r.saveTask(task(taskId));
@@ -298,14 +298,14 @@ export function defineRepositoryContract(
 
     it('casa e quarto: compras por item, mover muda só a posição', async () => {
       const { r } = await subject();
-      const parte = { item: 'cerca', cost: 40, createdAt: 1 };
+      const parte = { item: 'cerca', cost: HOUSE.partCost.cerca, createdAt: 1 };
       const tapete = { item: 'tapete', cost: 10, createdAt: 2, x: 0, y: 0, rotation: 0 as const, comodo: 'quarto' as const };
       await r.saveHousePurchase(parte);
       await r.saveRoomDecor(tapete);
       await r.moveRoomDecor('tapete', { x: 1, y: 2, rotation: 180 });
       expect(await r.listHousePurchases()).toEqual([parte]);
       expect(await r.listRoomDecor()).toEqual([{ ...tapete, x: 1, y: 2, rotation: 180 }]);
-      await r.saveHousePurchase({ item: 'banheiro', cost: 100, createdAt: 3 });
+      await r.saveHousePurchase({ item: 'banheiro', cost: HOUSE.partCost.banheiro, createdAt: 3 });
       await r.moveRoomDecor('tapete', { x: 1, y: 2, rotation: 180, comodo: 'banheiro' });
       expect(await r.listRoomDecor()).toEqual([{ ...tapete, x: 1, y: 2, rotation: 180, comodo: 'banheiro' }]);
       expect(await r.getJoiaCredit()).toBe(0);
