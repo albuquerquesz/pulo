@@ -147,4 +147,22 @@ describe('blocos', () => {
     expect(await repo.listBlocks()).toHaveLength(plan.blocks.length);
     expect(plan.blocks.filter((b) => b.weekday === 0)).toHaveLength(3);
   });
+  it('plano inicial não duplica o que já existe', async () => {
+    const repo = createMemoryRepository();
+    await criarPlanoInicial(repo, 5);
+    const blocks = await repo.listBlocks();
+    const habits = await repo.listHabits();
+    const again = await criarPlanoInicial(repo, 6);
+    expect(again).toEqual({ blocks: [], habits: [] });
+    expect(await repo.listBlocks()).toEqual(blocks);
+    expect(await repo.listHabits()).toEqual(habits);
+  });
+  it('plano inicial completa só o que falta numa conta com dados', async () => {
+    const repo = createMemoryRepository();
+    await criarBloco(repo, base, 1);
+    await repo.saveHabit({ id: 'h1', title: 'Beber água', weekdays: [0], state: 'ativo' });
+    await criarPlanoInicial(repo, 5);
+    expect(await repo.listBlocks()).toHaveLength(1);
+    expect((await repo.listHabits()).map((h) => h.title).sort()).toEqual(['Alongar um pouco', 'Beber água']);
+  });
 });
