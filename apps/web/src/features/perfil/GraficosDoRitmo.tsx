@@ -1,8 +1,12 @@
-import { useId, type ReactNode } from 'react';
+import { useId, useMemo, useState, type ReactNode } from 'react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 import { CARTAO } from './estilos';
-import type { Coluna, Serie, SeriesDoRitmo } from './series';
+import { duracaoTexto } from '../hoje/logic';
+import { Escolha } from './Linha';
+import { numero } from './logic';
+import { nomeDoPeriodo, porcentagem } from './metricas';
+import { focoDoIntervalo, habitosDoIntervalo, INTERVALOS, type Coluna, type Intervalo, type RegistrosDoRitmo, type Serie } from './series';
 
 /** Altura fixa da área do gráfico, igual nos dois cartões. */
 const ALTURA = 200;
@@ -23,10 +27,20 @@ function Dica({ active, payload }: { active?: boolean; payload?: readonly { payl
 /** Um número que aparece no topo do cartão do gráfico. */
 export type NumeroDoGrafico = { legenda: string; valor: string };
 
-type CartaoProps = { titulo: string; numeros: readonly NumeroDoGrafico[]; periodo: string; serie: Serie; children: ReactNode };
+type CartaoProps = {
+  titulo: string;
+  numeros: readonly NumeroDoGrafico[];
+  intervalo: Intervalo;
+  onIntervalo: (intervalo: Intervalo) => void;
+  serie: Serie;
+  children: ReactNode;
+};
+
+const OPCOES_DE_INTERVALO = INTERVALOS.map((i) => ({ valor: String(i.dias), rotulo: i.rotulo }));
+const intervaloDe = (valor: string): Intervalo => INTERVALOS.find((i) => String(i.dias) === valor)?.dias ?? 30;
 
 /** Um cartão com os números no topo e o gráfico embaixo; o título fica para o leitor de tela, junto da tabela com os mesmos números. */
-function CartaoDoGrafico({ titulo, numeros, periodo, serie, children }: CartaoProps) {
+function CartaoDoGrafico({ titulo, numeros, intervalo, onIntervalo, serie, children }: CartaoProps) {
   return (
     <figure aria-label={titulo} className={`${CARTAO} relative flex min-w-0 flex-col gap-4 p-5`}>
       <div className="flex items-start justify-between gap-4">
@@ -38,7 +52,7 @@ function CartaoDoGrafico({ titulo, numeros, periodo, serie, children }: CartaoPr
             </div>
           ))}
         </dl>
-        <span className="shrink-0 rounded-full border border-line px-3 py-1 text-xs font-extrabold text-muted">{periodo}</span>
+        <Escolha rotulo={`Intervalo de ${titulo.toLowerCase()}`} valor={String(intervalo)} opcoes={OPCOES_DE_INTERVALO} onEscolher={(v) => onIntervalo(intervaloDe(v))} />
       </div>
       <div aria-hidden="true" className="relative" style={{ height: ALTURA }}>
         {children}
@@ -118,24 +132,45 @@ function GraficoDeHabitos({ serie }: { serie: Serie }) {
   );
 }
 
-type GraficosProps = {
-  series: SeriesDoRitmo;
-  /** Os números de cada cartão, já formatados. */
-  numeros: { foco: readonly NumeroDoGrafico[]; habitos: readonly NumeroDoGrafico[] };
-  /** O período dos dados, na etiqueta do canto. */
-  periodo: string;
-};
+/** O cartão do foco: média por dia, sessões e melhor período em cima, e a área dos minutos por dia. */
+function CartaoDoFoco({ registros }: { registros: RegistrosDoRitmo }) {
+  const [intervalo, setIntervalo] = useState<Intervalo>(30);
+  const foco = useMemo(() => focoDoIntervalo(registros, intervalo), [registros, intervalo]);
+  const numeros = [
+    { legenda: 'Foco médio por dia', valor: duracaoTexto(foco.medioPorDia) },
+    { legenda: 'Sessões terminadas', valor: numero(foco.sessoesTerminadas) },
+    { legenda: 'Melhor período', valor: nomeDoPeriodo(foco.melhorPeriodo) },
+  ];
+  return (
+    <CartaoDoGrafico titulo="Foco por dia" numeros={numeros} intervalo={intervalo} onIntervalo={setIntervalo} serie={foco.porDia}>
+      <GraficoDeFoco serie={foco.porDia} />
+    </CartaoDoGrafico>
+  );
+}
 
-/** Os dois gráficos do Ritmo, cada um no seu cartão com os números no topo, meio a meio no desktop. */
-export function GraficosDoRitmo({ series: { porDia, habitosPorSemana }, numeros, periodo }: GraficosProps) {
+/** O cartão dos hábitos: a taxa do intervalo em cima e as barras por dia ou por semana. */
+function CartaoDosHabitos({ registros }: { registros: RegistrosDoRitmo }) {
+  const [intervalo, setIntervalo] = useState<Intervalo>(30);
+  const habitos = useMemo(() => habitosDoIntervalo(registros, intervalo), [registros, intervalo]);
+  return (
+    <CartaoDoGrafico
+      titulo="Hábitos feitos"
+      numeros={[{ legenda: 'Hábitos feitos', valor: porcentagem(habitos.taxa) }]}
+      intervalo={intervalo}
+      onIntervalo={setIntervalo}
+      serie={habitos.serie}
+    >
+      <GraficoDeHabitos serie={habitos.serie} />
+    </CartaoDoGrafico>
+  );
+}
+
+/** Os dois cartões do Ritmo, meio a meio no desktop; cada um escolhe o próprio intervalo. */
+export function GraficosDoRitmo({ registros }: { registros: RegistrosDoRitmo }) {
   return (
     <div className="grid gap-4 @2xl:grid-cols-2">
-      <CartaoDoGrafico titulo="Foco por dia" numeros={numeros.foco} periodo={periodo} serie={porDia}>
-        <GraficoDeFoco serie={porDia} />
-      </CartaoDoGrafico>
-      <CartaoDoGrafico titulo="Hábitos feitos por semana" numeros={numeros.habitos} periodo={periodo} serie={habitosPorSemana}>
-        <GraficoDeHabitos serie={habitosPorSemana} />
-      </CartaoDoGrafico>
+      <CartaoDoFoco registros={registros} />
+      <CartaoDosHabitos registros={registros} />
     </div>
   );
 }

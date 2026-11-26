@@ -58,7 +58,7 @@ describe('PerfilScreen', () => {
     await waitFor(() => expect(document.activeElement?.id).toBe('metricas'));
     expect(screen.getByRole('heading', { name: 'Descanso e gelo' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Concluído' })).toBeTruthy();
-    for (const name of ['Foco por dia', 'Hábitos feitos por semana']) {
+    for (const name of ['Foco por dia', 'Hábitos feitos']) {
       expect(screen.getByRole('figure', { name })).toBeTruthy();
     }
     expect(within(screen.getByRole('figure', { name: 'Foco por dia' })).getByRole('row', { name: /\(hoje\)/ })).toBeTruthy();

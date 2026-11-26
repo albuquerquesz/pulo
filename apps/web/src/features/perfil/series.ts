@@ -1,9 +1,10 @@
 import { DAY_ROLLOVER_HOUR, DEFAULT_TIMEZONE, METRICAS } from '@pulo/core/config/decisions';
 import { MINUTE_MS } from '@pulo/core/domain/clock';
-import { addDays, dateKeyOf, diffDays, weekdayOf, weekStartOf } from '@pulo/core/domain/day';
+import { addDays, dateKeyOf, diffDays, periodOf, weekdayOf, weekStartOf } from '@pulo/core/domain/day';
 import { focusedMs } from '@pulo/core/domain/joias';
 import { streakDaySets } from '@pulo/core/domain/streak';
-import type { Clock, DateKey, FocusSession, Habit, HabitLog, Repository, RestDay, User, Vacation } from '@pulo/core/domain/types';
+import { bestPeriod } from '@pulo/core/domain/week-summary';
+import type { Clock, DateKey, FocusSession, Habit, HabitLog, Period, Repository, RestDay, User, Vacation } from '@pulo/core/domain/types';
 
 import { verPreferencias } from '../app/conta';
 import { duracaoTexto } from '../hoje/logic';
@@ -30,10 +31,27 @@ export interface Serie {
   eixo: string[];
 }
 
-/** Os dois gráficos do Ritmo. Sem registros, as séries vêm zeradas (o gráfico aparece vazio). */
-export interface SeriesDoRitmo {
+/** Os intervalos que cada cartão do Ritmo deixa escolher. */
+export const INTERVALOS = [
+  { dias: 1, rotulo: 'Hoje' },
+  { dias: 7, rotulo: 'Últimos 7 dias' },
+  { dias: 30, rotulo: 'Últimos 30 dias' },
+] as const;
+export type Intervalo = (typeof INTERVALOS)[number]['dias'];
+
+/** O cartão do foco: o gráfico por dia e os números do intervalo. Sem registros, tudo vem zerado. */
+export interface FocoDoIntervalo {
   porDia: Serie;
-  habitosPorSemana: Serie;
+  /** Minutos por dia, na média do intervalo. */
+  medioPorDia: number;
+  sessoesTerminadas: number;
+  melhorPeriodo: Period | null;
+}
+
+/** O cartão dos hábitos: por dia até uma semana, por semana acima disso, e a taxa do intervalo (`null` sem hábito que conte). */
+export interface HabitosDoIntervalo {
+  serie: Serie;
+  taxa: number | null;
 }
 
 export interface RegistrosDoRitmo {
@@ -49,6 +67,8 @@ export interface RegistrosDoRitmo {
 interface SessaoDaJanela {
   date: DateKey;
   ms: number;
+  periodo: Period;
+  concluida: boolean;
 }
 
 interface DiaDeHabitos {
@@ -73,7 +93,7 @@ function focoPorDia(sessoes: readonly SessaoDaJanela[], dias: readonly DateKey[]
   const colunas = dias.map((date, i): Coluna => {
     const distancia = dias.length - 1 - i;
     const hoje = distancia === 0;
-    const marcado = distancia % 7 === 0 ? diaEMes(date) : '';
+    const marcado = dias.length <= 7 || distancia % 7 === 0 ? diaEMes(date) : '';
     const doDia = minutos[i] ?? 0;
     return {
       chave: date,
@@ -105,6 +125,23 @@ function diasDeHabitos(registros: RegistrosDoRitmo, dias: readonly DateKey[], ho
   });
 }
 
+function habitosPorDia(dias: readonly DiaDeHabitos[]): Serie {
+  const colunas = dias.map((d, i): Coluna => {
+    const taxa = d.esperados === 0 ? null : d.feitos / d.esperados;
+    const hoje = i === dias.length - 1;
+    return {
+      chave: d.date,
+      rotulo: hoje ? 'hoje' : diaEMes(d.date),
+      nome: hoje ? `${diaEMes(d.date)} (hoje)` : diaEMes(d.date),
+      texto: taxa === null ? 'sem hábitos no dia' : porcentagem(taxa),
+      altura: Math.round((taxa ?? 0) * 100),
+      valor: Math.round((taxa ?? 0) * 100),
+      destaque: hoje,
+    };
+  });
+  return { colunas, eixo: ['100%', '50%', '0'] };
+}
+
 function habitosPorSemana(dias: readonly DiaDeHabitos[]): Serie {
   const semanas = [...new Set(dias.map((d) => weekStartOf(d.date)))];
   const colunas = semanas.map((semana, i): Coluna => {
@@ -126,29 +163,61 @@ function habitosPorSemana(dias: readonly DiaDeHabitos[]): Serie {
   return { colunas, eixo: ['100%', '50%', '0'] };
 }
 
-/** As séries dos últimos `METRICAS.janelaDias` dias lógicos, nunca antes de a conta existir (como as métricas). */
-export function seriesDoRitmo(registros: RegistrosDoRitmo): SeriesDoRitmo {
-  const { sessions, user } = registros;
+/** Os dias lógicos do intervalo, até hoje, nunca antes de a conta existir (como as métricas). */
+function contexto(registros: RegistrosDoRitmo, intervalo: number) {
+  const { user } = registros;
   const fuso = user.timezone || DEFAULT_TIMEZONE;
   const virada = user.dayStartMinutes ?? DAY_ROLLOVER_HOUR * 60;
   const { today, rest, vacation } = streakDaySets({ ...registros, timeZone: fuso, dayStartMinutes: virada });
   const criada = dateKeyOf(user.createdAt, fuso, virada);
-  const comecoDaJanela = addDays(today, 1 - METRICAS.janelaDias);
+  const comecoDaJanela = addDays(today, 1 - intervalo);
   const primeiro = criada > comecoDaJanela ? criada : comecoDaJanela;
   const total = Math.max(1, diffDays(today, primeiro) + 1);
   const dias = Array.from({ length: total }, (_, i) => addDays(today, i - total + 1));
+  return { fuso, virada, today, parados: new Set([...rest, ...vacation]), dias };
+}
+
+/** O foco do intervalo: minutos por dia, a média, as sessões terminadas e o melhor período (a mesma regra das métricas). */
+export function focoDoIntervalo(registros: RegistrosDoRitmo, intervalo: number = METRICAS.janelaDias): FocoDoIntervalo {
+  const { fuso, virada, dias } = contexto(registros, intervalo);
   const daJanela = new Set(dias);
-  const sessoes = sessions
+  const sessoes = registros.sessions
     .filter((s) => s.state !== 'em_andamento')
-    .map((s): SessaoDaJanela => ({ date: dateKeyOf(s.endedAt ?? s.startedAt, fuso, virada), ms: focusedMs(s) }))
+    .map(
+      (s): SessaoDaJanela => ({
+        date: dateKeyOf(s.endedAt ?? s.startedAt, fuso, virada),
+        ms: focusedMs(s),
+        periodo: periodOf(s.startedAt, fuso),
+        concluida: s.state === 'concluida',
+      }),
+    )
     .filter((s) => daJanela.has(s.date));
+  const doPeriodo = (periodo: Period) => sessoes.filter((s) => s.periodo === periodo);
+  const msDe = (periodo: Period) => doPeriodo(periodo).reduce((total, s) => total + s.ms, 0);
+  const concluidasDe = (periodo: Period) => ({ completed: doPeriodo(periodo).filter((s) => s.concluida).length });
+  const ms: Record<Period, number> = { manha: msDe('manha'), tarde: msDe('tarde'), noite: msDe('noite') };
+  const concluidas: Record<Period, { completed: number }> = { manha: concluidasDe('manha'), tarde: concluidasDe('tarde'), noite: concluidasDe('noite') };
   return {
     porDia: focoPorDia(sessoes, dias),
-    habitosPorSemana: habitosPorSemana(diasDeHabitos(registros, dias, today, new Set([...rest, ...vacation]))),
+    medioPorDia: Math.round(minutosDe(sessoes) / dias.length),
+    sessoesTerminadas: sessoes.filter((s) => s.concluida).length,
+    melhorPeriodo: bestPeriod(ms, concluidas),
   };
 }
 
-export async function carregarSeries(repo: Repository, clock: Clock): Promise<SeriesDoRitmo> {
+/** Os hábitos do intervalo: por dia até uma semana, por semana acima disso, e a taxa somando o intervalo todo. */
+export function habitosDoIntervalo(registros: RegistrosDoRitmo, intervalo: number = METRICAS.janelaDias): HabitosDoIntervalo {
+  const { today, parados, dias } = contexto(registros, intervalo);
+  const doIntervalo = diasDeHabitos(registros, dias, today, parados);
+  const esperados = doIntervalo.reduce((total, d) => total + d.esperados, 0);
+  return {
+    serie: dias.length <= 7 ? habitosPorDia(doIntervalo) : habitosPorSemana(doIntervalo),
+    taxa: esperados === 0 ? null : doIntervalo.reduce((total, d) => total + d.feitos, 0) / esperados,
+  };
+}
+
+/** Os registros que os cartões do Ritmo usam; cada cartão calcula o próprio intervalo. */
+export async function carregarRegistros(repo: Repository, clock: Clock): Promise<RegistrosDoRitmo> {
   const [user, sessions, habits, habitLogs, restDays, preferencias] = await Promise.all([
     repo.getUser(),
     repo.listSessions(),
@@ -158,5 +227,5 @@ export async function carregarSeries(repo: Repository, clock: Clock): Promise<Se
     verPreferencias(repo),
   ]);
   if (!user) throw new Error('sem usuário');
-  return seriesDoRitmo({ user, sessions, habits, habitLogs, restDays, vacation: preferencias?.vacation, now: clock.now() });
+  return { user, sessions, habits, habitLogs, restDays, vacation: preferencias?.vacation, now: clock.now() };
 }
