@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import type { Repository } from '@pulo/core/domain/types';
@@ -54,7 +54,8 @@ describe('PerfilScreen', () => {
     window.location.hash = '#metricas';
     await abrir();
     await screen.findByRole('heading', { name: 'Ritmo' });
-    expect(document.activeElement?.id).toBe('metricas');
+    // O foco vai para a seção logo depois de ela aparecer; com a máquina ocupada, isso pode levar um instante.
+    await waitFor(() => expect(document.activeElement?.id).toBe('metricas'));
     expect(screen.getByRole('heading', { name: 'Descanso e gelo' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Concluído' })).toBeTruthy();
     window.location.hash = '';
