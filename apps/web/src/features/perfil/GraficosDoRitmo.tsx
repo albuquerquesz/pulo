@@ -20,19 +20,12 @@ function Dica({ active, payload }: { active?: boolean; payload?: readonly { payl
   );
 }
 
-type CartaoProps = { titulo: string; legenda: string; serie: Serie; children: ReactNode };
+type CartaoProps = { titulo: string; serie: Serie; children: ReactNode };
 
-/** Um cartão com o título, o gráfico (fora do leitor de tela) e a tabela com os mesmos números para quem não vê. */
-function CartaoDoGrafico({ titulo, legenda, serie, children }: CartaoProps) {
-  const id = useId();
+/** Um cartão só com o gráfico; o título fica para o leitor de tela, junto da tabela com os mesmos números. */
+function CartaoDoGrafico({ titulo, serie, children }: CartaoProps) {
   return (
-    <figure aria-labelledby={id} className={`${CARTAO} relative flex min-w-0 flex-col gap-3 p-5`}>
-      <figcaption className="flex flex-col">
-        <b id={id} className="text-base font-extrabold">
-          {titulo}
-        </b>
-        <span className="text-xs text-muted">{legenda}</span>
-      </figcaption>
+    <figure aria-label={titulo} className={`${CARTAO} relative flex min-w-0 flex-col gap-3 p-5`}>
       <div aria-hidden="true" className="relative" style={{ height: ALTURA }}>
         {children}
       </div>
@@ -111,16 +104,16 @@ function GraficoDeHabitos({ serie }: { serie: Serie }) {
   );
 }
 
-type GraficosProps = { series: SeriesDoRitmo; dias: number };
+type GraficosProps = { series: SeriesDoRitmo };
 
 /** Os dois gráficos do Ritmo, cada um no seu cartão, meio a meio no desktop. */
-export function GraficosDoRitmo({ series: { porDia, habitosPorSemana }, dias }: GraficosProps) {
+export function GraficosDoRitmo({ series: { porDia, habitosPorSemana } }: GraficosProps) {
   return (
     <div className="grid gap-4 @2xl:grid-cols-2">
-      <CartaoDoGrafico titulo="Foco por dia" legenda={`Minutos de foco nos últimos ${dias} dias`} serie={porDia}>
+      <CartaoDoGrafico titulo="Foco por dia" serie={porDia}>
         <GraficoDeFoco serie={porDia} />
       </CartaoDoGrafico>
-      <CartaoDoGrafico titulo="Hábitos feitos por semana" legenda="Quanto dos hábitos do dia você marcou" serie={habitosPorSemana}>
+      <CartaoDoGrafico titulo="Hábitos feitos por semana" serie={habitosPorSemana}>
         <GraficoDeHabitos serie={habitosPorSemana} />
       </CartaoDoGrafico>
     </div>

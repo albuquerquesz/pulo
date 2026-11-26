@@ -83,7 +83,7 @@ function Grupos({ metricas, series }: DadosDaSecao) {
         </dl>
         <p className="text-xs text-muted">Últimos {METRICAS.janelaDias} dias.</p>
       </Grupo>
-      <GraficosDoRitmo series={series} dias={METRICAS.janelaDias} />
+      <GraficosDoRitmo series={series} />
       <div className="grid gap-4 @2xl:grid-cols-2">
         <DescansoEGelo descanso={metricas.descanso} gelo={metricas.gelo} />
         <Grupo titulo="Concluído">

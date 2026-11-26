@@ -5,7 +5,7 @@ import type { Opcao } from './logic';
 
 /** O cartão com as linhas de uma seção. Estica para as colunas terem a mesma altura. */
 export function Linhas({ children }: { children: ReactNode }) {
-  return <div className={`${CARTAO} flex-1 divide-y divide-line px-5 py-1`}>{children}</div>;
+  return <div className={`${CARTAO} flex-1 divide-y divide-dashed divide-line px-5 py-1`}>{children}</div>;
 }
 
 type LinhaProps = { titulo: string; detalhe?: string; perigo?: boolean; children: ReactNode };
