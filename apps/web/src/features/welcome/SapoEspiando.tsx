@@ -5,9 +5,11 @@ function Olho({ cx, pupila, recorte }: { cx: number; pupila: number; recorte: st
   return (
     <g clipPath={`url(#${recorte})`}>
       <ellipse cx={cx} cy="88" rx="27" ry="44" fill="#fff" />
-      <g className="pupila">
-        <ellipse cx={pupila} cy="92" rx="13" ry="22" fill="var(--b-contorno)" />
-        <ellipse cx={pupila + 4} cy="82" rx="4.5" ry="9.9" fill="#fff" />
+      <g className="olhar">
+        <g className="pupila">
+          <ellipse cx={pupila} cy="92" rx="13" ry="22" fill="var(--b-contorno)" />
+          <ellipse cx={pupila + 4} cy="82" rx="4.5" ry="9.9" fill="#fff" />
+        </g>
       </g>
       <g className="palpebra">
         <rect x={cx - 32} y="30" width="64" height="104" fill="var(--b-sapo)" />
@@ -17,7 +19,7 @@ function Olho({ cx, pupila, recorte }: { cx: number; pupila: number; recorte: st
   );
 }
 
-/** Só o rosto do sapo, espiando por cima do cartão da entrada: respira e pisca. */
+/** Só o rosto do sapo, espiando por cima do cartão da entrada: respira, olha para os lados e pisca (a cena parado do mascote). */
 export function SapoEspiando({ className = '' }: { className?: string }) {
   // O id do React traz sinais que não valem dentro de url(#...).
   const id = `sapo${useId().replace(/[^a-zA-Z0-9]/g, '')}`;

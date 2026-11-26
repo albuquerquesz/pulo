@@ -766,17 +766,21 @@ body {
   }
 }
 
-/* O sapo que espia por cima do cartão: respira, e a pálpebra desce por dentro do olho para piscar. */
+/* O sapo que espia por cima do cartão: a cena parado do mascote, em ciclos de 4 s. Respira, pisca em 1,3 s e 3,4 s
+   (a pálpebra desce por dentro do olho) e, entre 1,8 s e 3,1 s, olha para um lado e para o outro. */
 .sapo-espiando .rosto {
   transform-origin: 150px 200px;
   animation: bosque-folego 3.6s ease-in-out infinite;
 }
 .sapo-espiando .palpebra {
   transform: translateY(-100px);
-  animation: bosque-pisca 5.2s infinite;
+  animation: bosque-pisca 4s infinite;
 }
 .sapo-espiando .pupila {
-  animation: bosque-aperta 5.2s infinite;
+  animation: bosque-aperta 4s infinite;
+}
+.sapo-espiando .olhar {
+  animation: bosque-olha 4s infinite;
 }
 @keyframes bosque-folego {
   50% {
@@ -785,32 +789,59 @@ body {
 }
 @keyframes bosque-pisca {
   0%,
-  86% {
+  30%,
+  82.5% {
     transform: translateY(-100px);
     animation-timing-function: cubic-bezier(0.5, 0, 1, 1);
   }
-  88.5% {
+  32.5%,
+  85% {
     transform: translateY(0);
   }
-  89.5% {
+  33.5%,
+  86% {
     transform: translateY(0);
     animation-timing-function: cubic-bezier(0, 0, 0.3, 1);
   }
-  93%,
+  37%,
+  89.5%,
   100% {
     transform: translateY(-100px);
   }
 }
 @keyframes bosque-aperta {
   0%,
-  86%,
-  93%,
+  30%,
+  37%,
+  82.5%,
+  89.5%,
   100% {
     transform: translateY(0);
   }
-  88.5%,
-  89.5% {
+  32.5%,
+  33.5%,
+  85%,
+  86% {
     transform: translateY(5px);
+  }
+}
+@keyframes bosque-olha {
+  0%,
+  45%,
+  77.5%,
+  100% {
+    transform: translateX(0);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  50%,
+  58% {
+    transform: translateX(-7px);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  64%,
+  72% {
+    transform: translateX(7px);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
   }
 }
 
