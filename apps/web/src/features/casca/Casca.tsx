@@ -59,7 +59,7 @@ export function Casca({ caminho, children }: CascaProps) {
 
   return (
     <div className={`md:grid md:min-h-dvh ${comTrilho ? 'md:grid-cols-[312px_minmax(0,1fr)_460px]' : 'md:grid-cols-[312px_minmax(0,1fr)]'}`}>
-      <div className="md:sticky md:top-0 md:flex md:h-dvh md:flex-col md:gap-6 md:overflow-y-auto md:border-r md:border-line md:bg-surface md:px-4 md:py-6">
+      <div className="md:sticky md:top-0 md:flex md:h-dvh md:flex-col md:gap-6 md:overflow-y-auto md:border-r md:border-line md:bg-[color-mix(in_srgb,var(--pulo-bg)_55%,var(--pulo-surface))] md:px-4 md:py-6">
         <div className="hidden md:block">
           <Marca />
         </div>
