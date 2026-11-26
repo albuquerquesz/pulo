@@ -43,3 +43,4 @@ export { useCamera } from './useCamera';
 export { pontoNaCena } from './camera';
 export type { Camera, LimitesDaCamera, Ponto } from './camera';
 export { BOTAO_DA_GAVETA, Gaveta } from './Gaveta';
+export { BotaoFechar } from './BotaoFechar';

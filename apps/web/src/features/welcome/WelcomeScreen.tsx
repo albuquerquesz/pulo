@@ -3,8 +3,8 @@ import { Botao, TelaDeEstado, Texto } from "@/ui";
 
 import { Tela, useApp } from "../app";
 
-/** Uma coluna estreita e centralizada: no desktop os botões não esticam pela tela toda. */
-const COLUNA = "mx-auto flex w-full max-w-sm flex-col gap-4 pt-6 md:pt-[12vh]";
+/** Uma coluna estreita, centralizada na tela: no desktop os botões não esticam pela tela toda. */
+const COLUNA = "mx-auto flex min-h-[calc(100dvh-6rem)] w-full max-w-sm flex-col items-center justify-center gap-4 text-center";
 
 export const TEXTO_SEM_SINAL =
   "A lagoa ficou sem sinal. Confira a internet e tente de novo.";

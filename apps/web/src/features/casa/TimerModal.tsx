@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 
 import { FOCUS } from '@pulo/core/config/decisions';
-import { Placa } from '@/ui';
+import { BotaoFechar, Placa } from '@/ui';
 
 import { ajustarMinutos, PASSO_DOS_MINUTOS, preenchimento, type OpcaoDeVinculo } from './logic';
 
@@ -43,7 +43,7 @@ export type TimerModalProps = {
   onComecar: (minutos: number, opcao: OpcaoDeVinculo) => void;
 };
 
-/** A caixa verde do timer, sobre o quarto: minutos, para que é o foco, Voltar e Começar. */
+/** A caixa verde do timer, sobre o quarto: minutos, para que é o foco, o X e Começar. */
 export function TimerModal({ minutosIniciais, opcoes, onVoltar, onComecar }: TimerModalProps) {
   const [minutos, setMinutos] = useState(() => ajustarMinutos(minutosIniciais));
   const [chave, setChave] = useState(opcoes[0]?.chave);
@@ -76,6 +76,7 @@ export function TimerModal({ minutosIniciais, opcoes, onVoltar, onComecar }: Tim
       <div className="my-auto flex w-full flex-col items-center gap-[26px]">
         <div className="relative flex flex-col items-center">
           <SapoDoTimer />
+          <BotaoFechar onFechar={onVoltar} className="top-0 -right-3 z-3" />
           <div className="relative z-1 flex flex-col items-center gap-3.5 rounded-[30px] border-[5px] border-contorno bg-timer-verde px-[18px] pt-7 pb-6 shadow-[inset_0_-10px_0_var(--pulo-timer-verde-borda)] md:px-[30px]">
             <div className="flex items-center gap-4" aria-live="polite" aria-label={`${minutos} minutos`}>
               <span data-testid="minutos" className={MOSTRADOR}>
@@ -133,13 +134,6 @@ export function TimerModal({ minutosIniciais, opcoes, onVoltar, onComecar }: Tim
           ))}
         </div>
         <div className="flex items-center gap-[22px] pb-3">
-          <button
-            type="button"
-            onClick={onVoltar}
-            className="cursor-pointer rounded-[14px] border-4 border-contorno bg-cancelar px-[22px] py-3 text-lg font-black tracking-wider text-contorno uppercase shadow-[inset_0_-5px_0_var(--pulo-cancelar-borda)]"
-          >
-            Voltar
-          </button>
           <Placa titulo="Começar" onPress={() => escolhida && onComecar(minutos, escolhida)} />
         </div>
       </div>

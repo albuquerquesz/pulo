@@ -58,7 +58,7 @@ beforeEach(() => {
 });
 
 describe('Casa', () => {
-  test('o timer anda de 5 em 5 entre os limites, e Voltar não grava nada', async () => {
+  test('o timer anda de 5 em 5 entre os limites, e fechar não grava nada', async () => {
     const { repo } = await abrir();
     const antes = (await repo.listSessions()).length;
     await clicar('Focar!');
@@ -68,7 +68,7 @@ describe('Casa', () => {
     fireEvent.change(screen.getByRole('slider', { name: 'Minutos de foco' }), { target: { value: '50' } });
     await clicar('Mais 5 minutos');
     expect(noMostrador()).toBe('50');
-    await clicar('Voltar');
+    await clicar('Fechar');
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(await repo.listSessions()).toHaveLength(antes);
   });
