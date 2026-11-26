@@ -32,7 +32,6 @@ export function useCarregar<T>(fn: () => Promise<T>): { estado: EstadoDeCarga<T>
       vivo.current = false;
     };
     // `versao` entra de propósito: refresh() recarrega a tela.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recarregar, versao]);
 
   return { estado, recarregar };

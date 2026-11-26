@@ -37,4 +37,4 @@ export function comparacaoDoDescanso({ focoMedioSemanaComDescanso: com, focoMedi
   return [barra('Semanas com descanso', com, true), barra('Semanas sem descanso', sem, false)];
 }
 
-export const TEXTO_DE_POUCA_HISTORIA = `A comparação de foco aparece depois de ${METRICAS.minSemanasPorTipo} semanas com descanso e ${METRICAS.minSemanasPorTipo} sem.`;
+export const TEXTO_DE_POUCA_HISTORIA = `A comparação do foco entre semanas com e sem descanso aparece quando houver pelo menos ${METRICAS.minSemanasPorTipo} semanas de cada tipo.`;

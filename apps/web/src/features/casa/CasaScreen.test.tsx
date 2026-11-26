@@ -116,6 +116,21 @@ describe('Casa', () => {
     expect(screen.getByRole('button', { name: 'Focar!' })).toBeTruthy();
   });
 
+  test('durante o foco, Loja e Decorar ficam desativados, com o motivo', async () => {
+    await abrir();
+    const botao = (name: string) => screen.getByRole<HTMLButtonElement>('button', { name });
+    await clicar('Focar!');
+    await clicar('Começar');
+    for (const nome of ['Loja', 'Decorar']) {
+      expect(botao(nome).disabled).toBe(true);
+      expect(botao(nome).title).toBe('Disponível quando o foco acabar');
+    }
+    expect(screen.getByText('Disponível quando o foco acabar')).toBeTruthy();
+    await clicar('Parar');
+    for (const nome of ['Loja', 'Decorar']) expect(botao(nome).disabled).toBe(false);
+    expect(screen.queryByText('Disponível quando o foco acabar')).toBeNull();
+  });
+
   test('decorar: Cancelar não grava; Ver no quarto e Comprar colocam o item e descontam o saldo', async () => {
     const { repo, saldo } = await abrir();
     expect(await repo.listRoomDecor()).toEqual([]);

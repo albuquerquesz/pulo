@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 import { HABITS } from '@pulo/core/config/decisions';
 import type { HabitInput } from '@pulo/core/domain/habits';
@@ -8,6 +8,8 @@ import { Botao, CAMPO_DO_MODAL, Modal, SeletorDeCor } from '@/ui';
 import { Dias } from './Dias';
 import { alternarDia, SEMANA_DA_TELA } from './logic';
 import { Periodo } from './Periodo';
+
+export const TEXTO_SEM_NOME = 'Dê um nome ao hábito.';
 
 type FormularioDeHabitoProps = {
   /** Sem ele, é um hábito novo. */
@@ -25,9 +27,15 @@ export function FormularioDeHabito({ habito, onSalvar, onFechar }: FormularioDeH
   const [dias, setDias] = useState<Weekday[]>(habito?.weekdays ?? [...SEMANA_DA_TELA]);
   const [periodo, setPeriodo] = useState(habito?.period);
   const [salvando, setSalvando] = useState(false);
+  const [semNome, setSemNome] = useState(false);
+  const idDoErro = useId();
   const nome = habito ? 'Editar hábito' : 'Novo hábito';
 
   const salvar = async () => {
+    if (!titulo.trim()) {
+      setSemNome(true);
+      return;
+    }
     setSalvando(true);
     const gravou = await onSalvar({ title: titulo, weekdays: dias, icon: icone.trim() || null, color: cor, period: periodo ?? null });
     if (!gravou) setSalvando(false);
@@ -48,10 +56,27 @@ export function FormularioDeHabito({ habito, onSalvar, onFechar }: FormularioDeH
         }}
       >
         <h2 className="text-center text-2xl font-black">{nome}</h2>
-        <label className="flex flex-col gap-1 font-extrabold">
-          Nome
-          <input value={titulo} onChange={(e) => setTitulo(e.target.value)} className={CAMPO_DO_MODAL} />
-        </label>
+        <div className="flex flex-col gap-1 font-extrabold">
+          <label className="flex flex-col gap-1">
+            Nome
+            <input
+              value={titulo}
+              onChange={(e) => {
+                setTitulo(e.target.value);
+                setSemNome(false);
+              }}
+              aria-required="true"
+              aria-invalid={semNome}
+              aria-describedby={semNome ? idDoErro : undefined}
+              className={CAMPO_DO_MODAL}
+            />
+          </label>
+          {semNome ? (
+            <p id={idDoErro} role="alert">
+              {TEXTO_SEM_NOME}
+            </p>
+          ) : null}
+        </div>
         <label className="flex flex-col gap-1 font-extrabold">
           Ícone
           <input value={icone} maxLength={HABITS.iconMaxChars} onChange={(e) => setIcone(e.target.value)} className={CAMPO_DO_MODAL} />

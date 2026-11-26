@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useId, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 
 import { artigoDaParte, COMODOS } from '@pulo/core/domain/casa';
@@ -26,6 +26,7 @@ const CAMERA: LimitesDaCamera = { cx: 400, cy: 400, w: 1400, wEstreito: 760, min
 /** De onde sai o +1 enquanto a cena ainda não foi medida. */
 const SOBRE_O_SAPO: Ponto = { x: 400, y: 470 };
 const DURACAO_DO_POP_MS = 1700;
+export const DICA_DURANTE_O_FOCO = 'Disponível quando o foco acabar';
 
 interface Pop extends Ponto {
   id: number;
@@ -99,6 +100,8 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
     setTimeout(() => setPops((todos) => todos.filter((p) => p.id !== id)), DURACAO_DO_POP_MS);
   };
   const foco = useFoco(soltarJoia);
+  const idDaDica = useId();
+  const bloqueio = { desativado: foco.focando, dica: DICA_DURANTE_O_FOCO, descritoPor: foco.focando ? idDaDica : undefined };
 
   const [timer, setTimer] = useState(false);
   const [decorando, setDecorando] = useState(false);
@@ -256,10 +259,15 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
           <div className="flex flex-1 justify-center pb-2 md:flex-none">
             <Placa titulo={decorando ? 'Pronto' : foco.focando ? 'Parar' : 'Focar!'} tom={decorando ? 'clara' : foco.focando ? 'escura' : 'madeira'} onPress={apertarPlaca} />
           </div>
-          <div className="flex flex-col gap-3.5">
-            <BotaoCanto icone="🛍️" rotulo="Loja" onPress={() => !foco.focando && dados && abrirLoja(null)} />
+          <div className="flex flex-col items-center gap-3.5">
+            {foco.focando ? (
+              <p id={idDaDica} className="w-24 rounded-2xl bg-white/90 px-2 py-1.5 text-center text-xs font-black text-contorno">
+                {DICA_DURANTE_O_FOCO}
+              </p>
+            ) : null}
+            <BotaoCanto icone="🛍️" rotulo="Loja" {...bloqueio} onPress={() => dados && abrirLoja(null)} />
             <BotaoCanto icone="🚪" rotulo="Sair de casa" onPress={() => void navegar({ to: '/ilha' })} />
-            <BotaoCanto icone="🖌️" rotulo="Decorar" onPress={() => !foco.focando && setDecorando((d) => !d)} />
+            <BotaoCanto icone="🖌️" rotulo="Decorar" {...bloqueio} onPress={() => setDecorando((d) => !d)} />
           </div>
         </div>
 
