@@ -11,6 +11,7 @@ import {
   barraDaSemana,
   carregarHoje,
   duracaoTexto,
+  FOLHA_DA_ENTRADA,
   FOLHAS_NA_LAGOA,
   fraseDosPulos,
   graficoDaSemana,
@@ -139,24 +140,26 @@ describe('pulos do dia', () => {
   const habito = (id: string, feito: boolean) => ({ id, titulo: id, quando: 'todo dia', feito });
   const tarefa = (id: string, feita: boolean) => ({ id, titulo: id, feita });
 
-  test('feitas primeiro, hábitos antes de tarefas, sem misturar ids iguais', () => {
+  test('a entrada vem feita na frente, depois as feitas, hábitos antes de tarefas, sem misturar ids iguais', () => {
     const p = pulosDoDia([habito('x', false), habito('agua', true)], [tarefa('x', true), tarefa('relatorio', false)]);
-    expect(p.folhas.map((f) => f.chave)).toEqual(['habito:agua', 'tarefa:x', 'habito:x', 'tarefa:relatorio']);
-    expect(p).toMatchObject({ feitos: 2, total: 4 });
+    expect(p.folhas.map((f) => f.chave)).toEqual(['entrada', 'habito:agua', 'tarefa:x', 'habito:x', 'tarefa:relatorio']);
+    expect(p).toMatchObject({ feitos: 3, total: 5 });
+  });
+
+  test('sem nada para hoje, o sapo já está na folha da entrada', () => {
+    expect(pulosDoDia([], [])).toEqual({ folhas: [FOLHA_DA_ENTRADA], feitos: 1, total: 1 });
   });
 
   test('a lagoa mostra no máximo as primeiras folhas, mas conta tudo', () => {
     const muitos = Array.from({ length: FOLHAS_NA_LAGOA + 3 }, (_, i) => habito(`h${i}`, i === 10));
     const p = pulosDoDia(muitos, []);
     expect(p.folhas).toHaveLength(FOLHAS_NA_LAGOA);
-    expect(p.folhas[0]?.chave).toBe('habito:h10');
-    expect(p).toMatchObject({ feitos: 1, total: FOLHAS_NA_LAGOA + 3 });
+    expect(p.folhas.map((f) => f.chave).slice(0, 2)).toEqual(['entrada', 'habito:h10']);
+    expect(p).toMatchObject({ feitos: 2, total: FOLHAS_NA_LAGOA + 4 });
   });
 
   test.each([
-    [0, 0, 'Nada na lagoa hoje. Crie um hábito ou uma tarefa para pular.'],
-    [0, 1, '1 pulo esperando você hoje.'],
-    [0, 5, '5 pulos esperando você hoje.'],
+    [1, 1, 'Primeiro pulo dado! Crie um hábito ou uma tarefa para seguir pulando.'],
     [1, 5, '1 pulo hoje. Mais 4 até a outra margem.'],
     [3, 8, '3 pulos hoje. Mais 5 até a outra margem.'],
     [4, 4, 'Chegou na outra margem! Tudo feito hoje.'],

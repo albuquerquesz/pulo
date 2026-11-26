@@ -255,9 +255,13 @@ export interface PulosDoDia {
   total: number;
 }
 
-/** Os hábitos e as tarefas de hoje viram vitórias-régias; cada coisa feita é um pulo do sapo. */
+/** A primeira folha: abrir o app já é o primeiro pulo, então o sapo nunca começa fora da lagoa. */
+export const FOLHA_DA_ENTRADA: FolhaDaLagoa = { chave: 'entrada', titulo: 'Entrar no Pulo', feito: true };
+
+/** Os hábitos e as tarefas de hoje viram vitórias-régias, depois da folha da entrada; cada coisa feita é um pulo do sapo. */
 export function pulosDoDia(habitos: readonly HabitoDeHoje[], tarefas: readonly TarefaDeHoje[]): PulosDoDia {
   const todas: FolhaDaLagoa[] = [
+    FOLHA_DA_ENTRADA,
     ...habitos.map((h) => ({ chave: `habito:${h.id}`, titulo: h.titulo, feito: h.feito })),
     ...tarefas.map((t) => ({ chave: `tarefa:${t.id}`, titulo: t.titulo, feito: t.feita })),
   ];
@@ -270,8 +274,7 @@ const pulos = (n: number) => (n === 1 ? '1 pulo' : `${n} pulos`);
 
 /** A frase embaixo da saudação, conforme o que já foi pulado. */
 export function fraseDosPulos({ feitos, total }: PulosDoDia): string {
-  if (total === 0) return 'Nada na lagoa hoje. Crie um hábito ou uma tarefa para pular.';
-  if (feitos === 0) return `${pulos(total)} esperando você hoje.`;
+  if (total === 1) return 'Primeiro pulo dado! Crie um hábito ou uma tarefa para seguir pulando.';
   if (feitos === total) return 'Chegou na outra margem! Tudo feito hoje.';
   return `${pulos(feitos)} hoje. Mais ${total - feitos} até a outra margem.`;
 }

@@ -41,7 +41,7 @@ type TopoProps = {
 /** O topo do Hoje: a lagoa com o céu da hora, os pulos do dia e o botão Começar foco, que abre a Casa já com o próximo foco. */
 export function Topo({ saudacao, periodo, foco, pulos }: TopoProps) {
   const { folhas, feitos } = pulos;
-  // O sapo fica na última folha pulada; sem nenhum pulo, espera na margem.
+  // O sapo fica na última folha pulada (a da entrada já conta como pulo).
   const ondeEsta = Math.min(feitos, folhas.length) - 1;
   const colunas = `${COLUNAS_NO_CELULAR[Math.min(folhas.length, FOLHAS_NO_CELULAR)]} ${COLUNAS_NO_LARGO[folhas.length]}`;
   return (
@@ -75,7 +75,6 @@ export function Topo({ saudacao, periodo, foco, pulos }: TopoProps) {
           <path d="M0 52 Q260 30 560 48 T1200 44 V64 H0Z" />
         </svg>
         <div aria-hidden="true" className="lagoa-agua absolute inset-x-0 top-[22px] bottom-0" />
-        {ondeEsta < 0 ? <SapoRosto className="lagoa-sapinho absolute -top-9 left-4 w-[62px]" /> : null}
         <ol aria-label="Pulos de hoje" className={`absolute inset-0 grid items-center px-3 md:px-[60px] ${colunas}`}>
           {folhas.map((folha, i) => (
             <li
