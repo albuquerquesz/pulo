@@ -135,7 +135,10 @@ export function CartaoDasMetas({ metas }: { metas: MetaDoTrilho[] }) {
         </Link>
       </div>
       {metas.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 text-center">
+        <div className="flex min-h-[240px] flex-col items-center justify-center gap-2 py-4 text-center">
+          <span aria-hidden="true" className="mb-2 grid size-16 place-items-center rounded-full bg-sapo/22 text-[32px]">
+            🎯
+          </span>
           <h3 className="text-base font-extrabold">Nenhuma meta por enquanto</h3>
           <p className="text-sm text-muted">Uma meta grande dá rumo aos seus hábitos e focos.</p>
           <Link
