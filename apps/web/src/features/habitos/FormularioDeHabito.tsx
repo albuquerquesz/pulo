@@ -46,7 +46,6 @@ export function FormularioDeHabito({ habito, onSalvar, onFechar }: FormularioDeH
       aberto
       onFechar={onFechar}
       rotulo={nome}
-      rodape={<Botao titulo="Cancelar" variante="foco" largura="auto" onPress={onFechar} />}
     >
       <form
         className="@container flex w-full flex-col gap-4"

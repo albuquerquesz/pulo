@@ -53,15 +53,6 @@ export function LojaModal({ lugar, escolha, quarto, saldo, comodo, onEscolher, o
       contido
       onFechar={onCancelar}
       rotulo={`${lugar ? 'Decorar' : 'Loja'}: ${comodo.nome}`}
-      rodape={
-        <button
-          type="button"
-          onClick={onCancelar}
-          className="cursor-pointer rounded-[14px] border-4 border-contorno bg-cancelar px-[46px] py-3 text-[19px] font-black tracking-wider text-contorno uppercase shadow-[inset_0_-5px_0_var(--pulo-cancelar-borda)]"
-        >
-          Cancelar
-        </button>
-      }
     >
       {lugar ? null : <CartaoDoGelo />}
       <div className="flex shrink-0 flex-col items-center justify-end gap-2 md:min-h-[130px]">

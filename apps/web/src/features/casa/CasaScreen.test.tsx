@@ -131,14 +131,14 @@ describe('Casa', () => {
     expect(screen.queryByText('Disponível quando o foco acabar')).toBeNull();
   });
 
-  test('decorar: Cancelar não grava; Ver no quarto e Comprar colocam o item e descontam o saldo', async () => {
+  test('decorar: fechar não grava; Ver no quarto e Comprar colocam o item e descontam o saldo', async () => {
     const { repo, saldo } = await abrir();
     expect(await repo.listRoomDecor()).toEqual([]);
     const antes = await saldo();
     await clicar('Decorar');
     expect(screen.getByText(/para decorar o quarto do Pulo/)).toBeTruthy();
     await clicar('Decorar: parede esquerda, primeiro lugar');
-    await clicar('Cancelar');
+    await clicar('Fechar');
     expect(await repo.listRoomDecor()).toEqual([]);
 
     await clicar('Decorar: parede esquerda, primeiro lugar');
@@ -201,7 +201,7 @@ describe('Casa', () => {
     await clicar('Loja');
     expect(screen.getByRole('dialog', { name: 'Loja: Quarto' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Ver no quarto' })).toBeNull();
-    await clicar('Cancelar');
+    await clicar('Fechar');
     await clicar('Sair de casa');
     expect(navegar).toHaveBeenCalledWith({ to: '/ilha' });
   });

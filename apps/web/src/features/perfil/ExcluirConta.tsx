@@ -37,9 +37,6 @@ export function ExcluirConta({ onExcluir, onFechar }: ExcluirContaProps) {
           <input className={CAMPO_DO_MODAL} autoComplete="off" autoCapitalize="characters" value={texto} onChange={(e) => setTexto(e.target.value)} />
         </label>
         <div className="flex justify-center gap-3">
-          <button type="button" onClick={onFechar} className={`${BOTAO_DO_DIALOGO} bg-white`}>
-            Cancelar
-          </button>
           <button type="submit" disabled={!podeExcluir(texto) || excluindo} className={`${BOTAO_DO_DIALOGO} bg-cancelar`}>
             Excluir minha conta
           </button>

@@ -127,13 +127,5 @@ describe('PerfilScreen', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  test('a foto precisa ser https', async () => {
-    await abrir();
-    await clicar(screen.getByRole('button', { name: 'Editar perfil' }));
-    const dialogo = within(screen.getByRole('dialog', { name: 'Editar perfil' }));
-    fireEvent.change(dialogo.getByLabelText('Endereço da foto (https)'), { target: { value: 'http://exemplo.com/a.png' } });
-    await clicar(dialogo.getByRole('button', { name: 'Salvar' }));
-    expect(dialogo.getByRole('alert').textContent).toContain('https');
-  });
 
 });

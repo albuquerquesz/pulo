@@ -102,15 +102,6 @@ export function Casca({ caminho, children }: CascaProps) {
         aberto={lojaDoGelo}
         onFechar={() => setLojaDoGelo(false)}
         rotulo="Loja de gelo"
-        rodape={
-          <button
-            type="button"
-            onClick={() => setLojaDoGelo(false)}
-            className="cursor-pointer rounded-[14px] border-4 border-contorno bg-cancelar px-[46px] py-3 text-[19px] font-black tracking-wider text-contorno uppercase shadow-[inset_0_-5px_0_var(--pulo-cancelar-borda)]"
-          >
-            Fechar
-          </button>
-        }
       >
         <CartaoDoGelo />
       </Modal>
