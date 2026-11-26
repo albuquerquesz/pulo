@@ -3,16 +3,24 @@ import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 type GavetaProps = {
   aberta: boolean;
   onFechar: () => void;
+  /** Nome do painel para leitores de tela. */
+  rotulo: string;
+  /** Título visível no topo, à esquerda. */
+  titulo?: string;
   /** Os botões redondos do topo, antes do fechar. */
-  acoes: ReactNode;
+  acoes?: ReactNode;
+  /** Largura no desktop (md para cima). */
+  largura?: string;
+  /** Classes do corpo, abaixo do topo. */
+  corpo?: string;
   children: ReactNode;
 };
 
 export const BOTAO_DA_GAVETA =
   'grid size-[34px] cursor-pointer place-items-center rounded-full border border-line text-[13px] text-muted hover:bg-line/50 hover:text-ink';
 
-/** Painel que entra pela direita sobre o quadro escurecido. Fica montado para animar a saída. */
-export function Gaveta({ aberta, onFechar, acoes, children }: GavetaProps) {
+/** Painel que entra pela direita sobre a tela escurecida. Fica montado para animar a saída. */
+export function Gaveta({ aberta, onFechar, rotulo, titulo, acoes, largura = 'md:w-[min(1000px,94vw)]', corpo = '', children }: GavetaProps) {
   const painel = useRef<HTMLElement>(null);
   const fechar = useRef(onFechar);
   useLayoutEffect(() => {
@@ -45,14 +53,15 @@ export function Gaveta({ aberta, onFechar, acoes, children }: GavetaProps) {
         ref={painel}
         role={aberta ? 'dialog' : undefined}
         aria-modal={aberta ? true : undefined}
-        aria-label="Detalhe da tarefa"
+        aria-label={rotulo}
         inert={!aberta}
         tabIndex={-1}
-        className={`fixed inset-y-0 right-0 z-[41] flex w-full flex-col border-line bg-bg outline-none transition-[translate,visibility] duration-250 ease-[ease] md:w-[min(1000px,94vw)] md:border-l ${
+        className={`fixed inset-y-0 right-0 z-[41] flex w-full flex-col border-line bg-bg outline-none transition-[translate,visibility] duration-250 ease-[ease] ${largura} md:border-l ${
           aberta ? 'visible translate-x-0 shadow-[-20px_0_50px_rgba(0,0,0,0.35)]' : 'invisible translate-x-[102%]'
         }`}
       >
         <div className="flex items-center gap-2.5 border-b border-line px-5 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
+          {titulo && aberta ? <h2 className="text-lg font-extrabold">{titulo}</h2> : null}
           <div className="ml-auto flex gap-1.5">
             {acoes}
             <button type="button" onClick={onFechar} aria-label="Fechar" title="Fechar" className={BOTAO_DA_GAVETA}>
@@ -60,7 +69,7 @@ export function Gaveta({ aberta, onFechar, acoes, children }: GavetaProps) {
             </button>
           </div>
         </div>
-        <div className="flex-1 overflow-auto md:grid md:grid-cols-[minmax(0,1fr)_250px]">{children}</div>
+        <div className={`flex-1 overflow-auto ${corpo}`}>{children}</div>
       </aside>
     </>
   );

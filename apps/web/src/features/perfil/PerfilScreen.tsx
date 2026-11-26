@@ -1,15 +1,13 @@
 import { useState } from 'react';
 
 import { DEFAULT_TIMEZONE } from '@pulo/core/config/decisions';
-import { dateKeyOf } from '@pulo/core/domain/day';
 import type { PreferencesPatch } from '@pulo/core/domain/user-metadata';
 
-import { Botao } from '@/ui';
+import { Botao, Gaveta } from '@/ui';
 
 import { Tela, useApp, useCarregar } from '../app';
-import { temConta, temPreferencias } from '../app/conta';
+import { temPreferencias } from '../app/conta';
 import { contaNaTela } from '../casca/logic';
-import { baixarJson } from './baixar';
 import { Cabecalho } from './Cabecalho';
 import { ClaudeDialogo } from './ClaudeDialogo';
 import { Conquistas } from './Conquistas';
@@ -17,9 +15,8 @@ import { Conta } from './Conta';
 import { EditarPerfil } from './EditarPerfil';
 import { Estatisticas } from './Estatisticas';
 import { ExcluirConta } from './ExcluirConta';
-import { carregarPerfil, desdeQuando, medalha, nomeDoArquivo } from './logic';
+import { carregarPerfil, desdeQuando, medalha } from './logic';
 import { Metricas } from './Metricas';
-import { PainelDemo } from './PainelDemo';
 import { Preferencias } from './Preferencias';
 import { Rotina } from './Rotina';
 import { useConexoes, type Conexoes } from './useConexoes';
@@ -35,15 +32,14 @@ function estadoDoClaude(conexoes: Conexoes): string | null {
 /** O Perfil: cabeçalho, estatísticas, conquistas, métricas, rotina, preferências e conta. */
 export function PerfilScreen() {
   const app = useApp();
-  const { repo, clock, user, demo, demoClock, refresh, atualizarPerfil } = app;
+  const { repo, clock, user, refresh, atualizarPerfil } = app;
   const { estado, recarregar } = useCarregar(() => carregarPerfil(repo, clock));
   const { conexoes, desconectar, tentarDeNovo } = useConexoes();
   const [dialogo, setDialogo] = useState<DialogoAberto>(null);
-  const [baixando, setBaixando] = useState(false);
   if (!user) return null;
 
   const fuso = user.timezone || DEFAULT_TIMEZONE;
-  const conta = contaNaTela(app.conta, user);
+  const conta = contaNaTela(app.pessoa, user);
   const dados = estado.tipo === 'ok' ? estado.dados : null;
   const fechar = () => setDialogo(null);
 
@@ -60,18 +56,6 @@ export function PerfilScreen() {
     refresh();
   };
 
-  const baixar = async () => {
-    if (!temConta(repo)) return;
-    setBaixando(true);
-    try {
-      baixarJson(nomeDoArquivo(dateKeyOf(clock.now(), fuso)), await repo.exportData());
-    } catch {
-      // O repositório já avisou o que houve.
-    } finally {
-      setBaixando(false);
-    }
-  };
-
   return (
     <Tela>
       {dados ? (
@@ -79,9 +63,6 @@ export function PerfilScreen() {
           <Cabecalho
             conta={conta}
             desde={desdeQuando(dados.estatisticas.desde, fuso)}
-            nomeDoSapo={user.frogName}
-            sapo={dados.sapo}
-            saldo={dados.saldo}
             onEditar={() => setDialogo('editar')}
           />
           <Estatisticas sequencia={dados.sequencia} estatisticas={dados.estatisticas} />
@@ -123,20 +104,18 @@ export function PerfilScreen() {
           ) : null}
           {/* A conta fica à mão mesmo se os números não abrirem. */}
           <Conta
-            baixando={baixando}
-            onBaixar={() => void baixar()}
-            onSair={() => void (demo ? app.disableDemo() : app.sair())}
+            onSair={() => void app.sair()}
             onExcluir={() => setDialogo('excluir')}
           />
         </div>
       </div>
 
-      {demoClock ? <PainelDemo relogio={demoClock} onAvancar={refresh} onReiniciar={() => void app.enableDemo()} /> : null}
-
-      {dialogo === 'editar' ? <EditarPerfil conta={conta} onSalvar={app.editarConta} onFechar={fechar} /> : null}
+      <Gaveta aberta={dialogo === 'editar'} onFechar={fechar} rotulo="Editar perfil" titulo="Editar perfil" largura="md:w-[min(560px,94vw)]">
+        {dialogo === 'editar' ? <EditarPerfil conta={conta} onSalvar={app.editarConta} onFechar={fechar} /> : null}
+      </Gaveta>
       {dialogo === 'claude' ? <ClaudeDialogo conexoes={conexoes} onDesconectar={desconectar} onTentarDeNovo={tentarDeNovo} onFechar={fechar} /> : null}
       {dialogo === 'excluir' ? (
-        <ExcluirConta demo={demo} onExcluir={demo ? app.disableDemo : app.excluirConta} onFechar={fechar} />
+        <ExcluirConta onExcluir={app.excluirConta} onFechar={fechar} />
       ) : null}
     </Tela>
   );

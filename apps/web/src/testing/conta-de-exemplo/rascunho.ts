@@ -1,15 +1,16 @@
 import { DEFAULT_TIMEZONE, HOUSE, JOIAS, TASKS, type ParteId } from '@pulo/core/config/decisions';
 import { MINUTE_MS } from '@pulo/core/domain/clock';
 import { addDays, dateKeyOf, weekEndOf } from '@pulo/core/domain/day';
-import type { DemoClock } from '@pulo/core/demo';
 import type { AccentColor, FocusSession, Goal, GoalMilestone, Habit, Period, Repository, RoutineBlock, Task, TaskStatus } from '@pulo/core/domain/types';
 
+import type { RelogioDeExemplo } from '@pulo/core/testing/relogio';
+
 /** O instante do rascunho: sábado, 21/11/2026, 14h38, dentro das quatro semanas de exemplo. */
-export const DIA_DO_DEMO = '2026-11-21';
-export const MINUTOS_DO_DEMO = 14 * 60 + 38;
+export const DIA_DE_EXEMPLO = '2026-11-21';
+export const MINUTOS_DE_EXEMPLO = 14 * 60 + 38;
 
 /** A casa de exemplo, já pela metade (spec 31), na ordem em que os requisitos permitem. */
-export const CASA_DO_DEMO: readonly ParteId[] = [
+export const CASA_DE_EXEMPLO: readonly ParteId[] = [
   'cozinha', 'sala', 'banheiro', 'segundo-andar', 'chamine', 'jardim', 'horta', 'arvore', 'balanco', 'caixa-correio', 'cerca',
 ];
 export const custoDaCasa = (casa: readonly ParteId[]): number => casa.reduce((total, id) => total + HOUSE.partCost[id], 0);
@@ -36,35 +37,35 @@ const DIA_MS = 24 * 60 * MINUTE_MS;
 
 /** Ícone, cor, período e lembrete da página de Hábitos do rascunho. A meta é atrelada depois que as metas existem. */
 const HABITOS: Habit[] = [
-  habito('demo-habito-agua', 'Beber água', TODOS_OS_DIAS, '💧', 'agua', 'manha', 7 * 60 + 30),
-  habito('demo-habito-alongar', 'Alongar', TODOS_OS_DIAS, '🧘', 'sapo', 'manha', 7 * 60 + 45),
-  habito('demo-habito-ler', 'Ler 10 páginas', TODOS_OS_DIAS, '📖', 'descanso', 'noite', 21 * 60),
-  habito('demo-habito-caminhar', 'Caminhar', [0, 2, 4, 5], '🚶', 'foco', 'manha'),
+  habito('ex-habito-agua', 'Beber água', TODOS_OS_DIAS, '💧', 'agua', 'manha', 7 * 60 + 30),
+  habito('ex-habito-alongar', 'Alongar', TODOS_OS_DIAS, '🧘', 'sapo', 'manha', 7 * 60 + 45),
+  habito('ex-habito-ler', 'Ler 10 páginas', TODOS_OS_DIAS, '📖', 'descanso', 'noite', 21 * 60),
+  habito('ex-habito-caminhar', 'Caminhar', [0, 2, 4, 5], '🚶', 'foco', 'manha'),
   // Não cai no sábado: no Hoje aparece só como o hábito atrelado ao próximo foco.
-  habito('demo-habito-ingles', 'Estudar inglês', [0, 1, 2, 3, 4], '🎓', 'agua', 'tarde', 14 * 60 + 30),
+  habito('ex-habito-ingles', 'Estudar inglês', [0, 1, 2, 3, 4], '🎓', 'agua', 'tarde', 14 * 60 + 30),
 ];
 const META_DO_HABITO: Record<string, string> = {
-  'demo-habito-caminhar': 'demo-meta-corrida',
-  'demo-habito-ingles': 'demo-meta-ingles',
-  'demo-habito-ler': 'demo-meta-livros',
+  'ex-habito-caminhar': 'ex-meta-corrida',
+  'ex-habito-ingles': 'ex-meta-ingles',
+  'ex-habito-ler': 'ex-meta-livros',
 };
-const FEITOS_HOJE = ['demo-habito-agua', 'demo-habito-alongar'];
+const FEITOS_HOJE = ['ex-habito-agua', 'ex-habito-alongar'];
 
 function bloco(id: string, hora: number, minuto: number, durationMinutes: number, title: string, icon: string): RoutineBlock {
-  const kind = id === 'demo-bloco-descanso' ? 'descanso' : 'foco';
+  const kind = id === 'ex-bloco-descanso' ? 'descanso' : 'foco';
   return { id, weekday: SABADO, startMinutes: hora * 60 + minuto, durationMinutes, kind, title, icon };
 }
 
 /** A Linha do dia do rascunho. */
 const BLOCOS: RoutineBlock[] = [
-  bloco('demo-bloco-revisar', 8, 0, 15, 'Revisar tarefas', '📝'),
-  bloco('demo-bloco-projeto', 10, 0, 25, 'Projeto da faculdade', '💻'),
-  bloco('demo-bloco-ingles', 14, 30, 25, 'Estudar inglês', '🎓'),
-  bloco('demo-bloco-artigo', 17, 0, 25, 'Ler artigo', '📖'),
-  bloco('demo-bloco-descanso', 20, 0, 60, 'Descanso', '🛋️'),
+  bloco('ex-bloco-revisar', 8, 0, 15, 'Revisar tarefas', '📝'),
+  bloco('ex-bloco-projeto', 10, 0, 25, 'Projeto da faculdade', '💻'),
+  bloco('ex-bloco-ingles', 14, 30, 25, 'Estudar inglês', '🎓'),
+  bloco('ex-bloco-artigo', 17, 0, 25, 'Ler artigo', '📖'),
+  bloco('ex-bloco-descanso', 20, 0, 60, 'Descanso', '🛋️'),
 ];
 
-interface TarefaDoDemo {
+interface TarefaDeExemplo {
   titulo: string;
   coluna: TaskStatus;
   prazo?: 'hoje' | 'semana';
@@ -78,7 +79,7 @@ interface TarefaDoDemo {
 }
 
 /** As tarefas do rascunho. */
-const TAREFAS: TarefaDoDemo[] = [
+const TAREFAS: TarefaDeExemplo[] = [
   {
     titulo: 'Resumo do capítulo 3 de Bioquímica',
     coluna: 'fazendo',
@@ -137,10 +138,10 @@ const TAREFAS: TarefaDoDemo[] = [
 const MINUTOS_DO_POMODORO_DE_EXEMPLO = 1;
 
 /** Grava as tarefas como criadas há três dias e movidas ontem, para a atividade ter história. */
-async function criarTarefas(repo: Repository, clock: DemoClock): Promise<void> {
+async function criarTarefas(repo: Repository, clock: RelogioDeExemplo): Promise<void> {
   const hoje = dateKeyOf(clock.now(), DEFAULT_TIMEZONE);
   for (const [i, t] of TAREFAS.entries()) {
-    const id = `demo-tarefa-${i + 1}`;
+    const id = `ex-tarefa-${i + 1}`;
     const base: Task = {
       id,
       title: t.titulo,
@@ -193,7 +194,7 @@ function sessaoConcluida(id: string, blockId: string, startedAt: number): FocusS
 }
 
 /** O que o rascunho mostra além das quatro semanas de exemplo: um dia em andamento, tarefas e três metas. Tudo inventado. */
-export async function completarDemo(repo: Repository, clock: DemoClock, casa: readonly ParteId[] = CASA_DO_DEMO): Promise<void> {
+export async function completarConta(repo: Repository, clock: RelogioDeExemplo, casa: readonly ParteId[] = CASA_DE_EXEMPLO): Promise<void> {
   const agora = clock.now();
   const hoje = dateKeyOf(agora, DEFAULT_TIMEZONE);
   const user = await repo.getUser();
@@ -205,22 +206,22 @@ export async function completarDemo(repo: Repository, clock: DemoClock, casa: re
   for (const habitId of FEITOS_HOJE) await repo.saveHabitLog({ habitId, date: hoje, doneAt: agora - 360 * MINUTE_MS });
   // Fecha o domingo que faltava: a sequência fica em 12 dias, como no rascunho.
   const domingo = addDays(hoje, -6);
-  await repo.saveHabitLog({ habitId: 'demo-habito-agua', date: domingo, doneAt: agora - 6 * DIA_MS });
+  await repo.saveHabitLog({ habitId: 'ex-habito-agua', date: domingo, doneAt: agora - 6 * DIA_MS });
 
   // O sábado dos dados de exemplo é de descanso; aqui ele vira o dia em andamento do rascunho.
   await repo.deleteRestDay(hoje);
-  await repo.deleteBlock('demo-bloco-descanso-5');
+  await repo.deleteBlock('ex-bloco-descanso-5');
   for (const b of BLOCOS) await repo.saveBlock(b);
   for (const [blockId, inicio] of [
-    ['demo-bloco-revisar', 8 * 60],
-    ['demo-bloco-projeto', 10 * 60],
+    ['ex-bloco-revisar', 8 * 60],
+    ['ex-bloco-projeto', 10 * 60],
   ] as const) {
-    await repo.saveSession(sessaoConcluida(`demo-sessao-hoje-${blockId}`, blockId, agora - (MINUTOS_DO_DEMO - inicio) * MINUTE_MS));
+    await repo.saveSession(sessaoConcluida(`ex-sessao-hoje-${blockId}`, blockId, agora - (MINUTOS_DE_EXEMPLO - inicio) * MINUTE_MS));
   }
   // O foco de ontem neste bloco dá o hábito atrelado ao próximo foco.
   await repo.saveSession({
-    ...sessaoConcluida('demo-sessao-ingles', 'demo-bloco-ingles', agora - DIA_MS - 60 * MINUTE_MS),
-    habitId: 'demo-habito-ingles',
+    ...sessaoConcluida('ex-sessao-ingles', 'ex-bloco-ingles', agora - DIA_MS - 60 * MINUTE_MS),
+    habitId: 'ex-habito-ingles',
   });
 
   await criarTarefas(repo, clock);
@@ -229,7 +230,7 @@ export async function completarDemo(repo: Repository, clock: DemoClock, casa: re
   // A idade e o prazo de cada meta dão o ritmo do rascunho: uma em dia e uma um pouco atrás.
   const metas: Goal[] = [
     {
-      id: 'demo-meta-ingles',
+      id: 'ex-meta-ingles',
       title: 'Terminar o curso de inglês',
       why: 'Quero viajar pro Canadá sem travar na conversa.',
       icon: '🎓',
@@ -237,10 +238,10 @@ export async function completarDemo(repo: Repository, clock: DemoClock, casa: re
       state: 'ativa',
       createdAt: agora - 43 * DIA_MS,
       targetDate: addDays(hoje, 40),
-      milestones: marcos('demo-meta-ingles', ['Unidade 1', 'Unidade 2', 'Unidade 3', 'Unidade 4', 'Prova final'], 3, feitoEm),
+      milestones: marcos('ex-meta-ingles', ['Unidade 1', 'Unidade 2', 'Unidade 3', 'Unidade 4', 'Prova final'], 3, feitoEm),
     },
     {
-      id: 'demo-meta-livros',
+      id: 'ex-meta-livros',
       title: 'Ler 4 livros no semestre',
       why: 'Voltar a ler por prazer, não só pra faculdade.',
       icon: '📚',
@@ -248,10 +249,10 @@ export async function completarDemo(repo: Repository, clock: DemoClock, casa: re
       state: 'ativa',
       createdAt: agora - 90 * DIA_MS,
       targetDate: addDays(hoje, 90),
-      milestones: marcos('demo-meta-livros', ['O Pequeno Príncipe', 'Dom Casmurro', 'Livro 3', 'Livro 4'], 1, feitoEm),
+      milestones: marcos('ex-meta-livros', ['O Pequeno Príncipe', 'Dom Casmurro', 'Livro 3', 'Livro 4'], 1, feitoEm),
     },
     {
-      id: 'demo-meta-corrida',
+      id: 'ex-meta-corrida',
       title: 'Correr 5 km sem parar',
       why: 'Ter fôlego pra brincar com meu sobrinho.',
       icon: '🏃',
@@ -259,7 +260,7 @@ export async function completarDemo(repo: Repository, clock: DemoClock, casa: re
       state: 'concluida',
       createdAt: agora - 90 * DIA_MS,
       completedAt: feitoEm,
-      milestones: marcos('demo-meta-corrida', ['1 km', '2 km', '3 km', '4 km', '5 km'], 5, feitoEm),
+      milestones: marcos('ex-meta-corrida', ['1 km', '2 km', '3 km', '4 km', '5 km'], 5, feitoEm),
     },
   ];
   for (const meta of metas) await repo.saveGoal(meta);
@@ -267,5 +268,5 @@ export async function completarDemo(repo: Repository, clock: DemoClock, casa: re
     const goalId = META_DO_HABITO[h.id];
     if (goalId) await repo.saveHabit({ ...h, goalId });
   }
-  await repo.saveGoalChest({ goalId: 'demo-meta-corrida', abertoEm: feitoEm, joias: JOIAS.por.goalCompleted });
+  await repo.saveGoalChest({ goalId: 'ex-meta-corrida', abertoEm: feitoEm, joias: JOIAS.por.goalCompleted });
 }

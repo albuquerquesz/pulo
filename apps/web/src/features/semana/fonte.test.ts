@@ -7,8 +7,8 @@ import type { BlockSlot, WeeklyProposal } from '@pulo/core/domain/types';
 import { createMemoryRepository } from '@/data';
 
 import { concluirOnboarding } from '../app/core';
-import { criarSessaoDemo } from '../app/demo';
-import { criarFonteDeProposta, criarFonteLocal, criarFonteRemota, type ClienteDePropostas } from './fonte';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
+import { criarFonteLocal, criarFonteRemota, type ClienteDePropostas } from './fonte';
 import { carregarSemana, type DadosSemana } from './logic';
 
 const PROPOSTA: WeeklyProposal = {
@@ -138,37 +138,16 @@ describe('fonte remota (conta): o servidor faz o trabalho', () => {
   });
 });
 
-describe('escolha da fonte pela origem (um lugar só)', () => {
-  test('demo e login usam a local; conta usa a remota', async () => {
-    const repo = createMemoryRepository();
-    const clock = fixedClock(sp(2026, 11, 25, 10, 0));
-    const { cliente, geradas } = servidorFalso({});
-    const avisos = { sessaoExpirou: vi.fn() };
-    const user = await concluirOnboarding(repo, clock, { frogName: 'Juca', startHour: 7, endHour: 22 });
-    const dados = await carregarSemana(repo, clock, user);
-
-    for (const origem of ['demo', 'login'] as const) {
-      const fonte = criarFonteDeProposta(origem, { repo, clock, ia: null, remoto: cliente, avisos });
-      expect((await fonte.gerar(dados)).kind).toBe('conhecendo');
-    }
-    expect(geradas).toEqual([]);
-
-    const remota = criarFonteDeProposta('remoto', { repo, clock, ia: null, remoto: cliente, avisos });
-    await remota.gerar(dados);
-    expect(geradas).toEqual([dados.weekStart]);
-  });
-});
-
-describe('fonte local (demo): o fluxo de sempre, pela mesma interface', () => {
-  async function demo() {
-    const s = await criarSessaoDemo();
+describe('fonte local: o fluxo de sempre, pela mesma interface', () => {
+  async function preparar() {
+    const s = await criarContaDeExemplo();
     const user = (await s.repo.getUser())!;
     const dados = await carregarSemana(s.repo, s.clock, user);
     return { ...s, dados, fonte: criarFonteLocal(s.repo, s.clock, null) };
   }
 
   test('gera por regra, aceita e desfaz no repositório em memória', async () => {
-    const { repo, dados, fonte } = await demo();
+    const { repo, dados, fonte } = await preparar();
     const out = await fonte.gerar(dados);
     if (out.kind !== 'proposta') throw new Error('sem proposta');
     expect(out.proposal.origin).toBe('regra');
@@ -183,7 +162,7 @@ describe('fonte local (demo): o fluxo de sempre, pela mesma interface', () => {
   });
 
   test('negar guarda a decisão; desfazer fora da janela devolve null', async () => {
-    const { repo, clock, dados, fonte } = await demo();
+    const { repo, clock, dados, fonte } = await preparar();
     const out = await fonte.gerar(dados);
     if (out.kind !== 'proposta') throw new Error('sem proposta');
     const res = await fonte.aceitar(out.proposal);
@@ -194,7 +173,7 @@ describe('fonte local (demo): o fluxo de sempre, pela mesma interface', () => {
   });
 
   test('editar horário e negar', async () => {
-    const a = await demo();
+    const a = await preparar();
     const out = await a.fonte.gerar(a.dados);
     if (out.kind !== 'proposta') throw new Error('sem proposta');
     const to = out.proposal.changes[0].to;
@@ -202,7 +181,7 @@ describe('fonte local (demo): o fluxo de sempre, pela mesma interface', () => {
     if (edit.ok) expect(edit.decisao.proposal.state).toBe('editada');
     else expect(edit.mensagem).toMatch(/ocupado|horário/);
 
-    const b = await demo();
+    const b = await preparar();
     const outB = await b.fonte.gerar(b.dados);
     if (outB.kind !== 'proposta') throw new Error('sem proposta');
     expect((await b.fonte.negar(outB.proposal)).state).toBe('negada');

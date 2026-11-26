@@ -5,7 +5,7 @@ import { Casca } from '@/features/casca/Casca';
 
 export const Route = createFileRoute('/_abas')({ component: LayoutDasAbas });
 
-/** A casca do app. Sem conta (e sem demo) vai para a welcome; sem sapo criado ainda, para o onboarding. */
+/** A casca do app. Sem conta vai para a welcome; sem sapo criado ainda, para o onboarding. */
 function LayoutDasAbas() {
   const { fase, user } = useApp();
   const { pathname } = useLocation();

@@ -6,7 +6,7 @@ import { concluirMeta } from '@pulo/core/domain/goals';
 import type { EntityId, Repository } from '@pulo/core/domain/types';
 
 import { AppProvider, useApp } from '../app';
-import { criarSessaoDemo } from '../app/demo';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
 import { TEXTO_SEM_NOME_DA_META } from './FormularioDeMeta';
 import { MetasScreen, TEXTO_DO_LIMITE } from './MetasScreen';
 
@@ -22,7 +22,7 @@ function Pagina({ meta }: { meta?: EntityId }) {
 }
 
 async function abrir(meta?: EntityId, antes?: (repo: Repository) => Promise<unknown>) {
-  const { repo, clock } = await criarSessaoDemo();
+  const { repo, clock } = await criarContaDeExemplo();
   await antes?.(repo);
   render(
     <AppProvider repoInicial={repo} relogioInicial={clock}>
@@ -60,7 +60,7 @@ describe('Tela de Metas', () => {
   });
 
   test('abre a meta pedida pela busca', async () => {
-    await abrir('demo-meta-corrida');
+    await abrir('ex-meta-corrida');
     expect(detalhe().getByRole('heading', { name: 'Correr 5 km sem parar' })).toBeTruthy();
     expect(detalhe().getByText('Concluída')).toBeTruthy();
     expect(detalhe().queryByTestId('linha-de-ritmo')).toBeNull();
@@ -68,9 +68,9 @@ describe('Tela de Metas', () => {
   });
 
   test('riscar e adicionar marcos', async () => {
-    const repo = await abrir('demo-meta-ingles');
+    const repo = await abrir('ex-meta-ingles');
     await clicar(detalhe().getByRole('checkbox', { name: 'Unidade 4' }));
-    await waitFor(async () => expect((await meta(repo, 'demo-meta-ingles'))?.milestones[3].doneAt).toBeDefined());
+    await waitFor(async () => expect((await meta(repo, 'ex-meta-ingles'))?.milestones[3].doneAt).toBeDefined());
     await clicar(detalhe().getByRole('button', { name: 'Adicionar marco' }));
     fireEvent.change(detalhe().getByRole('textbox', { name: 'Nome do novo marco' }), { target: { value: 'Certificado' } });
     await clicar(detalhe().getByRole('button', { name: 'Adicionar' }));
@@ -78,32 +78,32 @@ describe('Tela de Metas', () => {
   });
 
   test('atrelar um hábito tira ele da lista de opções', async () => {
-    const repo = await abrir('demo-meta-ingles');
+    const repo = await abrir('ex-meta-ingles');
     await clicar(detalhe().getByRole('button', { name: '+ Atrelar hábito' }));
     const opcoes = () => within(screen.getByRole('list', { name: 'Hábitos sem meta' }));
     await clicar(opcoes().getByRole('button', { name: 'Atrelar Beber água' }));
     await waitFor(() => expect(opcoes().queryByRole('button', { name: 'Atrelar Beber água' })).toBeNull());
     expect(grupo('Hábitos atrelados').getByText('Beber água')).toBeTruthy();
-    expect((await repo.listHabits()).find((h) => h.id === 'demo-habito-agua')?.goalId).toBe('demo-meta-ingles');
+    expect((await repo.listHabits()).find((h) => h.id === 'ex-habito-agua')?.goalId).toBe('ex-meta-ingles');
   });
 
   test('criar um hábito para a meta', async () => {
-    // O demo já está no limite de hábitos por dia: abre espaço antes.
-    const repo = await abrir('demo-meta-ingles', (r) => r.deleteHabit('demo-habito-agua'));
+    // A conta de exemplo já está no limite de hábitos por dia: abre espaço antes.
+    const repo = await abrir('ex-meta-ingles', (r) => r.deleteHabit('ex-habito-agua'));
     await clicar(detalhe().getByRole('button', { name: '+ Atrelar hábito' }));
     await clicar(screen.getByRole('button', { name: '+ Criar hábito pra essa meta' }));
     const form = within(screen.getByRole('dialog', { name: 'Novo hábito' }));
     fireEvent.change(form.getByLabelText('Nome'), { target: { value: 'Ver um filme sem legenda' } });
     await clicar(form.getByRole('button', { name: 'Salvar' }));
     await waitFor(async () =>
-      expect((await repo.listHabits()).find((h) => h.title === 'Ver um filme sem legenda')?.goalId).toBe('demo-meta-ingles'),
+      expect((await repo.listHabits()).find((h) => h.title === 'Ver um filme sem legenda')?.goalId).toBe('ex-meta-ingles'),
     );
   });
 
   test('abrir o baú grava uma vez só e soma as joias no saldo', async () => {
     let saldo = 0;
-    const repo = await abrir('demo-meta-ingles', async (r) => {
-      await concluirMeta(r, 'demo-meta-ingles', 1);
+    const repo = await abrir('ex-meta-ingles', async (r) => {
+      await concluirMeta(r, 'ex-meta-ingles', 1);
       saldo = (await verCasa(r)).saldo;
     });
     const gravar = vi.spyOn(repo, 'saveGoalChest');
@@ -149,23 +149,23 @@ describe('Tela de Metas', () => {
 
   test('concluir pede confirmação e deixa o baú esperando', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const repo = await abrir('demo-meta-livros');
+    const repo = await abrir('ex-meta-livros');
     await clicar(detalhe().getByRole('button', { name: 'Concluir meta' }));
     expect(await detalhe().findByRole('button', { name: 'Abrir o baú' })).toBeTruthy();
-    expect((await meta(repo, 'demo-meta-livros'))?.state).toBe('concluida');
+    expect((await meta(repo, 'ex-meta-livros'))?.state).toBe('concluida');
     await clicar(detalhe().getByRole('button', { name: 'Reabrir meta' }));
-    await waitFor(async () => expect((await meta(repo, 'demo-meta-livros'))?.state).toBe('ativa'));
+    await waitFor(async () => expect((await meta(repo, 'ex-meta-livros'))?.state).toBe('ativa'));
   });
 
   test('editar remove marco, e apagar tira a meta', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const repo = await abrir('demo-meta-livros');
+    const repo = await abrir('ex-meta-livros');
     await clicar(detalhe().getByRole('button', { name: 'Editar' }));
     const form = within(screen.getByRole('dialog', { name: 'Editar meta' }));
     await clicar(form.getByRole('button', { name: 'Remover o marco Livro 4' }));
-    await waitFor(async () => expect((await meta(repo, 'demo-meta-livros'))?.milestones).toHaveLength(3));
-    await clicar(screen.getByRole('button', { name: 'Cancelar' }));
+    await waitFor(async () => expect((await meta(repo, 'ex-meta-livros'))?.milestones).toHaveLength(3));
+    fireEvent.keyDown(window, { key: 'Escape' });
     await clicar(detalhe().getByRole('button', { name: 'Apagar' }));
-    await waitFor(async () => expect(await meta(repo, 'demo-meta-livros')).toBeUndefined());
+    await waitFor(async () => expect(await meta(repo, 'ex-meta-livros')).toBeUndefined());
   });
 });

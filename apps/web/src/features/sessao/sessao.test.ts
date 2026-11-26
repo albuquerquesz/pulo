@@ -7,8 +7,7 @@ import { providesStats } from '@pulo/core/domain/stats';
 import { providesStreak } from '@pulo/core/domain/streak';
 
 import { temAvisosDeConquista, temConta, temPreferencias } from '../app/conta';
-import { criarSessaoDemo } from '../app/demo';
-import { escolherOrigem } from '../app/origem';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
 import { comAvisosDeErro, repositorioFechado } from '../app/repositorio';
 import { API_LOCAL, apiUrl, endpointDaIa } from './config';
 
@@ -26,17 +25,6 @@ describe('endereços do ambiente', () => {
     expect(endpointDaIa({ VITE_API_URL: 'https://api.exemplo.dev/' }, false)).toBe('https://api.exemplo.dev/weekly-ai');
     expect(endpointDaIa({}, false)).toBeUndefined();
     expect(endpointDaIa({}, true)).toBe(`${API_LOCAL}/weekly-ai`);
-  });
-});
-
-describe('de onde vêm os dados', () => {
-  test('demo vence tudo e nunca precisa de sessão', () => {
-    expect(escolherOrigem({ demo: true, temSessao: false })).toBe('demo');
-    expect(escolherOrigem({ demo: true, temSessao: true })).toBe('demo');
-  });
-  test('sem demo: sessão usa o servidor, sem sessão pede login', () => {
-    expect(escolherOrigem({ demo: false, temSessao: true })).toBe('remoto');
-    expect(escolherOrigem({ demo: false, temSessao: false })).toBe('login');
   });
 });
 
@@ -83,17 +71,17 @@ describe('repositório fechado e avisos de erro', () => {
   test('repassa o que vai além do contrato: sequência, estatísticas, conquistas, preferências e conta', async () => {
     const avisos: string[] = [];
     const falha = new RemoteError({ kind: 'rede', mensagem: 'A lagoa ficou sem sinal.' });
-    const { repo: demo } = await criarSessaoDemo();
-    if (!temPreferencias(demo) || !temConta(demo)) throw new Error('o demo precisa de preferências e conta');
+    const { repo: exemplo } = await criarContaDeExemplo();
+    if (!temPreferencias(exemplo) || !temConta(exemplo)) throw new Error('a conta de exemplo precisa de preferências e conta');
     const cancelar = () => undefined;
-    const completo = { ...demo, onNewAchievements: () => cancelar, savePreferences: () => Promise.reject(falha) };
+    const completo = { ...exemplo, onNewAchievements: () => cancelar, savePreferences: () => Promise.reject(falha) };
     const repo = comAvisosDeErro(completo, { avisar: (m) => avisos.push(m), sessaoExpirou: () => undefined });
     expect(providesStreak(repo) && providesStats(repo) && providesAchievements(repo)).toBe(true);
     if (!temAvisosDeConquista(repo) || !temPreferencias(repo) || !temConta(repo)) throw new Error('capacidade perdida');
     expect(repo.onNewAchievements(() => undefined)).toBe(cancelar);
     expect((await repo.getPreferences()).focusMinutes).toBe(25);
     expect(await repo.listConnections()).toHaveLength(1);
-    expect(await repo.exportData()).toMatchObject({ demo: true });
+    expect(await repo.exportData()).toMatchObject({ exemplo: true });
     await expect(repo.savePreferences({ sounds: false })).rejects.toBe(falha);
     expect(avisos).toEqual(['A lagoa ficou sem sinal.']);
     const simples = comAvisosDeErro(createMemoryRepository(), { avisar: () => undefined, sessaoExpirou: () => undefined });

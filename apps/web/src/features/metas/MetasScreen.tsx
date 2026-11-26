@@ -34,13 +34,15 @@ type Formulario = { tipo: 'meta'; id?: EntityId } | { tipo: 'habito'; metaId: En
 type MetasScreenProps = {
   /** A meta que abre junto com a tela (o "Ver meta" do hábito). */
   metaAberta?: EntityId;
+  /** Abre já com o formulário de meta nova. */
+  abrirNova?: boolean;
 };
 
 /** Metas: a lista à esquerda e o detalhe à direita. No celular, o detalhe ocupa a tela. */
-export function MetasScreen({ metaAberta }: MetasScreenProps) {
+export function MetasScreen({ metaAberta, abrirNova = false }: MetasScreenProps) {
   const { repo, clock, user, mostrarAviso, emitirEvento, refresh } = useApp();
   const [aberta, setAberta] = useState(metaAberta);
-  const [formulario, setFormulario] = useState<Formulario>(null);
+  const [formulario, setFormulario] = useState<Formulario>(abrirNova ? { tipo: 'meta' } : null);
   const [voo, setVoo] = useState<Voo | null>(null);
   // Um conjunto que não muda de identidade: marca na hora o baú que está sendo aberto.
   const [abrindo] = useState(() => new Set<EntityId>());

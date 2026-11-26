@@ -11,7 +11,7 @@ import { contaNaTela } from '../casca/logic';
 import { EstaSemana } from './EstaSemana';
 import { HabitosDeHoje } from './HabitosDeHoje';
 import { LinhaDoDia } from './LinhaDoDia';
-import { alternarDescanso, alternarHabito, alternarTarefa, barraDaSemana, carregarHoje, comDescansoDeHoje, momentoDaSequencia } from './logic';
+import { alternarDescanso, alternarHabito, alternarTarefa, barraDaSemana, carregarHoje, comDescansoDeHoje } from './logic';
 import { Sequencia } from './Sequencia';
 import { SeuMes } from './SeuMes';
 import { TarefasDeHoje } from './TarefasDeHoje';
@@ -22,13 +22,13 @@ const CONSULTA_DA_COLUNA_LARGA = '(min-width: 48rem)';
 
 
 export function HojeScreen() {
-  const { repo, clock, user, conta, refresh, mostrarAviso } = useApp();
+  const { repo, clock, user, pessoa, refresh, mostrarAviso } = useApp();
   const largo = useConsultaDeMidia(CONSULTA_DA_COLUNA_LARGA);
   /** O descanso que acabou de ser pedido, mostrado antes da resposta. */
   const [descansoPedido, setDescansoPedido] = useState<boolean | null>(null);
   const { estado, recarregar } = useCarregar(async () => {
     if (!user) throw new Error('sem usuário');
-    return carregarHoje(repo, clock, user, contaNaTela(conta, user).nome);
+    return carregarHoje(repo, clock, user, contaNaTela(pessoa, user).nome);
   });
 
   // A saudação e o ponto da hora atual andam com o relógio.
@@ -96,7 +96,6 @@ export function HojeScreen() {
     <Tela>
       <Topo saudacao={d.saudacao} foco={d.foco} />
       <Sequencia
-        momento={momentoDaSequencia({ dias: d.diasSeguidos, recorde: d.recorde, semana, minutos: d.minutosAgora })}
         dias={d.diasSeguidos}
         barra={barraDaSemana(semana)}
         descanso={descanso}

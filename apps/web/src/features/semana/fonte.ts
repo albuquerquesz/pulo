@@ -3,7 +3,6 @@ import type { ProposalOutcome, UndoToken, WeeklyAiClient } from '@pulo/core/doma
 import type { BlockSlot, Clock, Repository, RoutineBlock, WeeklyProposal } from '@pulo/core/domain/types';
 
 import { verPreferencias } from '../app/conta';
-import type { Origem } from '../app/origem';
 import { aceitar, desfazer, editarHorario, gerarEGuardarProposta, negar, type DadosSemana, type Decisao } from './logic';
 
 /** Uma decisão já aplicada. `undo` só existe na fonte local (a remota desfaz pelo servidor, pelo id da proposta). */
@@ -20,9 +19,9 @@ export type ResultadoDaDecisao =
 
 /**
  * De onde vem a proposta da semana e quem aplica a decisão. A tela só conhece esta interface:
- * - fonte local (demo): o app calcula as candidatas, chama a IA aberta (`/weekly-ai`) e grava no repositório em memória;
+ * - fonte local (repositório em memória): o app calcula as candidatas, chama a IA aberta (`/weekly-ai`) e grava no repositório em memória;
  * - fonte remota (conta): o servidor faz tudo (dados, regras, IA, bloco e proposta na mesma transação).
- * Quem escolhe é `criarFonteDeProposta`, a partir da origem dos dados (`origem.ts`).
+ * Quem escolhe é o `AppProvider`, junto com o repositório.
  */
 export interface PropostaFonte {
   gerar(dados: DadosSemana): Promise<ProposalOutcome>;
@@ -35,7 +34,7 @@ export interface PropostaFonte {
 
 const daLogica = (d: Decisao): DecisaoFeita => ({ proposal: d.proposal, blocks: d.blocks, undo: d.undo });
 
-/** Fluxo local (demo): o que o app sempre fez, sobre o repositório em memória. */
+/** Fluxo local: o app decide e grava no próprio repositório (os testes usam o de memória). */
 export function criarFonteLocal(repo: Repository, clock: Clock, ia: WeeklyAiClient | null): PropostaFonte {
   const resultado = async (r: ReturnType<typeof aceitar>): Promise<ResultadoDaDecisao> => {
     const res = await r;
@@ -107,19 +106,4 @@ export function criarFonteRemota(remoto: ClienteDePropostas, avisos: AvisosDaFon
       }
     },
   };
-}
-
-export interface ContextoDaFonte {
-  repo: Repository;
-  clock: Clock;
-  ia: WeeklyAiClient | null;
-  /** O repositório da conta, quando a origem é `remoto`. */
-  remoto?: ClienteDePropostas;
-  avisos: AvisosDaFonteRemota;
-}
-
-/** O ÚNICO lugar que escolhe a fonte da proposta, pela mesma `Origem` que escolhe o repositório. */
-export function criarFonteDeProposta(origem: Origem, ctx: ContextoDaFonte): PropostaFonte {
-  if (origem === 'remoto' && ctx.remoto) return criarFonteRemota(ctx.remoto, ctx.avisos);
-  return criarFonteLocal(ctx.repo, ctx.clock, ctx.ia);
 }

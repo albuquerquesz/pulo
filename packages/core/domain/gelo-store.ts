@@ -2,7 +2,7 @@ import type { FreezePurchaseList } from './joias';
 import type { DateKey, FreezeUse, Purchase, Repository } from './types';
 
 /**
- * Onde um repositório local (memória, demo, armazenamento) guarda o gelo. O remoto não implementa: quem grava e acerta
+ * Onde um repositório local (memória, armazenamento) guarda o gelo. O remoto não implementa: quem grava e acerta
  * o gelo da conta é o servidor.
  */
 export interface FreezeStore extends FreezePurchaseList {

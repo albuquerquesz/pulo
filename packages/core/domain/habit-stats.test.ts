@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { HABITS } from '../config/decisions';
 import { computeHabitStats, statsDoHabito } from './habit-stats';
 import { criarHabito, editarHabito, habitsForDate, resolveHabitState } from './habits';
-import { createFakeRepository } from '../demo/fakeRepository';
+import { createMemoryRepository } from '../data/memory-repository';
 import type { DateKey, Weekday } from './types';
 
 // 2026-11-16 é segunda.
@@ -78,7 +78,7 @@ describe('estado e apresentação do hábito', () => {
   });
 
   it('pausar tira do Hoje; editar guarda e tira os campos; sem horário o lembrete fica desligado', async () => {
-    const repo = createFakeRepository();
+    const repo = createMemoryRepository();
     const criado = await criarHabito(repo, { title: 'Ler', weekdays: [0], icon: '📚', period: 'noite', reminderOn: true }, 1);
     if (!criado.ok) throw new Error(criado.error.message);
     expect(criado.value).not.toHaveProperty('reminderOn');

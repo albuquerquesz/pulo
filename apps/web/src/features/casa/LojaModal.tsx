@@ -3,7 +3,7 @@ import type { RoomDecor } from '@pulo/core/domain/types';
 import { Joia, Modal } from '@/ui';
 
 import { CartaoDoGelo } from '../casca/CartaoDoGelo';
-import { COR_NATURAL, CORES, idDaCompra, ITENS, precoDe, type Escolha, type Loja } from './catalogo';
+import { COR_NATURAL, CORES, idDaCompra, ITENS, precoDe, type Escolha } from './catalogo';
 import { colocadosNoQuarto, ehMeu, estadoDaCompra, type EstadoDaCompra } from './decoracao';
 import type { Lugar } from './lugares';
 import { VisualDoItem } from './VisualDoItem';
@@ -34,7 +34,6 @@ export type LojaModalProps = {
   escolha: Escolha;
   quarto: readonly RoomDecor[];
   saldo: number;
-  loja: Loja;
   /** O cômodo que está sendo decorado. */
   comodo: ComodoDaCasa;
   onEscolher: (escolha: Escolha) => void;
@@ -44,9 +43,9 @@ export type LojaModalProps = {
   onCancelar: () => void;
 };
 
-export function LojaModal({ lugar, escolha, quarto, saldo, loja, comodo, onEscolher, onVer, onComprar, onTirar, onCancelar }: LojaModalProps) {
+export function LojaModal({ lugar, escolha, quarto, saldo, comodo, onEscolher, onVer, onComprar, onTirar, onCancelar }: LojaModalProps) {
   const tipos = ITENS.filter((i) => !lugar || i.tipo === lugar.tipo);
-  const compra = estadoDaCompra({ quarto, saldo, loja, lugar, escolha, comodo: comodo.id });
+  const compra = estadoDaCompra({ quarto, saldo, lugar, escolha, comodo: comodo.id });
   const ocupado = lugar !== null && colocadosNoQuarto(quarto, comodo.id).some((c) => c.lugar.id === lugar.id);
   return (
     <Modal
@@ -54,15 +53,6 @@ export function LojaModal({ lugar, escolha, quarto, saldo, loja, comodo, onEscol
       contido
       onFechar={onCancelar}
       rotulo={`${lugar ? 'Decorar' : 'Loja'}: ${comodo.nome}`}
-      rodape={
-        <button
-          type="button"
-          onClick={onCancelar}
-          className="cursor-pointer rounded-[14px] border-4 border-contorno bg-cancelar px-[46px] py-3 text-[19px] font-black tracking-wider text-contorno uppercase shadow-[inset_0_-5px_0_var(--pulo-cancelar-borda)]"
-        >
-          Cancelar
-        </button>
-      }
     >
       {lugar ? null : <CartaoDoGelo />}
       <div className="flex shrink-0 flex-col items-center justify-end gap-2 md:min-h-[130px]">
@@ -93,8 +83,8 @@ export function LojaModal({ lugar, escolha, quarto, saldo, loja, comodo, onEscol
         {CORES.map((cor) => {
           const opcao = { item: escolha.item, cor };
           const meu = ehMeu(quarto, opcao);
-          const vendida = meu || idDaCompra(opcao, loja) !== null;
-          const preco = precoDe(opcao, loja);
+          const vendida = meu || idDaCompra(opcao) !== null;
+          const preco = precoDe(opcao);
           return (
             <button
               key={cor.id}

@@ -1,7 +1,7 @@
 import type { Achievement } from '@pulo/core/domain/types';
-import { localToMs } from '@pulo/core/demo';
+import { localToMs } from '@pulo/core/testing/relogio';
 
-import { criarSessaoDemo } from '../app/demo';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
 import {
   carregarPerfil,
   desdeQuando,
@@ -66,8 +66,8 @@ describe('textos do Perfil', () => {
     expect(podeExcluir('EXCLUIR')).toBe(true);
   });
 
-  test('o demo tem os números do rascunho', async () => {
-    const { repo, clock } = await criarSessaoDemo();
+  test('a conta de exemplo tem os números do rascunho', async () => {
+    const { repo, clock } = await criarContaDeExemplo();
     const dados = await carregarPerfil(repo, clock);
     expect(dados.sequencia).toMatchObject({ atual: 12, recorde: 21 });
     expect(dados.estatisticas).toMatchObject({ habitosFeitos: 186, minutosDeFoco: 1240 });

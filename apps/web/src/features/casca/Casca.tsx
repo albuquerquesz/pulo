@@ -32,7 +32,7 @@ type CascaProps = { caminho: string; children: ReactNode };
  * No celular é uma coluna com o menu embaixo, e o que é do trilho entra no Hoje (acima e abaixo do conteúdo).
  */
 export function Casca({ caminho, children }: CascaProps) {
-  const { repo, clock, user, conta: pessoa } = useApp();
+  const { repo, clock, user, pessoa } = useApp();
   const largo = useConsultaDeMidia(CONSULTA_DO_TRILHO);
   const { estado, recarregar } = useCarregar(async () => {
     if (!user) throw new Error('sem usuário');
@@ -102,15 +102,6 @@ export function Casca({ caminho, children }: CascaProps) {
         aberto={lojaDoGelo}
         onFechar={() => setLojaDoGelo(false)}
         rotulo="Loja de gelo"
-        rodape={
-          <button
-            type="button"
-            onClick={() => setLojaDoGelo(false)}
-            className="cursor-pointer rounded-[14px] border-4 border-contorno bg-cancelar px-[46px] py-3 text-[19px] font-black tracking-wider text-contorno uppercase shadow-[inset_0_-5px_0_var(--pulo-cancelar-borda)]"
-          >
-            Fechar
-          </button>
-        }
       >
         <CartaoDoGelo />
       </Modal>

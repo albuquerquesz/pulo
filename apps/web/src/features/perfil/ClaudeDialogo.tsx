@@ -51,11 +51,7 @@ export function ClaudeDialogo({ conexoes, onDesconectar, onTentarDeNovo, onFecha
           ))}
         </ul>
       ) : null}
-      {conexoes.tipo === 'ok' && conexoes.lista.length === 0 ? <p>Nenhum aplicativo conectado.</p> : null}
       <Endereco />
-      <button type="button" onClick={onFechar} className={`${BOTAO_DO_DIALOGO} bg-white`}>
-        Fechar
-      </button>
     </Dialogo>
   );
 }

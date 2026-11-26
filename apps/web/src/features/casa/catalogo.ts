@@ -4,7 +4,7 @@ import type { DecoracaoId } from '@pulo/core/domain/casa';
 /**
  * A loja do quarto como no rascunho: tipos por lugar, 8 cores e preços.
  * PENDÊNCIA (spec 23): este catálogo e os preços devem ir para `ROOM_DECOR` em `decisions.ts`. Hoje a API só vende os
- * ids de `ROOM_DECOR`, numa cor só; o resto existe apenas no demo (memória).
+ * ids de `ROOM_DECOR`, numa cor só; o resto aparece na loja como "em breve".
  */
 export type TipoDeLugar = 'parede' | 'chao' | 'tapete';
 
@@ -65,27 +65,17 @@ export interface Escolha {
   cor: Cor;
 }
 
-/** `completa`: o catálogo do rascunho (demo). `servidor`: só o que a API vende hoje (conta). */
-export type Loja = 'completa' | 'servidor';
-
-/** O id gravado de uma escolha, ou `null` se esta loja não a vende. */
-export function idDaCompra({ item, cor }: Escolha, loja: Loja): string | null {
-  const natural = cor.id === COR_NATURAL.id;
-  // A cor natural usa o id da API também no demo, para as duas lojas lerem os mesmos registros.
-  if (natural && item.naApi) return item.naApi;
-  if (loja === 'servidor') return null;
-  return natural ? item.id : `${item.id}:${cor.id}`;
+/** O id gravado de uma escolha, ou `null` se a API ainda não a vende. */
+export function idDaCompra({ item, cor }: Escolha): string | null {
+  return cor.id === COR_NATURAL.id ? (item.naApi ?? null) : null;
 }
 
-export function precoDe({ item, cor }: Escolha, loja: Loja): number {
-  if (loja === 'servidor' && item.naApi) return ROOM_DECOR.itemCost[item.naApi];
-  return item.preco + cor.acrescimo;
+export function precoDe({ item, cor }: Escolha): number {
+  return item.naApi ? ROOM_DECOR.itemCost[item.naApi] : item.preco + cor.acrescimo;
 }
 
 /** A escolha de um registro do quarto; `null` para um id que a loja não conhece. */
 export function escolhaDoId(id: string): Escolha | null {
-  const [base, corId = COR_NATURAL.id] = id.split(':');
-  const item = ITENS.find((i) => i.naApi === base) ?? ITENS.find((i) => i.id === base);
-  const cor = CORES.find((c) => c.id === corId);
-  return item && cor ? { item, cor } : null;
+  const item = ITENS.find((i) => i.naApi === id);
+  return item ? { item, cor: COR_NATURAL } : null;
 }

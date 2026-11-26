@@ -80,7 +80,7 @@ async function lerSessao(pedido: Promise<RespostaDeSessao>): Promise<PessoaLogad
   return null;
 }
 
-/** O login do app: Better Auth no endereço de `VITE_API_URL`. `null` se não houver endereço (só o demo funciona). */
+/** O login do app: Better Auth no endereço de `VITE_API_URL`. `null` se não houver endereço. */
 export function autenticacaoDoApp(): Autenticacao | null {
   const url = apiUrl(ambienteDoApp(), import.meta.env.DEV);
   return url ? criarAutenticacao(url) : null;

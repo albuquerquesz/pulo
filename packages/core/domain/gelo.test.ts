@@ -1,6 +1,7 @@
 import { GELO } from '../config/decisions';
 import { createMemoryRepository } from '../data/memory-repository';
-import { createDemoClock, seedRepository } from '../demo';
+import { gravarQuatroSemanas } from '../testing/quatro-semanas';
+import { criarRelogio } from '../testing/relogio';
 import { verCasa } from './casa';
 import { type AcertoInput, acertarGelo, comprarGelo, gelosGuardados, marcarGeloVisto, validarCompraDeGelo, verGelo } from './gelo';
 import { verSequencia } from './streak';
@@ -111,10 +112,10 @@ describe('gelo no repositório local', () => {
     expect(await comprarGelo(repo, clock)).toMatchObject({ ok: false, error: { code: 'gelo_no_maximo' } });
   });
 
-  it('o demo tem um dia protegido', async () => {
+  it('as quatro semanas de exemplo têm um dia protegido', async () => {
     const repo = createMemoryRepository();
-    const demo = createDemoClock();
-    await seedRepository(repo, demo);
+    const clock = criarRelogio();
+    await gravarQuatroSemanas(repo, clock);
     expect(await repo.listFreezeUses()).toHaveLength(1);
   });
 });

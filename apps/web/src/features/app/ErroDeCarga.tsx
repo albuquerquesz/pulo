@@ -24,7 +24,6 @@ export function ErroDeCarga({ falha, guardado, onTentar }: ErroDeCargaProps) {
       momento={falha.momento}
       titulo={TITULO[falha.momento]}
       texto={textoDaFalha(falha, guardado)}
-      codigo={falha.codigo}
       acao={{ titulo: 'Tentar de novo', onPress: onTentar }}
     />
   );

@@ -1,6 +1,6 @@
 /**
  * Contratos do domínio. Só o responsável pelo contrato altera este arquivo.
- * Os módulos de domínio, dados, mascote e demo apenas leem.
+ * Os módulos de domínio, dados e mascote apenas leem.
  *
  * Datas e horas:
  * - `DateKey` é o dia LÓGICO (vira às DAY_ROLLOVER_HOUR no fuso do usuário), 'AAAA-MM-DD'.
@@ -446,7 +446,7 @@ export interface Achievement {
   nome?: string;
   emoji?: string;
   conquistada: boolean;
-  /** Instante (ms) em que foi gravada. Ausente no que o app calcula sozinho (demo). */
+  /** Instante (ms) em que foi gravada. Ausente no que o app calcula sozinho. */
   conquistadaEm?: number;
   /** De 0 a `meta`. */
   progresso: number;

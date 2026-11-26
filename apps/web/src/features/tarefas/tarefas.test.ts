@@ -3,7 +3,7 @@ import { moverTarefa, verPomodoros } from '@pulo/core/domain/tasks';
 import type { Goal, Task } from '@pulo/core/domain/types';
 
 import { comAvisosDeErro } from '../app/repositorio';
-import { criarSessaoDemo } from '../app/demo';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
 import {
   alterarTarefa,
   cartaoAbaixo,
@@ -75,11 +75,11 @@ describe('soltar', () => {
   });
 
   test('ir para Feito grava completedAt e sair limpa', async () => {
-    const { repo, clock } = await criarSessaoDemo();
-    const feita = async () => (await repo.listTasks()).find((t) => t.id === 'demo-tarefa-4');
-    await moverTarefa(repo, 'demo-tarefa-4', 'feito', clock.now());
+    const { repo, clock } = await criarContaDeExemplo();
+    const feita = async () => (await repo.listTasks()).find((t) => t.id === 'ex-tarefa-4');
+    await moverTarefa(repo, 'ex-tarefa-4', 'feito', clock.now());
     expect((await feita())?.completedAt).toBe(clock.now());
-    await moverTarefa(repo, 'demo-tarefa-4', 'fazendo', clock.now());
+    await moverTarefa(repo, 'ex-tarefa-4', 'fazendo', clock.now());
     expect(await feita()).not.toHaveProperty('completedAt');
   });
 });
@@ -116,14 +116,14 @@ describe('escritas', () => {
   test('apagar um campo opcional tira a chave; tarefa excluída não volta', async () => {
     const completa = tarefa('a', { description: 'x', dueDate: HOJE, goalId: 'm' });
     expect(comMudanca(completa, { description: '', dueDate: undefined, goalId: undefined })).toEqual(tarefa('a'));
-    const { repo } = await criarSessaoDemo();
-    await repo.deleteTask('demo-tarefa-1');
-    await alterarTarefa(repo, 'demo-tarefa-1', { title: 'volta?' });
-    expect((await repo.listTasks()).some((t) => t.id === 'demo-tarefa-1')).toBe(false);
+    const { repo } = await criarContaDeExemplo();
+    await repo.deleteTask('ex-tarefa-1');
+    await alterarTarefa(repo, 'ex-tarefa-1', { title: 'volta?' });
+    expect((await repo.listTasks()).some((t) => t.id === 'ex-tarefa-1')).toBe(false);
   });
 
   test('o repositório com avisos repassa os pomodoros do servidor', async () => {
-    const { repo } = await criarSessaoDemo();
+    const { repo } = await criarContaDeExemplo();
     const remoto = { ...repo, getPomodoros: async () => ({ t: 7 }) };
     const envolvido = comAvisosDeErro(remoto, { avisar: () => undefined, sessaoExpirou: () => undefined });
     await expect(verPomodoros(envolvido)).resolves.toEqual({ t: 7 });

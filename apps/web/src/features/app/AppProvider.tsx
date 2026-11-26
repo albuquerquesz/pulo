@@ -2,7 +2,6 @@ import { createContext, useCallback, useContext, useEffect, useLayoutEffect, use
 
 import { FROG_EVENT_MS } from '@pulo/core/config/decisions';
 import { createRemoteRepository, isRemoteError } from '@pulo/client';
-import type { DemoClock } from '@pulo/core/demo';
 import { systemClock } from '@pulo/core/domain/clock';
 import type { WeeklyAiClient } from '@pulo/core/domain/ia';
 import type { Clock, FrogEvent, Repository, User } from '@pulo/core/domain/types';
@@ -10,11 +9,9 @@ import { eventoAtivo } from '@/mascot';
 
 import type { Autenticacao, MudancaDeConta, PessoaLogada } from '../sessao/auth';
 import { ambienteDoApp, endpointDaIa } from '../sessao/config';
-import { apagarTodosOsDados, concluirOnboarding, criarClienteDeIa, demoPedidoNaUrl, salvarPerfil, type DadosDoOnboarding } from './core';
+import { apagarTodosOsDados, concluirOnboarding, criarClienteDeIa, salvarPerfil, type DadosDoOnboarding } from './core';
 import { temConta } from './conta';
-import { criarSessaoDemo, PESSOA_DO_DEMO } from './demo';
-import { criarFonteDeProposta, criarFonteLocal, type PropostaFonte } from '../semana/fonte';
-import { escolherOrigem } from './origem';
+import { criarFonteLocal, criarFonteRemota, type PropostaFonte } from '../semana/fonte';
 import { comAvisosDeErro, repositorioFechado } from './repositorio';
 
 export interface Aviso {
@@ -35,28 +32,21 @@ export interface AppValue {
   versao: number;
   refresh(): void;
   aiClient: WeeklyAiClient | null;
-  /** De onde vem a proposta da semana e quem aplica a decisão: o servidor (conta) ou o app (demo). Escolhida junto com o repositório. */
+  /** De onde vem a proposta da semana e quem aplica a decisão: o servidor (conta) ou o app (repositório em memória dos testes). Escolhida junto com o repositório. */
   propostas: PropostaFonte;
 
-  demo: boolean;
-  demoClock: DemoClock | null;
-  enableDemo(): Promise<void>;
-  disableDemo(): Promise<void>;
-
   /**
-   * Em que pé está a abertura: `carregando`, `login` (sem sessão e sem demo), `sem_conexao` (tem sessão mas o servidor
-   * não respondeu) ou `pronto` (demo ou servidor; só aí `repo` tem dados).
+   * Em que pé está a abertura: `carregando`, `login` (sem sessão), `sem_conexao` (tem sessão mas o servidor
+   * não respondeu) ou `pronto` (só aí `repo` tem dados).
    */
   fase: FaseDoApp;
-  /** Pessoa logada (nunca no demo). */
+  /** Pessoa logada. */
   pessoa: PessoaLogada | null;
-  /** Quem a casca e o Perfil mostram: a pessoa logada ou a de exemplo do demo. */
-  conta: PessoaLogada | null;
   /** Grava nome e foto. Lança com texto em português se o servidor recusar. */
   editarConta(mudanca: MudancaDeConta): Promise<void>;
-  /** Exclui a conta de vez e volta à entrada. A tela pede a confirmação antes (no demo ela só desliga o demo). */
+  /** Exclui a conta de vez e volta à entrada. A tela pede a confirmação antes. */
   excluirConta(): Promise<void>;
-  /** O login está configurado (há endereço da API). Sem ele só o demo funciona. */
+  /** O login está configurado (há endereço da API). Sem ele não dá para entrar. */
   loginDisponivel: boolean;
   entrando: boolean;
   erroDeLogin: string | null;
@@ -86,38 +76,31 @@ const PRIORIDADE: FrogEvent[] = ['pouso', 'surpreso', 'comemorando', 'construind
 
 export interface AppProviderProps {
   children: ReactNode;
-  /** Para testes: usa este repositório como se viesse do servidor, sem login. */
+  /** Para testes: usa este repositório como se viesse do servidor, sem passar pelo login. */
   repoInicial?: Repository;
   relogioInicial?: Clock;
-  /** Padrão: lê `?demo=1` da URL. */
-  demoNaAbertura?: boolean;
-  /** Login (veja `autenticacaoDoApp`). `null` ou ausente = login não configurado: só o demo funciona. */
+  /** Login (veja `autenticacaoDoApp`). `null` ou ausente = login não configurado. */
   autenticacao?: Autenticacao | null;
 }
 
 interface Ativo {
   repo: Repository;
   clock: Clock;
-  demoClock: DemoClock | null;
   propostas: PropostaFonte;
 }
-
-const SEM_AVISOS = { sessaoExpirou: () => undefined };
 
 const SEM_DADOS: Ativo = {
   repo: repositorioFechado,
   clock: systemClock,
-  demoClock: null,
   propostas: criarFonteLocal(repositorioFechado, systemClock, null),
 };
 
-export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbertura, autenticacao = null }: AppProviderProps) {
+export function AppProvider({ children, repoInicial, relogioInicial, autenticacao = null }: AppProviderProps) {
   const relogioReal = relogioInicial ?? systemClock;
   const auth = autenticacao;
   const [ativo, setAtivo] = useState<Ativo>(SEM_DADOS);
   const [fase, setFase] = useState<FaseDoApp>('carregando');
   const [pessoa, setPessoa] = useState<PessoaLogada | null>(null);
-  const [pessoaDoDemo, setPessoaDoDemo] = useState(PESSOA_DO_DEMO);
   const [entrando, setEntrando] = useState(false);
   const [erroDeLogin, setErroDeLogin] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -172,70 +155,58 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
   );
 
   /**
-   * ÚNICO lugar que escolhe de onde vêm os dados (regra em `escolherOrigem`):
-   * demo = memória sintética; sessão = RemoteRepository; senão login. Nada do demo toca o servidor.
+   * ÚNICO lugar que escolhe de onde vêm os dados: com sessão, o RemoteRepository; sem sessão, a tela de login.
    */
-  const abrir = useCallback(
-    async (demo: boolean) => {
-      try {
-        if (!demo && repoInicial) {
-          setAtivo({ repo: repoInicial, clock: relogioReal, demoClock: null, propostas: criarFonteLocal(repoInicial, relogioReal, aiClient) });
-          setUser(await repoInicial.getUser());
-          setFase('pronto');
-          return;
-        }
-        const quem = demo || !auth ? null : await auth.sessaoAtual();
-        setPessoa(quem);
-        const origem = escolherOrigem({ demo, temSessao: quem !== null });
-        if (origem === 'demo') {
-          const s = await criarSessaoDemo({ aoVivo: true });
-          setPessoaDoDemo(PESSOA_DO_DEMO);
-          setAtivo({ repo: s.repo, clock: s.clock, demoClock: s.clock, propostas: criarFonteDeProposta(origem, { repo: s.repo, clock: s.clock, ia: aiClient, avisos: SEM_AVISOS }) });
-          setUser(await s.repo.getUser());
-          setFase('pronto');
-        } else if (origem === 'remoto' && auth) {
-          const remoto = await createRemoteRepository({ ...auth.rede(), clock: systemClock });
-          const sessaoExpirou = () => {
-            setPessoa(null);
-            setUser(null);
-            setAtivo(SEM_DADOS);
-            setFase('login');
-          };
-          const repo = comAvisosDeErro(remoto, {
-            avisar: (mensagem) => mostrarAvisoRef.current({ mensagem, variante: 'atencao' }),
-            sessaoExpirou,
-          });
-          const propostas = criarFonteDeProposta(origem, { repo, clock: systemClock, ia: aiClient, remoto, avisos: { sessaoExpirou } });
-          setAtivo({ repo, clock: systemClock, demoClock: null, propostas });
-          setUser(await repo.getUser());
-          setFase('pronto');
-        } else {
-          setAtivo(SEM_DADOS);
+  const abrir = useCallback(async () => {
+    try {
+      if (repoInicial) {
+        setPessoa(auth ? await auth.sessaoAtual() : null);
+        setAtivo({ repo: repoInicial, clock: relogioReal, propostas: criarFonteLocal(repoInicial, relogioReal, aiClient) });
+        setUser(await repoInicial.getUser());
+        setFase('pronto');
+        return;
+      }
+      const quem = auth ? await auth.sessaoAtual() : null;
+      setPessoa(quem);
+      if (auth && quem) {
+        const remoto = await createRemoteRepository({ ...auth.rede(), clock: systemClock });
+        const sessaoExpirou = () => {
+          setPessoa(null);
           setUser(null);
+          setAtivo(SEM_DADOS);
           setFase('login');
-        }
-      } catch (erro) {
+        };
+        const repo = comAvisosDeErro(remoto, {
+          avisar: (mensagem) => mostrarAvisoRef.current({ mensagem, variante: 'atencao' }),
+          sessaoExpirou,
+        });
+        const propostas = criarFonteRemota(remoto, { sessaoExpirou });
+        setAtivo({ repo, clock: systemClock, propostas });
+        setUser(await repo.getUser());
+        setFase('pronto');
+      } else {
         setAtivo(SEM_DADOS);
         setUser(null);
-        // Sessão que o servidor recusou volta ao login; falta de rede mostra "sem sinal" com nova tentativa.
-        setFase(isRemoteError(erro) && erro.kind === 'sessao' ? 'login' : 'sem_conexao');
-      } finally {
-        setVersao((v) => v + 1);
+        setFase('login');
       }
-    },
-    [auth, repoInicial, relogioReal, aiClient],
-  );
+    } catch (erro) {
+      setAtivo(SEM_DADOS);
+      setUser(null);
+      // Sessão que o servidor recusou volta ao login; falta de rede mostra "sem sinal" com nova tentativa.
+      setFase(isRemoteError(erro) && erro.kind === 'sessao' ? 'login' : 'sem_conexao');
+    } finally {
+      setVersao((v) => v + 1);
+    }
+  }, [auth, repoInicial, relogioReal, aiClient]);
 
-  const enableDemo = useCallback(() => abrir(true), [abrir]);
-  const disableDemo = useCallback(() => abrir(false), [abrir]);
   const tentarDeNovo = useCallback(async () => {
     setFase('carregando');
-    await abrir(false);
+    await abrir();
   }, [abrir]);
 
   const entrar = useCallback(async () => {
     if (!auth) {
-      setErroDeLogin('O login ainda não está configurado neste app. Você pode ver o demo.');
+      setErroDeLogin('O login ainda não está configurado neste app.');
       return;
     }
     setEntrando(true);
@@ -243,7 +214,7 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
     try {
       await auth.entrarComGoogle();
       setFase('carregando');
-      await abrir(false);
+      await abrir();
     } catch (erro) {
       setErroDeLogin(erro instanceof Error ? erro.message : 'Não consegui entrar. Tente de novo.');
     } finally {
@@ -264,20 +235,12 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
     setVersao((v) => v + 1);
   }, [auth]);
 
-  const noDemo = ativo.demoClock !== null;
-  const conta = noDemo ? pessoaDoDemo : pessoa;
-
   const editarConta = useCallback(
     async (mudanca: MudancaDeConta) => {
-      const aplicar = (atual: PessoaLogada): PessoaLogada => ({ ...atual, ...mudanca });
-      if (noDemo) {
-        setPessoaDoDemo(aplicar);
-        return;
-      }
       await auth?.atualizarConta(mudanca);
-      setPessoa((atual) => (atual ? aplicar(atual) : atual));
+      setPessoa((atual) => (atual ? { ...atual, ...mudanca } : atual));
     },
-    [auth, noDemo],
+    [auth],
   );
 
   const excluirConta = useCallback(async () => {
@@ -293,9 +256,8 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
 
   // Abertura
   useEffect(() => {
-    const search = (globalThis as { location?: { search?: string } }).location?.search;
     (async () => {
-      await abrir(demoNaAbertura ?? demoPedidoNaUrl(search));
+      await abrir();
     })();
     // Só na primeira vez: depois, cada ação chama `abrir` por conta própria.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -324,12 +286,6 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
   );
 
   const apagarDados = useCallback(async () => {
-    if (ativo.demoClock) {
-      // No demo só os dados de exemplo (memória) somem; a conta e o servidor ficam intactos.
-      await apagarTodosOsDados(ativo.repo);
-      await abrir(false);
-      return;
-    }
     try {
       await apagarTodosOsDados(ativo.repo);
       setUser(await ativo.repo.getUser());
@@ -337,7 +293,7 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
     } catch {
       // Aviso já mostrado; nada foi apagado do ponto de vista da tela.
     }
-  }, [ativo, abrir]);
+  }, [ativo]);
 
   const valor = useMemo<AppValue>(
     () => ({
@@ -349,13 +305,8 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
       refresh,
       aiClient,
       propostas: ativo.propostas,
-      demo: ativo.demoClock !== null,
-      demoClock: ativo.demoClock,
-      enableDemo,
-      disableDemo,
       fase,
       pessoa,
-      conta,
       editarConta,
       excluirConta,
       loginDisponivel: auth !== null,
@@ -373,7 +324,7 @@ export function AppProvider({ children, repoInicial, relogioInicial, demoNaAbert
       mostrarAviso,
       esconderAviso,
     }),
-    [ativo, user, carregando, versao, refresh, aiClient, enableDemo, disableDemo, fase, pessoa, conta, editarConta, excluirConta, auth, entrando, erroDeLogin, entrar, sair, tentarDeNovo, onboarding, atualizarPerfil, apagarDados, evento, emitirEvento, aviso, mostrarAviso, esconderAviso],
+    [ativo, user, carregando, versao, refresh, aiClient, fase, pessoa, editarConta, excluirConta, auth, entrando, erroDeLogin, entrar, sair, tentarDeNovo, onboarding, atualizarPerfil, apagarDados, evento, emitirEvento, aviso, mostrarAviso, esconderAviso],
   );
 
   return <AppContext.Provider value={valor}>{children}</AppContext.Provider>;

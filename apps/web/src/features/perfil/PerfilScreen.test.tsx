@@ -5,7 +5,8 @@ import type { Repository } from '@pulo/core/domain/types';
 
 import { AppProvider, useApp } from '../app';
 import { temConta, temPreferencias, type FonteDaConta, type FonteDePreferencias } from '../app/conta';
-import { criarSessaoDemo } from '../app/demo';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
+import type { Autenticacao } from '../sessao/auth';
 import { PerfilScreen } from './PerfilScreen';
 
 type RepoDoPerfil = Repository & FonteDaConta & FonteDePreferencias;
@@ -16,11 +17,11 @@ function SoPronto({ children }: { children: ReactNode }) {
 }
 
 async function abrir() {
-  const sessao = await criarSessaoDemo();
-  if (!temConta(sessao.repo) || !temPreferencias(sessao.repo)) throw new Error('o demo precisa de conta e preferências');
+  const sessao = await criarContaDeExemplo();
+  if (!temConta(sessao.repo) || !temPreferencias(sessao.repo)) throw new Error('a conta de exemplo precisa de conta e preferências');
   const repo: RepoDoPerfil = sessao.repo;
   render(
-    <AppProvider repoInicial={repo} relogioInicial={sessao.clock} demoNaAbertura={false}>
+    <AppProvider repoInicial={repo} relogioInicial={sessao.clock}>
       <SoPronto>
         <PerfilScreen />
       </SoPronto>
@@ -45,7 +46,6 @@ describe('PerfilScreen', () => {
     ]);
     expect(screen.getByText('Desde setembro de 2026')).toBeTruthy();
     expect(screen.getByText('1.240')).toBeTruthy();
-    expect(screen.getByRole('group', { name: 'Seu sapo' }).textContent).toContain('Fase');
     expect(screen.getByText('Continue cuidando do sapo')).toBeTruthy();
     expect(screen.getByRole('progressbar', { name: 'Mês de fogo' }).getAttribute('aria-valuenow')).toBe('21');
   });
@@ -97,13 +97,21 @@ describe('PerfilScreen', () => {
     await clicar(await screen.findByRole('button', { name: 'Conectar com o Claude: Conectado' }));
     await clicar(screen.getByRole('button', { name: 'Desconectar Claude' }));
     expect(screen.queryByRole('list', { name: 'Aplicativos conectados' })).toBeNull();
-    expect(screen.getByText('Nenhum aplicativo conectado.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Conectar com o Claude: Conectar' })).toBeTruthy();
   });
 
-  test('no demo, editar o nome muda o cabeçalho', async () => {
+  test('editar o nome grava na conta e muda o cabeçalho', async () => {
+    const { repo, clock } = await criarContaDeExemplo();
+    const atualizarConta = vi.fn(async () => undefined);
+    const autenticacao: Autenticacao = {
+      sessaoAtual: async () => ({ id: 'ex-user', nome: 'Ana', email: 'ana@exemplo.com' }),
+      entrarComGoogle: async () => undefined,
+      sair: async () => undefined,
+      atualizarConta,
+      rede: () => ({ baseUrl: 'https://api.exemplo.dev' }),
+    };
     render(
-      <AppProvider demoNaAbertura>
+      <AppProvider repoInicial={repo} relogioInicial={clock} autenticacao={autenticacao}>
         <SoPronto>
           <PerfilScreen />
         </SoPronto>
@@ -114,27 +122,9 @@ describe('PerfilScreen', () => {
     fireEvent.change(dialogo.getByLabelText('Nome'), { target: { value: 'Ana Lima' } });
     await clicar(dialogo.getByRole('button', { name: 'Salvar' }));
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Ana Lima');
+    expect(atualizarConta).toHaveBeenCalledWith({ nome: 'Ana Lima', foto: null });
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  test('a foto precisa ser https', async () => {
-    await abrir();
-    await clicar(screen.getByRole('button', { name: 'Editar perfil' }));
-    const dialogo = within(screen.getByRole('dialog', { name: 'Editar perfil' }));
-    fireEvent.change(dialogo.getByLabelText('Endereço da foto (https)'), { target: { value: 'http://exemplo.com/a.png' } });
-    await clicar(dialogo.getByRole('button', { name: 'Salvar' }));
-    expect(dialogo.getByRole('alert').textContent).toContain('https');
-  });
 
-  test('baixar gera o arquivo com os dados', async () => {
-    const repo = await abrir();
-    const exportar = vi.spyOn(repo, 'exportData');
-    URL.createObjectURL = vi.fn(() => 'blob:dados');
-    URL.revokeObjectURL = vi.fn();
-    const baixado = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
-    await clicar(screen.getByRole('button', { name: 'Baixar meus dados' }));
-    expect(exportar).toHaveBeenCalled();
-    expect(baixado).toHaveBeenCalled();
-    baixado.mockRestore();
-  });
 });

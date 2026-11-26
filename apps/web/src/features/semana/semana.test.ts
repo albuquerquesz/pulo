@@ -4,15 +4,15 @@ import { FakeWeeklyAiClient, proposalLabel } from '@pulo/core/domain/ia';
 import { sp } from '@pulo/core/domain/test-utils';
 
 import { concluirOnboarding } from '../app/core';
-import { criarSessaoDemo } from '../app/demo';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
 import { aceitar, carregarSemana, desfazer, editarHorario, gerarEGuardarProposta, negar } from './logic';
 
-async function demoComProposta() {
-  const demo = await criarSessaoDemo();
-  const user = (await demo.repo.getUser())!;
-  const dados = await carregarSemana(demo.repo, demo.clock, user);
-  const out = await gerarEGuardarProposta(demo.repo, demo.clock, dados, null);
-  return { ...demo, user, dados, out };
+async function contaComProposta() {
+  const conta = await criarContaDeExemplo();
+  const user = (await conta.repo.getUser())!;
+  const dados = await carregarSemana(conta.repo, conta.clock, user);
+  const out = await gerarEGuardarProposta(conta.repo, conta.clock, dados, null);
+  return { ...conta, user, dados, out };
 }
 
 describe('Semana', () => {
@@ -27,8 +27,8 @@ describe('Semana', () => {
     expect(await repo.listProposals()).toEqual([]);
   });
 
-  test('com os dados do demo vem uma proposta por regra, rotulada Sugestão e guardada', async () => {
-    const { repo, out, dados } = await demoComProposta();
+  test('com os dados de exemplo vem uma proposta por regra, rotulada Sugestão e guardada', async () => {
+    const { repo, out, dados } = await contaComProposta();
     expect(out.kind).toBe('proposta');
     if (out.kind !== 'proposta') return;
     expect(out.proposal.origin).toBe('regra');
@@ -40,19 +40,19 @@ describe('Semana', () => {
   });
 
   test('uma falha da IA cai na regra e ainda diz Sugestão', async () => {
-    const demo = await criarSessaoDemo();
-    const user = (await demo.repo.getUser())!;
-    const dados = await carregarSemana(demo.repo, demo.clock, user);
+    const conta = await criarContaDeExemplo();
+    const user = (await conta.repo.getUser())!;
+    const dados = await carregarSemana(conta.repo, conta.clock, user);
     const ia = new FakeWeeklyAiClient(() => {
       throw new Error('fora do ar');
     });
-    const out = await gerarEGuardarProposta(demo.repo, demo.clock, dados, ia);
+    const out = await gerarEGuardarProposta(conta.repo, conta.clock, dados, ia);
     expect(out.kind).toBe('proposta');
     if (out.kind === 'proposta') expect(out.proposal.origin).toBe('regra');
   });
 
   test('aceitar muda o bloco e desfazer restaura', async () => {
-    const { repo, clock, out } = await demoComProposta();
+    const { repo, clock, out } = await contaComProposta();
     if (out.kind !== 'proposta') throw new Error('sem proposta');
     const antes = await repo.listBlocks();
     const res = await aceitar(repo, clock, out.proposal);
@@ -71,7 +71,7 @@ describe('Semana', () => {
   });
 
   test('desfazer fora da janela não faz nada', async () => {
-    const { repo, clock, out } = await demoComProposta();
+    const { repo, clock, out } = await contaComProposta();
     if (out.kind !== 'proposta') throw new Error('sem proposta');
     const res = await aceitar(repo, clock, out.proposal);
     if (!res.ok) throw new Error('falhou');
@@ -81,7 +81,7 @@ describe('Semana', () => {
   });
 
   test('negar guarda a decisão e não muda blocos', async () => {
-    const { repo, clock, out } = await demoComProposta();
+    const { repo, clock, out } = await contaComProposta();
     if (out.kind !== 'proposta') throw new Error('sem proposta');
     const antes = await repo.listBlocks();
     const n = await negar(repo, clock, out.proposal);
@@ -90,7 +90,7 @@ describe('Semana', () => {
   });
 
   test('editar o horário aplica o horário escolhido', async () => {
-    const { repo, clock, out } = await demoComProposta();
+    const { repo, clock, out } = await contaComProposta();
     if (out.kind !== 'proposta') throw new Error('sem proposta');
     const to = { ...out.proposal.changes[0].to };
     const novo = { ...to, startMinutes: to.startMinutes + 30 };

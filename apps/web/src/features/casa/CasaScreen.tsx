@@ -55,9 +55,8 @@ const primeiraEscolha = (lugar: Lugar | null): Escolha | null => {
 
 /** A Casa: os cômodos do sapo, o foco e a decoração com loja. */
 export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
-  const { repo, clock, user, demo, refresh } = useApp();
+  const { repo, clock, user, refresh } = useApp();
   const navegar = useNavigate();
-  const loja = demo ? 'completa' : 'servidor';
   const { estado, recarregar } = useCarregar(async () => {
     if (!user) throw new Error('sem usuário');
     return carregarCasa(repo, clock, user, vinculo);
@@ -127,7 +126,7 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
       refresh();
     }
   };
-  const comprar = () => aberta && void gravar(() => comprarOuColocar(repo, clock, { loja, lugar: aberta.lugar, escolha: aberta.escolha, comodo: comodoId }));
+  const comprar = () => aberta && void gravar(() => comprarOuColocar(repo, clock, { lugar: aberta.lugar, escolha: aberta.escolha, comodo: comodoId }));
   const tirar = () => {
     const lugar = aberta?.lugar;
     if (lugar) void gravar(() => tirarDoLugar(repo, lugar, comodoId).then(() => true));
@@ -151,7 +150,7 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
 
   const colocados = dados ? colocadosNoQuarto(dados.quarto, comodoId) : [];
   const previa = aberta?.vendo && aberta.lugar ? { lugar: aberta.lugar, escolha: aberta.escolha } : null;
-  const compraDaPrevia = previa && dados ? estadoDaCompra({ quarto: dados.quarto, saldo: dados.saldo, loja, comodo: comodoId, ...previa }) : null;
+  const compraDaPrevia = previa && dados ? estadoDaCompra({ quarto: dados.quarto, saldo: dados.saldo, comodo: comodoId, ...previa }) : null;
 
   return (
     <main className="md:px-10 md:pt-8 md:pb-12">
@@ -285,7 +284,6 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
             escolha={aberta.escolha}
             quarto={dados.quarto}
             saldo={dados.saldo}
-            loja={loja}
             comodo={comodo}
             onEscolher={(escolha) => setAberta({ ...aberta, escolha })}
             onVer={() => setAberta({ ...aberta, vendo: true })}

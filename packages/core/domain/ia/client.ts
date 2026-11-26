@@ -8,7 +8,7 @@ export interface WeeklyAiClient {
   suggest(request: WeeklyAiRequest, options?: { signal?: AbortSignal }): Promise<unknown>;
 }
 
-/** Cliente falso para testes e demo: o comportamento vem de uma função. */
+/** Cliente falso para testes: o comportamento vem de uma função. */
 export class FakeWeeklyAiClient implements WeeklyAiClient {
   readonly calls: WeeklyAiRequest[] = [];
   constructor(

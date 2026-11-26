@@ -2,7 +2,7 @@ import { clone, createRepository, emptyDatabase, type Database } from './reposit
 import type { FreezeStore } from '../domain/gelo-store';
 import type { Clock, Repository } from '../domain/types';
 
-/** Repositório em memória (testes, modo demo, fallback). `initial` é copiado. */
+/** Repositório em memória (testes e fallback). `initial` é copiado. */
 export function createMemoryRepository(initial?: Partial<Database>, clock?: Clock): Repository & FreezeStore {
   let db: Database = { ...emptyDatabase(), ...clone(initial ?? {}) };
   return createRepository(

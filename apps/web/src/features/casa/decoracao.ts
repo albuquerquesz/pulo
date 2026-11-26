@@ -1,7 +1,7 @@
 import { COMODO_INICIAL, comodoDe, verCasa, type ComodoId } from '@pulo/core/domain/casa';
 import type { Clock, Repository, RoomDecor } from '@pulo/core/domain/types';
 
-import { escolhaDoId, idDaCompra, precoDe, type Escolha, type Loja } from './catalogo';
+import { escolhaDoId, idDaCompra, precoDe, type Escolha } from './catalogo';
 import { GUARDADO, lugarDaPosicao, posicaoDoLugar, type Lugar } from './lugares';
 
 /** Um item no quarto: onde está e qual é. */
@@ -47,7 +47,6 @@ export interface EstadoDaCompra {
 export interface PedidoDeCompra {
   quarto: readonly RoomDecor[];
   saldo: number;
-  loja: Loja;
   /** `null`: a loja aberta pelo botão de canto, sem lugar escolhido. */
   lugar: Lugar | null;
   escolha: Escolha;
@@ -55,14 +54,14 @@ export interface PedidoDeCompra {
   comodo?: ComodoId;
 }
 
-export function estadoDaCompra({ quarto, saldo, loja, lugar, escolha, comodo = COMODO_INICIAL }: PedidoDeCompra): EstadoDaCompra {
-  const preco = precoDe(escolha, loja);
+export function estadoDaCompra({ quarto, saldo, lugar, escolha, comodo = COMODO_INICIAL }: PedidoDeCompra): EstadoDaCompra {
+  const preco = precoDe(escolha);
   if (ehMeu(quarto, escolha)) {
     if (!lugar) return { acao: 'ja_e_seu', preco, bloqueado: true };
     const aqui = colocadosNoQuarto(quarto, comodo).some((c) => c.lugar.id === lugar.id && mesma(c.escolha, escolha));
     return { acao: aqui ? 'no_lugar' : 'colocar', preco, bloqueado: false };
   }
-  if (idDaCompra(escolha, loja) === null) return { acao: 'em_breve', preco, bloqueado: true };
+  if (idDaCompra(escolha) === null) return { acao: 'em_breve', preco, bloqueado: true };
   return { acao: 'comprar', preco, bloqueado: saldo < preco };
 }
 
@@ -81,14 +80,14 @@ export async function tirarDoLugar(repo: Repository, lugar: Lugar, comodo: Comod
 export async function comprarOuColocar(
   repo: Repository,
   clock: Clock,
-  { loja, lugar, escolha, comodo = COMODO_INICIAL }: Pick<PedidoDeCompra, 'loja' | 'lugar' | 'escolha' | 'comodo'>,
+  { lugar, escolha, comodo = COMODO_INICIAL }: Pick<PedidoDeCompra, 'lugar' | 'escolha' | 'comodo'>,
 ): Promise<boolean> {
   const [quarto, casa] = await Promise.all([repo.listRoomDecor(), verCasa(repo)]);
-  const compra = estadoDaCompra({ quarto, saldo: casa.saldo, loja, lugar, escolha, comodo });
+  const compra = estadoDaCompra({ quarto, saldo: casa.saldo, lugar, escolha, comodo });
   if (compra.bloqueado) return false;
   const meu = registroDe(quarto, escolha);
   const destino = { ...(lugar ? posicaoDoLugar(lugar) : GUARDADO), comodo };
-  const id = meu?.item ?? idDaCompra(escolha, loja);
+  const id = meu?.item ?? idDaCompra(escolha);
   if (id === null) return false;
   // Grava a compra antes de liberar o lugar: se o servidor recusar, o quarto fica como estava.
   if (!meu) await repo.saveRoomDecor({ item: id, cost: compra.preco, createdAt: clock.now(), ...destino });

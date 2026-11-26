@@ -19,8 +19,9 @@ describe('WelcomeScreen', () => {
     expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Tentar de novo']);
   });
 
-  test('boas vindas: o sapo acena', () => {
+  test('boas vindas: o sapo acena e a única entrada é pela conta', () => {
     comFase('login');
     expect(screen.getByRole('img', { name: 'Sapo, acenando' })).toBeTruthy();
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual(['Entrar com Google']);
   });
 });

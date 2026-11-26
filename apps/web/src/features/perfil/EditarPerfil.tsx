@@ -6,7 +6,7 @@ import { CAMPO_DO_MODAL } from '@/ui';
 
 import type { ContaNaTela } from '../casca/logic';
 import type { MudancaDeConta } from '../sessao/auth';
-import { BOTAO_DO_DIALOGO, Dialogo } from './Dialogo';
+import { BOTAO_DO_DIALOGO } from './Dialogo';
 import { erroDaConta } from './logic';
 
 type EditarPerfilProps = {
@@ -17,7 +17,7 @@ type EditarPerfilProps = {
 
 export function EditarPerfil({ conta, onSalvar, onFechar }: EditarPerfilProps) {
   const [nome, setNome] = useState(conta.nome);
-  const [foto, setFoto] = useState(conta.foto ?? '');
+  const foto = conta.foto ?? '';
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
@@ -37,30 +37,21 @@ export function EditarPerfil({ conta, onSalvar, onFechar }: EditarPerfilProps) {
   };
 
   return (
-    <Dialogo titulo="Editar perfil" onFechar={onFechar}>
-      <form noValidate onSubmit={(e) => void salvar(e)} className="flex w-full flex-col gap-3">
+    <form noValidate onSubmit={(e) => void salvar(e)} className="flex w-full flex-col gap-4 p-5">
         <label className="flex flex-col gap-1">
           Nome
           <input className={CAMPO_DO_MODAL} value={nome} maxLength={ACCOUNT.nameMaxChars} onChange={(e) => setNome(e.target.value)} />
-        </label>
-        <label className="flex flex-col gap-1">
-          Endereço da foto (https)
-          <input className={CAMPO_DO_MODAL} type="url" inputMode="url" placeholder="https://" value={foto} onChange={(e) => setFoto(e.target.value)} />
         </label>
         {erro ? (
           <p role="alert" className="font-extrabold">
             {erro}
           </p>
         ) : null}
-        <div className="flex justify-center gap-3">
-          <button type="button" onClick={onFechar} className={`${BOTAO_DO_DIALOGO} bg-cancelar`}>
-            Cancelar
-          </button>
+        <div className="flex justify-end gap-3">
           <button type="submit" disabled={salvando} className={`${BOTAO_DO_DIALOGO} bg-lima`}>
             Salvar
           </button>
         </div>
-      </form>
-    </Dialogo>
+    </form>
   );
 }

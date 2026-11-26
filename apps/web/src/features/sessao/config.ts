@@ -12,7 +12,7 @@ function limpar(valor: string | undefined): string | null {
   return texto ? texto : null;
 }
 
-/** Endereço da API sem barra no fim. `null` = não configurado (o login fica indisponível, o demo continua). */
+/** Endereço da API sem barra no fim. `null` = não configurado (o login fica indisponível). */
 export function apiUrl(env: Ambiente, emDesenvolvimento: boolean): string | null {
   return limpar(env.VITE_API_URL) ?? (emDesenvolvimento ? API_LOCAL : null);
 }

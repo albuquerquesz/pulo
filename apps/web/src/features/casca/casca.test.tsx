@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import type { Clock, Repository } from '@pulo/core/domain/types';
 
 import { AppProvider, useApp } from '../app';
-import { criarSessaoDemo } from '../app/demo';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
 import { ladoDoConteudo } from '../app/useLargura';
 import { Casca } from './Casca';
 
@@ -31,7 +31,7 @@ afterEach(() => {
 function MarcarHabito({ repo, clock }: { repo: Repository; clock: Clock }) {
   const { refresh } = useApp();
   const marcar = async () => {
-    await repo.saveHabitLog({ habitId: 'demo-habito-ler', date: '2026-11-21', doneAt: clock.now() });
+    await repo.saveHabitLog({ habitId: 'ex-habito-ler', date: '2026-11-21', doneAt: clock.now() });
     refresh();
   };
   return <button onClick={() => void marcar()}>marcar</button>;
@@ -39,9 +39,9 @@ function MarcarHabito({ repo, clock }: { repo: Repository; clock: Clock }) {
 
 async function abrir(caminho: string, larga = true) {
   telaLarga(larga);
-  const { repo, clock } = await criarSessaoDemo();
+  const { repo, clock } = await criarContaDeExemplo();
   render(
-    <AppProvider repoInicial={repo} relogioInicial={clock} demoNaAbertura={false}>
+    <AppProvider repoInicial={repo} relogioInicial={clock}>
       <SoPronto>
         <Casca caminho={caminho}>
           <MarcarHabito repo={repo} clock={clock} />

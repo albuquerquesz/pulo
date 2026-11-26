@@ -1,11 +1,12 @@
 import { computeCandidates } from '@pulo/core/domain/ia/candidates';
 import { buildAiRequest } from '@pulo/core/domain/ia/request';
-import { generateDemoData } from '@pulo/core/demo/generate';
-import { summarizeDemoWeek } from '@pulo/core/demo/summary';
+import { buildWeekSummary } from '@pulo/core/domain/week-summary';
+import { TZ } from '@pulo/core/domain/test-utils';
+import { gerarQuatroSemanas } from '@pulo/core/testing/quatro-semanas';
 import { createProviderFromEnv, FakeProvider, handleWeeklyAi, parseRequestBody } from './weekly-ai';
 
-const d = generateDemoData();
-const s = summarizeDemoWeek('2026-11-16', d.sessions, d.restDays, 5);
+const d = gerarQuatroSemanas();
+const s = buildWeekSummary({ weekStart: '2026-11-16', timeZone: TZ, sessions: d.sessions, restDays: d.restDays });
 const body = buildAiRequest(s, computeCandidates(s, d.blocks));
 
 describe('weekly-ai', () => {

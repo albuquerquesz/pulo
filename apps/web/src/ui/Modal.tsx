@@ -7,14 +7,12 @@ export type ModalProps = {
   /** Nome do diálogo para leitores de tela. */
   rotulo: string;
   children: ReactNode;
-  /** Fica abaixo da moldura, fora da folha (o Cancelar da loja). */
-  rodape?: ReactNode;
   /** Cobre só o pai (que precisa de `relative`), como na cena do quarto; sem isto, a tela toda. */
   contido?: boolean;
 };
 
 /** Diálogo com moldura de madeira (`.dm-moldura` e `.dm-folha`). */
-export function Modal({ aberto, onFechar, rotulo, children, rodape, contido = false }: ModalProps) {
+export function Modal({ aberto, onFechar, rotulo, children, contido = false }: ModalProps) {
   const folha = useRef<HTMLDivElement>(null);
   const fechar = useRef(onFechar);
   useEffect(() => {
@@ -46,12 +44,20 @@ export function Modal({ aberto, onFechar, rotulo, children, rodape, contido = fa
           aria-modal="true"
           aria-label={rotulo}
           tabIndex={-1}
-          className={`flex ${rodape ? 'max-h-[calc(100dvh-16rem)]' : 'max-h-[calc(100dvh-8rem)]'} flex-col items-center gap-5 overflow-auto rounded-2xl border-4 border-contorno bg-folha px-3 pt-4 pb-4 text-contorno md:px-[22px] md:pt-6 md:pb-5`}
+          className={`flex min-h-[min(360px,calc(100dvh-8rem))] max-h-[calc(100dvh-8rem)] flex-col items-center justify-center gap-5 overflow-auto rounded-2xl border-4 border-contorno bg-folha px-3 pt-4 pb-4 text-contorno md:px-[22px] md:pt-6 md:pb-5`}
         >
           {children}
         </div>
+        <button
+          type="button"
+          onClick={onFechar}
+          aria-label="Fechar"
+          title="Fechar"
+          className="absolute -top-4 -right-4 grid size-11 cursor-pointer place-items-center rounded-full border-4 border-contorno bg-cancelar text-lg font-black text-contorno shadow-[inset_0_-3px_0_var(--pulo-cancelar-borda)] active:translate-y-[2px]"
+        >
+          <span aria-hidden="true">✕</span>
+        </button>
       </div>
-      {rodape ? <div className="relative">{rodape}</div> : null}
     </div>
   );
 }

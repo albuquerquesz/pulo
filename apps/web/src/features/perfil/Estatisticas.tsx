@@ -17,8 +17,8 @@ function Numero({ icone, fundo, valor, legenda }: NumeroProps) {
         {icone}
       </span>
       <div className="min-w-0">
+        <span className="block text-[13px] text-muted first-letter:uppercase">{legenda}</span>
         <b className="block text-2xl leading-[1.1] font-extrabold">{numero(valor)}</b>
-        <span className="text-[13px] text-muted">{legenda}</span>
       </div>
     </li>
   );

@@ -29,7 +29,6 @@ import type {
 import { verPreferencias } from '../app/conta';
 import { minutosDeFocoDoDia } from '../casca/logic';
 import type { VinculoDaCasa } from '../foco/vinculo';
-import type { Momento } from '@/mascot/momentos';
 
 const MINUTOS_DO_DIA = 24 * 60;
 
@@ -130,30 +129,6 @@ export function barraDaSemana(semana: readonly StreakDay[]): BarraDaSemana {
     cheio: semana.length === 0 ? 0 : (hoje + 0.5) / semana.length,
     completa: semana.length > 0 && semana.every(cuidado),
   };
-}
-
-/** A partir desta hora o sapo se preocupa com um dia ainda sem cuidado. */
-export const HORA_DA_PREOCUPACAO = 20;
-/** Sequência a partir da qual bater o recorde vira orgulho. */
-export const DIAS_DE_SEQUENCIA_LONGA = 7;
-
-export type MomentoDaSequencia = Extract<Momento, 'sequencia-perdida' | 'fim-do-dia-sem-nada' | 'recorde'>;
-
-export interface EntradaDaReacao {
-  dias: number;
-  recorde: number;
-  semana: readonly StreakDay[];
-  /** Minutos de agora desde 00:00 do dia lógico. */
-  minutos: number;
-}
-
-/** A cara do sapo no cartão Sequência; `null` num dia comum. */
-export function momentoDaSequencia({ dias, recorde, semana, minutos }: EntradaDaReacao): MomentoDaSequencia | null {
-  const hoje = semana[indiceDeHoje(semana)];
-  const emAberto = hoje?.estado === 'hoje';
-  if (emAberto && dias === 0 && recorde > 0) return 'sequencia-perdida';
-  if (emAberto && minutos >= HORA_DA_PREOCUPACAO * 60) return 'fim-do-dia-sem-nada';
-  return dias >= DIAS_DE_SEQUENCIA_LONGA && dias >= recorde ? 'recorde' : null;
 }
 
 /** Alturas do gráfico, em % (medidas do rascunho): a maior barra, o descanso sem foco e o dia vazio. */
@@ -378,7 +353,7 @@ export function linhaDoDia({ blocos, sessions, alvos, descansoHoje, hoje, minuto
       titulo: bloco.title ?? TITULO_DO_BLOCO[bloco.kind],
       inicio,
       fim,
-      faixa: `${horaCheia(inicio)} – ${horaCheia(fim)} · ${duracaoTexto(bloco.durationMinutes)}`,
+      faixa: `${horaCheia(inicio)} – ${horaCheia(fim)}`,
       estado,
       focar: estado === 'agora' && bloco.kind === 'foco' ? vinculoDoBloco(bloco.id, sessions, alvos).busca : null,
     };

@@ -113,8 +113,13 @@ export function marcosDoTexto(texto: string): string[] {
 export interface BuscaDeMetas {
   /** A meta que abre junto com a tela (o "Ver meta" do hábito). */
   meta?: EntityId;
+  /** Abre já com o formulário de meta nova (o "Criar meta" do trilho). */
+  nova?: boolean;
 }
 
 export function lerBuscaDeMetas(busca: Record<string, unknown>): BuscaDeMetas {
-  return typeof busca.meta === 'string' && busca.meta ? { meta: busca.meta } : {};
+  return {
+    ...(typeof busca.meta === 'string' && busca.meta ? { meta: busca.meta } : {}),
+    ...(busca.nova === true ? { nova: true } : {}),
+  };
 }

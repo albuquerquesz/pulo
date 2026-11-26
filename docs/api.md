@@ -337,7 +337,7 @@ Resposta 200 `{ outcome, proposal? }` (`generateProposalResponseSchema`):
   (`WEEKLY_AI.timeoutMs`), erro, JSON inválido, índice fora das candidatas, termo proibido ou horário escrito no texto, vale a proposta por regra
   (`origin: 'regra'`, rótulo "Sugestão"). Nunca é 5xx por culpa da IA.
 - Duas gerações simultâneas: o índice único (pessoa e semana) deixa uma só; a outra devolve `existente`.
-- `POST /weekly-ai` continua aberto e sem login, para o demo.
+- `POST /weekly-ai` continua aberto e sem login. O app com conta usa as rotas de proposta acima.
 
 ### `POST /api/proposals/:id/decision`
 
@@ -372,7 +372,7 @@ Resposta 200 `{ proposal, blocks }`: a proposta já atualizada e TODOS os blocos
 
 ### Métricas: `GET /api/profile/metrics`
 
-`{ metrics: ProfileMetrics }`, calculado por `computeMetrics` (`@pulo/core/domain/metricas`), o mesmo do modo demo.
+`{ metrics: ProfileMetrics }`, calculado por `computeMetrics` (`@pulo/core/domain/metricas`), o mesmo do repositório em memória dos testes.
 
 - `ritmo`: últimos `METRICAS.janelaDias` dias lógicos, nunca antes da criação da conta. `taxaHabitos30` (0 a 1) olha só os
   hábitos ativos, nos dias da frequência, sem descanso, férias e hoje vazio. `melhorDiaDaSemana` (0 = segunda) soma minutos;
@@ -384,7 +384,7 @@ Resposta 200 `{ proposal, blocks }`: a proposta já atualizada e TODOS os blocos
 ### Sequência: `GET /api/streak`
 
 Resposta `{ streak: { atual, recorde, semana } }` (`streakResponseSchema`). O mesmo objeto vem no campo `streak` do `/api/sync`.
-A regra é a função pura `computeStreak` do core (`@pulo/core/domain/streak`), usada também no modo demo.
+A regra é a função pura `computeStreak` do core (`@pulo/core/domain/streak`), usada também pelo repositório em memória.
 
 - Um dia conta quando tem pelo menos um hábito feito **ou** uma sessão de foco que conta como cuidado (a mesma regra da ilha).
 - Dias do modo férias valem como descanso.
@@ -500,7 +500,7 @@ propostas, metas (e baús), tarefas (com subtarefas, comentários e histórico),
 - **`clearAll`:** `DELETE /api/data` e depois `PATCH /api/me/metadata` com `profile: null` e `onboardingCompleted: false` (volta ao onboarding; a conta fica).
 - **Erros:** `RemoteError` com `kind` (`rede`, `sessao`, `api`, `resposta_invalida`), `code` (código da tabela acima), `status`, `issues` e `mensagem` em português.
 - **Propostas:** `generateProposal(date?)` e `decideProposal(id, decisao)` chamam as duas rotas acima, validam a resposta com os schemas do core,
-  atualizam o cache (proposta e, na decisão, todos os blocos) e, se o servidor recusar, releem o `GET /api/sync`. No app, a tela Semana usa a `PropostaFonte` remota na conta e a local no demo.
+  atualizam o cache (proposta e, na decisão, todos os blocos) e, se o servidor recusar, releem o `GET /api/sync`. No app, a tela Semana usa a `PropostaFonte` remota; a local serve ao repositório em memória dos testes.
 - **Sequência:** `getStreak()` (ou `verSequencia(repo, clock)` do core) devolve a do sync, sem rede. Depois de uma escrita em hábito,
   registro, sessão, descanso, perfil ou do `clearAll`, ou na virada do dia, espera as escritas pendentes e chama `GET /api/streak`;
   sem rede, devolve a última conhecida.

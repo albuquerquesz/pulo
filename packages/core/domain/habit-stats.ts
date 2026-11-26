@@ -4,7 +4,7 @@ import { streakToday, vacationDates } from './streak';
 import type { Clock, DateKey, EntityId, Habit, HabitDayState, HabitLog, HabitStats, Repository, RestDay, Vacation } from './types';
 
 export type HabitoMedido = Pick<Habit, 'weekdays'> & {
-  /** Dia em que o hábito nasceu. Sem ele (registros antigos, demo), vale o primeiro dia feito. */
+  /** Dia em que o hábito nasceu. Sem ele (registros antigos), vale o primeiro dia feito. */
   criadoEm?: DateKey;
 };
 
@@ -91,7 +91,7 @@ export function providesHabitStats(repo: Repository): repo is Repository & Habit
   return 'getHabitStats' in repo && typeof repo.getHabitStats === 'function';
 }
 
-/** As estatísticas de um hábito: as do servidor, quando ele as fornece; senão (demo, memória), calculadas. `null` se não existe. */
+/** As estatísticas de um hábito: as do servidor, quando ele as fornece; senão (memória), calculadas. `null` se não existe. */
 export async function verEstatisticasDoHabito(repo: Repository, id: EntityId, clock: Clock): Promise<HabitStats | null> {
   const habito = (await repo.listHabits()).find((h) => h.id === id);
   if (!habito) return null;

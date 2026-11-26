@@ -1,4 +1,5 @@
-import { createDemoClock, seedRepository } from '../demo';
+import { gravarQuatroSemanas } from '../testing/quatro-semanas';
+import { criarRelogio } from '../testing/relogio';
 import { createMemoryRepository } from '../data/memory-repository';
 import { computeStreak, type StreakInput, verSequencia } from './streak';
 import { TZ, endedSession, sp } from './test-utils';
@@ -100,10 +101,10 @@ describe('computeStreak', () => {
     expect(streak({ ...extra, timeZone: 'Asia/Tokyo' }).semana.find((d) => d.estado === 'feito')?.date).toBe('2026-11-18');
   });
 
-  it('o modo demo tem uma sequência de exemplo', async () => {
-    const clock = createDemoClock();
+  it('as quatro semanas de exemplo têm uma sequência', async () => {
+    const clock = criarRelogio();
     const repo = createMemoryRepository();
-    await seedRepository(repo, clock);
+    await gravarQuatroSemanas(repo, clock);
     const result = await verSequencia(repo, clock);
     expect(result.atual).toBeGreaterThan(0);
     expect(result.recorde).toBeGreaterThanOrEqual(result.atual);

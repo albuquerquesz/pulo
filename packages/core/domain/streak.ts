@@ -102,7 +102,7 @@ export function providesStreak(repo: Repository): repo is Repository & StreakSou
   return 'getStreak' in repo && typeof repo.getStreak === 'function';
 }
 
-/** A sequência de um repositório: a do servidor, quando ele a fornece; senão (demo, memória), calculada dos registros. */
+/** A sequência de um repositório: a do servidor, quando ele a fornece; senão (memória), calculada dos registros. */
 export async function verSequencia(repo: Repository, clock: Clock): Promise<Streak> {
   if (providesStreak(repo)) return repo.getStreak();
   const [user, habitLogs, sessions, restDays, freezes] = await Promise.all([

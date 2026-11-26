@@ -5,17 +5,26 @@ import type { Habit, RoomDecor } from '@pulo/core/domain/types';
 
 import { createMemoryRepository } from '@/data';
 
-import { CORES, escolhaDoId, idDaCompra, ITENS, precoDe, type Escolha } from './catalogo';
+import { COR_NATURAL, CORES, escolhaDoId, idDaCompra, ITENS, precoDe, type Escolha } from './catalogo';
 import { colocadosNoQuarto, comprarOuColocar, estadoDaCompra, tirarDoLugar } from './decoracao';
 import { ajustarMinutos, joiasEstimadas, opcoesDeVinculo, preenchimento } from './logic';
 import { GUARDADO, lugarDaPosicao, LUGARES, posicaoDoLugar } from './lugares';
 
 const MIN = 60_000;
 
-function escolha(item: string, cor = 'natural'): Escolha {
-  const encontrada = escolhaDoId(cor === 'natural' ? item : `${item}:${cor}`);
-  if (!encontrada) throw new Error(`sem item ${item}`);
+/** A escolha de um registro, pelo id que a API vende. */
+function escolha(id: string): Escolha {
+  const encontrada = escolhaDoId(id);
+  if (!encontrada) throw new Error(`sem item ${id}`);
   return encontrada;
+}
+
+/** Qualquer item do catálogo numa cor, vendido ou não. */
+function item(id: string, cor = COR_NATURAL.id): Escolha {
+  const achado = ITENS.find((i) => i.id === id);
+  const tinta = CORES.find((c) => c.id === cor);
+  if (!achado || !tinta) throw new Error(`sem item ${id}`);
+  return { item: achado, cor: tinta };
 }
 const [parede, outraParede] = LUGARES;
 const chao = LUGARES[4];
@@ -61,30 +70,28 @@ describe('lugares e catálogo', () => {
     expect(lugarDaPosicao(GUARDADO)).toBeNull();
   });
 
-  test('preço do item mais a cor', () => {
-    expect(precoDe(escolha('cama'), 'completa')).toBe(60);
-    expect(precoDe(escolha('cama', 'brilho'), 'completa')).toBe(70);
+  test('só se compra o que a API vende, na cor natural e com o preço dela', () => {
+    expect(idDaCompra(escolha('quadro'))).toBe('quadro');
+    expect(precoDe(escolha('quadro'))).toBe(30);
+    expect(idDaCompra(item('quadro', 'rosa'))).toBeNull();
+    expect(idDaCompra(item('cama'))).toBeNull();
+    expect(idDaCompra(escolha('vaso'))).toBe('vaso');
   });
 
-  test('a conta só compra o que a API vende, com o preço dela', () => {
-    expect(idDaCompra(escolha('quadro'), 'servidor')).toBe('quadro');
-    expect(precoDe(escolha('quadro'), 'servidor')).toBe(30);
-    expect(idDaCompra(escolha('quadro', 'rosa'), 'servidor')).toBeNull();
-    expect(idDaCompra(escolha('cama'), 'servidor')).toBeNull();
-    expect(idDaCompra(escolha('planta'), 'completa')).toBe('vaso');
+  test('o que a API ainda não vende mostra o preço do item mais a cor', () => {
+    expect(precoDe(item('cama'))).toBe(60);
+    expect(precoDe(item('cama', 'brilho'))).toBe(70);
   });
 
-  test('todo par de item e cor volta do id gravado', () => {
-    for (const item of ITENS) {
-      for (const cor of CORES) {
-        const id = idDaCompra({ item, cor }, 'completa');
-        expect(id && escolhaDoId(id)).toEqual({ item, cor });
-      }
+  test('todo item vendido volta do id gravado', () => {
+    for (const vendido of ITENS.filter((i) => i.naApi)) {
+      const id = idDaCompra({ item: vendido, cor: COR_NATURAL });
+      expect(id && escolhaDoId(id)).toEqual({ item: vendido, cor: COR_NATURAL });
     }
   });
 
   test('item em lugar de outro tipo não aparece', () => {
-    const registro: RoomDecor = { item: 'cama', cost: 60, createdAt: 1, ...posicaoDoLugar(parede) };
+    const registro: RoomDecor = { item: 'poltrona', cost: 60, createdAt: 1, ...posicaoDoLugar(parede) };
     expect(colocadosNoQuarto([registro])).toEqual([]);
   });
 });
@@ -92,24 +99,24 @@ describe('lugares e catálogo', () => {
 describe('compra', () => {
   test('sem saldo o botão apaga e nada é gravado', async () => {
     const { repo, clock } = await comJoias(10);
-    const pedido = { loja: 'completa', lugar: parede, escolha: escolha('quadro') } as const;
+    const pedido = { lugar: parede, escolha: escolha('quadro') } as const;
     expect(estadoDaCompra({ ...pedido, quarto: [], saldo: 10 })).toMatchObject({ acao: 'comprar', bloqueado: true });
     expect(await comprarOuColocar(repo, clock, pedido)).toBe(false);
     expect(await repo.listRoomDecor()).toEqual([]);
   });
 
   test('comprar grava, mover é de graça e o antigo do lugar vai para o guardado', async () => {
-    const { repo, clock } = await comJoias(40);
-    const quadro = { loja: 'completa', escolha: escolha('quadro') } as const;
+    const { repo, clock } = await comJoias(80);
+    const quadro = { escolha: escolha('quadro') } as const;
     expect(await comprarOuColocar(repo, clock, { ...quadro, lugar: parede })).toBe(true);
     expect(await comprarOuColocar(repo, clock, { ...quadro, lugar: outraParede })).toBe(true);
     expect(await repo.listRoomDecor()).toHaveLength(1);
     expect(colocadosNoQuarto(await repo.listRoomDecor()).map((c) => c.lugar.id)).toEqual([outraParede.id]);
 
-    await comprarOuColocar(repo, clock, { loja: 'completa', escolha: escolha('relogio'), lugar: outraParede });
+    await comprarOuColocar(repo, clock, { escolha: escolha('estante'), lugar: outraParede });
     const quarto = await repo.listRoomDecor();
-    expect(quarto.map((d) => d.cost)).toEqual([15, 20]);
-    expect(colocadosNoQuarto(quarto).map((c) => c.escolha.item.id)).toEqual(['relogio']);
+    expect(quarto.map((d) => d.cost)).toEqual([30, 45]);
+    expect(colocadosNoQuarto(quarto).map((c) => c.escolha.item.id)).toEqual(['prateleira']);
 
     await tirarDoLugar(repo, outraParede);
     expect(colocadosNoQuarto(await repo.listRoomDecor())).toEqual([]);
@@ -117,22 +124,22 @@ describe('compra', () => {
   });
 
   test('cada cômodo mostra e libera só a decoração dele', async () => {
-    const { repo, clock } = await comJoias(60);
-    const quadro = { loja: 'completa', escolha: escolha('quadro'), lugar: parede } as const;
-    const relogio = { loja: 'completa', escolha: escolha('relogio'), lugar: parede, comodo: 'cozinha' } as const;
+    const { repo, clock } = await comJoias(80);
+    const quadro = { escolha: escolha('quadro'), lugar: parede } as const;
+    const estante = { escolha: escolha('estante'), lugar: parede, comodo: 'cozinha' } as const;
     await comprarOuColocar(repo, clock, quadro);
-    await comprarOuColocar(repo, clock, relogio);
+    await comprarOuColocar(repo, clock, estante);
     const quarto = await repo.listRoomDecor();
     expect(colocadosNoQuarto(quarto).map((c) => c.escolha.item.id)).toEqual(['quadro']);
-    expect(colocadosNoQuarto(quarto, 'cozinha').map((c) => c.escolha.item.id)).toEqual(['relogio']);
+    expect(colocadosNoQuarto(quarto, 'cozinha').map((c) => c.escolha.item.id)).toEqual(['prateleira']);
     await tirarDoLugar(repo, parede, 'cozinha');
     expect(colocadosNoQuarto(await repo.listRoomDecor(), 'cozinha')).toEqual([]);
     expect(colocadosNoQuarto(await repo.listRoomDecor())).toHaveLength(1);
   });
 
   test('pela loja de canto a compra fica guardada e não repete', async () => {
-    const { repo, clock } = await comJoias(40);
-    const pedido = { loja: 'completa', lugar: null, escolha: escolha('planta') } as const;
+    const { repo, clock } = await comJoias(80);
+    const pedido = { lugar: null, escolha: escolha('vaso') } as const;
     expect(await comprarOuColocar(repo, clock, pedido)).toBe(true);
     expect(await comprarOuColocar(repo, clock, pedido)).toBe(false);
     const [registro] = await repo.listRoomDecor();

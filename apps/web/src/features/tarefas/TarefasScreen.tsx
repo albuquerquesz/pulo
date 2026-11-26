@@ -7,13 +7,14 @@ import { newId } from '@pulo/core/domain/ids';
 import { criarTarefa, moverTarefa, verPomodoros } from '@pulo/core/domain/tasks';
 import type { Task, TaskStatus, TaskSubtask } from '@pulo/core/domain/types';
 
+import { BOTAO_DA_GAVETA, Gaveta } from '@/ui';
+
 import { confirmar, useApp, useCarregar, ErroDeCarga } from '../app';
 import { contaNaTela } from '../casca/logic';
 import { Atividade } from './Atividade';
 import { CartaoDaTarefa, type AcoesDoCartao } from './CartaoDaTarefa';
 import { ColunaDoQuadro } from './ColunaDoQuadro';
 import { Descricao } from './Descricao';
-import { BOTAO_DA_GAVETA, Gaveta } from './Gaveta';
 import {
   alterarSubtarefa,
   alterarTarefa,
@@ -31,7 +32,7 @@ import { TextoEditavel } from './TextoEditavel';
 
 /** O quadro de tarefas com a gaveta de detalhe. */
 export function TarefasScreen() {
-  const { repo, clock, user, conta, mostrarAviso } = useApp();
+  const { repo, clock, user, pessoa, mostrarAviso } = useApp();
   const navegar = useNavigate();
   const { estado, recarregar } = useCarregar(async () => {
     const [tarefas, subtarefas, metas] = await Promise.all([repo.listTasks(), repo.listSubtasks(), repo.listGoals()]);
@@ -121,7 +122,7 @@ export function TarefasScreen() {
     setGaveta((g) => (g ? { ...g, aberta: false } : g));
   };
   const detalhe = dados?.tarefas.find((t) => t.id === gaveta?.id) ?? null;
-  const nome = contaNaTela(conta, user).nome.split(' ')[0] ?? '';
+  const nome = contaNaTela(pessoa, user).nome.split(' ')[0] ?? '';
 
   const excluir = (tarefa: Task) => {
     void confirmar('Excluir esta tarefa?', `"${tarefa.title}" e as subtarefas dela somem. Não dá para desfazer.`).then((ok) => {
@@ -181,6 +182,8 @@ export function TarefasScreen() {
       <Gaveta
         aberta={gaveta?.aberta === true && detalhe !== null}
         onFechar={fechar}
+        rotulo="Detalhe da tarefa"
+        corpo="md:grid md:grid-cols-[minmax(0,1fr)_250px]"
         acoes={
           detalhe ? (
             <>

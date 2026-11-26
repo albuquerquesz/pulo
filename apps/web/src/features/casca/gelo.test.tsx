@@ -7,7 +7,7 @@ import { verCasa } from '@pulo/core/domain/casa';
 import { providesFreezeStore } from '@pulo/core/domain/gelo-store';
 
 import { AppProvider, useApp, type AppValue } from '../app';
-import { criarSessaoDemo, type SessaoDemo } from '../app/demo';
+import { criarContaDeExemplo, type ContaDeExemplo } from '../../testing/conta-de-exemplo';
 import { comAvisosDeErro } from '../app/repositorio';
 import { Casca } from './Casca';
 import { MENSAGENS_DE_ERRO } from './erros';
@@ -37,7 +37,7 @@ describe('textos do gelo e do descanso', () => {
   });
 
   test('a recusa da API vira o texto da tela', async () => {
-    const { repo } = await criarSessaoDemo();
+    const { repo } = await criarContaDeExemplo();
     const avisar = vi.fn();
     vi.spyOn(repo, 'saveRestDay').mockRejectedValue(new RemoteError({ kind: 'api', code: 'limite_de_descanso', mensagem: 'outra' }));
     const comAvisos = comAvisosDeErro(repo, { avisar, sessaoExpirou: vi.fn() });
@@ -46,17 +46,17 @@ describe('textos do gelo e do descanso', () => {
   });
 });
 
-/** O demo com os gelos pedidos: compras a mais e dias protegidos ainda não vistos. */
+/** A conta de exemplo com os gelos pedidos: compras a mais e dias protegidos ainda não vistos. */
 async function sessaoComGelo({ compras = 0, naoVistos = [] }: { compras?: number; naoVistos?: string[] } = {}) {
-  const sessao = await criarSessaoDemo();
+  const sessao = await criarContaDeExemplo();
   const { repo } = sessao;
-  if (!providesFreezeStore(repo)) throw new Error('o demo guarda gelo');
+  if (!providesFreezeStore(repo)) throw new Error('a conta de exemplo guarda gelo');
   for (let i = 0; i < compras; i += 1) await repo.saveFreezePurchase({ item: `gelo-teste-${i}`, cost: 0, createdAt: 0 });
   await repo.saveFreezeUses(naoVistos.map((date) => ({ date })));
   return { ...sessao, gelos: repo };
 }
 
-async function abrir({ repo, clock }: SessaoDemo) {
+async function abrir({ repo, clock }: ContaDeExemplo) {
   let app: AppValue | undefined;
   function Sonda() {
     const valor = useApp();
@@ -66,7 +66,7 @@ async function abrir({ repo, clock }: SessaoDemo) {
     return valor.fase === 'pronto' ? <Casca caminho="/">conteúdo</Casca> : null;
   }
   render(
-    <AppProvider repoInicial={repo} relogioInicial={clock} demoNaAbertura={false}>
+    <AppProvider repoInicial={repo} relogioInicial={clock}>
       <Sonda />
     </AppProvider>,
   );
@@ -100,7 +100,7 @@ describe('gelo na casca', () => {
   });
 
   test('no máximo o botão fica desligado, com o motivo, e não compra', async () => {
-    // O demo já usou um gelo: o presente mais duas compras menos um uso dá o máximo.
+    // A conta de exemplo já usou um gelo: o presente mais duas compras menos um uso dá o máximo.
     const sessao = await sessaoComGelo({ compras: 2 });
     await abrir(sessao);
     const loja = await abrirLoja();
@@ -134,7 +134,7 @@ describe('gelo na casca', () => {
 
 describe('reação do sapo', () => {
   test('numa conquista aparece o sapo comemorando', async () => {
-    const app = await abrir(await criarSessaoDemo());
+    const app = await abrir(await criarContaDeExemplo());
     expect(screen.queryByRole('img', { name: 'Sapo, comemorando' })).toBeNull();
     act(() => app()?.emitirEvento('comemorando'));
     expect(screen.getByRole('img', { name: 'Sapo, comemorando' })).toBeTruthy();
