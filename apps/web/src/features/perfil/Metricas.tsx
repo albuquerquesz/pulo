@@ -73,17 +73,26 @@ function Grupos({ metricas, series }: DadosDaSecao) {
   const { ritmo, feitos } = metricas;
   return (
     <div className="flex flex-col gap-4">
-      <Grupo titulo="Ritmo">
-        <dl className={`${NUMEROS} @xl:grid-cols-3 @3xl:grid-cols-5`}>
-          <Item valor={duracaoTexto(ritmo.focoMedioPorDia30)} legenda="foco médio por dia" />
-          <Item valor={porcentagem(ritmo.taxaHabitos30)} legenda={`hábitos em ${METRICAS.janelaDias} dias`} />
-          <Item valor={nomeDoPeriodo(ritmo.melhorPeriodo)} legenda="melhor período" />
-          <Item valor={nomeDoDia(ritmo.melhorDiaDaSemana)} legenda="melhor dia da semana" />
-          <Item valor={numero(ritmo.sessoesTerminadas)} legenda="sessões terminadas" />
-        </dl>
-        <p className="text-xs text-muted">Últimos {METRICAS.janelaDias} dias.</p>
-      </Grupo>
-      <GraficosDoRitmo series={series} />
+      <section aria-labelledby="titulo-do-ritmo" className="flex min-w-0 flex-col gap-2">
+        <h3 id="titulo-do-ritmo" className="font-extrabold text-muted">
+          Ritmo
+        </h3>
+        <GraficosDoRitmo
+          series={series}
+          periodo={`Últimos ${METRICAS.janelaDias} dias`}
+          numeros={{
+            foco: [
+              { legenda: 'Foco médio por dia', valor: duracaoTexto(ritmo.focoMedioPorDia30) },
+              { legenda: 'Sessões terminadas', valor: numero(ritmo.sessoesTerminadas) },
+              { legenda: 'Melhor período', valor: nomeDoPeriodo(ritmo.melhorPeriodo) },
+            ],
+            habitos: [
+              { legenda: 'Hábitos feitos', valor: porcentagem(ritmo.taxaHabitos30) },
+              { legenda: 'Melhor dia da semana', valor: nomeDoDia(ritmo.melhorDiaDaSemana) },
+            ],
+          }}
+        />
+      </section>
       <div className="grid gap-4 @2xl:grid-cols-2">
         <DescansoEGelo descanso={metricas.descanso} gelo={metricas.gelo} />
         <Grupo titulo="Concluído">

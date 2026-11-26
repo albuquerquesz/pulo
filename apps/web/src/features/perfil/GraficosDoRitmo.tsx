@@ -20,12 +20,26 @@ function Dica({ active, payload }: { active?: boolean; payload?: readonly { payl
   );
 }
 
-type CartaoProps = { titulo: string; serie: Serie; children: ReactNode };
+/** Um número que aparece no topo do cartão do gráfico. */
+export type NumeroDoGrafico = { legenda: string; valor: string };
 
-/** Um cartão só com o gráfico; o título fica para o leitor de tela, junto da tabela com os mesmos números. */
-function CartaoDoGrafico({ titulo, serie, children }: CartaoProps) {
+type CartaoProps = { titulo: string; numeros: readonly NumeroDoGrafico[]; periodo: string; serie: Serie; children: ReactNode };
+
+/** Um cartão com os números no topo e o gráfico embaixo; o título fica para o leitor de tela, junto da tabela com os mesmos números. */
+function CartaoDoGrafico({ titulo, numeros, periodo, serie, children }: CartaoProps) {
   return (
-    <figure aria-label={titulo} className={`${CARTAO} relative flex min-w-0 flex-col gap-3 p-5`}>
+    <figure aria-label={titulo} className={`${CARTAO} relative flex min-w-0 flex-col gap-4 p-5`}>
+      <div className="flex items-start justify-between gap-4">
+        <dl className="flex flex-wrap gap-x-8 gap-y-3">
+          {numeros.map((n) => (
+            <div key={n.legenda} className="flex min-w-0 flex-col">
+              <dt className="text-[11px] font-extrabold tracking-[0.06em] text-muted uppercase">{n.legenda}</dt>
+              <dd className="text-[28px] leading-tight font-extrabold">{n.valor}</dd>
+            </div>
+          ))}
+        </dl>
+        <span className="shrink-0 rounded-full border border-line px-3 py-1 text-xs font-extrabold text-muted">{periodo}</span>
+      </div>
       <div aria-hidden="true" className="relative" style={{ height: ALTURA }}>
         {children}
       </div>
@@ -104,16 +118,22 @@ function GraficoDeHabitos({ serie }: { serie: Serie }) {
   );
 }
 
-type GraficosProps = { series: SeriesDoRitmo };
+type GraficosProps = {
+  series: SeriesDoRitmo;
+  /** Os números de cada cartão, já formatados. */
+  numeros: { foco: readonly NumeroDoGrafico[]; habitos: readonly NumeroDoGrafico[] };
+  /** O período dos dados, na etiqueta do canto. */
+  periodo: string;
+};
 
-/** Os dois gráficos do Ritmo, cada um no seu cartão, meio a meio no desktop. */
-export function GraficosDoRitmo({ series: { porDia, habitosPorSemana } }: GraficosProps) {
+/** Os dois gráficos do Ritmo, cada um no seu cartão com os números no topo, meio a meio no desktop. */
+export function GraficosDoRitmo({ series: { porDia, habitosPorSemana }, numeros, periodo }: GraficosProps) {
   return (
     <div className="grid gap-4 @2xl:grid-cols-2">
-      <CartaoDoGrafico titulo="Foco por dia" serie={porDia}>
+      <CartaoDoGrafico titulo="Foco por dia" numeros={numeros.foco} periodo={periodo} serie={porDia}>
         <GraficoDeFoco serie={porDia} />
       </CartaoDoGrafico>
-      <CartaoDoGrafico titulo="Hábitos feitos por semana" serie={habitosPorSemana}>
+      <CartaoDoGrafico titulo="Hábitos feitos por semana" numeros={numeros.habitos} periodo={periodo} serie={habitosPorSemana}>
         <GraficoDeHabitos serie={habitosPorSemana} />
       </CartaoDoGrafico>
     </div>
