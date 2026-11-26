@@ -61,7 +61,14 @@ const desligado = (el: HTMLElement) => el.hasAttribute('disabled');
 const noTopo = () => screen.getByText('joias', { exact: false, selector: 'span.sr-only' }).closest('b')?.textContent;
 const naCena = (id: string) => screen.getByRole('img', { name: 'Sua ilha' }).querySelector(`[data-parte="${id}"]`);
 
-beforeEach(() => navegar.mockClear());
+const confirm = vi.fn(() => true);
+
+beforeEach(() => {
+  navegar.mockClear();
+  confirm.mockReset().mockReturnValue(true);
+  vi.stubGlobal('confirm', confirm);
+});
+afterEach(() => vi.unstubAllGlobals());
 
 describe('Ilha', () => {
   test('mostra o saldo, o contador e só o quarto pronto', async () => {
@@ -98,6 +105,20 @@ describe('Ilha', () => {
     expect(naCena('cerca')?.getAttribute('class')).toBe('parte-da-casa feita nova');
     expect(pronta(/Cerca, pronta/)).toBeTruthy();
     expect((await repo.listHousePurchases()).map((c) => c.item)).toEqual(['cerca']);
+  });
+
+  test('comprar pede confirmação com o nome e o preço, e cancelar não gasta', async () => {
+    const gravar = vi.fn();
+    await abrir({ saldo: 100, trocar: (repo) => ({ ...repo, saveHousePurchase: gravar }) });
+    await aba('Exterior');
+    confirm.mockReturnValue(false);
+    await act(async () => {
+      fireEvent.click(parte(/Cerca/));
+    });
+    expect(confirm).toHaveBeenCalledWith(`Construir Cerca?\nCusta ${HOUSE.partCost.cerca} joias.`);
+    expect(gravar).not.toHaveBeenCalled();
+    expect(noTopo()).toBe('100 joias');
+    expect(naCena('cerca')?.classList.contains('feita')).toBe(false);
   });
 
   test('a próxima parte que cabe no saldo ganha destaque', async () => {

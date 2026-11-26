@@ -7,8 +7,7 @@ import { newId } from '@pulo/core/domain/ids';
 import { criarTarefa, moverTarefa, verPomodoros } from '@pulo/core/domain/tasks';
 import type { Task, TaskStatus, TaskSubtask } from '@pulo/core/domain/types';
 
-import { useApp, useCarregar, ErroDeCarga } from '../app';
-import { perguntar } from '../app/confirmar';
+import { confirmar, useApp, useCarregar, ErroDeCarga } from '../app';
 import { contaNaTela } from '../casca/logic';
 import { Atividade } from './Atividade';
 import { CartaoDaTarefa, type AcoesDoCartao } from './CartaoDaTarefa';
@@ -73,9 +72,7 @@ export function TarefasScreen() {
     }
   };
 
-  const criar = (status: TaskStatus) => {
-    const title = perguntar('Nova tarefa');
-    if (!title) return;
+  const criar = (status: TaskStatus, title: string) => {
     void gravar(async () => {
       const resultado = await criarTarefa(repo, { title, status }, clock.now());
       if (!resultado.ok) mostrarAviso({ mensagem: resultado.error.message, variante: 'atencao' });
@@ -102,10 +99,7 @@ export function TarefasScreen() {
     abrir: (id) => setGaveta({ id, aberta: true }),
     alternarSubtarefas: (id) => setAbertos((a) => ({ ...a, [id]: !estaAberto(id) })),
     marcarSubtarefa,
-    novaSubtarefa: (tarefa) => {
-      const titulo = perguntar('Nova subtarefa');
-      if (titulo) adicionarSubtarefa(tarefa.id, titulo);
-    },
+    novaSubtarefa: (tarefa, titulo) => adicionarSubtarefa(tarefa.id, titulo),
     mover: (tarefa, status) => mover(tarefa.id, status),
     passo: (tarefa, passo) => {
       const visiveis = quadro.find((c) => c.status === tarefa.status)?.tarefas ?? [];
@@ -130,8 +124,11 @@ export function TarefasScreen() {
   const nome = contaNaTela(conta, user).nome.split(' ')[0] ?? '';
 
   const excluir = (tarefa: Task) => {
-    fechar();
-    void gravar(() => repo.deleteTask(tarefa.id));
+    void confirmar('Excluir esta tarefa?', `"${tarefa.title}" e as subtarefas dela somem. Não dá para desfazer.`).then((ok) => {
+      if (!ok) return;
+      fechar();
+      void gravar(() => repo.deleteTask(tarefa.id));
+    });
   };
   const comentar = (taskId: string, body: string) =>
     gravar(() => {
@@ -163,7 +160,7 @@ export function TarefasScreen() {
       {dados ? (
         <div className="grid grid-cols-1 items-stretch gap-4 pb-2 md:min-h-[calc(100dvh-140px)] md:grid-cols-[repeat(4,minmax(240px,1fr))] md:overflow-x-auto">
           {quadro.map((coluna) => (
-            <ColunaDoQuadro key={coluna.status} coluna={coluna} onNova={() => criar(coluna.status)} onSoltar={(antesDe) => soltar(coluna.status, antesDe)}>
+            <ColunaDoQuadro key={coluna.status} coluna={coluna} onNova={(titulo) => criar(coluna.status, titulo)} onSoltar={(antesDe) => soltar(coluna.status, antesDe)}>
               {coluna.tarefas.map((tarefa) => (
                 <CartaoDaTarefa
                   key={tarefa.id}

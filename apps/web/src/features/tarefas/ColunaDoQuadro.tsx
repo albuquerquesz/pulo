@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 
 import type { TaskStatus } from '@pulo/core/domain/types';
 
+import { CampoNovo } from './CampoNovo';
 import { cartaoAbaixo, type Coluna } from './logic';
 
 const PONTO: Record<TaskStatus, string> = {
@@ -13,7 +14,7 @@ const PONTO: Record<TaskStatus, string> = {
 
 type ColunaProps = {
   coluna: Coluna;
-  onNova: () => void;
+  onNova: (titulo: string) => void;
   /** Soltaram um cartão aqui, antes de `antesDe` (ou no fim). */
   onSoltar: (antesDe: string | undefined) => void;
   children: ReactNode;
@@ -21,6 +22,7 @@ type ColunaProps = {
 
 export function ColunaDoQuadro({ coluna, onNova, onSoltar, children }: ColunaProps) {
   const [alvo, setAlvo] = useState(false);
+  const [escrevendo, setEscrevendo] = useState(false);
   return (
     <section
       aria-label={coluna.nome}
@@ -50,7 +52,7 @@ export function ColunaDoQuadro({ coluna, onNova, onSoltar, children }: ColunaPro
         <span className="rounded-full bg-line/70 px-[9px] py-px text-xs font-extrabold text-muted">{coluna.tarefas.length}</span>
         <button
           type="button"
-          onClick={onNova}
+          onClick={() => setEscrevendo(true)}
           aria-label={`Adicionar tarefa em ${coluna.nome}`}
           title="Adicionar tarefa"
           className="ml-auto grid size-7 cursor-pointer place-items-center rounded-[9px] pb-0.5 text-xl leading-none font-extrabold text-muted transition-opacity duration-150 hover:bg-sapo/16 hover:text-ink focus-visible:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
@@ -59,13 +61,19 @@ export function ColunaDoQuadro({ coluna, onNova, onSoltar, children }: ColunaPro
         </button>
       </div>
       {children}
-      <button
-        type="button"
-        onClick={onNova}
-        className="mt-auto cursor-pointer rounded-[12px] border-[1.5px] border-dashed border-line p-2.5 font-extrabold text-muted hover:border-sapo hover:text-ink"
-      >
-        + Adicionar
-      </button>
+      {escrevendo ? (
+        <div className="mt-auto">
+          <CampoNovo rotulo={`Nova tarefa em ${coluna.nome}`} placeholder="Nome da tarefa e Enter" onSalvar={onNova} onFechar={() => setEscrevendo(false)} />
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setEscrevendo(true)}
+          className="mt-auto cursor-pointer rounded-[12px] border-[1.5px] border-dashed border-line p-2.5 font-extrabold text-muted hover:border-sapo hover:text-ink"
+        >
+          + Adicionar
+        </button>
+      )}
     </section>
   );
 }
