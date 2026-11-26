@@ -19,6 +19,8 @@ export interface Coluna {
   texto: string;
   /** De 0 a 100, em relação ao topo do eixo. */
   altura: number;
+  /** O valor bruto: minutos de foco ou porcentagem de hábitos (0 a 100). */
+  valor: number;
   destaque: boolean;
 }
 
@@ -79,6 +81,7 @@ function focoPorDia(sessoes: readonly SessaoDaJanela[], dias: readonly DateKey[]
       nome: hoje ? `${diaEMes(date)} (hoje)` : diaEMes(date),
       texto: duracaoTexto(doDia),
       altura: alturaDe(doDia, topo),
+      valor: doDia,
       destaque: hoje,
     };
   });
@@ -116,6 +119,7 @@ function habitosPorSemana(dias: readonly DiaDeHabitos[]): Serie {
       nome: `semana de ${diaEMes(inicio)}`,
       texto: taxa === null ? 'sem hábitos na conta' : porcentagem(taxa),
       altura: Math.round((taxa ?? 0) * 100),
+      valor: Math.round((taxa ?? 0) * 100),
       destaque: i === semanas.length - 1,
     };
   });
