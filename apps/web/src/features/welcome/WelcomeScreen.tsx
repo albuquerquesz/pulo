@@ -49,7 +49,7 @@ export function WelcomeScreen() {
       <main className="relative z-1 grid min-h-dvh place-items-center px-4 pt-28 pb-24">
         <section
           aria-labelledby="titulo-da-entrada"
-          className="relative flex min-h-[290px] w-full max-w-[480px] flex-col justify-center rounded-[28px] border-4 border-(--b-contorno) bg-(--b-folha) px-[22px] pt-[60px] pb-[26px] text-center text-(--b-tinta) shadow-[0_12px_0_rgba(59,42,47,0.25),0_30px_60px_rgba(59,42,47,0.18)] md:min-h-[320px] md:px-11 md:pt-[72px] md:pb-11"
+          className="relative flex min-h-[290px] w-full max-w-[480px] flex-col justify-center rounded-[28px] border-4 border-(--b-contorno) bg-(--b-folha) px-[22px] pt-[60px] pb-[26px] text-center text-(--b-tinta) shadow-[0_6px_0_rgba(59,42,47,0.2),0_14px_28px_rgba(59,42,47,0.12)] md:min-h-[320px] md:px-11 md:pt-[72px] md:pb-11"
         >
           <SapoEspiando className="absolute -top-[78px] left-1/2 w-40 -translate-x-1/2 md:-top-[92px] md:w-[190px]" />
           <h1 id="titulo-da-entrada" className="text-[26px] leading-[1.1] font-black md:text-[34px]">
