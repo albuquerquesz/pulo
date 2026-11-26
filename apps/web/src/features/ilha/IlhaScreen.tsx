@@ -12,7 +12,7 @@ import { carregarIlha, conquistasNovas, ilhaNaTela, textoDaConquista, textoDoPor
 import { Partes } from './Partes';
 
 /** A câmera da ilha: abre mostrando a mansão toda. */
-const CAMERA: LimitesDaCamera = { cx: 500, cy: 470, w: 1450, wEstreito: 1050, min: 350, max: 2400, x0: -150, x1: 1150, y0: 0, y1: 900 };
+const CAMERA: LimitesDaCamera = { cx: 500, cy: 470, w: 1450, wEstreito: 1050, hMinima: 1100, min: 350, max: 2400, x0: -150, x1: 1150, y0: 0, y1: 900 };
 
 const AVISO = 'absolute top-[150px] left-1/2 z-3 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-3xl bg-white/90 px-7 py-3 text-center font-black text-contorno';
 
@@ -80,7 +80,7 @@ export function IlhaScreen() {
   return (
     <main className="md:px-10 md:pt-8 md:pb-12">
       <h1 className="sr-only">Ilha</h1>
-      <div data-testid="cena-da-ilha" className="cena-ilha relative h-[calc(100dvh-5rem)] min-h-[520px] overflow-hidden bg-ceu md:min-h-[620px] md:rounded-lg">
+      <div data-testid="cena-da-ilha" className="cena-ilha relative h-[calc(100dvh-5rem)] min-h-[520px] overflow-hidden bg-ceu md:flex md:min-h-[620px] md:flex-col md:rounded-lg">
         <Nuvens />
         <CasaDaIlha
           {...gestos}
@@ -88,7 +88,7 @@ export function IlhaScreen() {
           nova={nova}
           onPortal={ilha ? () => mostrarAviso({ mensagem: textoDoPortal(ilha.construidas.length, ilha.total), variante: 'atencao' }) : undefined}
           viewBox={viewBox}
-          className={`relative z-1 block size-full touch-none select-none ${arrastando ? 'cursor-grabbing' : 'cursor-grab'}`}
+          className={`relative z-1 block size-full touch-none select-none md:min-h-0 md:flex-1 ${arrastando ? 'cursor-grabbing' : 'cursor-grab'}`}
         />
 
         <div className="absolute inset-x-0 top-7 z-3 flex justify-center pl-5">
@@ -111,7 +111,7 @@ export function IlhaScreen() {
           </div>
         ) : null}
 
-        <div className="absolute right-3 bottom-4 left-3 z-3 flex flex-col items-end gap-3 md:right-6 md:bottom-6 md:left-6 md:flex-row md:gap-4">
+        <div className="absolute right-3 bottom-4 left-3 z-3 flex flex-col items-end gap-3 md:relative md:right-0 md:bottom-0 md:left-0 md:flex-row md:gap-4 md:px-6 md:pb-6">
           <div className="w-full min-w-0 md:w-auto md:flex-1">{ilha ? <Partes ilha={ilha} onComprar={pedirCompra} /> : null}</div>
           <BotaoCanto icone="🏠" rotulo="Entrar em casa" onPress={irParaCasa} />
         </div>

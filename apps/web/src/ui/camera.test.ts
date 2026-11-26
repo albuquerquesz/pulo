@@ -9,6 +9,13 @@ describe('câmera', () => {
     expect(cameraInicial(LIMITES, { largura: 390, altura: 700 }).w).toBe(760);
   });
 
+  test('em contêiner baixo, afasta até caber a altura mínima', () => {
+    const limites = { ...LIMITES, hMinima: 900 };
+    expect(cameraInicial(limites, { largura: 1000, altura: 500 }).w).toBe(1800);
+    expect(cameraInicial(limites, { largura: 390, altura: 700 }).w).toBe(760);
+    expect(cameraInicial(limites, { largura: 1000, altura: 200 }).w).toBe(LIMITES.max);
+  });
+
   test('o viewBox segue a proporção do contêiner', () => {
     expect(viewBoxDe({ cx: 400, cy: 400, w: 1000 }, { largura: 1000, altura: 500 })).toBe('-100 150 1000 500');
   });

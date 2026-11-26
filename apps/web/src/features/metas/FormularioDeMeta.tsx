@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 import { GOALS } from '@pulo/core/config/decisions';
 import type { GoalInput } from '@pulo/core/domain/goals';
@@ -6,6 +6,8 @@ import type { AccentColor, DateKey, EntityId, Goal } from '@pulo/core/domain/typ
 import { Botao, CAMPO_DO_MODAL, Modal, SeletorDeCor } from '@/ui';
 
 import { marcosDoTexto } from './logic';
+
+export const TEXTO_SEM_NOME_DA_META = 'Dê um nome à meta.';
 
 type FormularioDeMetaProps = {
   hoje: DateKey;
@@ -26,9 +28,15 @@ export function FormularioDeMeta({ hoje, meta, onSalvar, onRemoverMarco, onFecha
   const [cor, setCor] = useState<AccentColor>(meta?.color ?? GOALS.defaultColor);
   const [marcos, setMarcos] = useState('');
   const [salvando, setSalvando] = useState(false);
+  const [semNome, setSemNome] = useState(false);
+  const idDoErro = useId();
   const nome = meta ? 'Editar meta' : 'Nova meta';
 
   const salvar = async () => {
+    if (!titulo.trim()) {
+      setSemNome(true);
+      return;
+    }
     setSalvando(true);
     const gravou = await onSalvar({
       title: titulo,
@@ -56,10 +64,29 @@ export function FormularioDeMeta({ hoje, meta, onSalvar, onRemoverMarco, onFecha
         }}
       >
         <h2 className="text-center text-2xl font-black">{nome}</h2>
-        <label className="flex flex-col gap-1 font-extrabold">
-          Qual é a meta?
-          <input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Correr uma maratona" maxLength={80} className={CAMPO_DO_MODAL} />
-        </label>
+        <div className="flex flex-col gap-1 font-extrabold">
+          <label className="flex flex-col gap-1">
+            Qual é a meta?
+            <input
+              value={titulo}
+              onChange={(e) => {
+                setTitulo(e.target.value);
+                setSemNome(false);
+              }}
+              placeholder="Correr uma maratona"
+              maxLength={80}
+              aria-required="true"
+              aria-invalid={semNome}
+              aria-describedby={semNome ? idDoErro : undefined}
+              className={CAMPO_DO_MODAL}
+            />
+          </label>
+          {semNome ? (
+            <p id={idDoErro} role="alert">
+              {TEXTO_SEM_NOME_DA_META}
+            </p>
+          ) : null}
+        </div>
         <label className="flex flex-col gap-1 font-extrabold">
           Por que ela importa?
           <input value={porque} onChange={(e) => setPorque(e.target.value)} placeholder="Opcional, em uma frase" maxLength={200} className={CAMPO_DO_MODAL} />

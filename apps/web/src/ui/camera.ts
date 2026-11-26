@@ -15,6 +15,8 @@ export interface LimitesDaCamera {
   cy: number;
   w: number;
   wEstreito: number;
+  /** Altura que a abertura mostra no mínimo: em contêiner baixo, a câmera se afasta para o desenho caber. */
+  hMinima?: number;
   min: number;
   max: number;
   /** Até onde o centro pode ir. */
@@ -49,7 +51,9 @@ export const PASSO_DA_RODINHA = 1.1;
 const limitar = (valor: number, menor: number, maior: number) => Math.min(maior, Math.max(menor, valor));
 
 export function cameraInicial(limites: LimitesDaCamera, { largura, altura }: Tamanho): Camera {
-  return { cx: limites.cx, cy: limites.cy, w: largura / altura < PROPORCAO_ESTREITA ? limites.wEstreito : limites.w };
+  const w = largura / altura < PROPORCAO_ESTREITA ? limites.wEstreito : limites.w;
+  const paraCaber = ((limites.hMinima ?? 0) * largura) / altura;
+  return { cx: limites.cx, cy: limites.cy, w: limitar(Math.max(w, paraCaber), limites.min, limites.max) };
 }
 
 export function viewBoxDe({ cx, cy, w }: Camera, { largura, altura }: Tamanho): string {
