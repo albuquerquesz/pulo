@@ -236,6 +236,46 @@ export function tarefasDeHoje(tarefas: readonly Task[], hoje: DateKey): TarefaDe
     .map((t) => ({ id: t.id, titulo: t.title, feita: t.status === 'feito' }));
 }
 
+// ---------- Pulos do dia ----------
+
+/** Quantas vitórias-régias cabem na lagoa do topo. */
+export const FOLHAS_NA_LAGOA = 8;
+
+/** Uma vitória-régia da lagoa: um hábito ou uma tarefa de hoje. */
+export interface FolhaDaLagoa {
+  chave: string;
+  titulo: string;
+  feito: boolean;
+}
+
+export interface PulosDoDia {
+  /** As feitas primeiro, depois as que faltam, até `FOLHAS_NA_LAGOA`. */
+  folhas: FolhaDaLagoa[];
+  feitos: number;
+  total: number;
+}
+
+/** Os hábitos e as tarefas de hoje viram vitórias-régias; cada coisa feita é um pulo do sapo. */
+export function pulosDoDia(habitos: readonly HabitoDeHoje[], tarefas: readonly TarefaDeHoje[]): PulosDoDia {
+  const todas: FolhaDaLagoa[] = [
+    ...habitos.map((h) => ({ chave: `habito:${h.id}`, titulo: h.titulo, feito: h.feito })),
+    ...tarefas.map((t) => ({ chave: `tarefa:${t.id}`, titulo: t.titulo, feito: t.feita })),
+  ];
+  const feitas = todas.filter((f) => f.feito);
+  const faltam = todas.filter((f) => !f.feito);
+  return { folhas: [...feitas, ...faltam].slice(0, FOLHAS_NA_LAGOA), feitos: feitas.length, total: todas.length };
+}
+
+const pulos = (n: number) => (n === 1 ? '1 pulo' : `${n} pulos`);
+
+/** A frase embaixo da saudação, conforme o que já foi pulado. */
+export function fraseDosPulos({ feitos, total }: PulosDoDia): string {
+  if (total === 0) return 'Nada na lagoa hoje. Crie um hábito ou uma tarefa para pular.';
+  if (feitos === 0) return `${pulos(total)} esperando você hoje.`;
+  if (feitos === total) return 'Chegou na outra margem! Tudo feito hoje.';
+  return `${pulos(feitos)} hoje. Mais ${total - feitos} até a outra margem.`;
+}
+
 // ---------- Próximo foco e vínculo ----------
 
 export interface AlvoNaTela {
@@ -397,6 +437,8 @@ export interface DescansoDeHoje extends RestStatus {
 
 export interface DadosHoje {
   saudacao: string;
+  /** Manhã, tarde ou noite: o céu do topo. */
+  periodo: Period;
   foco: FocoDoTopo;
   diasSeguidos: number;
   /** A maior sequência já feita. */
@@ -451,6 +493,7 @@ export async function carregarHoje(repo: Repository, clock: Clock, user: User, n
   const feitos = new Set(habitLogs.filter((r) => r.date === hoje).map((r) => r.habitId));
   return {
     saudacao: saudacao(agora, fuso, nome),
+    periodo: periodOf(agora, fuso),
     foco,
     diasSeguidos: sequencia.atual,
     recorde: sequencia.recorde,

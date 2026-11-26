@@ -866,3 +866,191 @@ body {
 :root[data-reduzir-movimento='true'] .bosque :is(.folha-cai, .libelula) {
   display: none;
 }
+
+/* Topo do Hoje: a lagoa com o céu da hora. As cores são da cena, iguais no tema claro e no escuro, como o bosque do login. */
+.lagoa-topo {
+  --l-contorno: #3b2a2f;
+  --l-folha: #79c94a;
+  --l-colina: #a6dd7a;
+  --l-colina-perto: #79c94a;
+  --l-agua: #3fc9a2;
+  color: #1f2a24;
+}
+.lagoa-topo .lagoa-frase {
+  color: #5e6b62;
+}
+.lagoa-topo[data-periodo='noite'] {
+  --l-folha: #5aa83a;
+  --l-colina: #4f7f52;
+  --l-colina-perto: #3e6b44;
+  color: #fff;
+}
+.lagoa-topo[data-periodo='noite'] .lagoa-frase {
+  color: #e2e0ff;
+}
+.lagoa-ceu {
+  background: linear-gradient(180deg, #cbf1f6, #fff3da 85%);
+}
+.lagoa-topo[data-periodo='tarde'] .lagoa-ceu {
+  background: linear-gradient(180deg, #ffd9a8, #ffe9c9 60%, #fff3da);
+}
+.lagoa-topo[data-periodo='noite'] .lagoa-ceu {
+  background: linear-gradient(180deg, #2b3a67, #4a4e8f 60%, #6c63b5);
+}
+.lagoa-estrelas {
+  opacity: 0;
+}
+.lagoa-topo[data-periodo='noite'] .lagoa-estrelas {
+  opacity: 1;
+}
+.lagoa-estrelas i {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #fff;
+  animation: bosque-cintila 2.4s ease-in-out infinite;
+}
+.lagoa-nuvem {
+  position: absolute;
+  top: 30px;
+  left: -120px;
+  width: 90px;
+  height: 26px;
+  border-radius: 999px;
+  background: #fff;
+  opacity: 0.9;
+  animation: lagoa-passa 38s linear infinite;
+}
+.lagoa-nuvem::before {
+  content: '';
+  position: absolute;
+  left: 18px;
+  top: -14px;
+  width: 40px;
+  height: 32px;
+  border-radius: 50%;
+  background: inherit;
+}
+.lagoa-topo[data-periodo='noite'] .lagoa-nuvem {
+  opacity: 0.12;
+}
+@keyframes lagoa-passa {
+  to {
+    left: 100%;
+  }
+}
+.lagoa-astro {
+  position: absolute;
+  top: 22px;
+  right: 290px;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff6c9 0 40%, #ffd166 41%);
+  box-shadow: 0 0 0 10px color-mix(in srgb, #ffd166 30%, transparent);
+}
+.lagoa-topo[data-periodo='tarde'] .lagoa-astro {
+  top: 70px;
+  background: radial-gradient(circle, #ffe2a8 0 40%, #ffb347 41%);
+}
+.lagoa-topo[data-periodo='noite'] .lagoa-astro {
+  background: #fff6d8;
+  box-shadow:
+    inset -12px -4px 0 #e9dfb6,
+    0 0 0 10px rgba(255, 255, 255, 0.08);
+}
+.lagoa-margem path:first-child {
+  fill: var(--l-colina);
+}
+.lagoa-margem path:last-child {
+  fill: var(--l-colina-perto);
+}
+.lagoa-agua {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--l-agua) 45%, #fff), var(--l-agua));
+}
+.lagoa-topo[data-periodo='tarde'] .lagoa-agua {
+  background: linear-gradient(180deg, #ffd3a0, #6fc6a6 45%, #3aa58f);
+}
+.lagoa-topo[data-periodo='noite'] .lagoa-agua {
+  background: linear-gradient(180deg, #5a5aa6, #34437a 55%, #263460);
+}
+.lagoa-folha {
+  position: relative;
+  width: 72px;
+  max-width: 90%;
+  height: 26px;
+  margin-top: 34px;
+  border: 3px solid var(--l-contorno);
+  border-radius: 50%;
+  background: var(--l-folha);
+  animation: lagoa-boia 3s ease-in-out infinite;
+}
+.lagoa-folha::after {
+  content: '';
+  position: absolute;
+  right: 8px;
+  top: 7px;
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--l-contorno);
+  transform: rotate(-24deg);
+}
+[data-feito='false'] > .lagoa-folha {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--l-folha) 35%, #fff);
+}
+.lagoa-topo[data-periodo='noite'] [data-feito='false'] > .lagoa-folha {
+  border-color: #c9c6ef;
+  background: color-mix(in srgb, var(--l-folha) 30%, #34437a);
+}
+.lagoa-onda {
+  position: absolute;
+  top: 40px;
+  width: 90px;
+  max-width: 100%;
+  height: 30px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  animation: bosque-onda 2.4s ease-out infinite;
+}
+.lagoa-rotulo {
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+}
+.lagoa-sapinho {
+  transform-origin: 50% 100%;
+  animation: lagoa-pulinho 2.6s ease-in-out infinite;
+}
+@keyframes lagoa-boia {
+  50% {
+    transform: translateY(-4px);
+  }
+}
+@keyframes lagoa-pulinho {
+  0%,
+  70%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  78% {
+    transform: translateY(2px) scale(1.06, 0.92);
+  }
+  86% {
+    transform: translateY(-16px) scale(0.96, 1.05);
+  }
+  94% {
+    transform: translateY(0) scale(1.04, 0.95);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lagoa-topo *,
+  .lagoa-topo *::before {
+    animation: none !important;
+  }
+}
+:root[data-reduzir-movimento='true'] .lagoa-topo *,
+:root[data-reduzir-movimento='true'] .lagoa-topo *::before {
+  animation: none !important;
+}

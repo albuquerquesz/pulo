@@ -11,10 +11,13 @@ import {
   barraDaSemana,
   carregarHoje,
   duracaoTexto,
+  FOLHAS_NA_LAGOA,
+  fraseDosPulos,
   graficoDaSemana,
   horaCheia,
   linhaDoDia,
   posicaoDoAgora,
+  pulosDoDia,
   quandoDoHabito,
   saudacao,
   tarefasDeHoje,
@@ -132,6 +135,36 @@ describe('hábitos e tarefas', () => {
   });
 });
 
+describe('pulos do dia', () => {
+  const habito = (id: string, feito: boolean) => ({ id, titulo: id, quando: 'todo dia', feito });
+  const tarefa = (id: string, feita: boolean) => ({ id, titulo: id, feita });
+
+  test('feitas primeiro, hábitos antes de tarefas, sem misturar ids iguais', () => {
+    const p = pulosDoDia([habito('x', false), habito('agua', true)], [tarefa('x', true), tarefa('relatorio', false)]);
+    expect(p.folhas.map((f) => f.chave)).toEqual(['habito:agua', 'tarefa:x', 'habito:x', 'tarefa:relatorio']);
+    expect(p).toMatchObject({ feitos: 2, total: 4 });
+  });
+
+  test('a lagoa mostra no máximo as primeiras folhas, mas conta tudo', () => {
+    const muitos = Array.from({ length: FOLHAS_NA_LAGOA + 3 }, (_, i) => habito(`h${i}`, i === 10));
+    const p = pulosDoDia(muitos, []);
+    expect(p.folhas).toHaveLength(FOLHAS_NA_LAGOA);
+    expect(p.folhas[0]?.chave).toBe('habito:h10');
+    expect(p).toMatchObject({ feitos: 1, total: FOLHAS_NA_LAGOA + 3 });
+  });
+
+  test.each([
+    [0, 0, 'Nada na lagoa hoje. Crie um hábito ou uma tarefa para pular.'],
+    [0, 1, '1 pulo esperando você hoje.'],
+    [0, 5, '5 pulos esperando você hoje.'],
+    [1, 5, '1 pulo hoje. Mais 4 até a outra margem.'],
+    [3, 8, '3 pulos hoje. Mais 5 até a outra margem.'],
+    [4, 4, 'Chegou na outra margem! Tudo feito hoje.'],
+  ])('%i de %i: %s', (feitos, total, frase) => {
+    expect(fraseDosPulos({ folhas: [], feitos, total })).toBe(frase);
+  });
+});
+
 describe('vínculo do bloco', () => {
   test('vale o alvo da sessão mais recente do bloco, e alvo apagado é ignorado', () => {
     const sessao = (inicio: number, habitId: string) => ({ ...endedSession(inicio, 25, 'concluida'), blockId: 'b', habitId });
@@ -193,6 +226,7 @@ describe('Hoje com a conta de exemplo', () => {
   test('mostra o dia do rascunho', async () => {
     const d = await (await preparar()).carregar();
     expect(d.saudacao).toBe('Boa tarde, Ana');
+    expect(d.periodo).toBe('tarde');
     expect(d.foco).toMatchObject({ titulo: 'Estudar inglês', minutos: 25, alvo: { icone: '🎓', titulo: 'Estudar inglês' } });
     expect(d.diasSeguidos).toBe(12);
     expect(d.habitos.map((h) => h.feito)).toEqual([true, true, false, false]);

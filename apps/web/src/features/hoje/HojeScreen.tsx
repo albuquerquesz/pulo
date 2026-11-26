@@ -11,7 +11,7 @@ import { contaNaTela } from '../casca/logic';
 import { EstaSemana } from './EstaSemana';
 import { HabitosDeHoje } from './HabitosDeHoje';
 import { LinhaDoDia } from './LinhaDoDia';
-import { alternarDescanso, alternarHabito, alternarTarefa, barraDaSemana, carregarHoje, comDescansoDeHoje } from './logic';
+import { alternarDescanso, alternarHabito, alternarTarefa, barraDaSemana, carregarHoje, comDescansoDeHoje, pulosDoDia } from './logic';
 import { Sequencia } from './Sequencia';
 import { SeuMes } from './SeuMes';
 import { TarefasDeHoje } from './TarefasDeHoje';
@@ -94,7 +94,7 @@ export function HojeScreen() {
 
   return (
     <Tela>
-      <Topo saudacao={d.saudacao} foco={d.foco} />
+      <Topo saudacao={d.saudacao} periodo={d.periodo} foco={d.foco} pulos={pulosDoDia(d.habitos, d.tarefas)} />
       <Sequencia
         dias={d.diasSeguidos}
         barra={barraDaSemana(semana)}
