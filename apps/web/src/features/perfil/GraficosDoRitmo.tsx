@@ -1,12 +1,9 @@
 import { useId, type ReactNode } from 'react';
 
-import type { Period } from '@pulo/core/domain/types';
+import type { Serie, SeriesDoRitmo } from './series';
 
-import { nomeDoPeriodo } from './metricas';
-import type { FaixaDoPeriodo, Serie, SeriesDoRitmo } from './series';
-
-const SEM_FOCO = 'Faça um foco para ver os gráficos de foco aqui.';
-const SEM_HABITOS = 'Marque um hábito para ver sua taxa por semana.';
+const SEM_FOCO = 'Seus focos aparecem aqui';
+const SEM_HABITOS = 'Seus hábitos aparecem aqui';
 
 type QuadroProps = { titulo: string; className?: string; children: ReactNode };
 
@@ -89,8 +86,6 @@ function Colunas({ serie: { colunas, eixo }, cor, corDoDestaque, longa = false }
   );
 }
 
-const COR_DO_PERIODO: Record<Period, string> = { manha: 'bg-sol', tarde: 'bg-foco', noite: 'bg-descanso' };
-
 type FaixaProps = { rotulo: string; texto: string; largura: number; cor: string };
 
 /** Uma barra deitada, com o nome e o valor em cima. */
@@ -108,49 +103,37 @@ export function Faixa({ rotulo, texto, largura, cor }: FaixaProps) {
   );
 }
 
-type PeriodosProps = { faixas: FaixaDoPeriodo[] };
+type GraficosProps = { series: SeriesDoRitmo };
 
-function Periodos({ faixas }: PeriodosProps) {
+/** Uma série sem nenhum valor: o gráfico aparece com a grade e um aviso por cima. */
+const vazia = (serie: Serie): boolean => serie.colunas.every((coluna) => coluna.altura === 0);
+
+/** O gráfico com o aviso centralizado quando ainda não há dados. */
+function ComAviso({ serie, aviso, children }: { serie: Serie; aviso: string; children: ReactNode }) {
   return (
-    <ul className="flex flex-1 flex-col justify-center gap-3">
-      {faixas.map((faixa) => (
-        <Faixa key={faixa.periodo} rotulo={nomeDoPeriodo(faixa.periodo)} texto={faixa.texto} largura={faixa.largura} cor={COR_DO_PERIODO[faixa.periodo]} />
-      ))}
-    </ul>
+    <div className="relative">
+      {children}
+      {vazia(serie) ? (
+        <p className="absolute inset-x-0 top-12 mx-auto w-fit rounded-full border border-line bg-surface px-3 py-1 text-center text-[13px] text-muted">{aviso}</p>
+      ) : null}
+    </div>
   );
 }
 
-const VAZIO = 'text-sm text-muted';
-
-type GraficosProps = { series: SeriesDoRitmo };
-
-export function GraficosDoRitmo({ series: { porDia, porPeriodo, porDiaDaSemana, habitosPorSemana } }: GraficosProps) {
+/** Os dois gráficos do Ritmo, lado a lado no desktop: foco por dia e hábitos feitos por semana. */
+export function GraficosDoRitmo({ series: { porDia, habitosPorSemana } }: GraficosProps) {
   return (
-    <div className="grid gap-6 border-t border-line pt-4 @2xl:grid-cols-3">
-      {porDia ? (
-        <Quadro titulo="Foco por dia" className="@2xl:col-span-3">
+    <div className="grid gap-6 border-t border-line pt-4 @2xl:grid-cols-2">
+      <Quadro titulo="Foco por dia">
+        <ComAviso serie={porDia} aviso={SEM_FOCO}>
           <Colunas serie={porDia} cor="bg-foco/45" corDoDestaque="bg-foco" longa />
-        </Quadro>
-      ) : (
-        <p className={`${VAZIO} @2xl:col-span-3`}>{SEM_FOCO}</p>
-      )}
-      {porPeriodo ? (
-        <Quadro titulo="Foco por período">
-          <Periodos faixas={porPeriodo} />
-        </Quadro>
-      ) : null}
-      {porDiaDaSemana ? (
-        <Quadro titulo="Foco por dia da semana">
-          <Colunas serie={porDiaDaSemana} cor="bg-agua/45" corDoDestaque="bg-agua" />
-        </Quadro>
-      ) : null}
-      {habitosPorSemana ? (
-        <Quadro titulo="Hábitos feitos por semana">
+        </ComAviso>
+      </Quadro>
+      <Quadro titulo="Hábitos feitos por semana">
+        <ComAviso serie={habitosPorSemana} aviso={SEM_HABITOS}>
           <Colunas serie={habitosPorSemana} cor="bg-sapo/55" corDoDestaque="bg-sapo" />
-        </Quadro>
-      ) : (
-        <p className={VAZIO}>{SEM_HABITOS}</p>
-      )}
+        </ComAviso>
+      </Quadro>
     </div>
   );
 }

@@ -100,7 +100,7 @@ function Grupos({ metricas, series }: DadosDaSecao) {
 
 async function carregarSecao(...[repo, clock, versao]: Parameters<typeof carregarMetricas>): Promise<DadosDaSecao> {
   const metricas = await carregarMetricas(repo, clock, versao);
-  return { metricas, series: await carregarSeries(repo, clock, metricas.ritmo.melhorDiaDaSemana) };
+  return { metricas, series: await carregarSeries(repo, clock) };
 }
 
 /** A seção Métricas do Perfil. Quem chega por `#metricas` é levado até ela. */
