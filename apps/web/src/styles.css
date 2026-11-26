@@ -585,3 +585,249 @@ body {
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
 }
+
+/* Entrada no bosque (tela de login): a terra do sapo, sempre no tema claro, em camadas que se mexem devagar. */
+.entrada-bosque {
+  --b-ceu-1: #fff6dc;
+  --b-ceu-2: #e9f6e4;
+  --b-morro-1: #d7ecc0;
+  --b-morro-2: #b9e08f;
+  --b-mata: #79c84e;
+  --b-mata-escura: #58a83a;
+  --b-tronco: #a7744f;
+  --b-chao: #8fe05a;
+  --b-capim: #6cc23f;
+  --b-agua: #3fc9a2;
+  --b-agua-clara: #8fe3c8;
+  --b-agua-funda: #2fae8a;
+  --b-regia: #6cc23f;
+  --b-lima: #c7e36b;
+  --b-sol: #ffd166;
+  --b-sol-borda: #ffb347;
+  --b-raio: #ffe08a;
+  --b-contorno: #3b2a2f;
+  --b-folha: #fbf4ee;
+  --b-tinta: #3b2a2f;
+  --b-apagado: #5e6b62;
+  --b-linha: #e4e0cc;
+  --b-sapo: #8fe05a;
+  --b-bochecha: #f08a7a;
+}
+.bosque {
+  background: linear-gradient(180deg, var(--b-ceu-1) 0%, #fdf1cf 38%, var(--b-ceu-2) 70%);
+}
+.bosque .camada {
+  position: absolute;
+  inset: -40px;
+  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+  will-change: transform;
+}
+.bosque .raios {
+  transform-origin: 1080px 230px;
+  animation: bosque-gira 90s linear infinite;
+}
+.bosque .brilho {
+  transform-origin: 1080px 230px;
+  animation: bosque-respira 6s ease-in-out infinite;
+}
+.bosque .nuvem {
+  animation: bosque-passa linear infinite;
+}
+.bosque .arvore {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: bosque-balanca 7s ease-in-out infinite;
+}
+.bosque .capim path {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: bosque-vento 3.4s ease-in-out infinite;
+}
+.bosque .onda-lagoa {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bosque-onda 4.5s ease-out infinite;
+}
+.bosque .regia {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bosque-boia 5s ease-in-out infinite;
+}
+.bosque .brilho-agua {
+  animation: bosque-cintila 3s ease-in-out infinite;
+}
+.bosque .folha-cai {
+  position: absolute;
+  top: -40px;
+  width: 22px;
+  height: 22px;
+  animation: bosque-cai linear infinite;
+}
+.bosque .libelula {
+  position: absolute;
+  top: 34%;
+  left: -80px;
+  width: 56px;
+  animation: bosque-voa 22s ease-in-out 4s infinite;
+}
+.bosque .libelula .asa {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: bosque-bate 0.12s linear infinite alternate;
+}
+@keyframes bosque-gira {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes bosque-respira {
+  50% {
+    transform: scale(1.08);
+    opacity: 0.75;
+  }
+}
+@keyframes bosque-passa {
+  from {
+    transform: translateX(-420px);
+  }
+  to {
+    transform: translateX(1900px);
+  }
+}
+@keyframes bosque-balanca {
+  50% {
+    transform: rotate(1.6deg);
+  }
+}
+@keyframes bosque-vento {
+  50% {
+    transform: rotate(6deg);
+  }
+}
+@keyframes bosque-onda {
+  from {
+    transform: scale(0.4);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+@keyframes bosque-boia {
+  50% {
+    transform: translateY(3px) rotate(-2deg);
+  }
+}
+@keyframes bosque-cintila {
+  50% {
+    opacity: 0.2;
+  }
+}
+@keyframes bosque-cai {
+  0% {
+    transform: translate(0, 0) rotate(0);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  50% {
+    transform: translate(60px, 50dvh) rotate(200deg);
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-30px, 105dvh) rotate(420deg);
+    opacity: 0;
+  }
+}
+@keyframes bosque-voa {
+  0% {
+    transform: translate(0, 0);
+  }
+  30% {
+    transform: translate(38vw, -6dvh);
+  }
+  45% {
+    transform: translate(44vw, 4dvh);
+  }
+  70% {
+    transform: translate(78vw, -8dvh);
+  }
+  100% {
+    transform: translate(115vw, 2dvh);
+  }
+}
+@keyframes bosque-bate {
+  to {
+    transform: scaleY(0.35);
+  }
+}
+
+/* O sapo que espia por cima do cartão: respira, e a pálpebra desce por dentro do olho para piscar. */
+.sapo-espiando .rosto {
+  transform-origin: 150px 200px;
+  animation: bosque-folego 3.6s ease-in-out infinite;
+}
+.sapo-espiando .palpebra {
+  transform: translateY(-100px);
+  animation: bosque-pisca 5.2s infinite;
+}
+.sapo-espiando .pupila {
+  animation: bosque-aperta 5.2s infinite;
+}
+@keyframes bosque-folego {
+  50% {
+    transform: scale(1.015, 0.985);
+  }
+}
+@keyframes bosque-pisca {
+  0%,
+  86% {
+    transform: translateY(-100px);
+    animation-timing-function: cubic-bezier(0.5, 0, 1, 1);
+  }
+  88.5% {
+    transform: translateY(0);
+  }
+  89.5% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0, 0.3, 1);
+  }
+  93%,
+  100% {
+    transform: translateY(-100px);
+  }
+}
+@keyframes bosque-aperta {
+  0%,
+  86%,
+  93%,
+  100% {
+    transform: translateY(0);
+  }
+  88.5%,
+  89.5% {
+    transform: translateY(5px);
+  }
+}
+
+/* Menos movimento: o bosque e o sapo ficam parados, sem folhas nem libélula. */
+@media (prefers-reduced-motion: reduce) {
+  :is(.bosque, .sapo-espiando) * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .bosque :is(.folha-cai, .libelula) {
+    display: none;
+  }
+}
+:root[data-reduzir-movimento='true'] :is(.bosque, .sapo-espiando) * {
+  animation: none !important;
+  transition: none !important;
+}
+:root[data-reduzir-movimento='true'] .bosque :is(.folha-cai, .libelula) {
+  display: none;
+}
