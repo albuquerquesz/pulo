@@ -22,8 +22,7 @@ npm run dev
 ```
 
 Sobe o web TanStack em http://localhost:3000 e a API em http://localhost:8787.
-O app pede login com Google. Modo demo, sem login e com 4 semanas de dados sintéticos: abra o endereço com `?demo=1`
-ou toque em "Ver o demo" na tela de entrada.
+O app pede login com Google.
 
 O endereço do app precisa estar em `PULO_CORS_ORIGIN` da API (CORS com credenciais, origens confiáveis e checagem de `Origin` nas escritas).
 Sessão, cookie, CSRF e como publicar app e API: [docs/web-auth.md](docs/web-auth.md).
@@ -58,7 +57,7 @@ Config em `apps/api/wrangler.jsonc`. Segredos vão por `npx wrangler secret put 
 ### Rotas
 
 - `GET /health`
-- `POST /weekly-ai`: sugestão semanal da IA (aberta, sem login: usada pelo demo)
+- `POST /weekly-ai`: sugestão semanal da IA (aberta, sem login)
 - `POST /api/proposals/generate` e `POST /api/proposals/:id/decision`: a proposta da semana gerada e decidida no servidor (conta), veja `docs/api.md`
 - `/api/auth/*`: Better Auth. Login com Google em `POST /api/auth/sign-in/social` com `{ "provider": "google", "callbackURL": "..." }`,
   sessão em `GET /api/auth/get-session`, saída em `POST /api/auth/sign-out`
@@ -91,7 +90,7 @@ O `User` do app é montado a partir disso (`userFromMetadata` e `metadataPatchFr
 ## Banco de dados
 
 PostgreSQL com Prisma 7, no pacote `packages/db` (`@pulo/db`): schema, migrações, cliente gerado, mapeadores e apoio a testes.
-Todos os dados do domínio ficam no servidor (login obrigatório); o modo demo continua local, com dados sintéticos.
+Todos os dados do domínio ficam no servidor (login obrigatório).
 Detalhes, diagrama das tabelas e regras contra N+1 em [docs/banco-de-dados.md](docs/banco-de-dados.md).
 
 ### Desenvolvimento local
@@ -138,7 +137,7 @@ apps/
   web/      @pulo/web     TanStack Start no Cloudflare Workers: rotas, telas, tema (Tailwind v4), sapo e lagoa
   api/      @pulo/api     Hono no Cloudflare Workers: auth (Better Auth + Google), IA semanal
 packages/
-  core/     @pulo/core    regras puras: domínio, decisões, repositórios e modo demo
+  core/     @pulo/core    regras puras: domínio, decisões e repositórios
   client/   @pulo/client  RemoteRepository: o Repository do core sobre a API (cliente tipado do Hono), com cache e erros em português
   db/       @pulo/db      Prisma 7 e PostgreSQL: schema, migrações, cliente, mapeadores e apoio a testes
 docs/specs/pulo           as 10 specs do projeto
@@ -158,11 +157,9 @@ docs/specs/pulo           as 10 specs do projeto
   que o app nunca lê.
 - **Apagar.** "Apagar todos os meus dados", no Perfil, remove da conta a rotina, os hábitos, as sessões, os descansos,
   as sugestões e o sapo, em todos os aparelhos. A conta e o login continuam; sair da conta é outro botão.
-- **Modo demo.** Não pede login nem envia seus dados: usa só dados sintéticos de exemplo, guardados na memória do aparelho
-  e descartados ao fechar. Nada do demo vai para o servidor.
 - **IA semanal.** Recebe só um resumo agregado da semana (minutos por período do dia, taxas de conclusão, contagens),
   nunca títulos, nome do sapo, e-mail, nome da conta, ids ou texto livre. Na conta, o servidor monta esse resumo e fala com a IA
-  (a chave nunca sai dele); no demo, o app envia só dados de exemplo. Sem IA configurada ou se ela falhar, as sugestões vêm de regras
+  (a chave nunca sai dele). Sem IA configurada ou se ela falhar, as sugestões vêm de regras
   simples e aparecem como "Sugestão"; só vem "Sugestão da IA" quando a IA realmente respondeu.
 
 ## Licença

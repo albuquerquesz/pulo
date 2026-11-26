@@ -30,7 +30,7 @@ Na raiz, cada comando roda em todos os pacotes via Turborepo:
 - Só um pacote: `npx turbo run test --filter=@pulo/core`
 
 ## Estrutura
-- `packages/core` (`@pulo/core`): `domain` regras puras, `config` decisões, `data` repositórios, `demo` modo demo.
+- `packages/core` (`@pulo/core`): `domain` regras puras, `config` decisões, `data` repositórios, `testing` dados sintéticos para testes.
   TypeScript sem build; importe por caminho, como `@pulo/core/domain/types`.
   Dentro do core os imports são relativos (o alias `@/` é só do app).
 - `apps/web` (`@pulo/web`): TanStack Start no Cloudflare Workers (`pulo-web`). `src/routes` rotas por arquivo (`_abas` é o layout com a barra
@@ -43,7 +43,8 @@ Na raiz, cada comando roda em todos os pacotes via Turborepo:
 - `packages/client` (`@pulo/client`): `createRemoteRepository` (o `Repository` do core sobre `hc<AppType>`; um `GET /api/sync` na abertura, cache em memória,
   escritas otimistas com rollback), `RemoteError` com texto em português. Só importa o TIPO da API. Testes com Vitest rodando a API de verdade
   (`app.fetch`) no Postgres de teste e a suíte `@pulo/core/data/repository-contract`.
-- `apps/web`, de onde vêm os dados: `features/app/AppProvider.tsx` é o ÚNICO lugar que decide (`origem.ts`): demo = memória sintética (sem login),
-  sessão = RemoteRepository, senão tela de login (`features/sessao`). Telas novas não escolhem repositório: usam `useApp().repo`.
+- `apps/web`, de onde vêm os dados: `features/app/AppProvider.tsx` é o ÚNICO lugar que decide : com sessão, o RemoteRepository;
+  sem sessão, a tela de login (`features/sessao`). Telas novas não escolhem repositório: usam `useApp().repo`. A conta de exemplo
+  dos testes fica em `src/testing/conta-de-exemplo`.
 - `packages/db` (`@pulo/db`): `prisma/schema.prisma` e `prisma/migrations`, `createDb(url)`, mapeadores `toDomain`/`fromDomain`,
   `@pulo/db/testing` (`createTestDatabase`, `countQueries`). Veja `docs/banco-de-dados.md`. Sem `any`, sem N+1.

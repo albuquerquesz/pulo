@@ -1,7 +1,7 @@
 # Banco de dados
 
 PostgreSQL com Prisma 7, no pacote `packages/db` (`@pulo/db`). Todos os dados do domínio ficam no servidor,
-sempre por pessoa logada. O modo demo continua local e não passa por aqui.
+sempre por pessoa logada.
 
 ## Tabelas
 
