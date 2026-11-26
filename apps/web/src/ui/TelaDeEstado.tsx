@@ -19,14 +19,12 @@ export type TelaDeEstadoProps = {
   acao?: AcaoDeEstado;
   /** Botões fantasma, embaixo da principal. */
   secundarias?: readonly AcaoDeEstado[];
-  /** Código do erro, escondido num detalhe, para o suporte. */
-  codigo?: string;
   fase?: Phase;
   testID?: string;
 };
 
 /** Tela de página inteira (erro, sem sinal, não encontrado): coluna centralizada, sapo grande, texto e ações. */
-export function TelaDeEstado({ momento, titulo, texto, acao, secundarias = [], codigo, fase = 1, testID }: TelaDeEstadoProps) {
+export function TelaDeEstado({ momento, titulo, texto, acao, secundarias = [], fase = 1, testID }: TelaDeEstadoProps) {
   return (
     <div className="mx-auto flex w-full max-w-sm flex-col gap-4 pt-2 text-center md:pt-[8vh]" data-testid={testID}>
       <div className="flex justify-center">
@@ -43,12 +41,6 @@ export function TelaDeEstado({ momento, titulo, texto, acao, secundarias = [], c
             <Botao key={s.titulo} titulo={s.titulo} variante="fantasma" onPress={s.onPress} />
           ))}
         </div>
-      ) : null}
-      {codigo ? (
-        <details className="text-sm text-muted">
-          <summary className="min-h-11 cursor-pointer content-center">Detalhes para o suporte</summary>
-          <code className="break-all">Código do erro: {codigo}</code>
-        </details>
       ) : null}
     </div>
   );

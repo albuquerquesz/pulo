@@ -164,7 +164,7 @@ describe('Tela de Metas', () => {
     const form = within(screen.getByRole('dialog', { name: 'Editar meta' }));
     await clicar(form.getByRole('button', { name: 'Remover o marco Livro 4' }));
     await waitFor(async () => expect((await meta(repo, 'ex-meta-livros'))?.milestones).toHaveLength(3));
-    await clicar(screen.getByRole('button', { name: 'Cancelar' }));
+    fireEvent.keyDown(window, { key: 'Escape' });
     await clicar(detalhe().getByRole('button', { name: 'Apagar' }));
     await waitFor(async () => expect(await meta(repo, 'ex-meta-livros')).toBeUndefined());
   });

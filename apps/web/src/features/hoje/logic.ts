@@ -353,7 +353,7 @@ export function linhaDoDia({ blocos, sessions, alvos, descansoHoje, hoje, minuto
       titulo: bloco.title ?? TITULO_DO_BLOCO[bloco.kind],
       inicio,
       fim,
-      faixa: `${horaCheia(inicio)} – ${horaCheia(fim)} · ${duracaoTexto(bloco.durationMinutes)}`,
+      faixa: `${horaCheia(inicio)} – ${horaCheia(fim)}`,
       estado,
       focar: estado === 'agora' && bloco.kind === 'foco' ? vinculoDoBloco(bloco.id, sessions, alvos).busca : null,
     };

@@ -144,7 +144,6 @@ export function erroDaConta(nome: string, foto: string): string | null {
 
 export const podeExcluir = (texto: string): boolean => texto.trim() === ACCOUNT.deleteConfirmation;
 
-export const nomeDoArquivo = (data: string): string => `pulo-meus-dados-${data}.json`;
 
 export interface DadosDoPerfil {
   sequencia: { atual: number; recorde: number };

@@ -42,7 +42,7 @@ export function Botao({ titulo, onPress, variante = 'primario', desativado, carr
         icone ? 'size-12 px-0' : 'px-[22px]',
         'transition-transform duration-75 enabled:active:translate-y-[3px]',
         'disabled:cursor-not-allowed disabled:opacity-45',
-        largura === 'cheia' ? 'w-full' : 'self-start',
+        largura === 'cheia' ? 'w-full' : /\bself-/.test(className) ? '' : 'self-start',
         VARIANTE[variante],
         className,
       ].join(' ')}

@@ -98,7 +98,6 @@ describe('PerfilScreen', () => {
     await clicar(await screen.findByRole('button', { name: 'Conectar com o Claude: Conectado' }));
     await clicar(screen.getByRole('button', { name: 'Desconectar Claude' }));
     expect(screen.queryByRole('list', { name: 'Aplicativos conectados' })).toBeNull();
-    expect(screen.getByText('Nenhum aplicativo conectado.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Conectar com o Claude: Conectar' })).toBeTruthy();
   });
 
@@ -137,15 +136,4 @@ describe('PerfilScreen', () => {
     expect(dialogo.getByRole('alert').textContent).toContain('https');
   });
 
-  test('baixar gera o arquivo com os dados', async () => {
-    const repo = await abrir();
-    const exportar = vi.spyOn(repo, 'exportData');
-    URL.createObjectURL = vi.fn(() => 'blob:dados');
-    URL.revokeObjectURL = vi.fn();
-    const baixado = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
-    await clicar(screen.getByRole('button', { name: 'Baixar meus dados' }));
-    expect(exportar).toHaveBeenCalled();
-    expect(baixado).toHaveBeenCalled();
-    baixado.mockRestore();
-  });
 });

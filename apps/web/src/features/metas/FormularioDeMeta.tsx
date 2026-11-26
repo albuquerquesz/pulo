@@ -50,12 +50,7 @@ export function FormularioDeMeta({ hoje, meta, onSalvar, onRemoverMarco, onFecha
   };
 
   return (
-    <Modal
-      aberto
-      onFechar={onFechar}
-      rotulo={nome}
-      rodape={<Botao titulo="Cancelar" variante="foco" largura="auto" onPress={onFechar} />}
-    >
+    <Modal aberto onFechar={onFechar} rotulo={nome}>
       <form
         className="flex w-full flex-col gap-4"
         onSubmit={(e) => {

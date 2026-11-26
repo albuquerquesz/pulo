@@ -10,7 +10,6 @@ const tela = (acao = vi.fn()) => (
       momento="erro"
       titulo="Algo tropeçou"
       texto="Tente de novo."
-      codigo="http_500"
       acao={{ titulo: 'Tentar de novo', onPress: acao }}
       secundarias={[{ titulo: 'Sair', onPress: vi.fn() }]}
     />
@@ -18,10 +17,9 @@ const tela = (acao = vi.fn()) => (
 );
 
 describe('TelaDeEstado', () => {
-  it('mostra o sapo com o humor do momento e o código do erro', () => {
+  it('mostra o sapo com o humor do momento', () => {
     render(tela());
     expect(screen.getByRole('img', { name: 'Sapo, confuso' })).toBeDefined();
-    expect(screen.getByText('Código do erro: http_500')).toBeDefined();
   });
 
   it('a ação principal vem antes das secundárias', () => {

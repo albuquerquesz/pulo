@@ -1,15 +1,13 @@
 import { useState } from 'react';
 
 import { DEFAULT_TIMEZONE } from '@pulo/core/config/decisions';
-import { dateKeyOf } from '@pulo/core/domain/day';
 import type { PreferencesPatch } from '@pulo/core/domain/user-metadata';
 
 import { Botao } from '@/ui';
 
 import { Tela, useApp, useCarregar } from '../app';
-import { temConta, temPreferencias } from '../app/conta';
+import { temPreferencias } from '../app/conta';
 import { contaNaTela } from '../casca/logic';
-import { baixarJson } from './baixar';
 import { Cabecalho } from './Cabecalho';
 import { ClaudeDialogo } from './ClaudeDialogo';
 import { Conquistas } from './Conquistas';
@@ -17,7 +15,7 @@ import { Conta } from './Conta';
 import { EditarPerfil } from './EditarPerfil';
 import { Estatisticas } from './Estatisticas';
 import { ExcluirConta } from './ExcluirConta';
-import { carregarPerfil, desdeQuando, medalha, nomeDoArquivo } from './logic';
+import { carregarPerfil, desdeQuando, medalha } from './logic';
 import { Metricas } from './Metricas';
 import { Preferencias } from './Preferencias';
 import { Rotina } from './Rotina';
@@ -38,7 +36,6 @@ export function PerfilScreen() {
   const { estado, recarregar } = useCarregar(() => carregarPerfil(repo, clock));
   const { conexoes, desconectar, tentarDeNovo } = useConexoes();
   const [dialogo, setDialogo] = useState<DialogoAberto>(null);
-  const [baixando, setBaixando] = useState(false);
   if (!user) return null;
 
   const fuso = user.timezone || DEFAULT_TIMEZONE;
@@ -57,18 +54,6 @@ export function PerfilScreen() {
       // O repositório já avisou e voltou ao que era.
     }
     refresh();
-  };
-
-  const baixar = async () => {
-    if (!temConta(repo)) return;
-    setBaixando(true);
-    try {
-      baixarJson(nomeDoArquivo(dateKeyOf(clock.now(), fuso)), await repo.exportData());
-    } catch {
-      // O repositório já avisou o que houve.
-    } finally {
-      setBaixando(false);
-    }
   };
 
   return (
@@ -122,8 +107,6 @@ export function PerfilScreen() {
           ) : null}
           {/* A conta fica à mão mesmo se os números não abrirem. */}
           <Conta
-            baixando={baixando}
-            onBaixar={() => void baixar()}
             onSair={() => void app.sair()}
             onExcluir={() => setDialogo('excluir')}
           />

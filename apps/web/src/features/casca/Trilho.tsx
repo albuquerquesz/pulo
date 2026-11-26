@@ -135,7 +135,17 @@ export function CartaoDasMetas({ metas }: { metas: MetaDoTrilho[] }) {
         </Link>
       </div>
       {metas.length === 0 ? (
-        <p className="text-sm text-muted">Nenhuma meta por enquanto.</p>
+        <div className="flex flex-col items-center gap-2 text-center">
+          <h3 className="text-base font-extrabold">Nenhuma meta por enquanto</h3>
+          <p className="text-sm text-muted">Uma meta grande dá rumo aos seus hábitos e focos.</p>
+          <Link
+            to="/metas"
+            search={{ nova: true }}
+            className="mt-2 rounded-md bg-sapo px-5 py-2.5 font-extrabold text-ink-sobre-acao shadow-[inset_0_-4px_0_var(--pulo-sapo-borda)] active:translate-y-[3px]"
+          >
+            Criar meta
+          </Link>
+        </div>
       ) : (
         <ul className="flex flex-col gap-10">
           {metas.map((m) => (
