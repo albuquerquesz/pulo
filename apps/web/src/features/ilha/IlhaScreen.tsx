@@ -7,7 +7,7 @@ import { comprarParte, type ParteId } from '@pulo/core/domain/casa';
 import { CasaDaIlha } from '@/mascot/ilha/CasaDaIlha';
 import { BarraValor, BotaoCanto, Joia, Nuvens, useCamera, type LimitesDaCamera } from '@/ui';
 
-import { useApp, useCarregar } from '../app';
+import { confirmar, useApp, useCarregar } from '../app';
 import { carregarIlha, conquistasNovas, ilhaNaTela, textoDaConquista, textoDoPortal } from './logic';
 import { Partes } from './Partes';
 
@@ -66,6 +66,15 @@ export function IlhaScreen() {
     }
   };
 
+  /** Gastar joias pede um sim antes. */
+  const pedirCompra = (id: ParteId) => {
+    const parte = ilha?.partes.find((p) => p.id === id);
+    if (!parte) return;
+    void confirmar(`Construir ${parte.nome}?`, `Custa ${parte.custo} joias.`).then((ok) => {
+      if (ok) void comprar(id);
+    });
+  };
+
   if (!user) return null;
 
   return (
@@ -103,7 +112,7 @@ export function IlhaScreen() {
         ) : null}
 
         <div className="absolute right-3 bottom-4 left-3 z-3 flex flex-col items-end gap-3 md:right-6 md:bottom-6 md:left-6 md:flex-row md:gap-4">
-          <div className="w-full min-w-0 md:w-auto md:flex-1">{ilha ? <Partes ilha={ilha} onComprar={(id) => void comprar(id)} /> : null}</div>
+          <div className="w-full min-w-0 md:w-auto md:flex-1">{ilha ? <Partes ilha={ilha} onComprar={pedirCompra} /> : null}</div>
           <BotaoCanto icone="🏠" rotulo="Entrar em casa" onPress={irParaCasa} />
         </div>
       </div>

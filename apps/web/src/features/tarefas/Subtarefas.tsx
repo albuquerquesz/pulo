@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { TASKS } from '@pulo/core/config/decisions';
 import type { TaskSubtask } from '@pulo/core/domain/types';
 
+import { CampoNovo } from './CampoNovo';
 import { TextoEditavel } from './TextoEditavel';
 
 type SubtarefasProps = {
@@ -15,7 +16,6 @@ type SubtarefasProps = {
 
 export function Subtarefas({ subtarefas, onMarcar, onRenomear, onRemover, onAdicionar }: SubtarefasProps) {
   const [escrevendo, setEscrevendo] = useState(false);
-  const [nova, setNova] = useState('');
   const total = subtarefas.length;
   const feitas = subtarefas.filter((s) => s.done).length;
   return (
@@ -58,28 +58,9 @@ export function Subtarefas({ subtarefas, onMarcar, onRenomear, onRemover, onAdic
         </div>
       ))}
       {total >= TASKS.maxSubtasks ? null : escrevendo ? (
-        <input
-          autoFocus
-          aria-label="Nova subtarefa"
-          placeholder="Nome da subtarefa e Enter"
-          maxLength={TASKS.titleMaxChars}
-          value={nova}
-          onChange={(e) => setNova(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && nova.trim()) {
-              e.preventDefault();
-              onAdicionar(nova.trim());
-              setNova('');
-            }
-            if (e.key === 'Escape') {
-              // Só fecha o campo, não a gaveta.
-              e.stopPropagation();
-              setEscrevendo(false);
-              setNova('');
-            }
-          }}
-          className="mt-1 w-full rounded-[8px] border border-line bg-transparent px-2.5 py-2 outline-none focus:border-sapo"
-        />
+        <div className="mt-1">
+          <CampoNovo rotulo="Nova subtarefa" placeholder="Nome da subtarefa e Enter" onSalvar={onAdicionar} onFechar={() => setEscrevendo(false)} />
+        </div>
       ) : (
         <button type="button" onClick={() => setEscrevendo(true)} className="cursor-pointer self-start px-2 py-1.5 text-sm font-bold text-muted hover:text-ink">
           + Adicionar subtarefas

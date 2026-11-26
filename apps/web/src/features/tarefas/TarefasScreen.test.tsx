@@ -75,14 +75,38 @@ describe('Tarefas', () => {
     expect(within(cartao('Marcar dentista')).getByText('Marcar dentista').className).toContain('line-through');
   });
 
-  test('Adicionar cria no pé da coluna', async () => {
+  test('Adicionar abre um campo na coluna: Enter cria e Esc cancela', async () => {
     const repo = await abrir();
-    vi.spyOn(window, 'prompt').mockReturnValue('Comprar caderno');
-    await act(async () => {
-      fireEvent.click(coluna('Ideias').getByRole('button', { name: '+ Adicionar' }));
-    });
+    const abrirCampo = (botao: string) => {
+      fireEvent.click(coluna('Ideias').getByRole('button', { name: botao }));
+      return coluna('Ideias').getByRole('textbox', { name: 'Nova tarefa em Ideias' });
+    };
+    let campo = abrirCampo('+ Adicionar');
+    fireEvent.change(campo, { target: { value: '  Comprar caderno  ' } });
+    await teclar(campo, 'Enter');
     await waitFor(() => expect(coluna('Ideias').getAllByRole('article').at(-1)?.getAttribute('aria-label')).toBe('Comprar caderno'));
     expect((await repo.listTasks()).find((t) => t.title === 'Comprar caderno')?.status).toBe('ideias');
+    await teclar(campo, 'Escape');
+    expect(coluna('Ideias').queryByRole('textbox')).toBeNull();
+
+    const antes = (await repo.listTasks()).length;
+    campo = abrirCampo('Adicionar tarefa em Ideias');
+    await teclar(campo, 'Enter');
+    fireEvent.change(campo, { target: { value: 'Desistir' } });
+    await teclar(campo, 'Escape');
+    expect(coluna('Ideias').queryByRole('textbox')).toBeNull();
+    expect(await repo.listTasks()).toHaveLength(antes);
+  });
+
+  test('+ subtarefa no cartão abre o campo e grava com Enter', async () => {
+    const repo = await abrir();
+    fireEvent.click(within(cartao(TITULO)).getByRole('button', { name: '+ subtarefa' }));
+    const campo = within(cartao(TITULO)).getByRole('textbox', { name: 'Nova subtarefa' });
+    fireEvent.change(campo, { target: { value: 'Revisar' } });
+    await teclar(campo, 'Enter');
+    await waitFor(() => expect(within(cartao(TITULO)).getByRole('checkbox', { name: 'Revisar' })).toBeTruthy());
+    expect((await repo.listSubtasks()).find((s) => s.title === 'Revisar')?.taskId).toBe('demo-tarefa-1');
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
   test('a gaveta carrega a atividade, comenta com Enter e fecha com Esc', async () => {
@@ -143,12 +167,20 @@ describe('Tarefas', () => {
     expect(salva).not.toHaveProperty('dueDate');
   });
 
-  test('focar leva para a Casa com a tarefa, e excluir apaga', async () => {
+  test('focar leva para a Casa com a tarefa, e excluir pede confirmação', async () => {
     const repo = await abrir();
     let gaveta = await abrirGaveta();
     fireEvent.click(gaveta.getByRole('button', { name: 'Focar nessa tarefa' }));
     expect(navegar).toHaveBeenCalledWith({ to: '/casa', search: { tarefa: 'demo-tarefa-1' } });
     gaveta = await abrirGaveta();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    await act(async () => {
+      fireEvent.click(gaveta.getByRole('button', { name: 'Excluir' }));
+    });
+    expect(confirm).toHaveBeenCalledWith(`Excluir esta tarefa?\n"${TITULO}" e as subtarefas dela somem. Não dá para desfazer.`);
+    expect(await tarefa(repo, 'demo-tarefa-1')).toBeDefined();
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    confirm.mockReturnValue(true);
     await act(async () => {
       fireEvent.click(gaveta.getByRole('button', { name: 'Excluir' }));
     });

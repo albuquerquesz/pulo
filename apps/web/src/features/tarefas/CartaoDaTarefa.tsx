@@ -1,6 +1,10 @@
+import { useState } from 'react';
+
+import { TASKS } from '@pulo/core/config/decisions';
 import { TASK_COLUMNS } from '@pulo/core/domain/tasks';
 import type { DateKey, Task, TaskStatus, TaskSubtask } from '@pulo/core/domain/types';
 
+import { CampoNovo } from './CampoNovo';
 import { CHIP, Etiqueta } from './Etiqueta';
 import { NOME_DA_COLUNA, textoDoPrazo, type Passo } from './logic';
 
@@ -8,7 +12,7 @@ export interface AcoesDoCartao {
   abrir(id: string): void;
   alternarSubtarefas(id: string): void;
   marcarSubtarefa(subtarefa: TaskSubtask, feita: boolean): void;
-  novaSubtarefa(tarefa: Task): void;
+  novaSubtarefa(tarefa: Task, titulo: string): void;
   mover(tarefa: Task, status: TaskStatus): void;
   passo(tarefa: Task, passo: Passo): void;
   arrastar(id: string | null): void;
@@ -72,13 +76,15 @@ function Mover({ tarefa, acoes }: { tarefa: Task; acoes: AcoesDoCartao }) {
 }
 
 export function CartaoDaTarefa({ tarefa, subtarefas, pomodoros, hoje, aberto, arrastando, acoes }: CartaoProps) {
+  const [escrevendo, setEscrevendo] = useState(false);
   const total = subtarefas.length;
   const feitas = subtarefas.filter((s) => s.done).length;
   return (
     <article
       data-tarefa={tarefa.id}
       aria-label={tarefa.title}
-      draggable
+      // Com o campo aberto, arrastar atrapalharia selecionar o texto.
+      draggable={!escrevendo}
       onDragStart={(e) => {
         // O Firefox só arrasta com algum dado.
         e.dataTransfer?.setData('text/plain', tarefa.id);
@@ -150,13 +156,22 @@ export function CartaoDaTarefa({ tarefa, subtarefas, pomodoros, hoje, aberto, ar
                   <span className={s.done ? 'text-muted line-through' : undefined}>{s.title}</span>
                 </label>
               ))}
-              <button
-                type="button"
-                onClick={() => acoes.novaSubtarefa(tarefa)}
-                className="cursor-pointer self-start px-1 py-1.5 text-[13px] font-extrabold text-muted hover:text-ink"
-              >
-                + subtarefa
-              </button>
+              {total >= TASKS.maxSubtasks ? null : escrevendo ? (
+                <CampoNovo
+                  rotulo="Nova subtarefa"
+                  placeholder="Nome da subtarefa e Enter"
+                  onSalvar={(titulo) => acoes.novaSubtarefa(tarefa, titulo)}
+                  onFechar={() => setEscrevendo(false)}
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setEscrevendo(true)}
+                  className="cursor-pointer self-start px-1 py-1.5 text-[13px] font-extrabold text-muted hover:text-ink"
+                >
+                  + subtarefa
+                </button>
+              )}
             </div>
           ) : null}
         </div>
