@@ -6,7 +6,7 @@ import { habitsForDate } from '@pulo/core/domain/habits';
 import type { EntityId, Repository } from '@pulo/core/domain/types';
 
 import { AppProvider, useApp } from '../app';
-import { criarSessaoDemo } from '../app/demo';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
 import { HabitosScreen } from './HabitosScreen';
 
 const HOJE = '2026-11-21';
@@ -25,7 +25,7 @@ function Pagina() {
 }
 
 async function abrir() {
-  const { repo, clock } = await criarSessaoDemo();
+  const { repo, clock } = await criarContaDeExemplo();
   render(
     <AppProvider repoInicial={repo} relogioInicial={clock}>
       <Pagina />
@@ -67,13 +67,13 @@ describe('Hábitos', () => {
     const repo = await abrir();
     await escolher(/^Estudar inglês/);
     await clicar(detalhe().getByRole('button', { name: 'Ver meta' }));
-    expect(verMeta).toHaveBeenCalledWith('demo-meta-ingles');
+    expect(verMeta).toHaveBeenCalledWith('ex-meta-ingles');
     await clicar(detalhe().getByRole('button', { name: 'Trocar meta' }));
     await clicar(detalhe().getByRole('radio', { name: /Ler 4 livros/ }));
-    await waitFor(async () => expect((await habito(repo, 'demo-habito-ingles'))?.goalId).toBe('demo-meta-livros'));
+    await waitFor(async () => expect((await habito(repo, 'ex-habito-ingles'))?.goalId).toBe('ex-meta-livros'));
     await clicar(await detalhe().findByRole('button', { name: 'Trocar meta' }));
     await clicar(detalhe().getByRole('radio', { name: 'Sem meta' }));
-    await waitFor(async () => expect((await habito(repo, 'demo-habito-ingles'))?.goalId).toBeUndefined());
+    await waitFor(async () => expect((await habito(repo, 'ex-habito-ingles'))?.goalId).toBeUndefined());
     expect(await detalhe().findByText('Esse hábito ainda não empurra nenhuma meta.')).toBeTruthy();
   });
 
@@ -82,10 +82,10 @@ describe('Hábitos', () => {
     await escolher(/^Ler 10 páginas/);
     await clicar(detalhe().getByRole('button', { name: 'Pausar hábito' }));
     const doDia = async () => habitsForDate(await repo.listHabits(), HOJE).map((h) => h.id);
-    expect(await doDia()).not.toContain('demo-habito-ler');
+    expect(await doDia()).not.toContain('ex-habito-ler');
     expect(await grupo('⏸️ Pausados').findByRole('button', { name: /Ler 10 páginas/ })).toBeTruthy();
     await clicar(detalhe().getByRole('button', { name: 'Retomar hábito' }));
-    expect(await doDia()).toContain('demo-habito-ler');
+    expect(await doDia()).toContain('ex-habito-ler');
   });
 
   test('a agenda grava dias, período e lembrete', async () => {
@@ -99,14 +99,14 @@ describe('Hábitos', () => {
     await act(async () => {
       fireEvent.blur(campo);
     });
-    expect(await habito(repo, 'demo-habito-caminhar')).toMatchObject({
+    expect(await habito(repo, 'ex-habito-caminhar')).toMatchObject({
       weekdays: [0, 2, 4],
       period: 'tarde',
       reminderMinutes: 18 * 60 + 15,
       reminderOn: true,
     });
     await clicar(await detalhe().findByRole('switch', { name: 'Lembrete', checked: true }));
-    const depois = await habito(repo, 'demo-habito-caminhar');
+    const depois = await habito(repo, 'ex-habito-caminhar');
     expect(depois?.reminderOn).toBeUndefined();
     expect(depois?.reminderMinutes).toBe(18 * 60 + 15);
   });

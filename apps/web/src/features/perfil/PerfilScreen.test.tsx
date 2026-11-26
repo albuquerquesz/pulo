@@ -5,7 +5,8 @@ import type { Repository } from '@pulo/core/domain/types';
 
 import { AppProvider, useApp } from '../app';
 import { temConta, temPreferencias, type FonteDaConta, type FonteDePreferencias } from '../app/conta';
-import { criarSessaoDemo } from '../app/demo';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
+import type { Autenticacao } from '../sessao/auth';
 import { PerfilScreen } from './PerfilScreen';
 
 type RepoDoPerfil = Repository & FonteDaConta & FonteDePreferencias;
@@ -16,11 +17,11 @@ function SoPronto({ children }: { children: ReactNode }) {
 }
 
 async function abrir() {
-  const sessao = await criarSessaoDemo();
-  if (!temConta(sessao.repo) || !temPreferencias(sessao.repo)) throw new Error('o demo precisa de conta e preferências');
+  const sessao = await criarContaDeExemplo();
+  if (!temConta(sessao.repo) || !temPreferencias(sessao.repo)) throw new Error('a conta de exemplo precisa de conta e preferências');
   const repo: RepoDoPerfil = sessao.repo;
   render(
-    <AppProvider repoInicial={repo} relogioInicial={sessao.clock} demoNaAbertura={false}>
+    <AppProvider repoInicial={repo} relogioInicial={sessao.clock}>
       <SoPronto>
         <PerfilScreen />
       </SoPronto>
@@ -101,9 +102,18 @@ describe('PerfilScreen', () => {
     expect(screen.getByRole('button', { name: 'Conectar com o Claude: Conectar' })).toBeTruthy();
   });
 
-  test('no demo, editar o nome muda o cabeçalho', async () => {
+  test('editar o nome grava na conta e muda o cabeçalho', async () => {
+    const { repo, clock } = await criarContaDeExemplo();
+    const atualizarConta = vi.fn(async () => undefined);
+    const autenticacao: Autenticacao = {
+      sessaoAtual: async () => ({ id: 'ex-user', nome: 'Ana', email: 'ana@exemplo.com' }),
+      entrarComGoogle: async () => undefined,
+      sair: async () => undefined,
+      atualizarConta,
+      rede: () => ({ baseUrl: 'https://api.exemplo.dev' }),
+    };
     render(
-      <AppProvider demoNaAbertura>
+      <AppProvider repoInicial={repo} relogioInicial={clock} autenticacao={autenticacao}>
         <SoPronto>
           <PerfilScreen />
         </SoPronto>
@@ -114,6 +124,7 @@ describe('PerfilScreen', () => {
     fireEvent.change(dialogo.getByLabelText('Nome'), { target: { value: 'Ana Lima' } });
     await clicar(dialogo.getByRole('button', { name: 'Salvar' }));
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Ana Lima');
+    expect(atualizarConta).toHaveBeenCalledWith({ nome: 'Ana Lima', foto: null });
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 

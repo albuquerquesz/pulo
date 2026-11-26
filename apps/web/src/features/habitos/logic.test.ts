@@ -1,7 +1,7 @@
 import { habitsForDate } from '@pulo/core/domain/habits';
 import type { Habit, HabitStats } from '@pulo/core/domain/types';
 
-import { criarSessaoDemo } from '../app/demo';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
 import {
   agruparPorPeriodo,
   alternarDia,
@@ -74,13 +74,13 @@ test('o calendário vira uma linha por dia da semana, com hoje marcado', () => {
   ]);
 });
 
-test('o demo traz o histórico do rascunho sem mexer nos registros', async () => {
-  const { repo, clock } = await criarSessaoDemo();
+test('a conta de exemplo traz o histórico do rascunho sem mexer nos registros', async () => {
+  const { repo, clock } = await criarContaDeExemplo();
   const antes = (await repo.listHabitLogs()).length;
   const stats = await carregarEstatisticas(repo, clock);
-  expect(stats.get('demo-habito-ingles')?.sequencia).toBe(8);
-  expect(stats.get('demo-habito-ler')?.sequencia).toBe(3);
-  expect(stats.get('demo-habito-ingles')?.calendario).toHaveLength(16);
+  expect(stats.get('ex-habito-ingles')?.sequencia).toBe(8);
+  expect(stats.get('ex-habito-ler')?.sequencia).toBe(3);
+  expect(stats.get('ex-habito-ingles')?.calendario).toHaveLength(16);
   expect((await repo.listHabitLogs()).length).toBe(antes);
   expect(habitsForDate(await repo.listHabits(), '2026-11-21')).toHaveLength(4);
 });

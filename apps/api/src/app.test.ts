@@ -1,7 +1,8 @@
 import { computeCandidates } from '@pulo/core/domain/ia/candidates';
 import { buildAiRequest } from '@pulo/core/domain/ia/request';
-import { generateDemoData } from '@pulo/core/demo/generate';
-import { summarizeDemoWeek } from '@pulo/core/demo/summary';
+import { buildWeekSummary } from '@pulo/core/domain/week-summary';
+import { TZ } from '@pulo/core/domain/test-utils';
+import { gerarQuatroSemanas } from '@pulo/core/testing/quatro-semanas';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
 import { createApp } from './app';
 import { testEnv } from './testing';
@@ -30,8 +31,8 @@ describe('API', () => {
   });
 
   it('devolve a sugestão do provedor falso', async () => {
-    const data = generateDemoData();
-    const summary = summarizeDemoWeek('2026-11-16', data.sessions, data.restDays, 5);
+    const data = gerarQuatroSemanas();
+    const summary = buildWeekSummary({ weekStart: '2026-11-16', timeZone: TZ, sessions: data.sessions, restDays: data.restDays });
     const request = buildAiRequest(summary, computeCandidates(summary, data.blocks));
     const res = await app.request('/weekly-ai', {
       method: 'POST',

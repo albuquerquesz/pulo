@@ -2,7 +2,7 @@
   "name": "@pulo/core",
   "version": "1.0.0",
   "private": true,
-  "description": "Regras puras do Pulo: domínio, decisões, repositórios e modo demo.",
+  "description": "Regras puras do Pulo: domínio, decisões e repositórios.",
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

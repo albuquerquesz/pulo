@@ -9,7 +9,7 @@ const COLUNA = "mx-auto flex w-full max-w-sm flex-col gap-4 pt-6 md:pt-[12vh]";
 export const TEXTO_SEM_SINAL =
   "A lagoa ficou sem sinal. Confira a internet e tente de novo.";
 
-/** Porta do app: sem sessão e sem demo. Também mostra "sem sinal" quando há sessão mas o servidor não respondeu. */
+/** Porta do app: sem sessão. Também mostra "sem sinal" quando há sessão mas o servidor não respondeu. */
 export function WelcomeScreen() {
   const {
     fase,
@@ -17,7 +17,6 @@ export function WelcomeScreen() {
     entrando,
     erroDeLogin,
     loginDisponivel,
-    enableDemo,
     tentarDeNovo,
   } = useApp();
 
@@ -64,18 +63,6 @@ export function WelcomeScreen() {
             O login ainda não está configurado neste app.
           </Texto>
         ) : null}
-        <div className="mt-4 flex flex-col gap-2">
-          <Texto variante="legenda" cor="muted" className="text-center">
-            Só quer espiar? O demo usa dados de exemplo, não pede conta e não
-            guarda nada no servidor.
-          </Texto>
-          <Botao
-            titulo="Ver o demo"
-            variante="fantasma"
-            onPress={() => void enableDemo()}
-            testID="ver-demo"
-          />
-        </div>
       </div>
     </Tela>
   );

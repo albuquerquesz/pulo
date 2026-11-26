@@ -80,12 +80,6 @@ export async function salvarPerfil(repo: Repository, user: User, patch: Partial<
   return next;
 }
 
-/** `?demo=1` na URL liga o modo demo ao abrir (web). */
-export function demoPedidoNaUrl(search: string | undefined | null): boolean {
-  if (!search) return false;
-  return /(^|[?&])demo=(1|true)(&|$)/.test(search);
-}
-
 /** Sem endpoint, não há cliente: as propostas vêm da regra e se chamam "Sugestão". */
 export function criarClienteDeIa(endpoint: string | undefined): WeeklyAiClient | null {
   return endpoint ? createHttpWeeklyAiClient({ endpoint }) : null;

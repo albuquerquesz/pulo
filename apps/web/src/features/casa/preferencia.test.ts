@@ -1,11 +1,11 @@
 import { temPreferencias } from '../app/conta';
-import { criarSessaoDemo } from '../app/demo';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
 import { carregarHoje } from '../hoje/logic';
 import { carregarCasa } from './logic';
 
 test('a duração de foco das preferências vale na Casa e no Hoje', async () => {
-  const { repo, clock } = await criarSessaoDemo();
-  if (!temPreferencias(repo)) throw new Error('o demo precisa de preferências');
+  const { repo, clock } = await criarContaDeExemplo();
+  if (!temPreferencias(repo)) throw new Error('a conta de exemplo precisa de preferências');
   await repo.savePreferences({ focusMinutes: 40 });
   const user = await repo.getUser();
   if (!user) throw new Error('sem usuário');

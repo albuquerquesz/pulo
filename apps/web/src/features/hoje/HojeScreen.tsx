@@ -22,13 +22,13 @@ const CONSULTA_DA_COLUNA_LARGA = '(min-width: 48rem)';
 
 
 export function HojeScreen() {
-  const { repo, clock, user, conta, refresh, mostrarAviso } = useApp();
+  const { repo, clock, user, pessoa, refresh, mostrarAviso } = useApp();
   const largo = useConsultaDeMidia(CONSULTA_DA_COLUNA_LARGA);
   /** O descanso que acabou de ser pedido, mostrado antes da resposta. */
   const [descansoPedido, setDescansoPedido] = useState<boolean | null>(null);
   const { estado, recarregar } = useCarregar(async () => {
     if (!user) throw new Error('sem usuário');
-    return carregarHoje(repo, clock, user, contaNaTela(conta, user).nome);
+    return carregarHoje(repo, clock, user, contaNaTela(pessoa, user).nome);
   });
 
   // A saudação e o ponto da hora atual andam com o relógio.

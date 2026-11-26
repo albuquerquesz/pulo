@@ -3,7 +3,7 @@ import type { Preferences, Repository } from '@pulo/core/domain/types';
 import { DEFAULT_PREFERENCES } from '@pulo/core/domain/user-metadata';
 
 /**
- * O que o remoto e o demo oferecem além do `Repository` do core. As telas perguntam pela capacidade,
+ * O que o remoto oferece além do `Repository` do core. As telas perguntam pela capacidade,
  * nunca por qual repositório está em uso.
  */
 export type FonteDePreferencias = Pick<RemoteRepository, 'getPreferences' | 'savePreferences'>;

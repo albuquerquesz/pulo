@@ -7,7 +7,7 @@ import { verCasa } from '@pulo/core/domain/casa';
 import type { Repository } from '@pulo/core/domain/types';
 
 import { AppProvider, useApp, type AppValue } from '../app';
-import { criarSessaoDemo } from '../app/demo';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
 import { IlhaScreen } from './IlhaScreen';
 
 const navegar = vi.fn();
@@ -16,14 +16,14 @@ vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navegar }));
 interface Abertura {
   saldo?: number;
   trocar?: (repo: Repository) => Repository;
-  /** Abre com a casa de exemplo do demo (pela metade). */
+  /** Abre com a casa de exemplo (pela metade). */
   comCasa?: boolean;
 }
 
 /** A Ilha com o saldo pedido; `trocar` muda o repositório antes de abrir. */
 async function abrir({ saldo, trocar, comCasa = false }: Abertura = {}) {
   // Sem a casa de exemplo, só o quarto.
-  const sessao = await criarSessaoDemo(comCasa ? {} : { casa: [] });
+  const sessao = await criarContaDeExemplo(comCasa ? {} : { casa: [] });
   if (saldo !== undefined) {
     const credito = (await sessao.repo.getJoiaCredit()) + saldo - (await verCasa(sessao.repo)).saldo;
     sessao.repo.getJoiaCredit = async () => credito;
@@ -189,7 +189,7 @@ describe('Ilha', () => {
     expect(app()?.evento).toBe('comemorando');
   });
 
-  test('o demo mostra a casa pela metade', async () => {
+  test('a conta de exemplo mostra a casa pela metade', async () => {
     await abrir({ comCasa: true });
     expect(screen.getByText('12 de 24')).toBeTruthy();
     expect(screen.queryByTestId('sapo-na-janela')).toBeNull();

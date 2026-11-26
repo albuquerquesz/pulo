@@ -10,11 +10,11 @@ interface Exemplo {
 }
 
 const EXEMPLOS: Record<EntityId, Exemplo> = {
-  'demo-habito-agua': { sequencia: 23, taxa: 0.92 },
-  'demo-habito-alongar': { sequencia: 12, taxa: 0.84 },
-  'demo-habito-caminhar': { sequencia: 5, taxa: 0.78 },
-  'demo-habito-ingles': { sequencia: 8, taxa: 0.86 },
-  'demo-habito-ler': { sequencia: 3, taxa: 0.64 },
+  'ex-habito-agua': { sequencia: 23, taxa: 0.92 },
+  'ex-habito-alongar': { sequencia: 12, taxa: 0.84 },
+  'ex-habito-caminhar': { sequencia: 5, taxa: 0.78 },
+  'ex-habito-ingles': { sequencia: 8, taxa: 0.86 },
+  'ex-habito-ler': { sequencia: 3, taxa: 0.64 },
 };
 
 /** Número de 0 a 1 que se repete para o mesmo hábito e dia. */
@@ -43,7 +43,7 @@ export function diasDeExemplo(habito: Pick<Habit, 'id' | 'weekdays'>, hoje: Date
 }
 
 /**
- * Só no demo: as estatísticas contam um passado inventado. Ele não é gravado como registro, para não mudar
+ * As estatísticas contam um passado inventado. Ele não é gravado como registro, para não mudar
  * o saldo de joias nem a sequência geral do rascunho.
  */
 export function comHistoricoDosHabitos(repo: Repository, clock: Clock): Repository & HabitStatsSource {

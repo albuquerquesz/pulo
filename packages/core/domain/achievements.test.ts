@@ -1,5 +1,6 @@
 import { ACHIEVEMENTS, HOUSE } from '../config/decisions';
-import { createDemoClock, seedRepository } from '../demo';
+import { gravarQuatroSemanas } from '../testing/quatro-semanas';
+import { criarRelogio } from '../testing/relogio';
 import { createMemoryRepository } from '../data/memory-repository';
 import { type AchievementSources, computeAchievements, passingAchievements, summarizeForAchievements, verConquistas } from './achievements';
 import { endedSession, sp } from './test-utils';
@@ -86,10 +87,10 @@ describe('conquistas', () => {
     expect(unlocked).toMatchObject({ nome: 'Segredo', conquistada: true });
   });
 
-  it('modo demo: mostra algumas medalhas de exemplo, calculadas sem data', async () => {
+  it('repositório local: mostra algumas medalhas, calculadas sem data', async () => {
     const repo = createMemoryRepository();
-    const clock = createDemoClock();
-    await seedRepository(repo, clock);
+    const clock = criarRelogio();
+    await gravarQuatroSemanas(repo, clock);
     const all = await verConquistas(repo, clock);
     expect(all.filter((item) => item.conquistada).length).toBeGreaterThanOrEqual(2);
     expect(all.some((item) => !item.conquistada)).toBe(true);

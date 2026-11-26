@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import type { Repository } from '@pulo/core/domain/types';
 
 import { AppProvider, useApp } from '../app';
-import { criarSessaoDemo } from '../app/demo';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
 import { HojeScreen } from './HojeScreen';
 
 type LinkFalso = { to: string; search?: object; hash?: string; children: ReactNode; className?: string; 'aria-label'?: string };
@@ -28,11 +28,11 @@ function SoPronto({ children }: { children: ReactNode }) {
 
 /** `dias`: quanto o relógio anda depois do sábado do rascunho. Domingo (1) começa a semana sem nenhum cuidado. */
 async function abrir({ dias = 0, preparar }: { dias?: number; preparar?: (repo: Repository) => Promise<void> } = {}) {
-  const { repo, clock } = await criarSessaoDemo();
+  const { repo, clock } = await criarContaDeExemplo();
   clock.advanceDays(dias);
   await preparar?.(repo);
   render(
-    <AppProvider repoInicial={repo} relogioInicial={clock} demoNaAbertura={false}>
+    <AppProvider repoInicial={repo} relogioInicial={clock}>
       <SoPronto>
         <HojeScreen />
       </SoPronto>
@@ -56,7 +56,7 @@ describe('Tela Hoje', () => {
 
   test('Começar foco e Focar levam à Casa com o vínculo', async () => {
     await abrir();
-    const destino = '/casa?bloco=demo-bloco-ingles&habito=demo-habito-ingles';
+    const destino = '/casa?bloco=ex-bloco-ingles&habito=ex-habito-ingles';
     expect(screen.getByRole('link', { name: '▶ Começar foco' }).getAttribute('href')).toBe(destino);
     expect(screen.getByRole('link', { name: 'Focar em Estudar inglês' }).getAttribute('href')).toBe(destino);
   });
@@ -67,7 +67,7 @@ describe('Tela Hoje', () => {
       fireEvent.click(regiao('Hábitos de hoje').getByRole('checkbox', { name: 'Ler 10 páginas' }));
     });
     expect(await regiao('Hábitos de hoje').findByText('3 de 4')).toBeTruthy();
-    expect((await repo.listHabitLogs()).some((r) => r.habitId === 'demo-habito-ler' && r.date === '2026-11-21')).toBe(true);
+    expect((await repo.listHabitLogs()).some((r) => r.habitId === 'ex-habito-ler' && r.date === '2026-11-21')).toBe(true);
   });
 
   test('concluir tarefa atualiza a tela e o repositório', async () => {
@@ -77,7 +77,7 @@ describe('Tela Hoje', () => {
       fireEvent.click(screen.getByRole('checkbox', { name: nome }));
     });
     expect(screen.getByRole('checkbox', { name: nome }).getAttribute('aria-checked')).toBe('true');
-    expect((await repo.listTasks()).find((t) => t.id === 'demo-tarefa-2')?.status).toBe('feito');
+    expect((await repo.listTasks()).find((t) => t.id === 'ex-tarefa-2')?.status).toBe('feito');
   });
 
   test('Descansar hoje grava, muda o dia na barra e desfaz', async () => {

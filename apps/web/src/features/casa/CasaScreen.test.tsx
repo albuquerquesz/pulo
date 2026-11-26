@@ -4,16 +4,16 @@ import { useEffect } from 'react';
 import { verCasa } from '@pulo/core/domain/casa';
 
 import { AppProvider, useApp, type AppValue } from '../app';
-import { criarSessaoDemo } from '../app/demo';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
 import type { VinculoDaCasa } from '../foco/vinculo';
 import { CasaScreen } from './CasaScreen';
 
 const navegar = vi.fn();
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navegar }));
 
-/** `demo`: o app abre no modo demo de verdade; senão, o repositório do demo entra como se fosse a conta. */
-async function abrir(vinculo?: VinculoDaCasa, demo = true) {
-  const conta = demo ? null : await criarSessaoDemo();
+/** A conta de exemplo entra como se viesse do servidor. */
+async function abrir(vinculo?: VinculoDaCasa) {
+  const conta = await criarContaDeExemplo({ aoVivo: true });
   const onComecou = vi.fn();
   let app: AppValue | undefined;
   function Sonda() {
@@ -24,7 +24,7 @@ async function abrir(vinculo?: VinculoDaCasa, demo = true) {
     return valor.fase === 'pronto' ? <CasaScreen vinculo={vinculo} onComecou={onComecou} /> : null;
   }
   render(
-    <AppProvider repoInicial={conta?.repo} relogioInicial={conta?.clock} demoNaAbertura={demo}>
+    <AppProvider repoInicial={conta.repo} relogioInicial={conta.clock}>
       <Sonda />
     </AppProvider>,
   );
@@ -74,13 +74,13 @@ describe('Casa', () => {
   });
 
   test('o vínculo da URL vai para a sessão, com o bloco', async () => {
-    const { repo, onComecou } = await abrir({ bloco: 'demo-bloco-ingles', habito: 'demo-habito-ingles' });
+    const { repo, onComecou } = await abrir({ bloco: 'ex-bloco-ingles', habito: 'ex-habito-ingles' });
     await clicar('Focar!');
     const para = within(screen.getByRole('group', { name: 'Para' }));
     expect(para.getByRole('button', { name: 'Estudar inglês' }).getAttribute('aria-pressed')).toBe('true');
     await clicar('Começar');
     const aberta = (await repo.listSessions()).find((s) => s.state === 'em_andamento');
-    expect(aberta).toMatchObject({ plannedMinutes: 25, blockId: 'demo-bloco-ingles', habitId: 'demo-habito-ingles' });
+    expect(aberta).toMatchObject({ plannedMinutes: 25, blockId: 'ex-bloco-ingles', habitId: 'ex-habito-ingles' });
     expect(onComecou).toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Parar' })).toBeTruthy();
   });
@@ -142,13 +142,13 @@ describe('Casa', () => {
     expect(await repo.listRoomDecor()).toEqual([]);
 
     await clicar('Decorar: parede esquerda, primeiro lugar');
-    await clicar('Relógio', within(screen.getByRole('group', { name: 'Tipo de item' })));
+    await clicar('Quadro', within(screen.getByRole('group', { name: 'Tipo de item' })));
     await clicar('Ver no quarto');
     expect(screen.getByTestId('item-p1')).toBeTruthy();
     expect(await repo.listRoomDecor()).toEqual([]);
     await clicar(/Comprar/, within(screen.getByRole('group', { name: 'Prévia no quarto' })));
-    expect(screen.getByTestId('item-p1').getAttribute('aria-label')).toBe('Relógio, Natural');
-    expect(await screen.findByText(String(antes - 20), { selector: 'b' })).toBeTruthy();
+    expect(screen.getByTestId('item-p1').getAttribute('aria-label')).toBe('Quadro, Natural');
+    expect(await screen.findByText(String(antes - 30), { selector: 'b' })).toBeTruthy();
 
     await clicar('Decorar: parede esquerda, primeiro lugar');
     expect(screen.getByRole('button', { name: 'No lugar' })).toBeTruthy();
@@ -166,7 +166,7 @@ describe('Casa', () => {
 
     await clicar('Decorar');
     await clicar('Decorar: parede esquerda, primeiro lugar');
-    await clicar('Relógio', within(screen.getByRole('group', { name: 'Tipo de item' })));
+    await clicar('Quadro', within(screen.getByRole('group', { name: 'Tipo de item' })));
     await clicar(/Comprar/);
     expect(screen.getByTestId('item-p1')).toBeTruthy();
 
@@ -178,17 +178,17 @@ describe('Casa', () => {
 
     // O mesmo item vem para a cozinha de graça e sai do quarto.
     await clicar('Decorar: parede esquerda, primeiro lugar');
-    await clicar('Relógio', within(screen.getByRole('group', { name: 'Tipo de item' })));
+    await clicar('Quadro', within(screen.getByRole('group', { name: 'Tipo de item' })));
     await clicar('Colocar');
     expect(screen.getByTestId('item-p1')).toBeTruthy();
-    expect(await repo.listRoomDecor()).toMatchObject([{ item: 'relogio', comodo: 'cozinha' }]);
+    expect(await repo.listRoomDecor()).toMatchObject([{ item: 'quadro', comodo: 'cozinha' }]);
     await clicar(/Quarto/, seletor);
     expect(screen.queryByTestId('item-p1')).toBeNull();
     expect(window.localStorage.getItem('pulo.comodo')).toBe('quarto');
   });
 
-  test('na conta, só dá para comprar o que a API vende', async () => {
-    await abrir(undefined, false);
+  test('só dá para comprar o que a API vende', async () => {
+    await abrir();
     await clicar('Decorar');
     await clicar('Decorar: chão, primeiro lugar');
     await clicar('Cama', within(screen.getByRole('group', { name: 'Tipo de item' })));

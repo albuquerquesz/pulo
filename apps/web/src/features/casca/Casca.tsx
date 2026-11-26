@@ -32,7 +32,7 @@ type CascaProps = { caminho: string; children: ReactNode };
  * No celular é uma coluna com o menu embaixo, e o que é do trilho entra no Hoje (acima e abaixo do conteúdo).
  */
 export function Casca({ caminho, children }: CascaProps) {
-  const { repo, clock, user, conta: pessoa } = useApp();
+  const { repo, clock, user, pessoa } = useApp();
   const largo = useConsultaDeMidia(CONSULTA_DO_TRILHO);
   const { estado, recarregar } = useCarregar(async () => {
     if (!user) throw new Error('sem usuário');

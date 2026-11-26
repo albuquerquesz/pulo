@@ -1,6 +1,5 @@
 import type { McpConnection } from '@pulo/core/api/schemas';
 import { ACHIEVEMENTS, DEFAULT_TIMEZONE } from '@pulo/core/config/decisions';
-import { localToMs, type DemoClock } from '@pulo/core/demo';
 import { type AchievementSource, verConquistas } from '@pulo/core/domain/achievements';
 import { dateKeyOf } from '@pulo/core/domain/day';
 import { acertarGeloLocal } from '@pulo/core/domain/gelo';
@@ -10,13 +9,14 @@ import { computeStreak, type StreakSource } from '@pulo/core/domain/streak';
 import type { Achievement, AchievementId, ProfileStats, Repository } from '@pulo/core/domain/types';
 import { applyUserMetadataPatch, DEFAULT_USER_METADATA, preferencesFromMetadata, type UserMetadata } from '@pulo/core/domain/user-metadata';
 
-import type { FonteDaConta, FonteDePreferencias } from './conta';
+import type { FonteDaConta, FonteDePreferencias } from '../../features/app/conta';
+import { localToMs, type RelogioDeExemplo } from '@pulo/core/testing/relogio';
 
-/** Os números do Perfil no rascunho. O que a pessoa fizer no demo soma em cima. */
+/** Os números do Perfil no rascunho. O que o teste fizer soma em cima. */
 const NUMEROS = { habitosFeitos: 186, minutosDeFoco: 1240, desde: '2026-09-14', recorde: 21 };
 const LEMBRETE_DA_NOITE = 20 * 60;
 
-/** As conquistas que o rascunho mostra além do que o demo calcula: data (se houver) ou quanto já andou. */
+/** As conquistas que o rascunho mostra além do que o app calcula: data (se houver) ou quanto já andou. */
 const CONQUISTAS: Partial<Record<AchievementId, { em?: string; progresso?: number }>> = {
   'primeira-semana': { em: '2026-10-02' },
   'foco-profundo': { em: '2026-10-18' },
@@ -26,7 +26,7 @@ const CONQUISTAS: Partial<Record<AchievementId, { em?: string; progresso?: numbe
 
 const meioDia = (data: string) => localToMs(data, 12 * 60);
 
-function conquistaDoDemo(calculada: Achievement): Achievement {
+function conquistaDeExemplo(calculada: Achievement): Achievement {
   const exemplo = CONQUISTAS[calculada.id];
   const catalogo = ACHIEVEMENTS.find((c) => c.id === calculada.id);
   if (!exemplo || !catalogo) return calculada;
@@ -36,20 +36,20 @@ function conquistaDoDemo(calculada: Achievement): Achievement {
 }
 
 const CLAUDE: McpConnection = {
-  clientId: 'demo-claude',
+  clientId: 'ex-claude',
   name: 'Claude',
   scopes: ['pulo'],
   connectedAt: meioDia('2026-11-02'),
   updatedAt: meioDia('2026-11-20'),
 };
 
-export type RepositorioDoDemo = Repository & FonteDePreferencias & FonteDaConta & StatsSource & StreakSource & AchievementSource;
+export type RepositorioDeExemplo = Repository & FonteDePreferencias & FonteDaConta & StatsSource & StreakSource & AchievementSource;
 
 /**
- * Só no demo: preferências, conta, estatísticas e conquistas em memória, com os exemplos do rascunho.
+ * Preferências, conta, estatísticas e conquistas em memória, com os exemplos do rascunho.
  * Nada daqui fala com um servidor.
  */
-export async function comContaDoDemo<R extends Repository>(repo: R, clock: DemoClock): Promise<R & RepositorioDoDemo> {
+export async function comContaDeExemplo<R extends Repository>(repo: R, clock: RelogioDeExemplo): Promise<R & RepositorioDeExemplo> {
   let metadata: UserMetadata = { ...DEFAULT_USER_METADATA, eveningReminder: { ligado: true, minutos: LEMBRETE_DA_NOITE } };
   let conexoes = [CLAUDE];
 
@@ -90,7 +90,7 @@ export async function comContaDoDemo<R extends Repository>(repo: R, clock: DemoC
       });
       return { ...sequencia, recorde: Math.max(sequencia.recorde, NUMEROS.recorde) };
     },
-    getAchievements: async () => (await verConquistas(repo, clock)).map(conquistaDoDemo),
+    getAchievements: async () => (await verConquistas(repo, clock)).map(conquistaDeExemplo),
     exportData: async () => {
       const [user, habits, habitLogs, sessions, restDays, goals, tasks, housePurchases] = await Promise.all([
         repo.getUser(),
@@ -103,7 +103,7 @@ export async function comContaDoDemo<R extends Repository>(repo: R, clock: DemoC
         repo.listHousePurchases(),
       ]);
       const exportadoEm = dateKeyOf(clock.now(), user?.timezone ?? DEFAULT_TIMEZONE);
-      return { demo: true, exportadoEm, user, preferences: preferencesFromMetadata(metadata), habits, habitLogs, sessions, restDays, goals, tasks, housePurchases };
+      return { exemplo: true, exportadoEm, user, preferences: preferencesFromMetadata(metadata), habits, habitLogs, sessions, restDays, goals, tasks, housePurchases };
     },
     listConnections: async () => [...conexoes],
     disconnect: async (clientId) => {

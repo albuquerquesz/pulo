@@ -31,7 +31,7 @@ import { TextoEditavel } from './TextoEditavel';
 
 /** O quadro de tarefas com a gaveta de detalhe. */
 export function TarefasScreen() {
-  const { repo, clock, user, conta, mostrarAviso } = useApp();
+  const { repo, clock, user, pessoa, mostrarAviso } = useApp();
   const navegar = useNavigate();
   const { estado, recarregar } = useCarregar(async () => {
     const [tarefas, subtarefas, metas] = await Promise.all([repo.listTasks(), repo.listSubtasks(), repo.listGoals()]);
@@ -121,7 +121,7 @@ export function TarefasScreen() {
     setGaveta((g) => (g ? { ...g, aberta: false } : g));
   };
   const detalhe = dados?.tarefas.find((t) => t.id === gaveta?.id) ?? null;
-  const nome = contaNaTela(conta, user).nome.split(' ')[0] ?? '';
+  const nome = contaNaTela(pessoa, user).nome.split(' ')[0] ?? '';
 
   const excluir = (tarefa: Task) => {
     void confirmar('Excluir esta tarefa?', `"${tarefa.title}" e as subtarefas dela somem. Não dá para desfazer.`).then((ok) => {

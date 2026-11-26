@@ -2,7 +2,7 @@ import { createMemoryRepository } from '@/data';
 import { precoDaParte } from '@pulo/core/domain/casa';
 import type { Goal } from '@pulo/core/domain/types';
 
-import { criarSessaoDemo } from '../app/demo';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
 import { abaAtiva, carregarTrilho, fraseDaProximaParte, metasDoTrilho, minutosDeFocoDoDia, telaDeImersao } from './logic';
 
 const meta = (id: string, extra: Partial<Goal> = {}): Goal => ({ id, title: id, state: 'ativa', milestones: [], createdAt: 0, ...extra });
@@ -61,10 +61,10 @@ describe('números do dia', () => {
     ];
     expect(minutosDeFocoDoDia(sessoes, '2026-11-22', 'America/Sao_Paulo')).toBe(25);
   });
-  test('o demo tem o que o trilho mostra', async () => {
-    const { repo, clock } = await criarSessaoDemo();
+  test('a conta de exemplo tem o que o trilho mostra', async () => {
+    const { repo, clock } = await criarContaDeExemplo();
     const user = await repo.getUser();
-    if (!user) throw new Error('demo sem usuário');
+    if (!user) throw new Error('conta de exemplo sem usuário');
     const dados = await carregarTrilho(repo, clock, user);
     expect(dados.habitos).toEqual({ feitos: 2, total: 4 });
     expect(dados.minutosDeFoco).toBe(50);
@@ -77,9 +77,9 @@ describe('números do dia', () => {
   });
   test('sem registros tudo é zero', async () => {
     const repo = createMemoryRepository();
-    const { clock, repo: demo } = await criarSessaoDemo();
-    const user = await demo.getUser();
-    if (!user) throw new Error('demo sem usuário');
+    const { clock, repo: exemplo } = await criarContaDeExemplo();
+    const user = await exemplo.getUser();
+    if (!user) throw new Error('conta de exemplo sem usuário');
     expect(await carregarTrilho(repo, clock, user)).toMatchObject({ sequencia: 0, minutosDeFoco: 0, joias: 0, metas: [] });
   });
 });

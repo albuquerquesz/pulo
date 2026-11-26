@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { AppProvider, useApp } from '@/features/app';
 import { autenticacaoDoApp } from '@/features/sessao/auth';
 import { TemaProvider } from '@/theme';
-import { Texto, Toast } from '@/ui';
+import { Toast } from '@/ui';
 
 import estilos from '../styles.css?url';
 
@@ -66,19 +66,12 @@ function TemaDoUsuario({ children }: ComFilhos) {
 }
 
 function Conteudo() {
-  const { carregando, demo, aviso, esconderAviso } = useApp();
+  const { carregando, aviso, esconderAviso } = useApp();
   // Os dados ficam no aparelho: até ler o armazenamento local, não há o que mostrar.
   if (carregando) return null;
 
   return (
     <>
-      {demo ? (
-        <div role="alert" data-testid="selo-demo" className="flex min-h-8 items-center justify-center bg-sol px-3 py-1.5">
-          <Texto variante="legenda" cor="inkSobreAcao">
-            Modo demo, dados de exemplo
-          </Texto>
-        </div>
-      ) : null}
       <Outlet />
       {aviso ? (
         <div className="pointer-events-none fixed inset-x-4 bottom-26 z-40 mx-auto max-w-xl md:bottom-6">

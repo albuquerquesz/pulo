@@ -7,12 +7,11 @@ import {
   apagarTodosOsDados,
   concluirOnboarding,
   criarClienteDeIa,
-  demoPedidoNaUrl,
   normalizarHorarios,
   rotaInicial,
   salvarPerfil,
 } from './core';
-import { criarSessaoDemo } from './demo';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
 
 const clock = () => fixedClock(sp(2026, 11, 23, 10, 0));
 
@@ -74,28 +73,12 @@ describe('perfil', () => {
   });
 });
 
-describe('modo demo', () => {
-  test('lê o parâmetro ?demo=1', () => {
-    expect(demoPedidoNaUrl('?demo=1')).toBe(true);
-    expect(demoPedidoNaUrl('?a=2&demo=1')).toBe(true);
-    expect(demoPedidoNaUrl('?demo=0')).toBe(false);
-    expect(demoPedidoNaUrl('')).toBe(false);
-    expect(demoPedidoNaUrl(undefined)).toBe(false);
-  });
-
-  test('o demo carrega dados sintéticos em memória, sem tocar o repositório real', async () => {
-    const real = createMemoryRepository();
-    const demo = await criarSessaoDemo();
-    expect(await demo.repo.getUser()).not.toBeNull();
-    expect((await demo.repo.listSessions()).length).toBeGreaterThan(0);
-    expect(await real.getUser()).toBeNull();
-  });
-
+describe('lagoa', () => {
   test('a lagoa recebe o momento calculado pela tela', async () => {
-    const demo = await criarSessaoDemo();
-    const user = (await demo.repo.getUser())!;
-    const m = (await demo.repo.getMascotState())!;
-    const agora = agoraDaLagoa(user, demo.clock.now(), m.careDays, false);
+    const conta = await criarContaDeExemplo();
+    const user = (await conta.repo.getUser())!;
+    const m = (await conta.repo.getMascotState())!;
+    const agora = agoraDaLagoa(user, conta.clock.now(), m.careDays, false);
     expect(agora.diasDeCuidadoTotal).toBe(m.careDays);
     expect(typeof agora.dentroDoDia).toBe('boolean');
   });

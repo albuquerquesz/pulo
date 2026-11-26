@@ -4,7 +4,7 @@ import { endedSession, sp } from '@pulo/core/domain/test-utils';
 import type { RoutineBlock, StreakDay, StreakDayState, Task } from '@pulo/core/domain/types';
 
 import { concluirOnboarding } from '../app/core';
-import { criarSessaoDemo } from '../app/demo';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
 import {
   alternarHabito,
   alternarTarefa,
@@ -182,17 +182,17 @@ describe('linha do dia', () => {
   });
 });
 
-describe('Hoje no modo demo', () => {
-  async function demo() {
-    const { repo, clock } = await criarSessaoDemo();
+describe('Hoje com a conta de exemplo', () => {
+  async function preparar() {
+    const { repo, clock } = await criarContaDeExemplo();
     const user = await repo.getUser();
-    if (!user) throw new Error('demo sem usuário');
+    if (!user) throw new Error('conta de exemplo sem usuário');
     const carregar = () => carregarHoje(repo, clock, user, 'Ana');
     return { repo, clock, user, carregar };
   }
 
   test('mostra o dia do rascunho', async () => {
-    const d = await (await demo()).carregar();
+    const d = await (await preparar()).carregar();
     expect(d.saudacao).toBe('Boa tarde, Ana');
     expect(d.foco).toMatchObject({ titulo: 'Estudar inglês', minutos: 25, alvo: { icone: '🎓', titulo: 'Estudar inglês' } });
     expect(d.diasSeguidos).toBe(12);
@@ -202,16 +202,16 @@ describe('Hoje no modo demo', () => {
   });
 
   test('marcar hábito e concluir tarefa gravam no repositório', async () => {
-    const { repo, clock, user, carregar } = await demo();
-    await alternarHabito(repo, clock, user, 'demo-habito-ler', false);
+    const { repo, clock, user, carregar } = await preparar();
+    await alternarHabito(repo, clock, user, 'ex-habito-ler', false);
     expect((await carregar()).habitos.filter((h) => h.feito)).toHaveLength(3);
-    await alternarHabito(repo, clock, user, 'demo-habito-ler', true);
+    await alternarHabito(repo, clock, user, 'ex-habito-ler', true);
     expect((await carregar()).habitos.filter((h) => h.feito)).toHaveLength(2);
 
-    const salva = async () => (await repo.listTasks()).find((t) => t.id === 'demo-tarefa-1');
-    await alternarTarefa(repo, clock, 'demo-tarefa-1', false);
+    const salva = async () => (await repo.listTasks()).find((t) => t.id === 'ex-tarefa-1');
+    await alternarTarefa(repo, clock, 'ex-tarefa-1', false);
     expect(await salva()).toMatchObject({ status: 'feito', completedAt: clock.now() });
-    await alternarTarefa(repo, clock, 'demo-tarefa-1', true);
+    await alternarTarefa(repo, clock, 'ex-tarefa-1', true);
     expect(await salva()).toMatchObject({ status: 'afazer' });
     expect((await salva())?.completedAt).toBeUndefined();
   });

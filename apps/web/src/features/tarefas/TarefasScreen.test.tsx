@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import type { Repository } from '@pulo/core/domain/types';
 
 import { AppProvider, useApp } from '../app';
-import { criarSessaoDemo } from '../app/demo';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
 import { TarefasScreen } from './TarefasScreen';
 
 const navegar = vi.fn();
@@ -12,7 +12,7 @@ vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navegar }));
 const TITULO = 'Resumo do capítulo 3 de Bioquímica';
 
 async function abrir() {
-  const { repo, clock } = await criarSessaoDemo();
+  const { repo, clock } = await criarContaDeExemplo();
   function Sonda() {
     return useApp().fase === 'pronto' ? <TarefasScreen /> : null;
   }
@@ -70,7 +70,7 @@ describe('Tarefas', () => {
       fireEvent.dragOver(screen.getByRole('region', { name: 'Feito' }));
       fireEvent.drop(screen.getByRole('region', { name: 'Feito' }));
     });
-    expect(await tarefa(repo, 'demo-tarefa-4')).toMatchObject({ status: 'feito', completedAt: expect.any(Number) });
+    expect(await tarefa(repo, 'ex-tarefa-4')).toMatchObject({ status: 'feito', completedAt: expect.any(Number) });
     await waitFor(() => expect(coluna('Feito').getAllByRole('article')).toHaveLength(3));
     expect(within(cartao('Marcar dentista')).getByText('Marcar dentista').className).toContain('line-through');
   });
@@ -105,7 +105,7 @@ describe('Tarefas', () => {
     fireEvent.change(campo, { target: { value: 'Revisar' } });
     await teclar(campo, 'Enter');
     await waitFor(() => expect(within(cartao(TITULO)).getByRole('checkbox', { name: 'Revisar' })).toBeTruthy());
-    expect((await repo.listSubtasks()).find((s) => s.title === 'Revisar')?.taskId).toBe('demo-tarefa-1');
+    expect((await repo.listSubtasks()).find((s) => s.title === 'Revisar')?.taskId).toBe('ex-tarefa-1');
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
@@ -118,7 +118,7 @@ describe('Tarefas', () => {
     fireEvent.change(campo, { target: { value: 'Falta o fichamento' } });
     await teclar(campo, 'Enter');
     expect(await gaveta.findByText('Falta o fichamento')).toBeTruthy();
-    expect((await repo.listTaskActivity('demo-tarefa-1')).comments).toHaveLength(1);
+    expect((await repo.listTaskActivity('ex-tarefa-1')).comments).toHaveLength(1);
     await teclar(window.document.body, 'Escape');
     expect(screen.queryByRole('dialog')).toBeNull();
   });
@@ -130,7 +130,7 @@ describe('Tarefas', () => {
     const campo = gaveta.getByRole('textbox', { name: 'Nova subtarefa' });
     fireEvent.change(campo, { target: { value: 'Ligar na clínica' } });
     await teclar(campo, 'Enter');
-    expect((await repo.listSubtasks()).filter((s) => s.taskId === 'demo-tarefa-4').map((s) => s.title)).toEqual(['Ligar na clínica']);
+    expect((await repo.listSubtasks()).filter((s) => s.taskId === 'ex-tarefa-4').map((s) => s.title)).toEqual(['Ligar na clínica']);
     expect(await gaveta.findByRole('button', { name: 'Remover Ligar na clínica' })).toBeTruthy();
     await teclar(campo, 'Escape');
     expect(screen.getByRole('dialog')).toBeTruthy();
@@ -147,7 +147,7 @@ describe('Tarefas', () => {
     await escolher('Prioridade', 'alta');
     await escolher('Pomodoros', '2');
     await escolher('Etiquetas', 'Saúde');
-    await escolher('Meta', 'demo-meta-livros');
+    await escolher('Meta', 'ex-meta-livros');
     await escolher('Prazo', '');
     const titulo = gaveta.getByRole('textbox', { name: 'Título da tarefa' });
     titulo.focus();
@@ -156,13 +156,13 @@ describe('Tarefas', () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId('fundo-da-gaveta'));
     });
-    const salva = await tarefa(repo, 'demo-tarefa-4');
+    const salva = await tarefa(repo, 'ex-tarefa-4');
     expect(salva).toMatchObject({
       title: 'Marcar dentista na terça',
       priority: 'alta',
       pomodorosEstimated: 2,
       tags: ['Pessoal', 'Saúde'],
-      goalId: 'demo-meta-livros',
+      goalId: 'ex-meta-livros',
     });
     expect(salva).not.toHaveProperty('dueDate');
   });
@@ -171,20 +171,20 @@ describe('Tarefas', () => {
     const repo = await abrir();
     let gaveta = await abrirGaveta();
     fireEvent.click(gaveta.getByRole('button', { name: 'Focar nessa tarefa' }));
-    expect(navegar).toHaveBeenCalledWith({ to: '/casa', search: { tarefa: 'demo-tarefa-1' } });
+    expect(navegar).toHaveBeenCalledWith({ to: '/casa', search: { tarefa: 'ex-tarefa-1' } });
     gaveta = await abrirGaveta();
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
     await act(async () => {
       fireEvent.click(gaveta.getByRole('button', { name: 'Excluir' }));
     });
     expect(confirm).toHaveBeenCalledWith(`Excluir esta tarefa?\n"${TITULO}" e as subtarefas dela somem. Não dá para desfazer.`);
-    expect(await tarefa(repo, 'demo-tarefa-1')).toBeDefined();
+    expect(await tarefa(repo, 'ex-tarefa-1')).toBeDefined();
     expect(screen.getByRole('dialog')).toBeTruthy();
     confirm.mockReturnValue(true);
     await act(async () => {
       fireEvent.click(gaveta.getByRole('button', { name: 'Excluir' }));
     });
-    expect(await tarefa(repo, 'demo-tarefa-1')).toBeUndefined();
+    expect(await tarefa(repo, 'ex-tarefa-1')).toBeUndefined();
     await waitFor(() => expect(screen.queryByRole('article', { name: TITULO })).toBeNull());
   });
 });

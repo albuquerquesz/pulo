@@ -15,7 +15,7 @@ export interface ContaNaTela {
   foto?: string | null;
 }
 
-/** Quem a casca e o Hoje mostram: a conta (logada ou do demo) ou, sem conta, o nome do sapo. */
+/** Quem a casca e o Hoje mostram: a conta logada ou, sem conta, o nome do sapo. */
 export function contaNaTela(pessoa: ContaNaTela | null, user: User | null): ContaNaTela {
   return pessoa ?? { nome: user?.frogName ?? 'Você', email: '' };
 }

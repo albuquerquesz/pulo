@@ -1,5 +1,6 @@
 import { createMemoryRepository } from '../data/memory-repository';
-import { createDemoClock, seedRepository } from '../demo';
+import { gravarQuatroSemanas } from '../testing/quatro-semanas';
+import { criarRelogio } from '../testing/relogio';
 import { type MetricsInput, computeMetrics, verMetricas } from './metricas';
 import { TZ, endedSession, sp } from './test-utils';
 
@@ -60,10 +61,10 @@ describe('métricas', () => {
     });
   });
 
-  it('no demo há números de exemplo', async () => {
+  it('com quatro semanas de exemplo há números', async () => {
     const repo = createMemoryRepository();
-    const clock = createDemoClock();
-    await seedRepository(repo, clock);
+    const clock = criarRelogio();
+    await gravarQuatroSemanas(repo, clock);
     const result = await verMetricas(repo, clock);
     expect(result?.gelo.usadosTotal).toBe(1);
     expect(result?.ritmo.focoMedioPorDia30).toBeGreaterThan(0);
