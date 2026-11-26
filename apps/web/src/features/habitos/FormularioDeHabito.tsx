@@ -82,7 +82,7 @@ export function FormularioDeHabito({ habito, onSalvar, onFechar }: FormularioDeH
         </label>
         <SeletorDeCor cor={cor} onEscolher={setCor} />
         <Dias dias={dias} onAlternar={(dia) => setDias(alternarDia(dias, dia))} />
-        <Periodo periodo={periodo} onEscolher={(p) => setPeriodo(p === periodo ? undefined : p)} />
+        <Periodo periodo={periodo} onEscolher={setPeriodo} />
         <Botao titulo="Salvar" tipo="submit" carregando={salvando} />
       </form>
     </Modal>

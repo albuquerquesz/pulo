@@ -9,7 +9,7 @@ import { Dias } from './Dias';
 import { alternarDia, lerCampoDeHora, paraCampoDeHora } from './logic';
 import { Periodo } from './Periodo';
 
-const LINHA = 'flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-line py-3.5 last:border-b-0';
+const LINHA = 'flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-dashed border-line py-3.5 last:border-b-0';
 
 type AgendaProps = { habito: Habit; onMudar: (mudanca: Partial<HabitInput>) => void };
 
@@ -78,7 +78,7 @@ export function Agenda({ habito, onMudar }: AgendaProps) {
       </div>
       <div className={LINHA}>
         <b>Período</b>
-        <Periodo periodo={habito.period} onEscolher={(period) => onMudar({ period })} />
+        <Periodo periodo={habito.period} onEscolher={(period) => onMudar({ period: period ?? null })} />
       </div>
       <div className={LINHA}>
         <b>Lembrete</b>

@@ -79,9 +79,36 @@ export function DetalheDoHabito({ habito, stats, metas, baus, acoes }: DetalheDo
             ) : null}
           </div>
         </div>
-        <button type="button" onClick={acoes.editar} className={`${BOTAO_FANTASMA} ml-auto px-4 py-[9px]`}>
-          Editar
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => acoes.mudarEstado(pausado ? 'ativo' : 'pausado')}
+            aria-label={pausado ? 'Retomar hábito' : 'Pausar hábito'}
+            title={pausado ? 'Retomar hábito' : 'Pausar hábito'}
+            className={`${BOTAO_FANTASMA} grid size-11 place-items-center p-0`}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5">
+              {pausado ? (
+                <path d="M8 5.5v13l10.5-6.5z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+              ) : (
+                <g fill="currentColor">
+                  <rect x="6.5" y="5" width="4" height="14" rx="1.5" />
+                  <rect x="13.5" y="5" width="4" height="14" rx="1.5" />
+                </g>
+              )}
+            </svg>
+          </button>
+          <button type="button" onClick={acoes.arquivar} aria-label="Arquivar" title="Arquivar" className={`${BOTAO_FANTASMA} grid size-11 place-items-center p-0`}>
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3.5" y="4.5" width="17" height="4.5" rx="1.2" />
+              <path d="M5.5 9v9a1.5 1.5 0 0 0 1.5 1.5h10a1.5 1.5 0 0 0 1.5-1.5V9" />
+              <path d="M10 13h4" />
+            </svg>
+          </button>
+          <button type="button" onClick={acoes.editar} className={`${BOTAO_FANTASMA} px-4 py-[9px]`}>
+            Editar
+          </button>
+        </div>
       </div>
       <dl className={`${CARTAO} grid grid-cols-2 gap-3 p-5 @min-[26rem]:grid-cols-4 @min-[26rem]:px-6 @min-[26rem]:py-[22px]`}>
         <Numero rotulo="Sequência">
@@ -103,14 +130,6 @@ export function DetalheDoHabito({ habito, stats, metas, baus, acoes }: DetalheDo
       <Secao titulo="Agenda">
         <Agenda habito={habito} onMudar={acoes.mudar} />
       </Secao>
-      <div className="flex flex-wrap gap-2.5">
-        <button type="button" onClick={() => acoes.mudarEstado(pausado ? 'ativo' : 'pausado')} className={`${BOTAO_FANTASMA} px-[22px] py-3`}>
-          {pausado ? 'Retomar hábito' : 'Pausar hábito'}
-        </button>
-        <button type="button" onClick={acoes.arquivar} className={`${BOTAO_FANTASMA} px-[22px] py-3`}>
-          Arquivar
-        </button>
-      </div>
     </div>
   );
 }
