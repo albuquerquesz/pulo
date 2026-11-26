@@ -94,7 +94,7 @@ export function HojeScreen() {
 
   return (
     <Tela>
-      <Topo saudacao={d.saudacao} periodo={d.periodo} foco={d.foco} pulos={pulosDoDia(d.habitos, d.tarefas)} />
+      <Topo saudacao={d.saudacao} periodo={d.periodo} semHabitos={d.semHabitos} foco={d.foco} pulos={pulosDoDia(d.habitos, d.tarefas)} />
       <Sequencia
         dias={d.diasSeguidos}
         barra={barraDaSemana(semana)}

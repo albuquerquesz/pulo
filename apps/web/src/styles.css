@@ -1054,3 +1054,38 @@ body {
 :root[data-reduzir-movimento='true'] .lagoa-topo *::before {
   animation: none !important;
 }
+
+/* O balão do sapo no topo sem hábito: branco e com texto escuro em qualquer hora. */
+.lagoa-balao {
+  position: relative;
+  padding: 12px 16px;
+  border: 2.5px solid var(--l-contorno);
+  border-radius: 18px;
+  background: #fff;
+  color: #1f2a24;
+  box-shadow: 0 3px 0 var(--l-contorno);
+}
+.lagoa-balao p {
+  color: #5e6b62;
+}
+.lagoa-balao::before {
+  content: '';
+  position: absolute;
+  left: 28px;
+  top: -11px;
+  width: 18px;
+  height: 18px;
+  border-top: 2.5px solid var(--l-contorno);
+  border-left: 2.5px solid var(--l-contorno);
+  background: #fff;
+  transform: rotate(45deg);
+}
+@media (min-width: 48rem) {
+  .lagoa-balao::before {
+    left: -11px;
+    top: calc(50% - 9px);
+    border-top: 0;
+    border-bottom: 2.5px solid var(--l-contorno);
+    transform: rotate(45deg);
+  }
+}

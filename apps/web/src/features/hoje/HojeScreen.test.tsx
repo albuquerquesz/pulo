@@ -27,7 +27,7 @@ function SoPronto({ children }: { children: ReactNode }) {
 }
 
 /** `dias`: quanto o relógio anda depois do sábado do rascunho. Domingo (1) começa a semana sem nenhum cuidado. */
-async function abrir({ dias = 0, preparar }: { dias?: number; preparar?: (repo: Repository) => Promise<void> } = {}) {
+async function abrir({ dias = 0, preparar, topo = 'Próximo foco' }: { dias?: number; preparar?: (repo: Repository) => Promise<void>; topo?: string } = {}) {
   const { repo, clock } = await criarContaDeExemplo();
   clock.advanceDays(dias);
   await preparar?.(repo);
@@ -38,7 +38,7 @@ async function abrir({ dias = 0, preparar }: { dias?: number; preparar?: (repo: 
       </SoPronto>
     </AppProvider>,
   );
-  await screen.findByRole('region', { name: 'Próximo foco' });
+  await screen.findByRole('region', { name: topo });
   return { repo };
 }
 
@@ -52,6 +52,22 @@ describe('Tela Hoje', () => {
     const titulos = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
     expect(titulos).toEqual(['Sequência', 'Esta semana', 'Hábitos de hoje', 'Seu mês', 'Tarefas de hoje', 'Linha do dia']);
     expect(regiao('Tarefas de hoje').getByRole('link', { name: 'Ver quadro' }).getAttribute('href')).toBe('/tarefas');
+  });
+
+  test('sem hábito (só arquivados), o sapo chama para criar o primeiro', async () => {
+    const arquivarTodos = async (repo: Repository) => {
+      const habitos = [...(await repo.listHabits())];
+      for (const h of habitos) await repo.saveHabit({ ...h, state: 'arquivado' });
+    };
+    await abrir({ preparar: arquivarTodos, topo: 'Primeiro hábito' });
+    expect(regiao('Primeiro hábito').getByRole('link', { name: '+ Criar hábito' }).getAttribute('href')).toBe('/habitos?novo=true');
+    expect(screen.queryByRole('link', { name: '▶ Começar foco' })).toBeNull();
+  });
+
+  test('com hábito, a lagoa mostra a entrada e os pulos do dia', async () => {
+    await abrir();
+    const pulos = within(regiao('Próximo foco').getByRole('list', { name: 'Pulos de hoje' })).getAllByRole('listitem');
+    expect(pulos[0]?.textContent).toBe('Entrar no Pulo, feito');
   });
 
   test('Começar foco e Focar levam à Casa com o vínculo', async () => {

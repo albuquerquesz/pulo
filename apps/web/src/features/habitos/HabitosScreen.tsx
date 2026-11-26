@@ -17,14 +17,16 @@ type Formulario = { habito?: Habit } | null;
 type HabitosScreenProps = {
   /** O hábito aberto pela pessoa. Sem ele, o celular mostra só a lista e o desktop abre o primeiro. */
   aberto?: EntityId;
+  /** Já abre o formulário de hábito novo. */
+  abrirNovo?: boolean;
   onAbrir: (id: EntityId | null) => void;
   onVerMeta: (goalId: EntityId) => void;
 };
 
 /** Hábitos: a lista por período à esquerda e o detalhe à direita. No celular, o detalhe ocupa a tela. */
-export function HabitosScreen({ aberto, onAbrir, onVerMeta }: HabitosScreenProps) {
+export function HabitosScreen({ aberto, abrirNovo, onAbrir, onVerMeta }: HabitosScreenProps) {
   const { repo, clock, user, mostrarAviso, refresh } = useApp();
-  const [formulario, setFormulario] = useState<Formulario>(null);
+  const [formulario, setFormulario] = useState<Formulario>(abrirNovo ? {} : null);
   const { estado, recarregar } = useCarregar(async () => {
     if (!user) throw new Error('sem usuário');
     return carregarHabitos(repo, clock, user);

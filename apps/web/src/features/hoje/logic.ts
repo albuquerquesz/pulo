@@ -442,6 +442,8 @@ export interface DadosHoje {
   saudacao: string;
   /** Manhã, tarde ou noite: o céu do topo. */
   periodo: Period;
+  /** Nenhum hábito na conta (fora os arquivados): o topo chama para criar o primeiro. */
+  semHabitos: boolean;
   foco: FocoDoTopo;
   diasSeguidos: number;
   /** A maior sequência já feita. */
@@ -497,6 +499,7 @@ export async function carregarHoje(repo: Repository, clock: Clock, user: User, n
   return {
     saudacao: saudacao(agora, fuso, nome),
     periodo: periodOf(agora, fuso),
+    semHabitos: habitos.every((h) => h.state === 'arquivado'),
     foco,
     diasSeguidos: sequencia.atual,
     recorde: sequencia.recorde,
