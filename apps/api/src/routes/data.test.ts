@@ -65,7 +65,7 @@ describe('DELETE /api/data', () => {
     const res = await me.call('DELETE', '/api/data');
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
-      deleted: { sessions: 1, blocks: 1, habits: 1, restDays: 1, proposals: 1, goals: 0, islandPurchases: 1, mascot: 1, tasks: 0, achievements: 0, freezeUses: 0 },
+      deleted: { sessions: 1, blocks: 1, habits: 1, restDays: 1, proposals: 1, goals: 0, islandPurchases: 1, mascot: 1, tasks: 0, achievements: 1, freezeUses: 0 },
     });
     expect(await snapshot(me)).toEqual({ blocks: 0, habits: 0, habitLogs: 0, sessions: 0, restDays: 0, proposals: 0, islandPurchases: 0, mascot: null });
     expect(await database.db.habitLog.count({ where: { userId: me.id } })).toBe(0);

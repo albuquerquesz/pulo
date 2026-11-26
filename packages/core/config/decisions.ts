@@ -227,7 +227,8 @@ export const ROOM_GRID = { columns: 6, rows: 6, rotations: [0, 90, 180, 270] } a
 /**
  * Conquistas (spec 14): catálogo na ordem em que aparecem. `meta` é o alvo numérico de cada regra
  * (`@pulo/core/domain/achievements`): dias seguidos, minutos de uma sessão de foco, dias de descanso, partes da casa,
- * cômodos, o segundo andar ou gelos usados.
+ * cômodos, o segundo andar, gelos usados, focos concluídos (no total ou de manhã), horas de foco, marcações de hábito
+ * (de um só ou no total), tarefas e metas concluídas, marcos riscados, joias ganhas ou decorações compradas.
  * A regra da secreta ainda não foi escolhida: ela não é concedida a ninguém. Proposta.
  */
 export const ACHIEVEMENTS = [
@@ -239,6 +240,19 @@ export const ACHIEVEMENTS = [
   { id: 'cinco-comodos', nome: 'Cinco cômodos', emoji: '🚪', secreta: false, meta: 5 },
   { id: 'casa-inteira', nome: 'Casa inteira', emoji: '🏡', secreta: false, meta: HOUSE.parts.length },
   { id: 'gelo-na-hora', nome: 'Gelo na hora certa', emoji: '🧊', secreta: false, meta: 1 },
+  { id: 'primeiro-foco', nome: 'Primeiro mergulho', emoji: '🐣', secreta: false, meta: 1 },
+  { id: 'vinte-cinco-focos', nome: 'Pegando o ritmo', emoji: '🍅', secreta: false, meta: 25 },
+  { id: 'dez-horas', nome: 'Dez horas na lagoa', emoji: '⌛', secreta: false, meta: 10 },
+  { id: 'madrugador', nome: 'Sapo madrugador', emoji: '🌅', secreta: false, meta: 10 },
+  { id: 'habito-firme', nome: 'Hábito firme', emoji: '🌱', secreta: false, meta: 21 },
+  { id: 'cem-marcas', nome: 'Cem marcações', emoji: '💯', secreta: false, meta: 100 },
+  { id: 'dez-tarefas', nome: 'Mão na massa', emoji: '✅', secreta: false, meta: 10 },
+  { id: 'cinquenta-tarefas', nome: 'Fila em dia', emoji: '📋', secreta: false, meta: 50 },
+  { id: 'primeira-meta', nome: 'Meta alcançada', emoji: '🎯', secreta: false, meta: 1 },
+  { id: 'dez-marcos', nome: 'Passo a passo', emoji: '🚩', secreta: false, meta: 10 },
+  { id: 'quinhentas-joias', nome: 'Cofre cheio', emoji: '💎', secreta: false, meta: 500 },
+  { id: 'quarto-decorado', nome: 'Casa com estilo', emoji: '🛋️', secreta: false, meta: 5 },
+  { id: 'cem-dias', nome: 'Cem dias', emoji: '👑', secreta: false, meta: 100 },
   { id: 'segredo', nome: 'Segredo', emoji: '✨', secreta: true, meta: 1 },
 ] as const;
 

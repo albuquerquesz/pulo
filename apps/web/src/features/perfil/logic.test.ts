@@ -1,3 +1,4 @@
+import { ACHIEVEMENTS } from '@pulo/core/config/decisions';
 import type { Achievement } from '@pulo/core/domain/types';
 import { localToMs } from '@pulo/core/testing/relogio';
 
@@ -44,6 +45,13 @@ describe('textos do Perfil', () => {
     expect(feita).toMatchObject({ estado: 'conquistada', detalhe: '7 dias seguidos · conquistada em 02/10' });
   });
 
+  test('conquistas de contagem e de primeira vez', () => {
+    const tarefas = { id: 'dez-tarefas', nome: 'Mão na massa', progresso: 3, meta: 10 } as const;
+    expect(medalha({ ...tarefas, conquistada: false }, FUSO).detalhe).toBe('3 de 10 tarefas concluídas');
+    expect(medalha({ ...tarefas, conquistada: true, progresso: 10 }, FUSO).detalhe).toBe('10 tarefas concluídas · conquistada');
+    expect(medalha({ id: 'primeira-meta', conquistada: false, progresso: 0, meta: 1 }, FUSO).detalhe).toBe('Conclua sua primeira meta');
+  });
+
   test('a secreta fica sem nome até ser conquistada', () => {
     expect(medalha({ id: 'segredo', conquistada: false, progresso: 0, meta: 1 }, FUSO)).toMatchObject({
       estado: 'secreta',
@@ -72,6 +80,6 @@ describe('textos do Perfil', () => {
     expect(dados.sequencia).toMatchObject({ atual: 12, recorde: 21 });
     expect(dados.estatisticas).toMatchObject({ habitosFeitos: 186, minutosDeFoco: 1240 });
     expect(dados.preferencias).toMatchObject({ focusMinutes: 25, eveningReminder: { ligado: true, minutos: 1200 } });
-    expect(dados.conquistas.map((c) => c.id)).toHaveLength(9);
+    expect(dados.conquistas.map((c) => c.id)).toHaveLength(ACHIEVEMENTS.length);
   });
 });

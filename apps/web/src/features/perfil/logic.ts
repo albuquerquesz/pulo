@@ -78,6 +78,12 @@ const sequencia: TextoDaRegra = {
   andamento: (progresso, meta) => `${progresso} de ${meta} dias seguidos`,
 };
 
+/** Regra de contagem: "10 tarefas concluídas" e "3 de 10 tarefas concluídas". */
+const contagem = (coisas: string): TextoDaRegra => ({
+  pedido: (meta) => `${meta} ${coisas}`,
+  andamento: (progresso, meta) => `${progresso} de ${meta} ${coisas}`,
+});
+
 const TEXTOS: Record<AchievementId, TextoDaRegra> = {
   'primeira-semana': sequencia,
   'foco-profundo': {
@@ -105,6 +111,19 @@ const TEXTOS: Record<AchievementId, TextoDaRegra> = {
     pedido: (meta) => (meta === 1 ? 'o primeiro gelo usado' : `${meta} gelos usados`),
     andamento: (progresso, meta) => `${progresso} de ${meta} ${meta === 1 ? 'gelo usado' : 'gelos usados'}`,
   },
+  'primeiro-foco': { pedido: () => 'o primeiro foco concluído', andamento: () => 'Conclua seu primeiro foco' },
+  'vinte-cinco-focos': contagem('focos concluídos'),
+  'dez-horas': contagem('horas de foco'),
+  madrugador: contagem('focos de manhã'),
+  'habito-firme': contagem('vezes no mesmo hábito'),
+  'cem-marcas': contagem('marcações de hábito'),
+  'dez-tarefas': contagem('tarefas concluídas'),
+  'cinquenta-tarefas': contagem('tarefas concluídas'),
+  'primeira-meta': { pedido: () => 'a primeira meta concluída', andamento: () => 'Conclua sua primeira meta' },
+  'dez-marcos': contagem('marcos de meta'),
+  'quinhentas-joias': contagem('joias ganhas'),
+  'quarto-decorado': contagem('itens de decoração'),
+  'cem-dias': sequencia,
   segredo: { pedido: () => 'Segredo revelado', andamento: () => 'Continue cuidando do sapo' },
 };
 
