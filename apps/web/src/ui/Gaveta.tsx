@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 
 type GavetaProps = {
   aberta: boolean;
@@ -17,19 +17,10 @@ type GavetaProps = {
 };
 
 export const BOTAO_DA_GAVETA =
-  "grid size-[34px] cursor-pointer place-items-center rounded-full border border-line text-[13px] text-muted hover:bg-line/50 hover:text-ink";
+  'grid size-[34px] cursor-pointer place-items-center rounded-full border border-line text-[13px] text-muted hover:bg-line/50 hover:text-ink';
 
 /** Painel que entra pela direita sobre a tela escurecida. Fica montado para animar a saída. */
-export function Gaveta({
-  aberta,
-  onFechar,
-  rotulo,
-  titulo,
-  acoes,
-  largura = "md:w-[min(1000px,94vw)]",
-  corpo = "",
-  children,
-}: GavetaProps) {
+export function Gaveta({ aberta, onFechar, rotulo, titulo, acoes, largura = 'md:w-[min(1000px,94vw)]', corpo = '', children }: GavetaProps) {
   const painel = useRef<HTMLElement>(null);
   const fechar = useRef(onFechar);
   useLayoutEffect(() => {
@@ -41,11 +32,11 @@ export function Gaveta({
     const anterior = document.activeElement;
     painel.current?.focus();
     const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === "Escape") fechar.current();
+      if (e.key === 'Escape') fechar.current();
     };
-    window.addEventListener("keydown", aoTeclar);
+    window.addEventListener('keydown', aoTeclar);
     return () => {
-      window.removeEventListener("keydown", aoTeclar);
+      window.removeEventListener('keydown', aoTeclar);
       if (anterior instanceof HTMLElement) anterior.focus();
     };
   }, [aberta]);
@@ -56,32 +47,24 @@ export function Gaveta({
         data-testid="fundo-da-gaveta"
         aria-hidden="true"
         onClick={onFechar}
-        className={`fixed inset-0 z-40 bg-[rgba(10,20,15,0.45)] transition-opacity duration-200 ${aberta ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        className={`fixed inset-0 z-40 bg-[rgba(10,20,15,0.45)] transition-opacity duration-200 ${aberta ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
       />
       <aside
         ref={painel}
-        role={aberta ? "dialog" : undefined}
+        role={aberta ? 'dialog' : undefined}
         aria-modal={aberta ? true : undefined}
         aria-label={rotulo}
         inert={!aberta}
         tabIndex={-1}
         className={`fixed inset-y-0 right-0 z-[41] flex w-full flex-col border-line bg-bg outline-none transition-[translate,visibility] duration-250 ease-[ease] ${largura} md:border-l ${
-          aberta
-            ? "visible translate-x-0 shadow-[-20px_0_50px_rgba(0,0,0,0.35)]"
-            : "invisible translate-x-[102%]"
+          aberta ? 'visible translate-x-0 shadow-[-20px_0_50px_rgba(0,0,0,0.35)]' : 'invisible translate-x-[102%]'
         }`}
       >
         <div className="flex items-center gap-2.5 border-b border-line px-5 py-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           {titulo && aberta ? <h2 className="text-lg font-extrabold">{titulo}</h2> : null}
           <div className="ml-auto flex gap-1.5">
             {acoes}
-            <button
-              type="button"
-              onClick={onFechar}
-              aria-label="Fechar"
-              title="Fechar"
-              className={BOTAO_DA_GAVETA}
-            >
+            <button type="button" onClick={onFechar} aria-label="Fechar" title="Fechar" className={BOTAO_DA_GAVETA}>
               ✕
             </button>
           </div>

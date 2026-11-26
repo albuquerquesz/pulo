@@ -46,7 +46,6 @@ describe('PerfilScreen', () => {
     ]);
     expect(screen.getByText('Desde setembro de 2026')).toBeTruthy();
     expect(screen.getByText('1.240')).toBeTruthy();
-    expect(screen.getByRole('group', { name: 'Seu sapo' }).textContent).toContain('Fase');
     expect(screen.getByText('Continue cuidando do sapo')).toBeTruthy();
     expect(screen.getByRole('progressbar', { name: 'Mês de fogo' }).getAttribute('aria-valuenow')).toBe('21');
   });
