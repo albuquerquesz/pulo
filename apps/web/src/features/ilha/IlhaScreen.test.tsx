@@ -42,7 +42,8 @@ async function abrir({ saldo, trocar, comCasa = false }: Abertura = {}) {
       <Sonda />
     </AppProvider>,
   );
-  await screen.findByRole('list', { name: 'Partes da casa' });
+  // A primeira renderização da Ilha é pesada: no CI passa de 1 s, o limite padrão do findBy.
+  await screen.findByRole('list', { name: 'Partes da casa' }, { timeout: 4000 });
   return { repo, saldo: async () => (await verCasa(repo)).saldo, app: () => app };
 }
 
