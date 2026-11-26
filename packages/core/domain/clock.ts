@@ -3,7 +3,7 @@ import type { Clock } from './types';
 /** Relógio real, para uso só na borda do app (telas). O domínio recebe `Clock`. */
 export const systemClock: Clock = { now: () => Date.now() };
 
-/** Relógio fixo, para testes e modo demo. */
+/** Relógio fixo, para testes. */
 export function fixedClock(ms: number): Clock & { set(ms: number): void; advance(ms: number): void } {
   let current = ms;
   return {

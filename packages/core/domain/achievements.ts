@@ -106,7 +106,7 @@ export function providesAchievements(repo: Repository): repo is Repository & Ach
   return 'getAchievements' in repo && typeof repo.getAchievements === 'function';
 }
 
-/** As conquistas de um repositório: as do servidor, quando ele as fornece; senão (demo, memória), calculadas dos registros, sem data. */
+/** As conquistas de um repositório: as do servidor, quando ele as fornece; senão (memória), calculadas dos registros, sem data. */
 export async function verConquistas(repo: Repository, clock: Clock): Promise<Achievement[]> {
   if (providesAchievements(repo)) return repo.getAchievements();
   const [user, habitLogs, sessions, restDays, casa, freezes] = await Promise.all([

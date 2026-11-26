@@ -23,7 +23,7 @@ export function providesStats(repo: Repository): repo is Repository & StatsSourc
   return 'getStats' in repo && typeof repo.getStats === 'function';
 }
 
-/** As estatísticas de um repositório: as do servidor, quando ele as fornece; senão (demo, memória), calculadas dos registros. */
+/** As estatísticas de um repositório: as do servidor, quando ele as fornece; senão (memória), calculadas dos registros. */
 export async function verEstatisticas(repo: Repository): Promise<ProfileStats | null> {
   if (providesStats(repo)) return repo.getStats();
   const [user, habitLogs, sessions] = await Promise.all([repo.getUser(), repo.listHabitLogs(), repo.listSessions()]);

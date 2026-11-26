@@ -93,7 +93,7 @@ export function providesPomodoros(repo: Repository): repo is Repository & Pomodo
   return 'getPomodoros' in repo && typeof repo.getPomodoros === 'function';
 }
 
-/** Os pomodoros de um repositório: os do servidor, quando ele os fornece; senão (demo, memória), contados das sessões. */
+/** Os pomodoros de um repositório: os do servidor, quando ele os fornece; senão (memória), contados das sessões. */
 export async function verPomodoros(repo: Repository): Promise<Record<EntityId, number>> {
   return providesPomodoros(repo) ? repo.getPomodoros() : countPomodoros(await repo.listSessions());
 }

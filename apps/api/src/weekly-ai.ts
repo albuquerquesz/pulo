@@ -93,7 +93,7 @@ export async function handleWeeklyAi(
   return { status: 200, body: v.value };
 }
 
-/** Provedor falso: escolhe a primeira candidata, com texto fixo e seguro. Para dev, testes e demo. */
+/** Provedor falso: escolhe a primeira candidata, com texto fixo e seguro. Para dev e testes. */
 export class FakeProvider implements ProviderAdapter {
   readonly prompts: { system: string; user: string }[] = [];
   constructor(private readonly override?: (prompt: { system: string; user: string }) => string) {}

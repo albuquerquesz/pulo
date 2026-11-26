@@ -118,7 +118,7 @@ function melhorPeriodo(sessions: readonly FocusSession[], timeZone: string): Per
   return bestPeriod(ms, count);
 }
 
-/** Os números do Perfil. O servidor entrega pronto; o modo demo calcula aqui. */
+/** Os números do Perfil. O servidor entrega pronto; o repositório em memória calcula aqui. */
 export function computeMetrics(input: MetricsInput): ProfileMetrics {
   const { timeZone, dayStartMinutes = DAY_ROLLOVER_HOUR * 60 } = input;
   const { today, rest, vacation } = streakDaySets(input);
@@ -159,7 +159,7 @@ export function providesMetrics(repo: Repository): repo is Repository & MetricsS
   return 'getMetrics' in repo && typeof repo.getMetrics === 'function';
 }
 
-/** As métricas de um repositório: as do servidor, quando ele as fornece; senão (demo, memória), calculadas dos registros. */
+/** As métricas de um repositório: as do servidor, quando ele as fornece; senão (memória), calculadas dos registros. */
 export async function verMetricas(repo: Repository, clock: Clock): Promise<ProfileMetrics | null> {
   if (providesMetrics(repo)) return repo.getMetrics();
   const user = await repo.getUser();

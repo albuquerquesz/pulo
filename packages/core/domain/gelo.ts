@@ -155,7 +155,7 @@ export async function acertarGeloLocal(repo: Repository, clock: Clock): Promise<
   return resumoDoGelo(compras.length, [...usos, ...novos]);
 }
 
-/** A situação do gelo: a do servidor, quando ele a fornece; senão (demo, memória), acertada aqui. */
+/** A situação do gelo: a do servidor, quando ele a fornece; senão (memória), acertada aqui. */
 export async function verGelo(repo: Repository, clock: Clock): Promise<FreezeSummary | null> {
   if (providesFreezes(repo)) return repo.getFreezes();
   const status = await acertarGeloLocal(repo, clock);
