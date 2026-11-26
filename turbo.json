@@ -12,7 +12,8 @@
       "dependsOn": [
         "^build",
         "^generate",
-        "generate"
+        "generate",
+        "@pulo/db#generate"
       ],
       "outputs": [
         "dist/**"
@@ -22,21 +23,24 @@
       "outputs": [],
       "dependsOn": [
         "^generate",
-        "generate"
+        "generate",
+        "@pulo/db#generate"
       ]
     },
     "typecheck": {
       "outputs": [],
       "dependsOn": [
         "^generate",
-        "generate"
+        "generate",
+        "@pulo/db#generate"
       ]
     },
     "lint": {
       "outputs": [],
       "dependsOn": [
         "^generate",
-        "generate"
+        "generate",
+        "@pulo/db#generate"
       ]
     },
     "dev": {
