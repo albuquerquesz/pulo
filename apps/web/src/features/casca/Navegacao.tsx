@@ -42,7 +42,7 @@ export function Navegacao({ ativa }: { ativa: ChaveDaAba | null }) {
   return (
     <nav
       aria-label="Principal"
-      className="fixed inset-x-0 bottom-0 z-20 flex gap-1 border-t border-line bg-surface px-1 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:static md:flex-col md:border-0 md:p-0"
+      className="fixed inset-x-0 bottom-0 z-20 flex gap-1 border-t border-line bg-[color-mix(in_srgb,var(--pulo-bg)_55%,var(--pulo-surface))] px-1 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:static md:flex-col md:border-0 md:bg-transparent md:p-0"
     >
       {ABAS.map((aba) => {
         const sel = aba.chave === ativa;

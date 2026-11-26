@@ -20,8 +20,8 @@ type ItemProps = { valor: string; legenda: string; cor?: string };
 
 function Item({ valor, legenda, cor = 'text-ink' }: ItemProps) {
   return (
-    <div className="flex min-w-0 flex-col-reverse justify-end">
-      <dt className="text-[13px] text-muted">{legenda}</dt>
+    <div className="flex min-w-0 flex-col justify-start">
+      <dt className="text-[13px] text-muted first-letter:uppercase">{legenda}</dt>
       <dd className={`text-2xl leading-tight font-extrabold break-words ${cor}`}>{valor}</dd>
     </div>
   );
