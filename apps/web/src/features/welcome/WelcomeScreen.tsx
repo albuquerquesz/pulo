@@ -41,7 +41,7 @@ export function WelcomeScreen() {
           <Sapo fase={1} momento="boas-vindas" tamanho={200} />
         </div>
         <Texto como="h1" variante="display" className="text-center">
-          Boas vindas ao Pulo
+          Boas-vindas ao Pulo
         </Texto>
         <Texto cor="muted" className="text-center">
           Entre para guardar sua rotina e seu progresso na sua conta, e

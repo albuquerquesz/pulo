@@ -1,5 +1,5 @@
 import { diasNoMes } from '../hoje/mes';
-import { comparacaoDoDescanso, nomeDoDia, nomeDoPeriodo, porcentagem, SEM_NUMERO } from './metricas';
+import { comparacaoDoDescanso, nomeDoDia, nomeDoPeriodo, porcentagem, SEM_NUMERO, TEXTO_DE_POUCA_HISTORIA } from './metricas';
 
 const DESCANSO = { total: 3, noMes: 1, semanasComDescanso: 2 };
 
@@ -22,6 +22,7 @@ describe('métricas do Perfil', () => {
 
   test('pouca história não tem comparação', () => {
     expect(comparacaoDoDescanso({ ...DESCANSO, focoMedioSemanaComDescanso: null, focoMedioSemanaSem: null })).toBeNull();
+    expect(TEXTO_DE_POUCA_HISTORIA).toBe('A comparação do foco entre semanas com e sem descanso aparece quando houver pelo menos 2 semanas de cada tipo.');
   });
 
   test('dias do mês sem repetir nem contar o futuro', () => {

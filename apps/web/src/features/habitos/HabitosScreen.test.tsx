@@ -123,6 +123,21 @@ describe('Hábitos', () => {
     expect(screen.getByRole('dialog', { name: 'Novo hábito' })).toBeTruthy();
   });
 
+  test('salvar sem nome avisa junto do campo e não grava', async () => {
+    const repo = await abrir();
+    const antes = (await repo.listHabits()).length;
+    await clicar(screen.getByRole('button', { name: '+ Novo hábito' }));
+    const dialogo = within(screen.getByRole('dialog', { name: 'Novo hábito' }));
+    const campo = dialogo.getByRole('textbox', { name: 'Nome' });
+    fireEvent.change(campo, { target: { value: '   ' } });
+    await clicar(dialogo.getByRole('button', { name: 'Salvar' }));
+    expect(dialogo.getByRole('alert').textContent).toBe('Dê um nome ao hábito.');
+    expect(campo.getAttribute('aria-invalid')).toBe('true');
+    expect(await repo.listHabits()).toHaveLength(antes);
+    fireEvent.change(campo, { target: { value: 'Meditar' } });
+    expect(dialogo.queryByRole('alert')).toBeNull();
+  });
+
   test('cria um hábito e o abre; arquivar tira da lista', async () => {
     const repo = await abrir();
     await clicar(screen.getByRole('button', { name: '+ Novo hábito' }));
