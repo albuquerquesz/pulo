@@ -229,7 +229,7 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
           />
         </div>
         {dados ? (
-          <div className="pointer-events-none absolute inset-x-0 top-[146px] z-3 flex justify-center px-2 md:top-[92px] md:px-24">
+          <div className="pointer-events-none absolute inset-x-0 top-[146px] z-3 flex justify-center md:top-[92px] md:px-24">
             <SeletorDeComodo
               meus={dados.comodos}
               atual={comodoId}

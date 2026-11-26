@@ -27,7 +27,7 @@ function Numero({ titulo, valor, cor, icone, destinoDasJoias }: NumeroProps) {
       title={titulo}
       data-destino-das-joias={destinoDasJoias || undefined}
       aria-label={titulo}
-      className={`inline-flex cursor-default items-center gap-2 rounded-sm px-1.5 py-1.5 text-[19px] leading-none font-extrabold tabular-nums hover:bg-line/50 ${cor}`}
+      className={`inline-flex cursor-default items-center gap-1 rounded-sm px-0.5 py-1.5 whitespace-nowrap md:gap-2 md:px-1.5 text-[19px] leading-none font-extrabold tabular-nums hover:bg-line/50 ${cor}`}
     >
       {icone}
       {valor}
@@ -38,7 +38,7 @@ function Numero({ titulo, valor, cor, icone, destinoDasJoias }: NumeroProps) {
 /** A linha de números do dia: sequência, hábitos, foco e joias. */
 export function NumerosDoDia({ dados, onGelo }: { dados: DadosDoTrilho; onGelo: () => void }) {
   return (
-    <div data-testid="numeros-do-dia" className="flex flex-wrap items-center justify-between px-1 pt-1 md:px-3">
+    <div data-testid="numeros-do-dia" className="flex items-center justify-between px-1 pt-1 md:flex-wrap md:px-3">
       <Numero titulo="dias seguidos" valor={dados.sequencia} cor="text-foco" icone={<Foguinho className="contorno-branco -m-[3px] size-9" />} />
       {dados.gelo ? (
         <button
@@ -46,7 +46,7 @@ export function NumerosDoDia({ dados, onGelo }: { dados: DadosDoTrilho; onGelo: 
           title="gelos guardados"
           aria-label={`Gelos guardados: ${dados.gelo.guardados} de ${dados.gelo.max}. Abrir a loja de gelo`}
           onClick={onGelo}
-          className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-sm px-1.5 py-1.5 text-[19px] leading-none font-extrabold text-agua tabular-nums hover:bg-line/50"
+          className="inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-sm px-0.5 py-1.5 whitespace-nowrap md:px-1.5 text-[19px] leading-none font-extrabold text-agua tabular-nums hover:bg-line/50"
         >
           <Floco className="size-6" />
           {dados.gelo.guardados}/{dados.gelo.max}

@@ -191,6 +191,19 @@ body {
     drop-shadow(0 2.5px 0 var(--pulo-contorno)) drop-shadow(0 -2.5px 0 var(--pulo-contorno));
 }
 
+/* Faixa que rola de lado no celular (partes da Ilha e cômodos da Casa): sem barra e com as bordas esmaecidas. */
+@utility faixa-lateral {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  padding-inline: 20px;
+  scroll-padding-inline: 20px;
+  mask-image: linear-gradient(90deg, transparent, #000 20px, #000 calc(100% - 20px), transparent);
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* A chama grande da sequência tremula (use `animate-tremula` com `origin-[50%_90%]`). */
 @theme inline {
   --animate-tremula: tremula 1.6s ease-in-out infinite;
