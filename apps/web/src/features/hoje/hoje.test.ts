@@ -20,7 +20,6 @@ import {
   tarefasDeHoje,
   textoDeFolga,
   vinculoDoBloco,
-  momentoDaSequencia,
 } from './logic';
 
 const FUSO = 'America/Sao_Paulo';
@@ -224,21 +223,5 @@ describe('Hoje com a conta de exemplo', () => {
     const d = await carregarHoje(repo, clock, user, 'Ana');
     expect(d.temRotina).toBe(false);
     expect(d.foco.titulo).toBeNull();
-  });
-});
-
-describe('o sapo da sequência', () => {
-  const semana = (estado: 'hoje' | 'feito') => [{ date: '2026-11-25', estado }];
-
-  test.each([
-    ['dia comum', 3, 10, 'hoje', 600, null],
-    ['noite sem nada feito', 3, 10, 'hoje', 20 * 60, 'fim-do-dia-sem-nada'],
-    ['noite com o dia feito', 3, 10, 'feito', 22 * 60, null],
-    ['sequência perdida', 0, 10, 'hoje', 600, 'sequencia-perdida'],
-    ['quem nunca começou', 0, 0, 'hoje', 600, null],
-    ['recorde longo', 9, 9, 'feito', 600, 'recorde'],
-    ['recorde ainda curto', 2, 2, 'feito', 600, null],
-  ] as const)('%s', (_nome, dias, recorde, estado, minutos, esperado) => {
-    expect(momentoDaSequencia({ dias, recorde, semana: semana(estado), minutos })).toBe(esperado);
   });
 });
