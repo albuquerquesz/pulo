@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 import { Chave } from '@/ui';
 
@@ -107,7 +107,7 @@ export function CorpoDasTravas({ respostas, responder }: CorpoProps) {
         return (
           <Opcao key={t.id} formato="linha" marcada={marcada} onEscolher={() => responder({ travas: alternar(respostas.travas, t.id) })}>
             <TextosDaOpcao icone={t.icone} titulo={t.titulo} detalhe={t.detalhe} />
-            <span aria-hidden="true" className={`ml-auto grid size-6 shrink-0 place-items-center rounded-lg border-[3px] border-contorno text-xs ${marcada ? 'bg-sapo' : 'bg-surface'}`}>
+            <span aria-hidden="true" className={`ml-auto grid size-6 shrink-0 place-items-center rounded-lg border-[3px] border-contorno text-xs ${marcada ? 'bg-[#79c94a]' : 'bg-surface'}`}>
               {marcada ? '✓' : ''}
             </span>
           </Opcao>
@@ -174,40 +174,47 @@ export function CorpoDoNomeDoSapo({ respostas, responder, escrever }: CorpoProps
   );
 }
 
-type FatoProps = { icone: string; texto: string; valor: string };
+type FatoProps = { icone: string; children: ReactNode };
 
-function Fato({ icone, texto, valor }: FatoProps) {
+function Fato({ icone, children }: FatoProps) {
   return (
     <li className="flex gap-2">
       <span aria-hidden="true">{icone}</span>
-      <span>
-        {texto} <b className="font-black">{valor}</b>
-      </span>
+      <span>{children}</span>
     </li>
   );
 }
 
 export function CorpoDoResumo({ respostas, responder }: CorpoProps) {
-  const vazio = 'ainda não sei';
+  const vazio = '?';
   const periodo = PERIODOS.find((p) => p.id === respostas.periodo)?.resumo ?? vazio;
   const travas = TRAVAS.filter((t) => respostas.travas.includes(t.id)).map((t) => t.titulo.toLowerCase());
   const tom = TONS.find((t) => t.id === respostas.tom)?.resumo ?? vazio;
-  const foco = respostas.focoMinutos ? `${respostas.focoMinutos} min` : vazio;
+  const foco = `${respostas.focoMinutos ?? vazio} min`;
+  const explicacao = useId();
   return (
     <>
       <ul aria-label="O que o Pulo aprendeu" className="m-0 grid list-none gap-1.5 rounded-[18px] border-[3px] border-dashed border-contorno bg-surface px-3.5 py-3 text-sm">
-        <Fato icone="🕒" texto="Rende mais:" valor={periodo} />
-        <Fato icone="🧱" texto="Trava em:" valor={travas.join(', ') || vazio} />
-        <Fato icone="💬" texto="Lembrete:" valor={tom} />
-        <Fato icone="⏱️" texto="Foco:" valor={foco} />
+        <Fato icone="🕒">
+          Rende mais de <b className="font-black">{periodo}</b>
+        </Fato>
+        <Fato icone="🧱">
+          Trava em <b className="font-black">{travas.join(', ') || vazio}</b>
+        </Fato>
+        <Fato icone="💬">
+          Prefere lembrete <b className="font-black">{tom}</b>, foco de <b className="font-black">{foco}</b>
+        </Fato>
       </ul>
-      <div className="flex items-center gap-3 rounded-[18px] border-[3px] border-contorno bg-surface p-3.5">
-        <p className="m-0 flex-1 font-extrabold">
+      {/* O cartão inteiro é o rótulo: clicar no texto também liga e desliga a chave. */}
+      <label className="flex cursor-pointer items-center gap-3 rounded-[18px] border-[3px] border-contorno bg-surface p-3.5">
+        <span className="flex-1 font-extrabold">
           Deixar o Pulo aprender comigo
-          <small className="mt-0.5 block text-[13px] font-semibold text-muted">Dá para ver e apagar tudo no Perfil, em "O que o Pulo sabe de você".</small>
-        </p>
-        <Chave rotulo="Deixar o Pulo aprender comigo" ligada={respostas.aprender} onMudar={(aprender) => responder({ aprender })} />
-      </div>
+          <small id={explicacao} className="mt-0.5 block text-[13px] font-semibold text-muted">
+            Dá para ver e apagar tudo no Perfil, em "O que o Pulo sabe de você".
+          </small>
+        </span>
+        <Chave rotulo="Deixar o Pulo aprender comigo" descritaPor={explicacao} ligada={respostas.aprender} onMudar={(aprender) => responder({ aprender })} />
+      </label>
     </>
   );
 }

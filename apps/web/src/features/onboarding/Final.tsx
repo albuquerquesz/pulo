@@ -13,12 +13,12 @@ export function Final({ respostas, salvando, onEntrar }: FinalProps) {
   useEffect(() => titulo.current?.focus(), []);
   const folhas = respostas.habitos.length;
   return (
-    <section className="onboarding-final relative z-2 flex flex-1 flex-col items-center justify-center gap-3.5 p-8 text-center">
+    <section className="onboarding-final absolute inset-0 z-5 flex bg-[linear-gradient(180deg,#cbf1f6,#fff3da_70%)] flex-col items-center justify-center gap-3.5 p-8 text-center">
       <div aria-hidden="true" className="relative h-[150px] w-[260px]">
-        <div className="absolute inset-x-0 bottom-0 h-[70px] rounded-[50%] border-[3px] border-contorno bg-agua" />
-        <div className="absolute bottom-[30px] left-4 h-[26px] w-[58px] rounded-[50%] border-[3px] border-contorno bg-sapo" />
-        <div className="absolute bottom-[30px] left-24 h-[26px] w-[58px] rounded-[50%] border-[3px] border-contorno bg-sapo" />
-        <div className="absolute bottom-[30px] left-44 h-[26px] w-[58px] rounded-[50%] border-[3px] border-contorno bg-sapo" />
+        <div className="absolute inset-x-0 bottom-0 h-[70px] rounded-[50%] border-[3px] border-contorno bg-[#7fd8d8]" />
+        <div className="absolute bottom-[30px] left-4 h-[26px] w-[58px] rounded-[50%] border-[3px] border-contorno bg-[#79c94a]" />
+        <div className="absolute bottom-[30px] left-24 h-[26px] w-[58px] rounded-[50%] border-[3px] border-contorno bg-[#79c94a]" />
+        <div className="absolute bottom-[30px] left-44 h-[26px] w-[58px] rounded-[50%] border-[3px] border-contorno bg-[#79c94a]" />
         <div className="onboarding-atravessa absolute bottom-10 left-2.5 w-[90px]">
           <SapoRosto className="block w-full" />
         </div>
@@ -29,7 +29,7 @@ export function Final({ respostas, salvando, onEntrar }: FinalProps) {
       <p className="m-0 font-bold text-muted">
         {nomeDoSapoEscolhido(respostas)} já está na lagoa{folhas > 0 ? `, com ${contarFolhas(folhas)} para pular` : ''}.
       </p>
-      <Botao titulo="Entrar na lagoa" variante="foco" carregando={salvando} onPress={onEntrar} className="max-w-[260px]" />
+      <Botao titulo="Entrar na lagoa" variante="foco" carregando={salvando} onPress={onEntrar} className="max-w-[260px] min-h-14 rounded-[18px] [&_span]:text-lg [&_span]:font-black" />
     </section>
   );
 }

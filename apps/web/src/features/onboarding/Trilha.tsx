@@ -11,7 +11,7 @@ export function Trilha({ ids, atual }: TrilhaProps) {
         <span
           key={id}
           aria-hidden="true"
-          className={`relative h-[15px] w-6 rounded-[50%] border-[2.5px] border-contorno transition-[scale,background-color] duration-300 ${i <= atual ? 'bg-sapo' : 'bg-bege-borda'} ${i === atual ? 'scale-125' : ''}`}
+          className={`relative h-[15px] w-6 rounded-[50%] border-[2.5px] border-contorno transition-[scale,background-color] duration-300 ${i <= atual ? 'bg-[#79c94a]' : 'bg-[#c9d8b8]'} ${i === atual ? 'scale-125' : ''}`}
         />
       ))}
       {/* A folha tem 24 px: o sapinho (32 px) anda no mesmo intervalo, 4 px antes dela. */}

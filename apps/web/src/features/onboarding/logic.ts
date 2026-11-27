@@ -20,7 +20,7 @@ export const TRAVAS = [
 
 export const TONS = [
   { id: 'leve', icone: '🌸', titulo: 'Com carinho', detalhe: '"Bora dar um pulinho hoje?"', resumo: 'com carinho' },
-  { id: 'direto', icone: '🎯', titulo: 'Direto ao ponto', detalhe: '"Hora do foco: 25 minutos."', resumo: 'direto ao ponto' },
+  { id: 'direto', icone: '🎯', titulo: 'Direto ao ponto', detalhe: '"Hora do foco: 25 minutos."', resumo: 'direto' },
 ] as const;
 
 export const DURACOES_DO_FOCO = [

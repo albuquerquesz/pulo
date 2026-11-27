@@ -3,16 +3,19 @@ export type ChaveProps = {
   ligada: boolean;
   onMudar: (ligada: boolean) => void;
   desativada?: boolean;
+  /** Id do texto que explica a chave (`aria-describedby`). */
+  descritaPor?: string;
 };
 
 /** O interruptor do rascunho (`.chave`), com área de toque de 44 px. */
-export function Chave({ rotulo, ligada, onMudar, desativada = false }: ChaveProps) {
+export function Chave({ rotulo, ligada, onMudar, desativada = false, descritaPor }: ChaveProps) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={ligada}
       aria-label={rotulo}
+      aria-describedby={descritaPor}
       disabled={desativada}
       onClick={() => onMudar(!ligada)}
       className="group grid min-h-11 shrink-0 cursor-pointer place-items-center disabled:cursor-not-allowed disabled:opacity-50 md:min-h-0"

@@ -5,7 +5,6 @@ import { SapoRosto } from '@/mascot';
 import { Botao } from '@/ui';
 
 import { useApp } from '../app';
-import { Colinas } from '../hoje/Topo';
 import { Final } from './Final';
 import { dadosParaConcluir, respostasIniciais, type RespostasDoOnboarding } from './logic';
 import { PASSOS } from './passos';
@@ -86,21 +85,24 @@ export function OnboardingScreen() {
     <div className="onboarding relative flex min-h-dvh flex-col overflow-hidden">
       <div aria-hidden="true" className="onboarding-nuvem" />
       <div aria-hidden="true" className="onboarding-nuvem onboarding-nuvem-baixa" />
-      <Colinas className="absolute inset-x-0 bottom-0 h-[150px] w-full" />
+      <svg aria-hidden="true" className="lagoa-margem absolute inset-x-0 bottom-0 h-[150px] w-full" viewBox="0 0 1200 150" preserveAspectRatio="none">
+        <path d="M0 70 Q200 20 420 55 T860 40 T1200 50 V150 H0Z" />
+        <path d="M0 105 Q260 70 560 95 T1200 88 V150 H0Z" />
+      </svg>
 
       {terminou ? (
         <Final respostas={respostas} salvando={salvando} onEntrar={() => void entrar()} />
       ) : (
         <>
-          <header className="relative z-2 flex items-center gap-2.5 px-4.5 pt-[max(0.875rem,env(safe-area-inset-top))] pb-1 text-[17px] font-black md:px-7 md:pt-4.5 md:text-xl">
-            <span aria-hidden="true" className="w-9">
+          <header className="relative z-2 flex items-center gap-2.5 px-4.5 pt-[max(0.875rem,env(safe-area-inset-top))] pb-3.5 text-[17px] font-black md:px-7 md:pt-4.5 md:pb-4.5 md:text-xl">
+            <span aria-hidden="true" className="w-[38px]">
               <SapoRosto className="block w-full" />
             </span>
             Pulo
           </header>
 
           <main className="relative z-2 flex w-full flex-1 flex-col md:mx-auto md:mt-1.5 md:mb-15 md:min-h-[600px] md:max-w-[620px] md:flex-none md:rounded-[32px] md:border-4 md:border-contorno md:bg-bg md:shadow-[0_12px_0_rgba(59,42,47,0.12)]">
-            <div className="flex items-center gap-3 px-4.5 pt-3 pb-1.5 md:px-5.5 md:pt-4.5">
+            <div className="flex items-center gap-3 px-4.5 pt-4.5 pb-1.5 md:px-5.5">
               <button type="button" aria-label="Voltar" disabled={primeiro} onClick={() => irPara(indice - 1)} className={SETA}>
                 <span aria-hidden="true">‹</span>
               </button>
@@ -125,7 +127,7 @@ export function OnboardingScreen() {
               </div>
 
               <div className="flex justify-center px-4.5 pt-1.5 pb-[max(1.375rem,env(safe-area-inset-bottom))] md:px-7 md:pb-6">
-                <Botao titulo={passo.botao ?? 'Continuar'} tipo="submit" variante="foco" desativado={!pronto} className="md:max-w-[340px]" />
+                <Botao titulo={passo.botao ?? 'Continuar'} tipo="submit" variante="foco" desativado={!pronto} className="min-h-14 rounded-[18px] md:max-w-[340px] [&_span]:text-lg [&_span]:font-black" />
               </div>
             </form>
           </main>
