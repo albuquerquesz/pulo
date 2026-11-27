@@ -2,7 +2,6 @@ import type { ComodoDaCasa } from '@pulo/core/domain/casa';
 import type { RoomDecor } from '@pulo/core/domain/types';
 import { Joia, Modal } from '@/ui';
 
-import { CartaoDoGelo } from '../casca/CartaoDoGelo';
 import { COR_NATURAL, CORES, ITENS, precoDe, type Escolha } from './catalogo';
 import { colocadosNoQuarto, ehMeu, estadoDaCompra, type EstadoDaCompra } from './decoracao';
 import type { Lugar } from './lugares';
@@ -54,7 +53,6 @@ export function LojaModal({ lugar, escolha, quarto, saldo, comodo, onEscolher, o
       onFechar={onCancelar}
       rotulo={`${lugar ? 'Decorar' : 'Loja'}: ${comodo.nome}`}
     >
-      {lugar ? null : <CartaoDoGelo />}
       <div className="flex shrink-0 flex-col items-center justify-end gap-2 md:min-h-[130px]">
         <span className="origin-bottom max-md:[zoom:0.65]">
           <VisualDoItem {...escolha} tamanho={96} />
