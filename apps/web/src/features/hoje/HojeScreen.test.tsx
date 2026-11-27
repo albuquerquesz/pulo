@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import type { Repository } from '@pulo/core/domain/types';
@@ -50,7 +50,7 @@ describe('Tela Hoje', () => {
   test('blocos na ordem do rascunho', async () => {
     await abrir();
     const titulos = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
-    expect(titulos).toEqual(['Sequência', 'Esta semana', 'Hábitos de hoje', 'Seu mês', 'Tarefas de hoje', 'Linha do dia']);
+    expect(titulos).toEqual(['Sequência', 'Esta semana', 'Hábitos de hoje', 'Tarefas de hoje', 'Linha do dia']);
     expect(regiao('Tarefas de hoje').getByRole('link', { name: 'Ver quadro' }).getAttribute('href')).toBe('/tarefas');
   });
 
@@ -125,12 +125,5 @@ describe('Tela Hoje', () => {
     await clicar(screen.getByRole('button', { name: 'Descansar hoje' }));
     expect(await regiao('Sequência').findByRole('button', { name: 'Descansar hoje' })).toBeTruthy();
     expect(regiao('Sequência').getByText('domingo, hoje')).toBeTruthy();
-  });
-
-  test('Seu mês mostra os três números e leva às métricas', async () => {
-    await abrir();
-    expect(regiao('Seu mês').getByRole('link', { name: 'Ver métricas' }).getAttribute('href')).toBe('/perfil#metricas');
-    expect(await regiao('Seu mês').findByText('dias de cuidado')).toBeTruthy();
-    await waitFor(() => expect(regiao('Seu mês').queryByText('…')).toBeNull());
   });
 });

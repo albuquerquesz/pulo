@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 
 import { MINUTE_MS } from '@pulo/core/domain/clock';
 import { criarPlanoInicial } from '@pulo/core/domain/routine';
-import { useConsultaDeMidia } from '@/theme';
 import { Botao } from '@/ui';
 
 import { Tela, useApp, useCarregar, ErroDeCarga } from '../app';
@@ -13,17 +12,11 @@ import { HabitosDeHoje } from './HabitosDeHoje';
 import { LinhaDoDia } from './LinhaDoDia';
 import { alternarDescanso, alternarHabito, alternarTarefa, barraDaSemana, carregarHoje, comDescansoDeHoje, pulosDoDia } from './logic';
 import { Sequencia } from './Sequencia';
-import { SeuMes } from './SeuMes';
 import { TarefasDeHoje } from './TarefasDeHoje';
 import { Topo } from './Topo';
 
-/** A partir daqui Seu mês fica logo abaixo de Esta semana; no celular, depois dos hábitos. */
-const CONSULTA_DA_COLUNA_LARGA = '(min-width: 48rem)';
-
-
 export function HojeScreen() {
   const { repo, clock, user, pessoa, refresh, mostrarAviso } = useApp();
-  const largo = useConsultaDeMidia(CONSULTA_DA_COLUNA_LARGA);
   /** O descanso que acabou de ser pedido, mostrado antes da resposta. */
   const [descansoPedido, setDescansoPedido] = useState<boolean | null>(null);
   const { estado, recarregar } = useCarregar(async () => {
@@ -103,9 +96,7 @@ export function HojeScreen() {
         onDescanso={() => void mudarDescanso()}
       />
       <EstaSemana grafico={d.grafico} />
-      {largo ? <SeuMes /> : null}
       <HabitosDeHoje habitos={d.habitos} onAlternar={(h) => void gravar(alternarHabito(repo, clock, user, h.id, h.feito))} />
-      {largo ? null : <SeuMes />}
       <TarefasDeHoje tarefas={d.tarefas} onAlternar={(t) => void gravar(alternarTarefa(repo, clock, t.id, t.feita))} />
       {d.temRotina ? (
         <LinhaDoDia itens={d.linha} minutos={d.minutosAgora} />
