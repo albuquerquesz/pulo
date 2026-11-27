@@ -15,6 +15,7 @@ import type { Clock, Purchase, Repository, RoomDecor, RoomRotation, RoomSpot } f
 export type { CamadaDaCasa, ComodoId, ParteDaCasa, ParteId };
 export { CAMADAS_DA_CASA };
 export type DecoracaoId = keyof typeof ROOM_DECOR.itemCost;
+export type CorDaDecoracao = keyof typeof ROOM_DECOR.colorCost;
 
 export type HouseErrorCode = 'item_inexistente' | 'ja_comprado' | 'falta_requisito' | 'joias_insuficientes' | 'comodo_nao_comprado';
 export type MoveErrorCode = 'item_inexistente' | 'nao_encontrado' | 'corpo_invalido' | 'comodo_nao_comprado';
@@ -89,14 +90,62 @@ export const DECORACOES: readonly { id: DecoracaoId; nome: string }[] = [
   { id: 'estante', nome: 'Estante' },
   { id: 'poltrona', nome: 'Poltrona' },
   { id: 'aquario', nome: 'Aquário' },
+  { id: 'relogio', nome: 'Relógio' },
+  { id: 'bandeira', nome: 'Bandeirinhas' },
+  { id: 'pendente', nome: 'Planta pendurada' },
+  { id: 'janela', nome: 'Janela' },
+  { id: 'cama', nome: 'Cama' },
+  { id: 'sofa', nome: 'Sofá' },
+  { id: 'bau', nome: 'Baú' },
+  { id: 'pelucia', nome: 'Pelúcia' },
+  { id: 'violao', nome: 'Violão' },
 ];
 
+/** O nome de cada cor, como vai depois do nome do item. */
+export const CORES_DA_DECORACAO: Record<CorDaDecoracao, string> = {
+  rosa: 'rosa',
+  verde: 'verde',
+  agua: 'água',
+  lilas: 'lilás',
+  dourado: 'dourado',
+  noite: 'noite',
+  brilho: 'brilho',
+};
+
 const ehDecoracao = (item: string): item is DecoracaoId => Object.hasOwn(ROOM_DECOR.itemCost, item);
+const ehCorDaDecoracao = (cor: string): cor is CorDaDecoracao => Object.hasOwn(ROOM_DECOR.colorCost, cor);
+
+/** Um item da loja do quarto numa cor; `null` é a cor natural. */
+export interface DecoracaoLida {
+  item: DecoracaoId;
+  cor: CorDaDecoracao | null;
+}
+
+/** O id gravado de um item numa cor: na natural, só o item; nas outras, `item-cor`. */
+export const idDaDecoracao = ({ item, cor }: DecoracaoLida): string => (cor ? `${item}-${cor}` : item);
+
+/** O item e a cor de um id gravado, ou null se a loja não vende esse id. */
+export function lerDecoracao(id: string): DecoracaoLida | null {
+  if (ehDecoracao(id)) return { item: id, cor: null };
+  const [item = '', cor = '', ...resto] = id.split('-');
+  if (resto.length > 0 || !ehDecoracao(item) || !ehCorDaDecoracao(cor)) return null;
+  return { item, cor };
+}
+
+/** O nome de uma decoração na loja, com a cor quando não é a natural. */
+function nomeDaDecoracao({ item, cor }: DecoracaoLida): string {
+  const nome = DECORACOES.find((d) => d.id === item)?.nome ?? item;
+  return cor ? `${nome} ${CORES_DA_DECORACAO[cor]}` : nome;
+}
 
 /** Preço da parte da casa, ou null se não existe. */
 export const precoDaParte = (item: string): number | null => (ehParte(item) ? HOUSE.partCost[item] : null);
 /** Preço da decoração, ou null se não existe. */
-export const precoDaDecoracao = (item: string): number | null => (ehDecoracao(item) ? ROOM_DECOR.itemCost[item] : null);
+export function precoDaDecoracao(id: string): number | null {
+  const lida = lerDecoracao(id);
+  if (!lida) return null;
+  return ROOM_DECOR.itemCost[lida.item] + (lida.cor ? ROOM_DECOR.colorCost[lida.cor] : 0);
+}
 
 export const ehRotacao = (valor: number): valor is RoomRotation => ROOM_GRID.rotations.some((r) => r === valor);
 
@@ -113,7 +162,8 @@ export interface ParteNaCasa extends ParteDaCasa {
 }
 
 export interface DecoracaoNaLoja {
-  id: DecoracaoId;
+  /** O id gravado: o item, ou `item-cor` fora da cor natural. */
+  id: string;
   nome: string;
   custo: number;
   /** Onde está no quarto; null se ainda não foi comprada. */
@@ -178,13 +228,21 @@ export function estadoDaCasa(
     const horasDeFoco = Math.ceil((faltam * JOIAS.focusMinutesPerJoia) / 60);
     proxima = { id: barata.id, nome: barata.nome, custo: barata.custo, faltam, horasDeFoco };
   }
-  const decoracoes = DECORACOES.map((d): DecoracaoNaLoja => {
-    const compra = quarto.find((q) => q.item === d.id);
-    return {
-      ...d,
-      custo: ROOM_DECOR.itemCost[d.id],
-      posicao: compra ? { x: compra.x, y: compra.y, rotation: compra.rotation, comodo: comodoDe(compra) } : null,
-    };
+  // Os itens na cor natural, comprados ou não, e os coloridos que a pessoa já comprou.
+  const naturais = DECORACOES.map((d) => d.id);
+  const coloridos = quarto.flatMap((q) => (lerDecoracao(q.item)?.cor ? [q.item] : []));
+  const decoracoes = [...naturais, ...coloridos].flatMap((id): DecoracaoNaLoja[] => {
+    const lida = lerDecoracao(id);
+    if (!lida) return [];
+    const compra = quarto.find((q) => q.item === id);
+    return [
+      {
+        id,
+        nome: nomeDaDecoracao(lida),
+        custo: precoDaDecoracao(id) ?? 0,
+        posicao: compra ? { x: compra.x, y: compra.y, rotation: compra.rotation, comodo: comodoDe(compra) } : null,
+      },
+    ];
   });
   return { ganhas, gastas, saldo, partes, construidas, total: partes.length, completa: construidas === partes.length, proxima, comodos: comodosProntos(partes), decoracoes };
 }
@@ -213,12 +271,12 @@ export function validarCompraDaDecoracao(
   estado: EstadoDaCasa,
   comodo: ComodoId = COMODO_INICIAL,
 ): Result<number, HouseErrorCode> {
-  const decoracao = estado.decoracoes.find((d) => d.id === item);
-  if (!decoracao) return fail('item_inexistente', 'Esse item não existe na loja.');
-  if (decoracao.posicao) return fail('ja_comprado', 'Esse item já é seu.');
+  const custo = precoDaDecoracao(item);
+  if (custo === null) return fail('item_inexistente', 'Esse item não existe na loja.');
+  if (estado.decoracoes.some((d) => d.id === item && d.posicao)) return fail('ja_comprado', 'Esse item já é seu.');
   if (!estado.comodos.includes(comodo)) return semComodo();
-  if (estado.saldo < decoracao.custo) return fail('joias_insuficientes', textoDeFalta(decoracao.custo - estado.saldo));
-  return ok(decoracao.custo);
+  if (estado.saldo < custo) return fail('joias_insuficientes', textoDeFalta(custo - estado.saldo));
+  return ok(custo);
 }
 
 /** Estado atual da casa, lido do repositório. */

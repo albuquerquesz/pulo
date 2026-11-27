@@ -216,9 +216,30 @@ function precosDaCasa(): Record<ParteId, number> {
  */
 export const HOUSE = { parts: PARTES_DA_CASA, partCost: precosDaCasa() } as const;
 
-/** Decorações do quarto (spec 18): preço em joias. O quarto começa vazio. Proposta. */
+/**
+ * Decorações do quarto (spec 18): preço em joias de cada item na cor natural e o acréscimo de cada cor.
+ * Um item numa cor é gravado como `item-cor` (ex.: `relogio-rosa`); na cor natural, só o item. O quarto começa vazio. Proposta.
+ */
 export const ROOM_DECOR = {
-  itemCost: { tapete: 10, vaso: 15, luminaria: 25, quadro: 30, estante: 45, poltrona: 60, aquario: 80 },
+  itemCost: {
+    tapete: 10,
+    vaso: 15,
+    luminaria: 25,
+    quadro: 30,
+    estante: 45,
+    poltrona: 60,
+    aquario: 80,
+    relogio: 20,
+    bandeira: 10,
+    pendente: 18,
+    janela: 40,
+    cama: 60,
+    sofa: 70,
+    bau: 30,
+    pelucia: 12,
+    violao: 35,
+  },
+  colorCost: { rosa: 0, verde: 0, agua: 0, lilas: 0, dourado: 0, noite: 0, brilho: 10 },
 } as const;
 
 /** Grade do chão do quarto (`x` de 0 a columns - 1, `y` de 0 a rows - 1) e giros possíveis, em graus. Proposta. */

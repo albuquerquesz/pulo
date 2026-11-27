@@ -70,24 +70,24 @@ describe('lugares e catálogo', () => {
     expect(lugarDaPosicao(GUARDADO)).toBeNull();
   });
 
-  test('só se compra o que a API vende, na cor natural e com o preço dela', () => {
+  test('todo item se compra em toda cor, com o preço de ROOM_DECOR', () => {
     expect(idDaCompra(escolha('quadro'))).toBe('quadro');
     expect(precoDe(escolha('quadro'))).toBe(30);
-    expect(idDaCompra(item('quadro', 'rosa'))).toBeNull();
-    expect(idDaCompra(item('cama'))).toBeNull();
-    expect(idDaCompra(escolha('vaso'))).toBe('vaso');
+    expect(idDaCompra(item('quadro', 'rosa'))).toBe('quadro-rosa');
+    expect(idDaCompra(item('cama'))).toBe('cama');
+    expect(idDaCompra(item('planta', 'agua'))).toBe('vaso-agua');
   });
 
-  test('o que a API ainda não vende mostra o preço do item mais a cor', () => {
+  test('a cor Brilho custa mais que o item na cor natural', () => {
     expect(precoDe(item('cama'))).toBe(60);
     expect(precoDe(item('cama', 'brilho'))).toBe(70);
   });
 
-  test('todo item vendido volta do id gravado', () => {
-    for (const vendido of ITENS.filter((i) => i.naApi)) {
-      const id = idDaCompra({ item: vendido, cor: COR_NATURAL });
-      expect(id && escolhaDoId(id)).toEqual({ item: vendido, cor: COR_NATURAL });
+  test('todo item em toda cor volta do id gravado', () => {
+    for (const vendido of ITENS) {
+      for (const cor of CORES) expect(escolhaDoId(idDaCompra({ item: vendido, cor }))).toEqual({ item: vendido, cor });
     }
+    expect(escolhaDoId('cama-roxo')).toBeNull();
   });
 
   test('item em lugar de outro tipo não aparece', () => {
