@@ -1,14 +1,16 @@
-import { ROOM_GRID } from '@pulo/core/config/decisions';
+import { ROOM_DECOR, ROOM_GRID } from '@pulo/core/config/decisions';
+import type { ComodoId } from '@pulo/core/domain/casa';
 import { fixedClock } from '@pulo/core/domain/clock';
 import { sp } from '@pulo/core/domain/test-utils';
-import type { Habit, RoomDecor } from '@pulo/core/domain/types';
+import type { Habit, Repository, RoomDecor } from '@pulo/core/domain/types';
 
 import { createMemoryRepository } from '@/data';
 
-import { COR_NATURAL, CORES, escolhaDoId, idDaCompra, ITENS, precoDe, type Escolha } from './catalogo';
+import { CORES, escolhaDoId, idDaCompra, precoDe, type Escolha } from './catalogo';
 import { colocadosNoQuarto, comprarOuColocar, estadoDaCompra, tirarDoLugar } from './decoracao';
 import { ajustarMinutos, joiasEstimadas, opcoesDeVinculo, preenchimento } from './logic';
-import { GUARDADO, lugarDaPosicao, LUGARES, posicaoDoLugar } from './lugares';
+import { GUARDADO, lugarDaPosicao, posicaoDoLugar } from './lugares';
+import { MOVEIS } from './mobilia';
 
 const MIN = 60_000;
 
@@ -19,15 +21,7 @@ function escolha(id: string): Escolha {
   return encontrada;
 }
 
-/** Qualquer item do catálogo numa cor, vendido ou não. */
-function item(id: string, cor = COR_NATURAL.id): Escolha {
-  const achado = ITENS.find((i) => i.id === id);
-  const tinta = CORES.find((c) => c.id === cor);
-  if (!achado || !tinta) throw new Error(`sem item ${id}`);
-  return { item: achado, cor: tinta };
-}
-const [parede, outraParede] = LUGARES;
-const chao = LUGARES[4];
+const doQuarto = async (repo: Repository, comodo?: ComodoId) => [...colocadosNoQuarto(await repo.listRoomDecor(), comodo).values()].map(idDaCompra);
 
 async function comJoias(joias: number) {
   const repo = createMemoryRepository();
@@ -65,85 +59,91 @@ describe('Para', () => {
 
 describe('lugares e catálogo', () => {
   test('cada lugar tem uma casa própria da grade, e o guardado não é lugar', () => {
-    for (const lugar of LUGARES) expect(lugarDaPosicao(posicaoDoLugar(lugar))).toBe(lugar);
-    expect(LUGARES.length).toBeLessThan(ROOM_GRID.columns * ROOM_GRID.rows);
+    for (const lugar of MOVEIS) expect(lugarDaPosicao(posicaoDoLugar(lugar))).toBe(lugar);
+    expect(MOVEIS).toHaveLength(10);
+    expect(MOVEIS.length).toBeLessThan(ROOM_GRID.columns * ROOM_GRID.rows);
     expect(lugarDaPosicao(GUARDADO)).toBeNull();
   });
 
-  test('todo item se compra em toda cor, com o preço de ROOM_DECOR', () => {
-    expect(idDaCompra(escolha('quadro'))).toBe('quadro');
-    expect(precoDe(escolha('quadro'))).toBe(30);
-    expect(idDaCompra(item('quadro', 'rosa'))).toBe('quadro-rosa');
-    expect(idDaCompra(item('cama'))).toBe('cama');
-    expect(idDaCompra(item('planta', 'agua'))).toBe('vaso-agua');
+  test('cada item de ROOM_DECOR tem um modelo, no lugar que o id diz', () => {
+    const modelos = MOVEIS.flatMap((m) => m.modelos.map((modelo) => ({ lugar: m.id, id: modelo.id })));
+    expect(modelos.map((m) => m.id).sort()).toEqual(Object.keys(ROOM_DECOR.itemCost).sort());
+    for (const { lugar, id } of modelos) expect(id.startsWith(`${lugar}-`)).toBe(true);
+    for (const lugar of MOVEIS) expect([2, 3]).toContain(lugar.modelos.length);
   });
 
-  test('a cor Brilho custa mais que o item na cor natural', () => {
-    expect(precoDe(item('cama'))).toBe(60);
-    expect(precoDe(item('cama', 'brilho'))).toBe(70);
+  test('o id gravado é lugar-modelo, com a cor fora da natural, e o preço vem de ROOM_DECOR', () => {
+    expect(idDaCompra(escolha('cama-estofada'))).toBe('cama-estofada');
+    expect(idDaCompra(escolha('cama-estofada-rosa'))).toBe('cama-estofada-rosa');
+    expect(precoDe(escolha('cama-estofada'))).toBe(60);
+    expect(precoDe(escolha('cama-estofada-brilho'))).toBe(70);
   });
 
-  test('todo item em toda cor volta do id gravado', () => {
-    for (const vendido of ITENS) {
-      for (const cor of CORES) expect(escolhaDoId(idDaCompra({ item: vendido, cor }))).toEqual({ item: vendido, cor });
+  test('todo modelo em toda cor volta do id gravado, e os ids antigos são ignorados', () => {
+    for (const lugar of MOVEIS) {
+      for (const modelo of lugar.modelos) {
+        for (const cor of CORES) expect(escolhaDoId(idDaCompra({ lugar, modelo, cor }))).toEqual({ lugar, modelo, cor });
+      }
     }
-    expect(escolhaDoId('cama-roxo')).toBeNull();
+    for (const id of ['cama', 'cama-rosa', 'vaso', 'sofa-rosa', 'bau', 'cama-estofada-roxo']) expect(escolhaDoId(id)).toBeNull();
   });
 
-  test('item em lugar de outro tipo não aparece', () => {
-    const registro: RoomDecor = { item: 'poltrona', cost: 60, createdAt: 1, ...posicaoDoLugar(parede) };
-    expect(colocadosNoQuarto([registro])).toEqual([]);
+  test('móvel fora do lugar dele ou antigo não aparece', () => {
+    const registros: RoomDecor[] = [
+      { item: 'assento-poltrona', cost: 60, createdAt: 1, ...posicaoDoLugar(escolha('quadro-paisagem').lugar) },
+      { item: 'poltrona', cost: 60, createdAt: 1, ...posicaoDoLugar(escolha('assento-poltrona').lugar) },
+    ];
+    expect(colocadosNoQuarto(registros).size).toBe(0);
   });
 });
 
 describe('compra', () => {
   test('sem saldo o botão apaga e nada é gravado', async () => {
     const { repo, clock } = await comJoias(10);
-    const pedido = { lugar: parede, escolha: escolha('quadro') } as const;
+    const pedido = { escolha: escolha('quadro-paisagem') };
     expect(estadoDaCompra({ ...pedido, quarto: [], saldo: 10 })).toMatchObject({ acao: 'comprar', bloqueado: true });
     expect(await comprarOuColocar(repo, clock, pedido)).toBe(false);
     expect(await repo.listRoomDecor()).toEqual([]);
   });
 
-  test('comprar grava, mover é de graça e o antigo do lugar vai para o guardado', async () => {
+  test('um móvel por lugar: o antigo vai para o guardado e volta de graça', async () => {
     const { repo, clock } = await comJoias(80);
-    const quadro = { escolha: escolha('quadro') } as const;
-    expect(await comprarOuColocar(repo, clock, { ...quadro, lugar: parede })).toBe(true);
-    expect(await comprarOuColocar(repo, clock, { ...quadro, lugar: outraParede })).toBe(true);
-    expect(await repo.listRoomDecor()).toHaveLength(1);
-    expect(colocadosNoQuarto(await repo.listRoomDecor()).map((c) => c.lugar.id)).toEqual([outraParede.id]);
+    const paisagem = { escolha: escolha('quadro-paisagem') };
+    expect(await comprarOuColocar(repo, clock, paisagem)).toBe(true);
+    expect(await comprarOuColocar(repo, clock, paisagem)).toBe(false);
+    expect(await comprarOuColocar(repo, clock, { escolha: escolha('quadro-retrato') })).toBe(true);
+    expect(await doQuarto(repo)).toEqual(['quadro-retrato']);
+    const [primeiro] = await repo.listRoomDecor();
+    expect(primeiro).toMatchObject({ item: 'quadro-paisagem', ...GUARDADO });
 
-    await comprarOuColocar(repo, clock, { escolha: escolha('estante'), lugar: outraParede });
-    const quarto = await repo.listRoomDecor();
-    expect(quarto.map((d) => d.cost)).toEqual([30, 45]);
-    expect(colocadosNoQuarto(quarto).map((c) => c.escolha.item.id)).toEqual(['prateleira']);
+    expect(estadoDaCompra({ ...paisagem, quarto: await repo.listRoomDecor(), saldo: 0 })).toMatchObject({ acao: 'colocar', bloqueado: false });
+    expect(await comprarOuColocar(repo, clock, paisagem)).toBe(true);
+    expect(await doQuarto(repo)).toEqual(['quadro-paisagem']);
+    expect((await repo.listRoomDecor()).map((d) => d.cost)).toEqual([30, 35]);
 
-    await tirarDoLugar(repo, outraParede);
-    expect(colocadosNoQuarto(await repo.listRoomDecor())).toEqual([]);
+    await tirarDoLugar(repo, paisagem.escolha.lugar);
+    expect(await doQuarto(repo)).toEqual([]);
     expect(await repo.listRoomDecor()).toHaveLength(2);
+  });
+
+  test('um item antigo na mesma casa da grade fica onde está', async () => {
+    const { repo, clock } = await comJoias(80);
+    const nova = escolha('quadro-paisagem');
+    const antigo: RoomDecor = { item: 'quadro', cost: 30, createdAt: 1, ...posicaoDoLugar(nova.lugar) };
+    await repo.saveRoomDecor(antigo);
+    expect(await comprarOuColocar(repo, clock, { escolha: nova })).toBe(true);
+    expect(await repo.listRoomDecor()).toContainEqual(antigo);
   });
 
   test('cada cômodo mostra e libera só a decoração dele', async () => {
     const { repo, clock } = await comJoias(80);
-    const quadro = { escolha: escolha('quadro'), lugar: parede } as const;
-    const estante = { escolha: escolha('estante'), lugar: parede, comodo: 'cozinha' } as const;
-    await comprarOuColocar(repo, clock, quadro);
-    await comprarOuColocar(repo, clock, estante);
-    const quarto = await repo.listRoomDecor();
-    expect(colocadosNoQuarto(quarto).map((c) => c.escolha.item.id)).toEqual(['quadro']);
-    expect(colocadosNoQuarto(quarto, 'cozinha').map((c) => c.escolha.item.id)).toEqual(['prateleira']);
-    await tirarDoLugar(repo, parede, 'cozinha');
-    expect(colocadosNoQuarto(await repo.listRoomDecor(), 'cozinha')).toEqual([]);
-    expect(colocadosNoQuarto(await repo.listRoomDecor())).toHaveLength(1);
-  });
-
-  test('pela loja de canto a compra fica guardada e não repete', async () => {
-    const { repo, clock } = await comJoias(80);
-    const pedido = { lugar: null, escolha: escolha('vaso') } as const;
-    expect(await comprarOuColocar(repo, clock, pedido)).toBe(true);
-    expect(await comprarOuColocar(repo, clock, pedido)).toBe(false);
-    const [registro] = await repo.listRoomDecor();
-    expect(registro).toMatchObject({ item: 'vaso', ...GUARDADO });
-    expect(estadoDaCompra({ ...pedido, lugar: chao, quarto: [registro], saldo: 0 })).toMatchObject({ acao: 'colocar', bloqueado: false });
+    const paisagem = escolha('quadro-paisagem');
+    await comprarOuColocar(repo, clock, { escolha: paisagem });
+    await comprarOuColocar(repo, clock, { escolha: escolha('quadro-retrato'), comodo: 'cozinha' });
+    expect(await doQuarto(repo)).toEqual(['quadro-paisagem']);
+    expect(await doQuarto(repo, 'cozinha')).toEqual(['quadro-retrato']);
+    await tirarDoLugar(repo, paisagem.lugar, 'cozinha');
+    expect(await doQuarto(repo, 'cozinha')).toEqual([]);
+    expect(await doQuarto(repo)).toEqual(['quadro-paisagem']);
   });
 });

@@ -22,7 +22,10 @@ function rotuloDa({ nome, custo, situacao, motivo }: ParteAVenda, alvo: boolean)
   return `${nome}, ${custo} joias${alvo ? ', próximo alvo' : ''}`;
 }
 
-type CartaoProps = { parte: ParteAVenda; alvo: boolean; onComprar: (id: ParteId) => void };
+/** `botao` é de onde as joias saem. */
+type AoComprar = (id: ParteId, botao: Element) => void;
+
+type CartaoProps = { parte: ParteAVenda; alvo: boolean; onComprar: AoComprar };
 
 /** A parte já construída vira um selo pequeno: emoji e visto. O nome fica no rótulo e na dica. */
 function Selo({ parte }: Pick<CartaoProps, 'parte'>) {
@@ -44,7 +47,7 @@ function Cartao({ parte, alvo, onComprar }: CartaoProps) {
     <button
       type="button"
       disabled={situacao !== 'disponivel'}
-      onClick={() => onComprar(id)}
+      onClick={(e) => onComprar(id, e.currentTarget)}
       aria-label={rotuloDa(parte, alvo)}
       className={`flex h-full min-h-[56px] items-center gap-2.5 rounded-[18px] border-4 border-contorno py-1.5 pr-4 pl-3 text-left text-sm font-black whitespace-nowrap text-contorno ${alvo ? ALVO : APARENCIA[situacao]}`}
     >
@@ -71,7 +74,7 @@ function emOrdem(partes: readonly ParteAVenda[], alvo: ParteId | null): ParteAVe
   return [...partes].sort((a, b) => Number(b.id === alvo) - Number(a.id === alvo) || PESO[a.situacao] - PESO[b.situacao] || a.custo - b.custo);
 }
 
-type PartesProps = { ilha: IlhaNaTela; onComprar: (id: ParteId) => void };
+type PartesProps = { ilha: IlhaNaTela; onComprar: AoComprar };
 
 /** As partes à venda no pé da ilha, por camada: uma faixa no celular e uma grade com rolagem, abaixo do desenho, do md para cima. Só a que o saldo paga responde ao toque. */
 export function Partes({ ilha, onComprar }: PartesProps) {

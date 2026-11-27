@@ -83,22 +83,32 @@ export function casaCompleta(compradas: readonly string[]): boolean {
 }
 
 export const DECORACOES: readonly { id: DecoracaoId; nome: string }[] = [
-  { id: 'tapete', nome: 'Tapete' },
-  { id: 'vaso', nome: 'Vaso de planta' },
-  { id: 'luminaria', nome: 'Luminária' },
-  { id: 'quadro', nome: 'Quadro' },
-  { id: 'estante', nome: 'Estante' },
-  { id: 'poltrona', nome: 'Poltrona' },
-  { id: 'aquario', nome: 'Aquário' },
-  { id: 'relogio', nome: 'Relógio' },
-  { id: 'bandeira', nome: 'Bandeirinhas' },
-  { id: 'pendente', nome: 'Planta pendurada' },
-  { id: 'janela', nome: 'Janela' },
-  { id: 'cama', nome: 'Cama' },
-  { id: 'sofa', nome: 'Sofá' },
-  { id: 'bau', nome: 'Baú' },
-  { id: 'pelucia', nome: 'Pelúcia' },
-  { id: 'violao', nome: 'Violão' },
+  { id: 'quadro-paisagem', nome: 'Quadro paisagem' },
+  { id: 'quadro-retrato', nome: 'Quadro retrato' },
+  { id: 'quadro-abstrato', nome: 'Quadro abstrato' },
+  { id: 'janela-quadrada', nome: 'Janela quadrada' },
+  { id: 'janela-arco', nome: 'Janela em arco' },
+  { id: 'janela-dupla', nome: 'Janela dupla' },
+  { id: 'relogio-redondo', nome: 'Relógio redondo' },
+  { id: 'relogio-cuco', nome: 'Relógio cuco' },
+  { id: 'estante-livros', nome: 'Estante de livros' },
+  { id: 'estante-comoda', nome: 'Cômoda' },
+  { id: 'luminaria-pe', nome: 'Luminária de pé' },
+  { id: 'luminaria-abajur', nome: 'Abajur' },
+  { id: 'cama-simples', nome: 'Cama simples' },
+  { id: 'cama-estofada', nome: 'Cama estofada' },
+  { id: 'cama-futon', nome: 'Futon' },
+  { id: 'tapete-redondo', nome: 'Tapete redondo' },
+  { id: 'tapete-retangular', nome: 'Tapete retangular' },
+  { id: 'tapete-listrado', nome: 'Tapete listrado' },
+  { id: 'assento-poltrona', nome: 'Poltrona' },
+  { id: 'assento-sofa', nome: 'Sofá' },
+  { id: 'assento-pufe', nome: 'Pufe' },
+  { id: 'bau-bau', nome: 'Baú' },
+  { id: 'bau-caixote', nome: 'Caixote' },
+  { id: 'planta-folhas', nome: 'Planta folhagem' },
+  { id: 'planta-cacto', nome: 'Cacto' },
+  { id: 'planta-palmeira', nome: 'Palmeira' },
 ];
 
 /** O nome de cada cor, como vai depois do nome do item. */
@@ -121,14 +131,17 @@ export interface DecoracaoLida {
   cor: CorDaDecoracao | null;
 }
 
-/** O id gravado de um item numa cor: na natural, só o item; nas outras, `item-cor`. */
+/** O id gravado de um item numa cor: na natural, só o item (`lugar-modelo`); nas outras, `item-cor`. */
 export const idDaDecoracao = ({ item, cor }: DecoracaoLida): string => (cor ? `${item}-${cor}` : item);
 
 /** O item e a cor de um id gravado, ou null se a loja não vende esse id. */
 export function lerDecoracao(id: string): DecoracaoLida | null {
   if (ehDecoracao(id)) return { item: id, cor: null };
-  const [item = '', cor = '', ...resto] = id.split('-');
-  if (resto.length > 0 || !ehDecoracao(item) || !ehCorDaDecoracao(cor)) return null;
+  // O item já tem hífen (`cama-estofada`): a cor é o que vem depois do último.
+  const corte = id.lastIndexOf('-');
+  const item = id.slice(0, corte);
+  const cor = id.slice(corte + 1);
+  if (corte < 0 || !ehDecoracao(item) || !ehCorDaDecoracao(cor)) return null;
   return { item, cor };
 }
 

@@ -217,27 +217,38 @@ function precosDaCasa(): Record<ParteId, number> {
 export const HOUSE = { parts: PARTES_DA_CASA, partCost: precosDaCasa() } as const;
 
 /**
- * Decorações do quarto (spec 18): preço em joias de cada item na cor natural e o acréscimo de cada cor.
- * Um item numa cor é gravado como `item-cor` (ex.: `relogio-rosa`); na cor natural, só o item. O quarto começa vazio. Proposta.
+ * Mobília do quarto (spec 18): cada lugar fixo tem os seus modelos, com o preço em joias na cor natural,
+ * e cada cor tem o seu acréscimo. O id é `lugar-modelo` na cor natural e `lugar-modelo-cor` nas outras
+ * (ex.: `cama-estofada-rosa`). O quarto começa vazio.
  */
 export const ROOM_DECOR = {
   itemCost: {
-    tapete: 10,
-    vaso: 15,
-    luminaria: 25,
-    quadro: 30,
-    estante: 45,
-    poltrona: 60,
-    aquario: 80,
-    relogio: 20,
-    bandeira: 10,
-    pendente: 18,
-    janela: 40,
-    cama: 60,
-    sofa: 70,
-    bau: 30,
-    pelucia: 12,
-    violao: 35,
+    'quadro-paisagem': 30,
+    'quadro-retrato': 35,
+    'quadro-abstrato': 40,
+    'janela-quadrada': 40,
+    'janela-arco': 45,
+    'janela-dupla': 55,
+    'relogio-redondo': 20,
+    'relogio-cuco': 35,
+    'estante-livros': 45,
+    'estante-comoda': 50,
+    'luminaria-pe': 25,
+    'luminaria-abajur': 30,
+    'cama-simples': 40,
+    'cama-estofada': 60,
+    'cama-futon': 50,
+    'tapete-redondo': 20,
+    'tapete-retangular': 25,
+    'tapete-listrado': 30,
+    'assento-poltrona': 60,
+    'assento-sofa': 70,
+    'assento-pufe': 25,
+    'bau-bau': 30,
+    'bau-caixote': 20,
+    'planta-folhas': 15,
+    'planta-cacto': 15,
+    'planta-palmeira': 25,
   },
   colorCost: { rosa: 0, verde: 0, agua: 0, lilas: 0, dourado: 0, noite: 0, brilho: 10 },
 } as const;

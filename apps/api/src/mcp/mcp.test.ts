@@ -168,8 +168,8 @@ describe('servidor MCP', () => {
     const mapa = await ferramenta(token, 'ver_ilha');
     expect(mapa.dados).toMatchObject({ saldo: 0, moeda: 'joias', casa: { construidas: 1, total: 24 } });
     expect(await ferramenta(token, 'comprar_na_ilha', { item: 'cerca' })).toMatchObject({ erro: true, texto: `Faltam ${HOUSE.partCost.cerca} joias.` });
-    expect(await ferramenta(token, 'comprar_na_ilha', { item: 'tapete', x: 1, y: 1 })).toMatchObject({ erro: true, texto: 'Faltam 10 joias.' });
-    expect(await ferramenta(token, 'mover_decoracao', { item: 'tapete', x: 1, y: 1 })).toMatchObject({ erro: true });
+    expect(await ferramenta(token, 'comprar_na_ilha', { item: 'tapete-redondo', x: 1, y: 1 })).toMatchObject({ erro: true, texto: 'Faltam 20 joias.' });
+    expect(await ferramenta(token, 'mover_decoracao', { item: 'tapete-redondo', x: 1, y: 1 })).toMatchObject({ erro: true });
 
     const habito = await ferramenta(token, 'criar_habito', { titulo: 'Ler 10 páginas', dias: ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'] });
     expect(habito.dados).toMatchObject({ titulo: 'Ler 10 páginas', ativo: true });

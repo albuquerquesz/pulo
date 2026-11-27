@@ -1,4 +1,4 @@
-import type { SVGProps } from 'react';
+import type { Ref, SVGProps } from 'react';
 
 import { casaCompleta, type ParteId } from '@pulo/core/domain/casa';
 
@@ -49,14 +49,16 @@ export const VIEWBOX_DA_ILHA = '-150 -100 1300 1025';
 type CasaDaIlhaProps = Omit<SVGProps<SVGSVGElement>, 'children'> & {
   /** Partes já construídas; as outras aparecem tracejadas. */
   construidas: readonly ParteId[];
-  /** A parte recém comprada, que cai do alto. */
+  /** A parte recém comprada. */
   nova?: ParteId | null;
   rotulo?: string;
   /** Toque no cais da próxima ilha. Sem ele (miniatura), o cais é só desenho. */
   onPortal?: () => void;
+  /** A camada vazia, por cima das partes, onde entram os efeitos da compra. */
+  efeitos?: Ref<SVGGElement>;
 };
 
-export function CasaDaIlha({ construidas, nova, onPortal, viewBox = VIEWBOX_DA_ILHA, rotulo = 'Sua ilha', ...svg }: CasaDaIlhaProps) {
+export function CasaDaIlha({ construidas, nova, onPortal, efeitos, viewBox = VIEWBOX_DA_ILHA, rotulo = 'Sua ilha', ...svg }: CasaDaIlhaProps) {
   const prontas = new Set(construidas);
   return (
     <svg {...svg} viewBox={viewBox} preserveAspectRatio="xMidYMid meet" role="img" aria-label={rotulo}>
@@ -67,6 +69,7 @@ export function CasaDaIlha({ construidas, nova, onPortal, viewBox = VIEWBOX_DA_I
         </g>
       ))}
       <PortalDaProximaIlha aberto={casaCompleta(construidas)} onToque={onPortal} />
+      {efeitos ? <g ref={efeitos} pointerEvents="none" aria-hidden="true" /> : null}
     </svg>
   );
 }
