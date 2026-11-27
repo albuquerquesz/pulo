@@ -4,7 +4,7 @@ import type { PreferencesPatch } from '@pulo/core/domain/user-metadata';
 import { Chave } from '@/ui';
 
 import { Escolha, Linha, Linhas } from './Linha';
-import { lembreteEscolhido, opcoesDeComecoDoDia, opcoesDeFoco, opcoesDeLembrete, SEM_LEMBRETE } from './logic';
+import { lembreteEscolhido, opcoesDeComecoDoDia, opcoesDeLembrete, SEM_LEMBRETE } from './logic';
 import { Secao } from './Secao';
 
 type RotinaProps = {
@@ -15,7 +15,7 @@ type RotinaProps = {
 };
 
 export function Rotina({ comecoDoDia, preferencias, onComecoDoDia, onMudar }: RotinaProps) {
-  const { eveningReminder: lembrete, focusMinutes, breakMinutes, vacation } = preferencias;
+  const { eveningReminder: lembrete, vacation } = preferencias;
   return (
     <Secao titulo="Rotina">
       <Linhas>
@@ -29,9 +29,6 @@ export function Rotina({ comecoDoDia, preferencias, onComecoDoDia, onMudar }: Ro
             opcoes={opcoesDeLembrete(lembrete)}
             onEscolher={(v) => onMudar({ eveningReminder: lembreteEscolhido(v, lembrete) })}
           />
-        </Linha>
-        <Linha titulo="Duração do foco" detalhe={`pausa curta de ${breakMinutes} min`}>
-          <Escolha rotulo="Duração do foco" valor={String(focusMinutes)} opcoes={opcoesDeFoco(focusMinutes)} onEscolher={(v) => onMudar({ focusMinutes: Number(v) })} />
         </Linha>
         <Linha titulo="Modo férias" detalhe="pausa a sequência sem perder o fogo">
           <Chave rotulo="Modo férias" ligada={vacation.ligado} onMudar={(ligado) => onMudar({ vacation: { ligado } })} />

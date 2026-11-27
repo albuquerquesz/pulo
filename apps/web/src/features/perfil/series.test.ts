@@ -1,6 +1,6 @@
-import type { FocusSession, Habit, HabitLog } from '@pulo/core/domain/types';
+import type { FocusSession, Habit, HabitLog, Task } from '@pulo/core/domain/types';
 
-import { focoDoIntervalo, habitosDoIntervalo, type RegistrosDoRitmo } from './series';
+import { concluidoDoIntervalo, descansoDoIntervalo, focoDoIntervalo, habitosDoIntervalo, type RegistrosDoRitmo } from './series';
 
 const FUSO = 'America/Sao_Paulo';
 /** Hora de São Paulo (UTC-3). */
@@ -20,6 +20,10 @@ const BASE: RegistrosDoRitmo = {
   habits: [],
   habitLogs: [],
   restDays: [],
+  freezeUses: [],
+  tasks: [],
+  goals: [],
+  baus: [],
   user: { createdAt: sp('2026-01-01'), timezone: FUSO, dayStartMinutes: 240 },
   now: sp('2026-11-26', 20),
 };
@@ -89,5 +93,51 @@ describe('séries do ritmo', () => {
     expect(semana.serie.colunas).toHaveLength(7);
     expect(semana.serie.colunas.at(-1)).toMatchObject({ rotulo: 'hoje', texto: '100%', destaque: true });
     expect(semana.taxa).toBeCloseTo(3 / 7);
+  });
+});
+
+function tarefa(id: string, status: Task['status'], completedAt?: number): Task {
+  return { id, title: id, status, position: 0, priority: 'normal', tags: [], pomodorosEstimated: 1, createdAt: sp('2026-09-01'), ...(completedAt === undefined ? {} : { completedAt }) };
+}
+
+describe('descanso e concluído', () => {
+  test('sem registros vem tudo zerado', () => {
+    expect(descansoDoIntervalo(BASE)).toMatchObject({ descansos: 0, gelos: 0 });
+    expect(concluidoDoIntervalo(BASE)).toMatchObject({ tarefas: 0, metas: 0, joias: 0 });
+  });
+
+  test('descansos e gelos por dia na semana, só dentro do intervalo', () => {
+    const registros: RegistrosDoRitmo = {
+      ...BASE,
+      restDays: [{ date: '2026-11-22' }, { date: '2026-10-01' }],
+      freezeUses: [{ date: '2026-11-24' }],
+    };
+    const semana = descansoDoIntervalo(registros, 7);
+    expect(semana).toMatchObject({ descansos: 1, gelos: 1 });
+    expect(semana.colunas).toHaveLength(7);
+    expect(semana.colunas.find((c) => c.chave === '2026-11-24')).toMatchObject({ a: 0, b: 1, texto: '0 descansos, 1 gelo' });
+    expect(descansoDoIntervalo(registros, 30).colunas.length).toBeLessThan(7);
+  });
+
+  test('tarefas e metas pelo dia da conclusão, e joias de cada fonte no dia em que renderam', () => {
+    const registros: RegistrosDoRitmo = {
+      ...BASE,
+      habits: [HABITO],
+      habitLogs: [feito('2026-11-26')],
+      restDays: [{ date: '2026-11-25' }],
+      sessions: [foco('2026-11-26', 9, 25)],
+      tasks: [
+        tarefa('t1', 'feito', sp('2026-11-26', 10)),
+        tarefa('t2', 'feito', sp('2026-09-02')),
+        tarefa('t3', 'afazer'),
+      ],
+      goals: [],
+      baus: [],
+    };
+    const hoje = concluidoDoIntervalo(registros, 1);
+    expect(hoje).toMatchObject({ tarefas: 1, metas: 0 });
+    // 1 do hábito e 5 dos 25 minutos de foco; o descanso de ontem fica fora de "hoje".
+    expect(hoje.joias).toBe(6);
+    expect(concluidoDoIntervalo(registros, 7).joias).toBe(8);
   });
 });

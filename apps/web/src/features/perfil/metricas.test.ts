@@ -1,7 +1,5 @@
 import { diasNoMes } from '../hoje/mes';
-import { comparacaoDoDescanso, nomeDoDia, nomeDoPeriodo, porcentagem, SEM_NUMERO, TEXTO_DE_POUCA_HISTORIA } from './metricas';
-
-const DESCANSO = { total: 3, noMes: 1, semanasComDescanso: 2 };
+import { nomeDoDia, nomeDoPeriodo, porcentagem, SEM_NUMERO } from './metricas';
 
 describe('métricas do Perfil', () => {
   test('porcentagem, período e dia, com traço sem dado', () => {
@@ -11,18 +9,6 @@ describe('métricas do Perfil', () => {
     expect(nomeDoPeriodo('manha')).toBe('manhã');
     expect(nomeDoDia(5)).toBe('sábado');
     expect(nomeDoDia(null)).toBe(SEM_NUMERO);
-  });
-
-  test('comparação em horas, na proporção da maior', () => {
-    expect(comparacaoDoDescanso({ ...DESCANSO, focoMedioSemanaComDescanso: 150, focoMedioSemanaSem: 75 })).toEqual([
-      { rotulo: 'Semanas com descanso', texto: '2h30', largura: 100, comDescanso: true },
-      { rotulo: 'Semanas sem descanso', texto: '1h15', largura: 50, comDescanso: false },
-    ]);
-  });
-
-  test('pouca história não tem comparação', () => {
-    expect(comparacaoDoDescanso({ ...DESCANSO, focoMedioSemanaComDescanso: null, focoMedioSemanaSem: null })).toBeNull();
-    expect(TEXTO_DE_POUCA_HISTORIA).toBe('A comparação do foco entre semanas com e sem descanso aparece quando houver pelo menos 2 semanas de cada tipo.');
   });
 
   test('dias do mês sem repetir nem contar o futuro', () => {

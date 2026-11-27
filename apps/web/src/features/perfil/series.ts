@@ -1,10 +1,26 @@
-import { DAY_ROLLOVER_HOUR, DEFAULT_TIMEZONE, METRICAS } from '@pulo/core/config/decisions';
+import { DAY_ROLLOVER_HOUR, DEFAULT_TIMEZONE, JOIAS, METRICAS } from '@pulo/core/config/decisions';
 import { MINUTE_MS } from '@pulo/core/domain/clock';
 import { addDays, dateKeyOf, diffDays, periodOf, weekdayOf, weekStartOf } from '@pulo/core/domain/day';
-import { focusedMs } from '@pulo/core/domain/joias';
+import { providesFreezeStore } from '@pulo/core/domain/gelo-store';
+import { focusedMs, joiasDoFoco } from '@pulo/core/domain/joias';
 import { streakDaySets } from '@pulo/core/domain/streak';
 import { bestPeriod } from '@pulo/core/domain/week-summary';
-import type { Clock, DateKey, FocusSession, Habit, HabitLog, Period, Repository, RestDay, User, Vacation } from '@pulo/core/domain/types';
+import type {
+  Clock,
+  DateKey,
+  FocusSession,
+  FreezeUse,
+  Goal,
+  GoalChest,
+  Habit,
+  HabitLog,
+  Period,
+  Repository,
+  RestDay,
+  Task,
+  User,
+  Vacation,
+} from '@pulo/core/domain/types';
 
 import { verPreferencias } from '../app/conta';
 import { duracaoTexto } from '../hoje/logic';
@@ -34,8 +50,8 @@ export interface Serie {
 /** Os intervalos que cada cartão do Ritmo deixa escolher. */
 export const INTERVALOS = [
   { dias: 1, rotulo: 'Hoje' },
-  { dias: 7, rotulo: 'Últimos 7 dias' },
-  { dias: 30, rotulo: 'Últimos 30 dias' },
+  { dias: 7, rotulo: '7 dias' },
+  { dias: 30, rotulo: '30 dias' },
 ] as const;
 export type Intervalo = (typeof INTERVALOS)[number]['dias'];
 
@@ -59,6 +75,10 @@ export interface RegistrosDoRitmo {
   habits: readonly Habit[];
   habitLogs: readonly HabitLog[];
   restDays: readonly RestDay[];
+  freezeUses: readonly FreezeUse[];
+  tasks: readonly Task[];
+  goals: readonly Goal[];
+  baus: readonly GoalChest[];
   vacation?: Vacation;
   user: Pick<User, 'createdAt' | 'timezone' | 'dayStartMinutes'>;
   now: number;
@@ -216,16 +236,109 @@ export function habitosDoIntervalo(registros: RegistrosDoRitmo, intervalo: numbe
   };
 }
 
+/** Uma coluna com duas contagens empilhadas no mesmo dia ou semana (descanso e gelo, tarefas e metas). */
+export interface ColunaEmPilha {
+  chave: string;
+  rotulo: string;
+  /** Para o leitor de tela. */
+  nome: string;
+  texto: string;
+  a: number;
+  b: number;
+  destaque: boolean;
+}
+
+const plural = (n: number, um: string, varios: string): string => `${n} ${n === 1 ? um : varios}`;
+
+/** Quantas vezes cada dia aparece. */
+function contagemPorDia(entradas: readonly { date: DateKey; quanto: number }[]): Map<DateKey, number> {
+  const contagem = new Map<DateKey, number>();
+  for (const { date, quanto } of entradas) contagem.set(date, (contagem.get(date) ?? 0) + quanto);
+  return contagem;
+}
+
+const somaNosDias = (contagem: ReadonlyMap<DateKey, number>, dias: readonly DateKey[]): number => dias.reduce((total, d) => total + (contagem.get(d) ?? 0), 0);
+
+/** As colunas empilhadas: por dia até uma semana, por semana acima disso (como o cartão dos hábitos). */
+function emPilha(dias: readonly DateKey[], a: ReadonlyMap<DateKey, number>, b: ReadonlyMap<DateKey, number>, descrever: (a: number, b: number) => string): ColunaEmPilha[] {
+  if (dias.length <= 7) {
+    return dias.map((date, i): ColunaEmPilha => {
+      const hoje = i === dias.length - 1;
+      const [doA, doB] = [a.get(date) ?? 0, b.get(date) ?? 0];
+      return { chave: date, rotulo: hoje ? 'hoje' : diaEMes(date), nome: hoje ? `${diaEMes(date)} (hoje)` : diaEMes(date), texto: descrever(doA, doB), a: doA, b: doB, destaque: hoje };
+    });
+  }
+  const semanas = [...new Set(dias.map((d) => weekStartOf(d)))];
+  return semanas.map((semana, i): ColunaEmPilha => {
+    const daSemana = dias.filter((d) => weekStartOf(d) === semana);
+    const [doA, doB] = [somaNosDias(a, daSemana), somaNosDias(b, daSemana)];
+    const inicio = daSemana[0] ?? semana;
+    return { chave: semana, rotulo: diaEMes(inicio), nome: `semana de ${diaEMes(inicio)}`, texto: descrever(doA, doB), a: doA, b: doB, destaque: i === semanas.length - 1 };
+  });
+}
+
+/** O cartão do descanso: descansos e gelos usados no intervalo, empilhados por dia ou semana. */
+export interface DescansoDoIntervalo {
+  colunas: ColunaEmPilha[];
+  descansos: number;
+  gelos: number;
+}
+
+export function descansoDoIntervalo(registros: RegistrosDoRitmo, intervalo: number = METRICAS.janelaDias): DescansoDoIntervalo {
+  const { dias } = contexto(registros, intervalo);
+  const descansos = contagemPorDia(registros.restDays.map((r) => ({ date: r.date, quanto: 1 })));
+  const gelos = contagemPorDia(registros.freezeUses.map((u) => ({ date: u.date, quanto: 1 })));
+  return {
+    colunas: emPilha(dias, descansos, gelos, (a, b) => `${plural(a, 'descanso', 'descansos')}, ${plural(b, 'gelo', 'gelos')}`),
+    descansos: somaNosDias(descansos, dias),
+    gelos: somaNosDias(gelos, dias),
+  };
+}
+
+/** O cartão do concluído: tarefas e metas empilhadas por dia ou semana, e as joias ganhas no intervalo. */
+export interface ConcluidoDoIntervalo {
+  colunas: ColunaEmPilha[];
+  tarefas: number;
+  metas: number;
+  joias: number;
+}
+
+export function concluidoDoIntervalo(registros: RegistrosDoRitmo, intervalo: number = METRICAS.janelaDias): ConcluidoDoIntervalo {
+  const { fuso, virada, dias } = contexto(registros, intervalo);
+  const dia = (ts: number): DateKey => dateKeyOf(ts, fuso, virada);
+  const tarefas = contagemPorDia(registros.tasks.flatMap((t) => (t.status === 'feito' && t.completedAt !== undefined ? [{ date: dia(t.completedAt), quanto: 1 }] : [])));
+  const metas = contagemPorDia(registros.goals.flatMap((g) => (g.state === 'concluida' && g.completedAt !== undefined ? [{ date: dia(g.completedAt), quanto: 1 }] : [])));
+  // As mesmas fontes de joias do saldo, cada uma no dia em que rendeu.
+  const por = JOIAS.por;
+  const joias = contagemPorDia([
+    ...registros.habitLogs.map((log) => ({ date: log.date, quanto: por.habitDone })),
+    ...registros.sessions.filter((s) => s.state !== 'em_andamento').map((s) => ({ date: dia(s.endedAt ?? s.startedAt), quanto: joiasDoFoco(s) })),
+    ...registros.restDays.map((r) => ({ date: r.date, quanto: por.restDay })),
+    ...registros.goals.flatMap((g) => g.milestones.flatMap((m) => (m.doneAt === undefined ? [] : [{ date: dia(m.doneAt), quanto: por.milestoneDone }]))),
+    ...registros.baus.map((b) => ({ date: dia(b.abertoEm), quanto: b.joias })),
+  ]);
+  return {
+    colunas: emPilha(dias, tarefas, metas, (a, b) => `${plural(a, 'tarefa', 'tarefas')}, ${plural(b, 'meta', 'metas')}`),
+    tarefas: somaNosDias(tarefas, dias),
+    metas: somaNosDias(metas, dias),
+    joias: somaNosDias(joias, dias),
+  };
+}
+
 /** Os registros que os cartões do Ritmo usam; cada cartão calcula o próprio intervalo. */
 export async function carregarRegistros(repo: Repository, clock: Clock): Promise<RegistrosDoRitmo> {
-  const [user, sessions, habits, habitLogs, restDays, preferencias] = await Promise.all([
+  const [user, sessions, habits, habitLogs, restDays, freezeUses, tasks, goals, baus, preferencias] = await Promise.all([
     repo.getUser(),
     repo.listSessions(),
     repo.listHabits(),
     repo.listHabitLogs(),
     repo.listRestDays(),
+    providesFreezeStore(repo) ? repo.listFreezeUses() : [],
+    repo.listTasks(),
+    repo.listGoals(),
+    repo.listGoalChests(),
     verPreferencias(repo),
   ]);
   if (!user) throw new Error('sem usuário');
-  return { user, sessions, habits, habitLogs, restDays, vacation: preferencias?.vacation, now: clock.now() };
+  return { user, sessions, habits, habitLogs, restDays, freezeUses, tasks, goals, baus, vacation: preferencias?.vacation, now: clock.now() };
 }

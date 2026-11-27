@@ -56,9 +56,8 @@ describe('PerfilScreen', () => {
     await screen.findByRole('heading', { name: 'Ritmo' });
     // O foco vai para a seção logo depois de ela aparecer; com a máquina ocupada, isso pode levar um instante.
     await waitFor(() => expect(document.activeElement?.id).toBe('metricas'));
-    expect(screen.getByRole('heading', { name: 'Descanso e gelo' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Concluído' })).toBeTruthy();
-    for (const name of ['Foco por dia', 'Hábitos feitos']) {
+    expect(screen.getByRole('heading', { name: 'Descanso e concluído' })).toBeTruthy();
+    for (const name of ['Foco por dia', 'Hábitos feitos', 'Descanso e gelo', 'Concluído']) {
       expect(screen.getByRole('figure', { name })).toBeTruthy();
     }
     expect(within(screen.getByRole('figure', { name: 'Foco por dia' })).getByRole('row', { name: /\(hoje\)/ })).toBeTruthy();
@@ -69,9 +68,9 @@ describe('PerfilScreen', () => {
     const repo = await abrir();
     await clicar(screen.getByRole('switch', { name: 'Sons do sapo' }));
     await clicar(screen.getByRole('switch', { name: 'Modo férias' }));
-    await act(async () => void fireEvent.change(screen.getByRole('combobox', { name: 'Duração do foco' }), { target: { value: '40' } }));
     const preferencias = await repo.getPreferences();
-    expect(preferencias).toMatchObject({ sounds: false, focusMinutes: 40, vacation: { ligado: true } });
+    expect(preferencias).toMatchObject({ sounds: false, vacation: { ligado: true } });
+    expect(screen.queryByRole('combobox', { name: 'Duração do foco' })).toBeNull();
     expect(screen.getByRole('switch', { name: 'Sons do sapo' }).getAttribute('aria-checked')).toBe('false');
   });
 

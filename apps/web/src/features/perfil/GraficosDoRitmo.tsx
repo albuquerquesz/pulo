@@ -6,14 +6,27 @@ import { duracaoTexto } from '../hoje/logic';
 import { Escolha } from './Linha';
 import { numero } from './logic';
 import { nomeDoPeriodo, porcentagem } from './metricas';
-import { focoDoIntervalo, habitosDoIntervalo, INTERVALOS, type Coluna, type Intervalo, type RegistrosDoRitmo, type Serie } from './series';
+import {
+  concluidoDoIntervalo,
+  descansoDoIntervalo,
+  focoDoIntervalo,
+  habitosDoIntervalo,
+  INTERVALOS,
+  type Coluna,
+  type ColunaEmPilha,
+  type Intervalo,
+  type RegistrosDoRitmo,
+} from './series';
 
 /** Altura fixa da área do gráfico, igual nos dois cartões. */
 const ALTURA = 200;
 const EIXO = { fontSize: 11, fill: 'var(--pulo-muted)' } as const;
 
+/** O que a dica e a tabela do leitor de tela mostram de cada coluna. */
+type LinhaDoGrafico = Pick<Coluna, 'chave' | 'nome' | 'texto'>;
+
 /** A dica ao passar o mouse: o nome da coluna e o valor já formatado. */
-function Dica({ active, payload }: { active?: boolean; payload?: readonly { payload: Coluna }[] }) {
+function Dica({ active, payload }: { active?: boolean; payload?: readonly { payload: LinhaDoGrafico }[] }) {
   const coluna = payload?.[0]?.payload;
   if (!active || !coluna) return null;
   return (
@@ -32,7 +45,7 @@ type CartaoProps = {
   numeros: readonly NumeroDoGrafico[];
   intervalo: Intervalo;
   onIntervalo: (intervalo: Intervalo) => void;
-  serie: Serie;
+  linhas: readonly LinhaDoGrafico[];
   children: ReactNode;
 };
 
@@ -40,7 +53,7 @@ const OPCOES_DE_INTERVALO = INTERVALOS.map((i) => ({ valor: String(i.dias), rotu
 const intervaloDe = (valor: string): Intervalo => INTERVALOS.find((i) => String(i.dias) === valor)?.dias ?? 30;
 
 /** Um cartão com os números no topo e o gráfico embaixo; o título fica para o leitor de tela, junto da tabela com os mesmos números. */
-function CartaoDoGrafico({ titulo, numeros, intervalo, onIntervalo, serie, children }: CartaoProps) {
+function CartaoDoGrafico({ titulo, numeros, intervalo, onIntervalo, linhas, children }: CartaoProps) {
   return (
     <figure aria-label={titulo} className={`${CARTAO} relative flex min-w-0 flex-col gap-4 p-5`}>
       <div className="flex items-start justify-between gap-4">
@@ -60,7 +73,7 @@ function CartaoDoGrafico({ titulo, numeros, intervalo, onIntervalo, serie, child
       <div className="sr-only">
         <table>
           <tbody>
-            {serie.colunas.map((coluna) => (
+            {linhas.map((coluna) => (
               <tr key={coluna.chave}>
                 <th scope="row">{coluna.nome}</th>
                 <td>{coluna.texto}</td>
@@ -82,7 +95,7 @@ function PontoDeHoje({ cx, cy, payload, index }: PontoDaArea) {
 }
 
 /** Minutos de foco por dia, em área, com o dia de hoje marcado. */
-function GraficoDeFoco({ serie }: { serie: Serie }) {
+function GraficoDeFoco({ serie }: { serie: { colunas: Coluna[] } }) {
   const gradiente = `foco${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const topo = Math.max(10, ...serie.colunas.map((c) => c.valor));
   return (
@@ -114,7 +127,7 @@ function GraficoDeFoco({ serie }: { serie: Serie }) {
 }
 
 /** A taxa de hábitos feitos por semana, em barras arredondadas, com a semana atual mais forte. */
-function GraficoDeHabitos({ serie }: { serie: Serie }) {
+function GraficoDeHabitos({ serie }: { serie: { colunas: Coluna[] } }) {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={serie.colunas} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
@@ -137,12 +150,12 @@ function CartaoDoFoco({ registros }: { registros: RegistrosDoRitmo }) {
   const [intervalo, setIntervalo] = useState<Intervalo>(30);
   const foco = useMemo(() => focoDoIntervalo(registros, intervalo), [registros, intervalo]);
   const numeros = [
-    { legenda: 'Foco médio por dia', valor: duracaoTexto(foco.medioPorDia) },
+    { legenda: 'Foco médio', valor: duracaoTexto(foco.medioPorDia) },
     { legenda: 'Sessões terminadas', valor: numero(foco.sessoesTerminadas) },
     { legenda: 'Melhor período', valor: nomeDoPeriodo(foco.melhorPeriodo) },
   ];
   return (
-    <CartaoDoGrafico titulo="Foco por dia" numeros={numeros} intervalo={intervalo} onIntervalo={setIntervalo} serie={foco.porDia}>
+    <CartaoDoGrafico titulo="Foco por dia" numeros={numeros} intervalo={intervalo} onIntervalo={setIntervalo} linhas={foco.porDia.colunas}>
       <GraficoDeFoco serie={foco.porDia} />
     </CartaoDoGrafico>
   );
@@ -158,7 +171,7 @@ function CartaoDosHabitos({ registros }: { registros: RegistrosDoRitmo }) {
       numeros={[{ legenda: 'Hábitos feitos', valor: porcentagem(habitos.taxa) }]}
       intervalo={intervalo}
       onIntervalo={setIntervalo}
-      serie={habitos.serie}
+      linhas={habitos.serie.colunas}
     >
       <GraficoDeHabitos serie={habitos.serie} />
     </CartaoDoGrafico>
@@ -175,19 +188,72 @@ export function GraficosDoRitmo({ registros }: { registros: RegistrosDoRitmo }) 
   );
 }
 
-type FaixaProps = { rotulo: string; texto: string; largura: number; cor: string };
+type Pilha = { rotulo: string; cor: string };
 
-/** Uma barra deitada, com o nome e o valor em cima. */
-export function Faixa({ rotulo, texto, largura, cor }: FaixaProps) {
+/** Duas contagens empilhadas por dia ou semana; a coluna de hoje (ou da semana atual) fica inteira, as outras mais claras. */
+function GraficoEmPilha({ colunas, a, b }: { colunas: ColunaEmPilha[]; a: Pilha; b: Pilha }) {
+  const topo = Math.max(2, ...colunas.map((c) => c.a + c.b));
+  const tom = (cor: string, destaque: boolean) => (destaque ? cor : `color-mix(in srgb, ${cor} 50%, transparent)`);
   return (
-    <li className="flex flex-col gap-1">
-      <span className="flex justify-between gap-3 text-[13px]">
-        <span className="text-muted first-letter:uppercase">{rotulo}</span>
-        <b>{texto}</b>
-      </span>
-      <span aria-hidden="true" className="block h-[18px] overflow-hidden rounded-full bg-line">
-        <i className={`block h-full rounded-full ${cor}`} style={{ width: `${largura}%` }} />
-      </span>
-    </li>
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={colunas} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
+        <CartesianGrid vertical={false} stroke="var(--pulo-line)" />
+        <XAxis dataKey="rotulo" tick={EIXO} tickLine={false} axisLine={false} interval={0} />
+        <YAxis domain={[0, topo]} tick={EIXO} tickLine={false} axisLine={false} allowDecimals={false} />
+        <Tooltip content={<Dica />} cursor={{ fill: 'var(--pulo-line)', opacity: 0.4 }} />
+        <Bar dataKey="a" name={a.rotulo} stackId="pilha" maxBarSize={48} isAnimationActive={false}>
+          {colunas.map((coluna) => (
+            <Cell key={coluna.chave} fill={tom(a.cor, coluna.destaque)} />
+          ))}
+        </Bar>
+        <Bar dataKey="b" name={b.rotulo} stackId="pilha" radius={[8, 8, 0, 0]} maxBarSize={48} isAnimationActive={false}>
+          {colunas.map((coluna) => (
+            <Cell key={coluna.chave} fill={tom(b.cor, coluna.destaque)} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+/** O cartão do descanso: descansos e gelos usados no intervalo, e os gelos guardados agora. */
+function CartaoDoDescanso({ registros, guardados }: { registros: RegistrosDoRitmo; guardados: number }) {
+  const [intervalo, setIntervalo] = useState<Intervalo>(30);
+  const descanso = useMemo(() => descansoDoIntervalo(registros, intervalo), [registros, intervalo]);
+  const numeros = [
+    { legenda: 'Descansos', valor: numero(descanso.descansos) },
+    { legenda: 'Gelos usados', valor: numero(descanso.gelos) },
+    { legenda: 'Gelos guardados', valor: numero(guardados) },
+  ];
+  return (
+    <CartaoDoGrafico titulo="Descanso e gelo" numeros={numeros} intervalo={intervalo} onIntervalo={setIntervalo} linhas={descanso.colunas}>
+      <GraficoEmPilha colunas={descanso.colunas} a={{ rotulo: 'Descansos', cor: 'var(--pulo-descanso)' }} b={{ rotulo: 'Gelos', cor: 'var(--pulo-agua)' }} />
+    </CartaoDoGrafico>
+  );
+}
+
+/** O cartão do concluído: tarefas e metas empilhadas, e as joias ganhas no intervalo. */
+function CartaoDoConcluido({ registros }: { registros: RegistrosDoRitmo }) {
+  const [intervalo, setIntervalo] = useState<Intervalo>(30);
+  const concluido = useMemo(() => concluidoDoIntervalo(registros, intervalo), [registros, intervalo]);
+  const numeros = [
+    { legenda: 'Tarefas concluídas', valor: numero(concluido.tarefas) },
+    { legenda: 'Metas concluídas', valor: numero(concluido.metas) },
+    { legenda: 'Joias ganhas', valor: numero(concluido.joias) },
+  ];
+  return (
+    <CartaoDoGrafico titulo="Concluído" numeros={numeros} intervalo={intervalo} onIntervalo={setIntervalo} linhas={concluido.colunas}>
+      <GraficoEmPilha colunas={concluido.colunas} a={{ rotulo: 'Tarefas', cor: 'var(--pulo-agua)' }} b={{ rotulo: 'Metas', cor: 'var(--pulo-joia)' }} />
+    </CartaoDoGrafico>
+  );
+}
+
+/** Descanso e concluído, meio a meio no desktop, no mesmo molde dos cartões do Ritmo. */
+export function GraficosDoDescanso({ registros, guardados }: { registros: RegistrosDoRitmo; guardados: number }) {
+  return (
+    <div className="grid gap-4 @2xl:grid-cols-2">
+      <CartaoDoDescanso registros={registros} guardados={guardados} />
+      <CartaoDoConcluido registros={registros} />
+    </div>
   );
 }

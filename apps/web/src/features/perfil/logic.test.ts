@@ -11,7 +11,7 @@ import {
   lembreteEscolhido,
   medalha,
   numero,
-  opcoesDeFoco,
+  opcoesDeComecoDoDia,
   opcoesDeLembrete,
   podeExcluir,
 } from './logic';
@@ -28,7 +28,7 @@ describe('textos do Perfil', () => {
   });
 
   test('as opções mantêm um valor fora do passo e o lembrete pode ser desligado', () => {
-    expect(opcoesDeFoco(27).map((o) => o.valor)).toContain('27');
+    expect(opcoesDeComecoDoDia(270).map((o) => o.valor)).toContain('270');
     const lembrete = { ligado: false, minutos: 21 * 60 };
     expect(opcoesDeLembrete(lembrete)[0]?.rotulo).toBe('Desligado');
     expect(lembreteEscolhido('1200', lembrete)).toEqual({ ligado: true, minutos: 1200 });
