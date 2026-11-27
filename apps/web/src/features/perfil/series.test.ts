@@ -80,11 +80,11 @@ describe('séries do ritmo', () => {
     const sessions = [foco('2026-11-26', 9, 30), foco('2026-11-25', 15, 60), foco('2026-11-10', 9, 90)];
     const hoje = focoDoIntervalo({ ...BASE, sessions }, 1);
     expect(hoje.porDia.colunas).toHaveLength(1);
-    expect(hoje).toMatchObject({ medioPorDia: 30, sessoesTerminadas: 1, melhorPeriodo: 'manha' });
+    expect(hoje).toMatchObject({ medioPorDia: 30, sessoesTerminadas: 1 });
     const semana = focoDoIntervalo({ ...BASE, sessions }, 7);
     expect(semana.porDia.colunas).toHaveLength(7);
     expect(semana.porDia.colunas.every((c) => c.rotulo !== '')).toBe(true);
-    expect(semana).toMatchObject({ medioPorDia: 13, sessoesTerminadas: 2, melhorPeriodo: 'tarde' });
+    expect(semana).toMatchObject({ medioPorDia: 13, sessoesTerminadas: 2 });
   });
 
   test('até uma semana os hábitos vão por dia, e a taxa soma o intervalo', () => {

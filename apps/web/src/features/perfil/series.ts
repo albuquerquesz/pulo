@@ -1,10 +1,9 @@
 import { DAY_ROLLOVER_HOUR, DEFAULT_TIMEZONE, JOIAS, METRICAS } from '@pulo/core/config/decisions';
 import { MINUTE_MS } from '@pulo/core/domain/clock';
-import { addDays, dateKeyOf, diffDays, periodOf, weekdayOf, weekStartOf } from '@pulo/core/domain/day';
+import { addDays, dateKeyOf, diffDays, weekdayOf, weekStartOf } from '@pulo/core/domain/day';
 import { providesFreezeStore } from '@pulo/core/domain/gelo-store';
 import { focusedMs, joiasDoFoco } from '@pulo/core/domain/joias';
 import { streakDaySets } from '@pulo/core/domain/streak';
-import { bestPeriod } from '@pulo/core/domain/week-summary';
 import type {
   Clock,
   DateKey,
@@ -14,7 +13,6 @@ import type {
   GoalChest,
   Habit,
   HabitLog,
-  Period,
   Repository,
   RestDay,
   Task,
@@ -61,7 +59,6 @@ export interface FocoDoIntervalo {
   /** Minutos por dia, na média do intervalo. */
   medioPorDia: number;
   sessoesTerminadas: number;
-  melhorPeriodo: Period | null;
 }
 
 /** O cartão dos hábitos: por dia até uma semana, por semana acima disso, e a taxa do intervalo (`null` sem hábito que conte). */
@@ -87,7 +84,6 @@ export interface RegistrosDoRitmo {
 interface SessaoDaJanela {
   date: DateKey;
   ms: number;
-  periodo: Period;
   concluida: boolean;
 }
 
@@ -197,7 +193,7 @@ function contexto(registros: RegistrosDoRitmo, intervalo: number) {
   return { fuso, virada, today, parados: new Set([...rest, ...vacation]), dias };
 }
 
-/** O foco do intervalo: minutos por dia, a média, as sessões terminadas e o melhor período (a mesma regra das métricas). */
+/** O foco do intervalo: minutos por dia, a média e as sessões terminadas. */
 export function focoDoIntervalo(registros: RegistrosDoRitmo, intervalo: number = METRICAS.janelaDias): FocoDoIntervalo {
   const { fuso, virada, dias } = contexto(registros, intervalo);
   const daJanela = new Set(dias);
@@ -207,21 +203,14 @@ export function focoDoIntervalo(registros: RegistrosDoRitmo, intervalo: number =
       (s): SessaoDaJanela => ({
         date: dateKeyOf(s.endedAt ?? s.startedAt, fuso, virada),
         ms: focusedMs(s),
-        periodo: periodOf(s.startedAt, fuso),
         concluida: s.state === 'concluida',
       }),
     )
     .filter((s) => daJanela.has(s.date));
-  const doPeriodo = (periodo: Period) => sessoes.filter((s) => s.periodo === periodo);
-  const msDe = (periodo: Period) => doPeriodo(periodo).reduce((total, s) => total + s.ms, 0);
-  const concluidasDe = (periodo: Period) => ({ completed: doPeriodo(periodo).filter((s) => s.concluida).length });
-  const ms: Record<Period, number> = { manha: msDe('manha'), tarde: msDe('tarde'), noite: msDe('noite') };
-  const concluidas: Record<Period, { completed: number }> = { manha: concluidasDe('manha'), tarde: concluidasDe('tarde'), noite: concluidasDe('noite') };
   return {
     porDia: focoPorDia(sessoes, dias),
     medioPorDia: Math.round(minutosDe(sessoes) / dias.length),
     sessoesTerminadas: sessoes.filter((s) => s.concluida).length,
-    melhorPeriodo: bestPeriod(ms, concluidas),
   };
 }
 

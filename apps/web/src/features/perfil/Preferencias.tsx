@@ -44,9 +44,6 @@ export function Preferencias({ tema, preferencias, onTema, onMudar, claude, onCl
             ))}
           </div>
         </Linha>
-        <Linha titulo="Sons do sapo">
-          <Chave rotulo="Sons do sapo" ligada={preferencias.sounds} onMudar={(sounds) => onMudar({ sounds })} />
-        </Linha>
         <Linha titulo="Assistente de IA" detalhe="sugere ajustes na semana">
           <Chave rotulo="Assistente de IA" ligada={preferencias.aiEnabled} onMudar={(aiEnabled) => onMudar({ aiEnabled })} />
         </Linha>

@@ -66,12 +66,11 @@ describe('PerfilScreen', () => {
 
   test('mudar preferência grava na conta', async () => {
     const repo = await abrir();
-    await clicar(screen.getByRole('switch', { name: 'Sons do sapo' }));
     await clicar(screen.getByRole('switch', { name: 'Modo férias' }));
     const preferencias = await repo.getPreferences();
-    expect(preferencias).toMatchObject({ sounds: false, vacation: { ligado: true } });
+    expect(preferencias).toMatchObject({ vacation: { ligado: true } });
     expect(screen.queryByRole('combobox', { name: 'Duração do foco' })).toBeNull();
-    expect(screen.getByRole('switch', { name: 'Sons do sapo' }).getAttribute('aria-checked')).toBe('false');
+    expect(screen.queryByRole('switch', { name: 'Sons do sapo' })).toBeNull();
   });
 
   test('tema e começo do dia vão para o usuário', async () => {

@@ -5,7 +5,7 @@ import { CARTAO } from './estilos';
 import { duracaoTexto } from '../hoje/logic';
 import { Escolha } from './Linha';
 import { numero } from './logic';
-import { nomeDoPeriodo, porcentagem } from './metricas';
+import { porcentagem } from './metricas';
 import {
   concluidoDoIntervalo,
   descansoDoIntervalo,
@@ -152,7 +152,6 @@ function CartaoDoFoco({ registros }: { registros: RegistrosDoRitmo }) {
   const numeros = [
     { legenda: 'Foco médio', valor: duracaoTexto(foco.medioPorDia) },
     { legenda: 'Sessões terminadas', valor: numero(foco.sessoesTerminadas) },
-    { legenda: 'Melhor período', valor: nomeDoPeriodo(foco.melhorPeriodo) },
   ];
   return (
     <CartaoDoGrafico titulo="Foco por dia" numeros={numeros} intervalo={intervalo} onIntervalo={setIntervalo} linhas={foco.porDia.colunas}>
@@ -237,9 +236,9 @@ function CartaoDoConcluido({ registros }: { registros: RegistrosDoRitmo }) {
   const [intervalo, setIntervalo] = useState<Intervalo>(30);
   const concluido = useMemo(() => concluidoDoIntervalo(registros, intervalo), [registros, intervalo]);
   const numeros = [
-    { legenda: 'Tarefas concluídas', valor: numero(concluido.tarefas) },
-    { legenda: 'Metas concluídas', valor: numero(concluido.metas) },
-    { legenda: 'Joias ganhas', valor: numero(concluido.joias) },
+    { legenda: 'Tarefas', valor: numero(concluido.tarefas) },
+    { legenda: 'Metas', valor: numero(concluido.metas) },
+    { legenda: 'Joias', valor: numero(concluido.joias) },
   ];
   return (
     <CartaoDoGrafico titulo="Concluído" numeros={numeros} intervalo={intervalo} onIntervalo={setIntervalo} linhas={concluido.colunas}>
