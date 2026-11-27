@@ -51,7 +51,7 @@ function Ceu() {
 }
 
 /** Colinas do bosque, as mesmas da margem da lagoa. */
-function Colinas({ className }: { className: string }) {
+export function Colinas({ className }: { className: string }) {
   return (
     <svg aria-hidden="true" className={`lagoa-margem ${className}`} viewBox="0 0 1200 64" preserveAspectRatio="none">
       <path d="M0 40 Q200 6 420 30 T860 22 T1200 28 V64 H0Z" />

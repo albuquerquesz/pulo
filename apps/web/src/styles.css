@@ -1112,6 +1112,178 @@ body {
   color: #fff;
 }
 
+/* Onboarding: a página do céu com colinas, sempre no tema claro (ainda não há perfil com tema). */
+.onboarding {
+  --pulo-bg: #f6f1e4;
+  --pulo-surface: #ffffff;
+  --pulo-line: #e4e0cc;
+  --pulo-ink: #1f2a24;
+  --pulo-muted: #5e6b62;
+  --l-contorno: #3b2a2f;
+  --l-colina: #a6dd7a;
+  --l-colina-perto: #79c94a;
+  background: linear-gradient(180deg, #cbf1f6, #fff3da 70%);
+  color: var(--pulo-ink);
+  color-scheme: light;
+}
+.onboarding :focus-visible {
+  outline: 3px solid var(--pulo-joia-escura);
+  outline-offset: 2px;
+}
+.onboarding [tabindex='-1']:focus-visible {
+  outline-style: dashed;
+}
+.onboarding .lagoa-margem path {
+  stroke: var(--l-contorno);
+  stroke-width: 4;
+  vector-effect: non-scaling-stroke;
+}
+.onboarding-nuvem {
+  position: absolute;
+  top: 80px;
+  left: -160px;
+  width: 150px;
+  height: 46px;
+  border-radius: 999px;
+  background: #fff;
+  opacity: 0.9;
+  animation: lagoa-passa 40s linear infinite;
+}
+.onboarding-nuvem::before,
+.onboarding-nuvem::after {
+  content: '';
+  position: absolute;
+  border-radius: 999px;
+  background: inherit;
+}
+.onboarding-nuvem::before {
+  left: 22px;
+  top: -26px;
+  width: 64px;
+  height: 56px;
+}
+.onboarding-nuvem::after {
+  left: 70px;
+  top: -18px;
+  width: 52px;
+  height: 44px;
+}
+.onboarding-nuvem-baixa {
+  top: 220px;
+  scale: 0.7;
+  animation-duration: 55s;
+  animation-delay: -20s;
+}
+.onboarding-trilha::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: calc(50% - 2px);
+  height: 4px;
+  border-radius: 4px;
+  background: #bfe6e2;
+}
+.onboarding-sapinho {
+  transition: left 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.onboarding-tela[data-direcao='avanca'] {
+  animation: onboarding-avanca 0.45s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.onboarding-tela[data-direcao='volta'] {
+  animation: onboarding-volta 0.45s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.onboarding-balao {
+  animation: onboarding-surge 0.4s 0.1s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.onboarding-balao::after {
+  content: '';
+  position: absolute;
+  left: -11px;
+  bottom: 14px;
+  width: 16px;
+  height: 16px;
+  border-left: 3px solid var(--pulo-contorno);
+  border-bottom: 3px solid var(--pulo-contorno);
+  background: var(--pulo-surface);
+  transform: rotate(45deg);
+}
+.onboarding-sapo {
+  transform-origin: 50% 100%;
+}
+.onboarding-sapo[data-pulando='true'] {
+  animation: onboarding-pulo 0.55s cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+.onboarding-final {
+  animation: onboarding-surge 0.4s;
+}
+/* A posição parada é a última folha: vale quando o movimento está reduzido. */
+.onboarding-atravessa {
+  transform: translate(160px, 0);
+  animation: onboarding-atravessa 1.8s 0.3s cubic-bezier(0.4, 0, 0.3, 1) both;
+}
+@keyframes onboarding-avanca {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+}
+@keyframes onboarding-volta {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+}
+@keyframes onboarding-surge {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes onboarding-pulo {
+  20% {
+    transform: scale(1.08, 0.9);
+  }
+  50% {
+    transform: translateY(-22px) scale(0.95, 1.06);
+  }
+  80% {
+    transform: scale(1.05, 0.95);
+  }
+}
+@keyframes onboarding-atravessa {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(40px, -40px);
+  }
+  40% {
+    transform: translate(80px, 0) scale(1.08, 0.9);
+  }
+  65% {
+    transform: translate(120px, -40px);
+  }
+  80%,
+  100% {
+    transform: translate(160px, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .onboarding *,
+  .onboarding *::before,
+  .onboarding *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+:root[data-reduzir-movimento='true'] .onboarding *,
+:root[data-reduzir-movimento='true'] .onboarding *::before,
+:root[data-reduzir-movimento='true'] .onboarding *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
 /* A lista do seletor (Escolha) abre crescendo um pouco a partir do botão. */
 @keyframes escolha-abre {
   from {
