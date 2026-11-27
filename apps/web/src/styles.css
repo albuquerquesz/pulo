@@ -1095,3 +1095,11 @@ body {
 .lagoa-topo[data-periodo='noite'] .lagoa-destaque {
   color: #fff;
 }
+
+/* A lista do seletor (Escolha) abre crescendo um pouco a partir do botão. */
+@keyframes escolha-abre {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-4px);
+  }
+}

@@ -76,7 +76,8 @@ describe('PerfilScreen', () => {
   test('tema e começo do dia vão para o usuário', async () => {
     const repo = await abrir();
     await clicar(screen.getByRole('button', { name: 'Escuro' }));
-    await act(async () => void fireEvent.change(screen.getByRole('combobox', { name: 'Meu dia começa' }), { target: { value: '480' } }));
+    await clicar(screen.getByRole('combobox', { name: 'Meu dia começa' }));
+    await clicar(screen.getByRole('option', { name: '08h00' }));
     expect(await repo.getUser()).toMatchObject({ theme: 'escuro', dayStartMinutes: 480 });
   });
 
