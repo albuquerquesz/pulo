@@ -165,8 +165,13 @@ export async function carregarEstatisticas(repo: Repository, clock: Clock): Prom
 export interface BuscaDeHabitos {
   /** O hábito aberto (no celular, é a tela do detalhe). */
   habito?: EntityId;
+  /** Abre o formulário de hábito novo (o atalho do Hoje quando ainda não há hábito). */
+  novo?: boolean;
 }
 
 export function lerBuscaDeHabitos(busca: Record<string, unknown>): BuscaDeHabitos {
-  return typeof busca.habito === 'string' && busca.habito ? { habito: busca.habito } : {};
+  return {
+    ...(typeof busca.habito === 'string' && busca.habito ? { habito: busca.habito } : {}),
+    ...(busca.novo === true ? { novo: true } : {}),
+  };
 }

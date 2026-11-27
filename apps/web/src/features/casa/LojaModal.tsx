@@ -3,7 +3,7 @@ import type { RoomDecor } from '@pulo/core/domain/types';
 import { Joia, Modal } from '@/ui';
 
 import { CartaoDoGelo } from '../casca/CartaoDoGelo';
-import { COR_NATURAL, CORES, idDaCompra, ITENS, precoDe, type Escolha } from './catalogo';
+import { COR_NATURAL, CORES, ITENS, precoDe, type Escolha } from './catalogo';
 import { colocadosNoQuarto, ehMeu, estadoDaCompra, type EstadoDaCompra } from './decoracao';
 import type { Lugar } from './lugares';
 import { VisualDoItem } from './VisualDoItem';
@@ -13,7 +13,7 @@ export const BOTAO_DA_LOJA =
 export const BOTAO_NEUTRO = `${BOTAO_DA_LOJA} bg-bege shadow-[inset_0_-5px_0_var(--pulo-bege-borda)]`;
 export const BOTAO_DE_COMPRA = `${BOTAO_DA_LOJA} bg-lima-clara shadow-[inset_0_-5px_0_var(--pulo-lima)]`;
 
-const TEXTO_DA_ACAO = { colocar: 'Colocar', no_lugar: 'No lugar', ja_e_seu: 'Já é seu', em_breve: 'Em breve' } as const;
+const TEXTO_DA_ACAO = { colocar: 'Colocar', no_lugar: 'No lugar', ja_e_seu: 'Já é seu' } as const;
 
 export function RotuloDaCompra({ compra }: { compra: EstadoDaCompra }) {
   if (compra.acao !== 'comprar') return TEXTO_DA_ACAO[compra.acao];
@@ -83,14 +83,13 @@ export function LojaModal({ lugar, escolha, quarto, saldo, comodo, onEscolher, o
         {CORES.map((cor) => {
           const opcao = { item: escolha.item, cor };
           const meu = ehMeu(quarto, opcao);
-          const vendida = meu || idDaCompra(opcao) !== null;
           const preco = precoDe(opcao);
           return (
             <button
               key={cor.id}
               type="button"
               title={cor.nome}
-              aria-label={`${cor.nome}, ${meu ? 'já é seu' : vendida ? `${preco} joias` : 'em breve'}`}
+              aria-label={`${cor.nome}, ${meu ? 'já é seu' : `${preco} joias`}`}
               aria-pressed={cor.id === escolha.cor.id}
               onClick={() => onEscolher(opcao)}
               className="relative flex cursor-pointer flex-col items-center gap-1.5 rounded-[14px] border-4 border-contorno bg-creme px-1.5 pt-2 pb-2.5 aria-pressed:bg-lima-forte"
@@ -98,13 +97,11 @@ export function LojaModal({ lugar, escolha, quarto, saldo, comodo, onEscolher, o
               <span className="inline-flex items-center gap-[3px] self-start text-[13px] font-black md:text-[15px]">
                 {meu ? (
                   '✓ seu'
-                ) : vendida ? (
+                ) : (
                   <>
                     <Joia />
                     {preco}
                   </>
-                ) : (
-                  'em breve'
                 )}
               </span>
               <VisualDoItem {...opcao} tamanho={34} />

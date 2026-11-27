@@ -6,7 +6,7 @@ import { Barra, Foguinho, Joia, FUNDO_DA_COR } from '@/ui';
 
 import { Floco } from './Floco';
 import { ProgressoDaMeta } from '../metas/ProgressoDaMeta';
-import { fraseDaProximaParte, type DadosDoTrilho, type MetaDoTrilho } from './logic';
+import { type DadosDoTrilho, type MetaDoTrilho } from './logic';
 
 const CARTAO = 'rounded-md border border-b-4 border-line bg-surface';
 const ICONE = 'contorno-branco block size-[30px] shrink-0';
@@ -82,7 +82,6 @@ export function NumerosDoDia({ dados, onGelo }: { dados: DadosDoTrilho; onGelo: 
 }
 
 export function CartaoDaCasa({ dados }: { dados: DadosDoTrilho }) {
-  const frase = fraseDaProximaParte(dados.proximaParte);
   const construidas = dados.partesConstruidas.length;
   return (
     <section aria-label="Sua casa" className={`${CARTAO} shrink-0 overflow-hidden`}>
@@ -95,11 +94,6 @@ export function CartaoDaCasa({ dados }: { dados: DadosDoTrilho }) {
           </span>
         </div>
         <Barra rotulo="Partes da casa construídas" feito={construidas} total={dados.totalDePartes} />
-        <p className="text-sm text-muted">
-          {frase.antes}
-          <b className="text-ink">{frase.destaque}</b>
-          {frase.depois}
-        </p>
         <Link
           to="/casa"
           className="mt-3.5 flex min-h-11 w-full items-center justify-center rounded-md bg-foco px-[22px] py-3 font-extrabold text-ink-sobre-acao shadow-[inset_0_-4px_0_var(--pulo-foco-borda)] active:translate-y-[3px]"

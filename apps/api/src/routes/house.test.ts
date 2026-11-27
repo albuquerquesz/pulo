@@ -80,7 +80,7 @@ describe('/api/house e /api/room', () => {
     const movido = await me.call('PATCH', '/api/room/tapete', spot);
     expect(await movido.json()).toEqual({ item: 'tapete', spot });
     const repetida = await me.call('PUT', '/api/room/tapete', decor('tapete'));
-    expect(await repetida.json()).toEqual({ decor: { ...decor('tapete'), ...spot } });
+    expect(await repetida.json()).toEqual({ decor: { ...decor('tapete'), ...spot }, newAchievements: [] });
     expect(await quarto(me)).toEqual([{ ...decor('tapete'), ...spot }]);
 
     const outra = await h.newUser();
@@ -120,7 +120,7 @@ describe('/api/house e /api/room', () => {
     expect(await quarto(me)).toEqual([]);
     // Sem `comodo` (cliente antigo) vai para o quarto.
     const { comodo: _, ...semComodo } = decor('tapete');
-    expect(await (await me.call('PUT', '/api/room/tapete', semComodo)).json()).toEqual({ decor: decor('tapete') });
+    expect(await (await me.call('PUT', '/api/room/tapete', semComodo)).json()).toEqual({ decor: decor('tapete'), newAchievements: [] });
     expect(await erro(await me.call('PUT', '/api/room/tapete', naCozinha))).toEqual(recusa);
     expect(await erro(await me.call('PATCH', '/api/room/tapete', { x: 0, y: 0, rotation: 0, comodo: 'cozinha' }))).toEqual(recusa);
     expect(await erro(await me.call('PATCH', '/api/room/tapete', { x: 0, y: 0, rotation: 0, comodo: 'porao' }))).toEqual({
@@ -130,7 +130,7 @@ describe('/api/house e /api/room', () => {
 
     await me.call('PUT', '/api/house/cozinha', parte('cozinha'));
     // `PUT` com o cômodo novo muda o item de lugar sem cobrar.
-    expect(await (await me.call('PUT', '/api/room/tapete', naCozinha)).json()).toEqual({ decor: naCozinha });
+    expect(await (await me.call('PUT', '/api/room/tapete', naCozinha)).json()).toEqual({ decor: naCozinha, newAchievements: [] });
     expect(await quarto(me)).toEqual([naCozinha]);
     // Mover sem dizer o cômodo mantém o atual; o `PATCH` também muda de cômodo.
     await me.call('PATCH', '/api/room/tapete', { x: 3, y: 3, rotation: 0 });
@@ -207,6 +207,7 @@ describe('/api/house e /api/room', () => {
     const big = await h.newUser();
     for (const [user, n] of [[small, 1], [big, 50]] as const) {
       await joias(user, 500);
+      await database.db.achievement.create({ data: { userId: user.id, achievement: 'quinhentas-joias', conquistadaEm: new Date(TEST_NOW) } });
       await database.db.restDay.createMany({ data: Array.from({ length: n }, (_, i) => ({ userId: user.id, date: new Date(Date.UTC(2025, 0, 1 + i)) })) });
       // Já gravada, para a contagem não incluir o INSERT de uma conquista só em quem tem muitos descansos.
       await database.db.achievement.create({ data: { userId: user.id, achievement: 'descanso-sabido', conquistadaEm: new Date(TEST_NOW) } });
@@ -219,10 +220,10 @@ describe('/api/house e /api/room', () => {
       expect(await queriesOf(database, big, method, path, body)).toBe(count);
       return count;
     };
-    // 2 de sessão + 7 leituras + o insert + 8 leituras das conquistas + a gravação do primeiro acerto do gelo no dia.
-    expect(await both('PUT', '/api/house/cerca', parte('cerca'))).toBe(20);
-    // 2 de sessão + 7 leituras + 2 inserts + a leitura da resposta.
-    expect(await both('PUT', '/api/room/tapete', decor('tapete'))).toBe(13);
+    // 2 de sessão + 7 leituras + o insert + 14 leituras das conquistas + a gravação do primeiro acerto do gelo no dia.
+    expect(await both('PUT', '/api/house/cerca', parte('cerca'))).toBe(26);
+    // 2 de sessão + 7 leituras + 2 inserts + a leitura da resposta + 14 leituras das conquistas.
+    expect(await both('PUT', '/api/room/tapete', decor('tapete'))).toBe(27);
     expect(await both('GET', '/api/house')).toBe(4);
     expect(await both('GET', '/api/room')).toBe(3);
     const spot = { x: 0, y: 0, rotation: 0 };

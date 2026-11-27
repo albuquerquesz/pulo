@@ -111,7 +111,7 @@ describe('/api/habit-logs', () => {
     expect(get).toBe(3);
     const putCount = await queriesOf(database, small, 'PUT', `/api/habit-logs/${smallHabit}/2026-11-17`, log(smallHabit, '2026-11-17'));
     expect(await queriesOf(database, big, 'PUT', `/api/habit-logs/${bigHabit}/2026-12-01`, log(bigHabit, '2026-12-01'))).toBe(putCount);
-    expect(putCount).toBe(12);
+    expect(putCount).toBe(18);
     const del = await queriesOf(database, small, 'DELETE', `/api/habit-logs/${smallHabit}/2026-11-17`);
     expect(await queriesOf(database, big, 'DELETE', `/api/habit-logs/${bigHabit}/2026-12-01`)).toBe(del);
     // 2 de sessão + o acerto do gelo (6 leituras) + o delete.

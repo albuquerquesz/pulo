@@ -2,6 +2,7 @@ import { GOALS, JOIAS } from '@pulo/core/config/decisions';
 import { goalSchema, idParamSchema } from '@pulo/core/api/schemas';
 import { Prisma, goalChestMapper, goalMapper } from '@pulo/db';
 import { Hono } from 'hono';
+import { unlockAchievements } from '../achievements';
 import { ApiError, type AppEnv, type RouteDeps, jsonBody, pathParams, requireMatch, requireSession } from '../http';
 import { goalChestSelect, goalSelect } from '../selects';
 
@@ -41,7 +42,10 @@ export function goalRoutes({ auth, db, now }: RouteDeps) {
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
-      return c.json({ goal: goalMapper.toDomain(row) });
+      // Só meta concluída ou marco riscado mudam as conquistas.
+      const andou = goal.state === 'concluida' || goal.milestones.some((m) => m.doneAt !== undefined);
+      const newAchievements = andou ? await unlockAchievements(db, c.var.user, now()) : [];
+      return c.json({ goal: goalMapper.toDomain(row), newAchievements });
     })
     .post('/:id/chest', pathParams(idParamSchema), async (c) => {
       const { id } = c.req.valid('param');
@@ -60,7 +64,8 @@ export function goalRoutes({ auth, db, now }: RouteDeps) {
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
-      return c.json({ chest });
+      const newAchievements = await unlockAchievements(db, c.var.user, now());
+      return c.json({ chest, newAchievements });
     })
     .delete('/:id', pathParams(idParamSchema), async (c) => {
       const { count } = await db.goal.deleteMany({ where: { id: c.req.valid('param').id, userId: c.var.user.id } });

@@ -1,7 +1,7 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 
-import { Sapo } from '@/mascot';
+import { SapoRosto } from '@/mascot';
 import { Botao, Texto } from '@/ui';
 
 import { ONBOARDING_PADRAO, Tela, useApp } from '../app';
@@ -30,7 +30,7 @@ export function OnboardingScreen() {
   return (
     <Tela>
       <div className="flex justify-center">
-        <Sapo fase={1} momento="boas-vindas" tamanho={180} />
+        <SapoRosto momento="boas-vindas" className="w-[180px]" />
       </div>
       <Texto como="h1" variante="display">
         Oi, eu sou o Pulo

@@ -35,7 +35,7 @@ function registroDe(quarto: readonly RoomDecor[], escolha: Escolha): RoomDecor |
 
 export const ehMeu = (quarto: readonly RoomDecor[], escolha: Escolha): boolean => registroDe(quarto, escolha) !== undefined;
 
-export type AcaoDaCompra = 'comprar' | 'colocar' | 'no_lugar' | 'ja_e_seu' | 'em_breve';
+export type AcaoDaCompra = 'comprar' | 'colocar' | 'no_lugar' | 'ja_e_seu';
 
 export interface EstadoDaCompra {
   acao: AcaoDaCompra;
@@ -61,7 +61,6 @@ export function estadoDaCompra({ quarto, saldo, lugar, escolha, comodo = COMODO_
     const aqui = colocadosNoQuarto(quarto, comodo).some((c) => c.lugar.id === lugar.id && mesma(c.escolha, escolha));
     return { acao: aqui ? 'no_lugar' : 'colocar', preco, bloqueado: false };
   }
-  if (idDaCompra(escolha) === null) return { acao: 'em_breve', preco, bloqueado: true };
   return { acao: 'comprar', preco, bloqueado: saldo < preco };
 }
 
@@ -75,7 +74,7 @@ export async function tirarDoLugar(repo: Repository, lugar: Lugar, comodo: Comod
 /**
  * Compra (se ainda não é seu) e coloca no lugar; sem lugar, a compra fica guardada.
  * Um item numa cor é um só: colocar em outro lugar muda ele de lugar, sem pagar de novo.
- * Devolve `false` se não dá (sem saldo ou fora da loja), sem gravar nada.
+ * Devolve `false` se não dá (sem saldo), sem gravar nada.
  */
 export async function comprarOuColocar(
   repo: Repository,
@@ -88,7 +87,6 @@ export async function comprarOuColocar(
   const meu = registroDe(quarto, escolha);
   const destino = { ...(lugar ? posicaoDoLugar(lugar) : GUARDADO), comodo };
   const id = meu?.item ?? idDaCompra(escolha);
-  if (id === null) return false;
   // Grava a compra antes de liberar o lugar: se o servidor recusar, o quarto fica como estava.
   if (!meu) await repo.saveRoomDecor({ item: id, cost: compra.preco, createdAt: clock.now(), ...destino });
   if (!lugar) return true;

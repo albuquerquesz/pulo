@@ -1,11 +1,11 @@
 import { DEFAULT_TIMEZONE, GOALS } from '@pulo/core/config/decisions';
-import { PARTES, verCasa, type ParteId, type ProximaParte } from '@pulo/core/domain/casa';
+import { verCasa, type ParteId } from '@pulo/core/domain/casa';
 import { MINUTE_MS } from '@pulo/core/domain/clock';
 import { dateKeyOf } from '@pulo/core/domain/day';
 import { estadoDoBau, goalProgress, sortGoals } from '@pulo/core/domain/goals';
 import { habitsForDate } from '@pulo/core/domain/habits';
 import { verGelo } from '@pulo/core/domain/gelo';
-import { focusedMs, textoDeFalta } from '@pulo/core/domain/joias';
+import { focusedMs } from '@pulo/core/domain/joias';
 import { verSequencia } from '@pulo/core/domain/streak';
 import type { AccentColor, Clock, DateKey, FocusSession, FreezeSummary, Goal, GoalChest, Habit, HabitLog, Repository, User } from '@pulo/core/domain/types';
 
@@ -39,21 +39,6 @@ export function abaAtiva(caminho: string): ChaveDaAba | null {
 /** Telas de imersão: ocupam também a coluna do trilho. */
 const IMERSAO: readonly string[] = ['/ilha', '/casa', '/tarefas'];
 export const telaDeImersao = (caminho: string): boolean => IMERSAO.includes(caminho);
-
-export interface FraseDaProximaParte {
-  antes: string;
-  destaque: string;
-  depois: string;
-}
-
-/** A frase do cartão da casa: o que falta para a próxima parte, ou que já dá para construir. */
-export function fraseDaProximaParte(proxima: ProximaParte | null): FraseDaProximaParte {
-  if (!proxima) return { antes: '', destaque: 'Casa completa!', depois: '' };
-  const destaque = [PARTES.find((p) => p.id === proxima.id)?.emoji, proxima.nome].filter(Boolean).join(' ');
-  if (proxima.faltam === 0) return { antes: 'Você já pode construir: ', destaque, depois: '' };
-  const falta = textoDeFalta(proxima.faltam).replace(/\.$/, '').toLowerCase();
-  return { antes: 'Próxima: ', destaque, depois: ` · ${falta}, uns ${proxima.horasDeFoco}h de foco` };
-}
 
 export interface MetaDoTrilho {
   id: string;
@@ -119,7 +104,6 @@ export interface DadosDoTrilho {
   joias: number;
   partesConstruidas: ParteId[];
   totalDePartes: number;
-  proximaParte: ProximaParte | null;
   metas: MetaDoTrilho[];
 }
 
@@ -145,7 +129,6 @@ export async function carregarTrilho(repo: Repository, clock: Clock, user: User)
     joias: casa.saldo,
     partesConstruidas: casa.partes.filter((p) => p.construida).map((p) => p.id),
     totalDePartes: casa.total,
-    proximaParte: casa.proxima,
     metas: metasDoTrilho(metas, baus),
   };
 }

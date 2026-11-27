@@ -3,28 +3,56 @@ import { gravarQuatroSemanas } from '../testing/quatro-semanas';
 import { criarRelogio } from '../testing/relogio';
 import { createMemoryRepository } from '../data/memory-repository';
 import { type AchievementSources, computeAchievements, passingAchievements, summarizeForAchievements, verConquistas } from './achievements';
-import { endedSession, sp } from './test-utils';
-import type { AchievementId, Purchase } from './types';
+import { joiasGanhas } from './joias';
+import { TZ, endedSession, sp } from './test-utils';
+import type { AchievementId, Goal, Purchase } from './types';
 
 const parts = (...items: string[]): Purchase[] => items.map((item) => ({ item, cost: 1, createdAt: 1 }));
 const summary = (extra: Partial<AchievementSources> = {}) =>
-  summarizeForAchievements({ sequencia: { atual: 0, recorde: 0 }, sessions: [], descansos: 0, casa: [], gelosUsados: 0, ...extra });
+  summarizeForAchievements({
+    sequencia: { atual: 0, recorde: 0 },
+    sessions: [],
+    descansos: 0,
+    casa: [],
+    gelosUsados: 0,
+    timeZone: TZ,
+    marcacoesPorHabito: [],
+    tarefasConcluidas: 0,
+    goals: [],
+    baus: [],
+    credito: 0,
+    decoracoes: 0,
+    ...extra,
+  });
 const one = (id: AchievementId, extra: Partial<AchievementSources> = {}) =>
   computeAchievements(summary(extra), []).find((item) => item.id === id);
 const passes = (id: AchievementId, extra: Partial<AchievementSources>) => passingAchievements(summary(extra)).includes(id);
 const run = (atual: number, recorde = atual) => ({ sequencia: { atual, recorde } });
+const focos = (count: number, hour = 14, minutes = 25) => ({
+  sessions: Array.from({ length: count }, (_, i) => ({ ...endedSession(sp(2026, 11, 1, hour), minutes, 'concluida'), id: `foco-${i}` })),
+});
+const meta = (state: Goal['state'], marcos = 0): Goal => ({
+  id: 'meta',
+  title: 'Meta',
+  state,
+  milestones: Array.from({ length: marcos }, (_, i) => ({ id: `marco-${i}`, title: 'Passo', doneAt: 1 })),
+  createdAt: 1,
+});
 
 describe('conquistas', () => {
   it('sem registros: o catálogo inteiro, nada conquistado, só a casa com o quarto', () => {
     const all = computeAchievements(summary(), []);
     expect(all.map((item) => item.id)).toEqual(ACHIEVEMENTS.map((item) => item.id));
     expect(all.some((item) => item.conquistada)).toBe(false);
-    expect(all.map((item) => item.progresso)).toEqual([0, 0, 0, 0, 0, 1, 1, 0, 0]);
+    // Só o quarto conta de saída, em cinco cômodos e casa inteira.
+    const andadas = all.filter((item) => item.progresso > 0).map((item) => item.id);
+    expect(andadas).toEqual(['cinco-comodos', 'casa-inteira']);
   });
 
   it.each([
     ['primeira-semana', 7],
     ['mes-de-fogo', 30],
+    ['cem-dias', 100],
   ] as const)('%s: falta um dia e depois conquista', (id, days) => {
     expect(passes(id, run(days - 1))).toBe(false);
     expect(one(id, run(days - 1))).toMatchObject({ progresso: days - 1, meta: days });
@@ -73,6 +101,50 @@ describe('conquistas', () => {
     const quatro = parts('cozinha', 'sala', 'banheiro', 'cerca', 'torre');
     expect(one('cinco-comodos', { casa: quatro })).toMatchObject({ conquistada: false, progresso: 4, meta: 5 });
     expect(passes('cinco-comodos', { casa: [...quatro, ...parts('escritorio')] })).toBe(true);
+  });
+
+  it.each([
+    ['primeiro-foco', 1, (n: number) => focos(n)],
+    ['vinte-cinco-focos', 25, (n: number) => focos(n)],
+    ['dez-horas', 10, (n: number) => focos(n, 14, 60)],
+    ['madrugador', 10, (n: number) => focos(n, 8)],
+    ['habito-firme', 21, (n: number) => ({ marcacoesPorHabito: [3, n] })],
+    ['cem-marcas', 100, (n: number) => ({ marcacoesPorHabito: n === 0 ? [] : [1, n - 1] })],
+    ['dez-tarefas', 10, (n: number) => ({ tarefasConcluidas: n })],
+    ['cinquenta-tarefas', 50, (n: number) => ({ tarefasConcluidas: n })],
+    ['primeira-meta', 1, (n: number) => ({ goals: [meta(n > 0 ? 'concluida' : 'ativa')] })],
+    ['dez-marcos', 10, (n: number) => ({ goals: [meta('ativa', n)] })],
+    ['quinhentas-joias', 500, (n: number) => ({ credito: n })],
+    ['quarto-decorado', 5, (n: number) => ({ decoracoes: n })],
+  ] as const)('%s: falta um e depois conquista', (id, target, sources) => {
+    expect(passes(id, sources(target - 1))).toBe(false);
+    expect(one(id, sources(target - 1))).toMatchObject({ progresso: target - 1, meta: target });
+    expect(passes(id, sources(target))).toBe(true);
+  });
+
+  it('foco interrompido não conta como concluído, e de tarde não conta como manhã', () => {
+    expect(passes('primeiro-foco', { sessions: [endedSession(sp(2026, 11, 18, 8), 25, 'interrompida', 20)] })).toBe(false);
+    expect(one('madrugador', focos(3, 12))).toMatchObject({ progresso: 0 });
+  });
+
+  it('joias: somam hábitos, descansos, focos, marcos, baús e o crédito', () => {
+    const { joias } = summary({
+      ...focos(1),
+      marcacoesPorHabito: [2],
+      descansos: 1,
+      goals: [meta('concluida', 1)],
+      baus: [{ goalId: 'meta', abertoEm: 1, joias: 10 }],
+      credito: 7,
+    });
+    const fontes = joiasGanhas({
+      habitLogs: [1, 2].map((day) => ({ habitId: 'h', date: `2026-11-0${day}`, doneAt: 1 })),
+      sessions: focos(1).sessions,
+      restDays: [{ date: '2026-11-03' }],
+      goals: [meta('concluida', 1)],
+      baus: [{ goalId: 'meta', abertoEm: 1, joias: 10 }],
+      credito: 7,
+    });
+    expect(joias).toBe(fontes.total);
   });
 
   it('a gravada continua conquistada sem os registros, com a data', () => {

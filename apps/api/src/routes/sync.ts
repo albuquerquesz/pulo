@@ -26,7 +26,7 @@ import { Hono } from 'hono';
 import { acertarGelos } from '../gelo';
 import { habitFromRow } from '../habits';
 import { type AppEnv, type RouteDeps, queryParams, requireSession } from '../http';
-import { achievementSummaryFromRows, dateFilter, sessionRangeWhere, statsFromRows, streakFromRows, streakReads } from '../queries';
+import { achievementSummaryFromRows, dateFilter, habitMarkRead, sessionRangeWhere, statsFromRows, streakFromRows, streakReads } from '../queries';
 import {
   achievementSelect,
   blockSelect,
@@ -44,14 +44,14 @@ import {
   taskSubtaskSelect,
 } from '../selects';
 
-/** Tudo o que o app precisa para abrir: `/api/sync`. Vinte e uma leituras fixas numa transação, qualquer volume de dados. */
+/** Tudo o que o app precisa para abrir: `/api/sync`. Vinte e duas leituras fixas numa transação, qualquer volume de dados. */
 export function syncRoutes({ auth, db, now }: RouteDeps) {
   return new Hono<AppEnv>().use(requireSession(auth)).get('/', queryParams(syncQuerySchema), async (c) => {
     const { id: userId, name, email, image, createdAt, metadata } = c.var.user;
     const range = c.req.valid('query');
     const date = dateFilter(range);
 
-    const [blocks, habits, habitLogs, sessions, restDays, proposals, goals, goalChests, tasks, subtasks, islandPurchases, housePurchases, roomDecor, joiaCredit, mascot, unlocked, gelos, habitDays, allSessions, allRestDays, freezeUses] =
+    const [blocks, habits, habitLogs, sessions, restDays, proposals, goals, goalChests, tasks, subtasks, islandPurchases, housePurchases, roomDecor, joiaCredit, mascot, unlocked, gelos, habitMarks, habitDays, allSessions, allRestDays, freezeUses] =
       await db.$transaction([
       db.routineBlock.findMany({
         where: { userId },
@@ -83,6 +83,7 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
       db.mascotState.findUnique({ where: { userId }, select: { ...mascotSelect, geloResolvidoAte: true } }),
       db.achievement.findMany({ where: { userId }, select: achievementSelect }),
       db.islandPurchase.findMany({ where: { userId, kind: 'gelo' }, select: islandPurchaseSelect, orderBy: { createdAt: 'asc' } }),
+      habitMarkRead(db, userId),
       ...streakReads(db, userId),
     ]);
 
@@ -122,8 +123,19 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
       gelosComprados: gelos.map(islandPurchaseMapper.toDomain),
       descanso: situacaoDoDescanso(hoje, restDates),
       streak,
-      // As partes da casa e o histórico já foram lidos: só as gravadas pedem uma leitura própria.
-      achievements: computeAchievements(achievementSummaryFromRows(streak, history), unlocked.map(achievementMapper.toDomain)),
+      // Quase tudo já foi lido: só as gravadas e as marcações por hábito pedem leitura própria.
+      achievements: computeAchievements(
+        achievementSummaryFromRows(metadata, streak, {
+          ...history,
+          habitMarks,
+          tarefasConcluidas: tasks.filter((task) => task.status === 'feito').length,
+          goals,
+          goalChests,
+          joiaCredit,
+          decoracoes: roomDecor.length,
+        }),
+        unlocked.map(achievementMapper.toDomain),
+      ),
       // Sem query a mais: usa as mesmas leituras de todo o histórico da sequência.
       stats: statsFromRows(createdAt, habitDays.reduce((total, day) => total + day._count.habitId, 0), allSessions),
       serverTime,

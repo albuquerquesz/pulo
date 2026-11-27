@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+import { SapoRosto } from '@/mascot/sapo/SapoRosto';
+
 import { ambienteDoApp, apiUrl } from '../sessao/config';
 import { BOTAO_DO_DIALOGO, Dialogo } from './Dialogo';
 import type { Conexoes } from './useConexoes';
@@ -11,6 +13,35 @@ type ClaudeDialogoProps = {
   onFechar: () => void;
 };
 
+/** Os raios da marca do Claude: doze traços arredondados, em ângulos e tamanhos levemente diferentes. */
+const RAIOS_DO_CLAUDE = [0, 31, 58, 92, 118, 151, 179, 211, 238, 272, 299, 331].map((angulo, i) => ({ angulo, tamanho: i % 2 ? 36 : 42 }));
+
+/** A marca do Claude, desenhada em SVG. */
+function MarcaDoClaude() {
+  return (
+    <svg viewBox="0 0 100 100" aria-hidden="true" className="size-16">
+      <g fill="#D97757">
+        {RAIOS_DO_CLAUDE.map(({ angulo, tamanho }) => (
+          <rect key={angulo} x="46" y={50 - tamanho} width="8" height={tamanho} rx="4" transform={`rotate(${angulo} 50 50)`} />
+        ))}
+      </g>
+    </svg>
+  );
+}
+
+/** O sapo e a marca do Claude lado a lado, com uma seta do sapo para o Claude. */
+function SapoComClaude() {
+  return (
+    <div role="img" aria-label="O sapo do Pulo e o Claude" className="flex items-center gap-3">
+      <SapoRosto momento="conectando-conta" className="w-[88px]" />
+      <svg viewBox="0 0 48 24" aria-hidden="true" className="w-12 text-contorno">
+        <path d="M4 12 H40 M30 4 L42 12 L30 20" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <MarcaDoClaude />
+    </div>
+  );
+}
+
 /** Quem tem acesso à conta pelo servidor MCP, com o botão de desconectar, e o endereço para conectar. */
 export function ClaudeDialogo({ conexoes, onDesconectar, onTentarDeNovo, onFechar }: ClaudeDialogoProps) {
   const desconectar = async (clientId: string) => {
@@ -21,7 +52,7 @@ export function ClaudeDialogo({ conexoes, onDesconectar, onTentarDeNovo, onFecha
     }
   };
   return (
-    <Dialogo titulo="Conectar com o Claude" onFechar={onFechar}>
+    <Dialogo titulo="Conectar com o Claude" onFechar={onFechar} ilustracao={<SapoComClaude />}>
       {conexoes.tipo === 'carregando' ? <p role="status">Verificando…</p> : null}
       {conexoes.tipo === 'erro' ? (
         <div role="alert" className="flex flex-col items-center gap-2">

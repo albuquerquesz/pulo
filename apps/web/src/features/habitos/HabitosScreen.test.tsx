@@ -92,7 +92,8 @@ describe('Hábitos', () => {
     const repo = await abrir();
     await escolher(/^Caminhar/);
     await clicar(detalhe().getByRole('button', { name: 'sábado' }));
-    await clicar(detalhe().getByRole('button', { name: 'Tarde' }));
+    await clicar(detalhe().getByRole('combobox', { name: 'Período' }));
+    await clicar(detalhe().getByRole('option', { name: /Tarde/ }));
     await clicar(detalhe().getByRole('switch', { name: 'Lembrete' }));
     const campo = detalhe().getByLabelText('Horário do lembrete');
     fireEvent.change(campo, { target: { value: '18:15' } });
@@ -144,7 +145,8 @@ describe('Hábitos', () => {
     const dialogo = within(screen.getByRole('dialog', { name: 'Novo hábito' }));
     fireEvent.change(dialogo.getByRole('textbox', { name: 'Nome' }), { target: { value: 'Meditar' } });
     for (const dia of ['segunda', 'terça', 'quarta', 'quinta', 'sexta']) await clicar(dialogo.getByRole('button', { name: dia }));
-    await clicar(dialogo.getByRole('button', { name: 'Noite' }));
+    await clicar(dialogo.getByRole('combobox', { name: 'Período' }));
+    await clicar(dialogo.getByRole('option', { name: /Noite/ }));
     await clicar(dialogo.getByRole('button', { name: 'Salvar' }));
     expect(await detalhe().findByRole('heading', { name: 'Meditar' })).toBeTruthy();
     vi.spyOn(window, 'confirm').mockReturnValue(true);

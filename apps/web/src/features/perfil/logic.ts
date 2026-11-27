@@ -1,4 +1,4 @@
-import { ACCOUNT, ACHIEVEMENTS, FOCUS, PREFERENCES } from '@pulo/core/config/decisions';
+import { ACCOUNT, ACHIEVEMENTS, PREFERENCES } from '@pulo/core/config/decisions';
 import { verConquistas } from '@pulo/core/domain/achievements';
 import { verCasa } from '@pulo/core/domain/casa';
 import { verEstatisticas } from '@pulo/core/domain/stats';
@@ -9,7 +9,6 @@ import { verPreferencias } from '../app/conta';
 
 /** De quanto em quanto andam as opções de hora e de duração. */
 const PASSO_DO_LEMBRETE = 30;
-const PASSO_DO_FOCO = 5;
 /** O lembrete é da noite: as opções começam no fim da tarde. */
 const PRIMEIRO_LEMBRETE = 17 * 60;
 const MINUTOS_DO_DIA = 24 * 60;
@@ -36,9 +35,6 @@ function serie(de: number, ate: number, passo: number, atual: number): number[] 
 const comoOpcao = (rotulo: (n: number) => string) => (n: number): Opcao => ({ valor: String(n), rotulo: rotulo(n) });
 
 export const opcoesDeComecoDoDia = (atual: number): Opcao[] => serie(0, MINUTOS_DO_DIA - 120, 60, atual).map(comoOpcao(horario));
-
-export const opcoesDeFoco = (atual: number): Opcao[] =>
-  serie(FOCUS.minMinutes, FOCUS.maxMinutes, PASSO_DO_FOCO, atual).map(comoOpcao((n) => `${n} min`));
 
 export function opcoesDeLembrete(lembrete: Preferences['eveningReminder']): Opcao[] {
   const atual = lembrete.ligado ? lembrete.minutos : PREFERENCES.eveningReminderMinutes;
@@ -78,6 +74,12 @@ const sequencia: TextoDaRegra = {
   andamento: (progresso, meta) => `${progresso} de ${meta} dias seguidos`,
 };
 
+/** Regra de contagem: "10 tarefas concluídas" e "3 de 10 tarefas concluídas". */
+const contagem = (coisas: string): TextoDaRegra => ({
+  pedido: (meta) => `${meta} ${coisas}`,
+  andamento: (progresso, meta) => `${progresso} de ${meta} ${coisas}`,
+});
+
 const TEXTOS: Record<AchievementId, TextoDaRegra> = {
   'primeira-semana': sequencia,
   'foco-profundo': {
@@ -105,6 +107,19 @@ const TEXTOS: Record<AchievementId, TextoDaRegra> = {
     pedido: (meta) => (meta === 1 ? 'o primeiro gelo usado' : `${meta} gelos usados`),
     andamento: (progresso, meta) => `${progresso} de ${meta} ${meta === 1 ? 'gelo usado' : 'gelos usados'}`,
   },
+  'primeiro-foco': { pedido: () => 'o primeiro foco concluído', andamento: () => 'Conclua seu primeiro foco' },
+  'vinte-cinco-focos': contagem('focos concluídos'),
+  'dez-horas': contagem('horas de foco'),
+  madrugador: contagem('focos de manhã'),
+  'habito-firme': contagem('vezes no mesmo hábito'),
+  'cem-marcas': contagem('marcações de hábito'),
+  'dez-tarefas': contagem('tarefas concluídas'),
+  'cinquenta-tarefas': contagem('tarefas concluídas'),
+  'primeira-meta': { pedido: () => 'a primeira meta concluída', andamento: () => 'Conclua sua primeira meta' },
+  'dez-marcos': contagem('marcos de meta'),
+  'quinhentas-joias': contagem('joias ganhas'),
+  'quarto-decorado': contagem('itens de decoração'),
+  'cem-dias': sequencia,
   segredo: { pedido: () => 'Segredo revelado', andamento: () => 'Continue cuidando do sapo' },
 };
 

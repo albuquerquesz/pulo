@@ -145,8 +145,6 @@ export interface BarraDoGrafico {
 }
 
 export interface GraficoDaSemana {
-  /** Dias da semana feitos ou de descanso. */
-  diasDeCuidado: number;
   barras: BarraDoGrafico[];
   minutos: number;
   joias: number;
@@ -196,7 +194,6 @@ export function graficoDaSemana(registros: RegistrosDaSemana): GraficoDaSemana {
     return { date: dia.date, letra: LETRAS[weekdayOf(dia.date)], minutos: doDia, tipo, altura };
   });
   return {
-    diasDeCuidado: semana.filter(cuidado).length,
     barras,
     minutos: minutos.reduce((total, n) => total + n, 0),
     joias: joiasDosDias(registros, new Set(semana.filter((d) => d.estado !== 'futuro').map((d) => d.date))),
@@ -234,6 +231,55 @@ export function tarefasDeHoje(tarefas: readonly Task[], hoje: DateKey): TarefaDe
     .filter((t) => t.dueDate === hoje)
     .sort((a, b) => Number(a.status === 'feito') - Number(b.status === 'feito') || byPosition(a, b))
     .map((t) => ({ id: t.id, titulo: t.title, feita: t.status === 'feito' }));
+}
+
+// ---------- Pulos do dia ----------
+
+/** Quantas vitórias-régias cabem na lagoa do topo. */
+export const FOLHAS_NA_LAGOA = 8;
+
+/** Uma vitória-régia da lagoa: um hábito ou uma tarefa de hoje. */
+export interface FolhaDaLagoa {
+  chave: string;
+  titulo: string;
+  feito: boolean;
+}
+
+export interface PulosDoDia {
+  /** As feitas primeiro, depois as que faltam, até `FOLHAS_NA_LAGOA`. */
+  folhas: FolhaDaLagoa[];
+  feitos: number;
+  total: number;
+}
+
+/** A primeira folha: abrir o app já é o primeiro pulo, então o sapo nunca começa fora da lagoa. */
+export const FOLHA_DA_ENTRADA: FolhaDaLagoa = { chave: 'entrada', titulo: 'Entrar no Pulo', feito: true };
+
+/** Os hábitos e as tarefas de hoje viram vitórias-régias, depois da folha da entrada; cada coisa feita é um pulo do sapo. */
+export function pulosDoDia(habitos: readonly HabitoDeHoje[], tarefas: readonly TarefaDeHoje[]): PulosDoDia {
+  const todas: FolhaDaLagoa[] = [
+    FOLHA_DA_ENTRADA,
+    ...habitos.map((h) => ({ chave: `habito:${h.id}`, titulo: h.titulo, feito: h.feito })),
+    ...tarefas.map((t) => ({ chave: `tarefa:${t.id}`, titulo: t.titulo, feito: t.feita })),
+  ];
+  const feitas = todas.filter((f) => f.feito);
+  const faltam = todas.filter((f) => !f.feito);
+  return { folhas: [...feitas, ...faltam].slice(0, FOLHAS_NA_LAGOA), feitos: feitas.length, total: todas.length };
+}
+
+const pulos = (n: number) => (n === 1 ? '1 pulo' : `${n} pulos`);
+
+/** A frase embaixo da saudação: o destaque vai em negrito, o resto segue normal. */
+export interface FraseDosPulos {
+  destaque: string;
+  resto: string;
+}
+
+/** A frase embaixo da saudação, conforme o que já foi pulado. */
+export function fraseDosPulos({ feitos, total }: PulosDoDia): FraseDosPulos {
+  if (total === 1) return { destaque: 'Primeiro pulo dado!', resto: ' Crie um hábito ou uma tarefa para seguir pulando.' };
+  if (feitos === total) return { destaque: 'Chegou na outra margem!', resto: ' Tudo feito hoje.' };
+  return { destaque: pulos(feitos), resto: ` hoje. Mais ${total - feitos} até a outra margem.` };
 }
 
 // ---------- Próximo foco e vínculo ----------
@@ -397,6 +443,10 @@ export interface DescansoDeHoje extends RestStatus {
 
 export interface DadosHoje {
   saudacao: string;
+  /** Manhã, tarde ou noite: o céu do topo. */
+  periodo: Period;
+  /** Nenhum hábito na conta (fora os arquivados): o topo chama para criar o primeiro. */
+  semHabitos: boolean;
   foco: FocoDoTopo;
   diasSeguidos: number;
   /** A maior sequência já feita. */
@@ -451,6 +501,8 @@ export async function carregarHoje(repo: Repository, clock: Clock, user: User, n
   const feitos = new Set(habitLogs.filter((r) => r.date === hoje).map((r) => r.habitId));
   return {
     saudacao: saudacao(agora, fuso, nome),
+    periodo: periodOf(agora, fuso),
+    semHabitos: habitos.every((h) => h.state === 'arquivado'),
     foco,
     diasSeguidos: sequencia.atual,
     recorde: sequencia.recorde,

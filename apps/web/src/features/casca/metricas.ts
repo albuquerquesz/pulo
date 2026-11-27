@@ -20,7 +20,7 @@ async function pedir(repo: Repository, clock: Clock): Promise<ProfileMetrics> {
 }
 
 /**
- * As métricas com cache curto, para o cartão Seu mês e o Perfil não pedirem duas vezes.
+ * As métricas com cache curto, para o Perfil não pedir duas vezes.
  * `versao` é a do app: depois de uma escrita (`refresh`) a resposta antiga não vale.
  */
 export function carregarMetricas(repo: Repository, clock: Clock, versao: number): Promise<ProfileMetrics> {

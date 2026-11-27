@@ -63,7 +63,7 @@ describe('POST /api/goals/:id/chest', () => {
     const chest = { goalId: id, abertoEm: TEST_NOW, joias: JOIAS.por.goalCompleted };
     const res = await me.call('POST', `/api/goals/${id}/chest`);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ chest });
+    expect(await res.json()).toEqual({ chest, newAchievements: [] });
     expect(await erro(await me.call('POST', `/api/goals/${id}/chest`))).toEqual([409, 'bau_ja_aberto']);
     expect((await sync(me)).goalChests).toEqual([chest]);
     expect((await (await me.call('GET', '/api/goals')).json()).chests).toEqual([chest]);

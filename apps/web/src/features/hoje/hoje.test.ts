@@ -11,10 +11,14 @@ import {
   barraDaSemana,
   carregarHoje,
   duracaoTexto,
+  FOLHA_DA_ENTRADA,
+  FOLHAS_NA_LAGOA,
+  fraseDosPulos,
   graficoDaSemana,
   horaCheia,
   linhaDoDia,
   posicaoDoAgora,
+  pulosDoDia,
   quandoDoHabito,
   saudacao,
   tarefasDeHoje,
@@ -99,7 +103,6 @@ describe('gráfico da semana', () => {
     expect(g.barras.map((b) => b.tipo)).toEqual(['foco', 'foco', 'descanso', 'vazia', 'vazia', 'vazia', 'vazia']);
     expect(g.barras.map((b) => b.altura)).toEqual([90, 45, 40, 6, 6, 6, 6]);
     expect(g.minutos).toBe(75);
-    expect(g.diasDeCuidado).toBe(3);
     // 1 hábito, 15 do foco e 2 do descanso
     expect(g.joias).toBe(18);
   });
@@ -129,6 +132,39 @@ describe('hábitos e tarefas', () => {
       '2026-11-21',
     );
     expect(lista.map((t) => t.id)).toEqual(['a', 'b', 'feita']);
+  });
+});
+
+describe('pulos do dia', () => {
+  const habito = (id: string, feito: boolean) => ({ id, titulo: id, quando: 'todo dia', feito });
+  const tarefa = (id: string, feita: boolean) => ({ id, titulo: id, feita });
+
+  test('a entrada vem feita na frente, depois as feitas, hábitos antes de tarefas, sem misturar ids iguais', () => {
+    const p = pulosDoDia([habito('x', false), habito('agua', true)], [tarefa('x', true), tarefa('relatorio', false)]);
+    expect(p.folhas.map((f) => f.chave)).toEqual(['entrada', 'habito:agua', 'tarefa:x', 'habito:x', 'tarefa:relatorio']);
+    expect(p).toMatchObject({ feitos: 3, total: 5 });
+  });
+
+  test('sem nada para hoje, o sapo já está na folha da entrada', () => {
+    expect(pulosDoDia([], [])).toEqual({ folhas: [FOLHA_DA_ENTRADA], feitos: 1, total: 1 });
+  });
+
+  test('a lagoa mostra no máximo as primeiras folhas, mas conta tudo', () => {
+    const muitos = Array.from({ length: FOLHAS_NA_LAGOA + 3 }, (_, i) => habito(`h${i}`, i === 10));
+    const p = pulosDoDia(muitos, []);
+    expect(p.folhas).toHaveLength(FOLHAS_NA_LAGOA);
+    expect(p.folhas.map((f) => f.chave).slice(0, 2)).toEqual(['entrada', 'habito:h10']);
+    expect(p).toMatchObject({ feitos: 2, total: FOLHAS_NA_LAGOA + 4 });
+  });
+
+  test.each([
+    [1, 1, 'Primeiro pulo dado! Crie um hábito ou uma tarefa para seguir pulando.'],
+    [1, 5, '1 pulo hoje. Mais 4 até a outra margem.'],
+    [3, 8, '3 pulos hoje. Mais 5 até a outra margem.'],
+    [4, 4, 'Chegou na outra margem! Tudo feito hoje.'],
+  ])('%i de %i: %s', (feitos, total, frase) => {
+    const { destaque, resto } = fraseDosPulos({ folhas: [], feitos, total });
+    expect(`${destaque}${resto}`).toBe(frase);
   });
 });
 
@@ -193,6 +229,7 @@ describe('Hoje com a conta de exemplo', () => {
   test('mostra o dia do rascunho', async () => {
     const d = await (await preparar()).carregar();
     expect(d.saudacao).toBe('Boa tarde, Ana');
+    expect(d.periodo).toBe('tarde');
     expect(d.foco).toMatchObject({ titulo: 'Estudar inglês', minutos: 25, alvo: { icone: '🎓', titulo: 'Estudar inglês' } });
     expect(d.diasSeguidos).toBe(12);
     expect(d.habitos.map((h) => h.feito)).toEqual([true, true, false, false]);

@@ -130,8 +130,8 @@ describe('/api/rest-days', () => {
     expect(await queriesOf(database, big, 'DELETE', `/api/rest-days/${HOJE}`)).toBe(del);
     // 2 de sessão + o acerto do gelo (6) + 2 leituras do dia + o delete + o sapo (4).
     expect(del).toBe(15);
-    // 2 de sessão + 2 leituras do dia + o insert + o sapo (4) + 8 leituras das conquistas.
-    expect(put).toBe(17);
+    // 2 de sessão + 2 leituras do dia + o insert + o sapo (4) + 14 leituras das conquistas.
+    expect(put).toBe(23);
 
     const mascot = await queriesOf(database, big, 'GET', '/api/mascot');
     expect(mascot).toBe(3);

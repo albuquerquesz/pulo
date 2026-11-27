@@ -1,10 +1,11 @@
-import { ACHIEVEMENTS, DEFAULT_TIMEZONE } from '../config/decisions';
+import { ACHIEVEMENTS, DEFAULT_TIMEZONE, JOIAS } from '../config/decisions';
 import { comodosProntos, partesDaCasa } from './casa';
 import { MINUTE_MS } from './clock';
+import { periodOf } from './day';
 import { listFreezeDatesOf } from './gelo-store';
-import { focusedMs } from './joias';
+import { focusedMs, joiasGanhas } from './joias';
 import { computeStreak } from './streak';
-import type { Achievement, AchievementId, Clock, FocusSession, Purchase, Repository, Streak, UnlockedAchievement } from './types';
+import type { Achievement, AchievementId, Clock, FocusSession, Goal, GoalChest, HabitLog, Purchase, Repository, Streak, UnlockedAchievement } from './types';
 
 /** O que as regras olham: só contagens e sequências, nunca o banco. */
 export interface AchievementSummary {
@@ -18,6 +19,20 @@ export interface AchievementSummary {
   temSegundoAndar: boolean;
   /** Gelos já gastos (spec 29). */
   gelosUsados: number;
+  focosConcluidos: number;
+  /** Focos concluídos que começaram de manhã (`PERIODS.manha`, no fuso da pessoa). */
+  focosDeManha: number;
+  /** Horas inteiras focadas em todas as sessões encerradas. */
+  horasDeFoco: number;
+  /** Marcações do hábito mais marcado. */
+  maiorHabito: number;
+  /** Marcações de todos os hábitos. */
+  marcacoes: number;
+  tarefasConcluidas: number;
+  metasConcluidas: number;
+  marcosConcluidos: number;
+  joias: number;
+  decoracoes: number;
 }
 
 /** Quanto a pessoa já andou rumo à `meta`. Chegar nela conquista. */
@@ -35,6 +50,19 @@ const RULES: Record<AchievementId, Rule> = {
   'cinco-comodos': (summary) => summary.comodos,
   'casa-inteira': (summary) => summary.partesConstruidas,
   'gelo-na-hora': (summary) => summary.gelosUsados,
+  'primeiro-foco': (summary) => summary.focosConcluidos,
+  'vinte-cinco-focos': (summary) => summary.focosConcluidos,
+  'dez-horas': (summary) => summary.horasDeFoco,
+  madrugador: (summary) => summary.focosDeManha,
+  'habito-firme': (summary) => summary.maiorHabito,
+  'cem-marcas': (summary) => summary.marcacoes,
+  'dez-tarefas': (summary) => summary.tarefasConcluidas,
+  'cinquenta-tarefas': (summary) => summary.tarefasConcluidas,
+  'primeira-meta': (summary) => summary.metasConcluidas,
+  'dez-marcos': (summary) => summary.marcosConcluidos,
+  'quinhentas-joias': (summary) => summary.joias,
+  'quarto-decorado': (summary) => summary.decoracoes,
+  'cem-dias': streakDays,
   // Sem regra escolhida ainda.
   segredo: () => 0,
 };
@@ -46,11 +74,34 @@ export interface AchievementSources {
   descansos: number;
   casa: readonly Purchase[];
   gelosUsados: number;
+  timeZone: string;
+  /** Quantas vezes cada hábito foi marcado, um número por hábito. */
+  marcacoesPorHabito: readonly number[];
+  tarefasConcluidas: number;
+  goals: readonly Goal[];
+  baus: readonly GoalChest[];
+  /** Crédito histórico de joias. */
+  credito: number;
+  decoracoes: number;
 }
 
-export function summarizeForAchievements({ sequencia, sessions, descansos, casa, gelosUsados }: AchievementSources): AchievementSummary {
-  const longest = sessions.reduce((max, session) => Math.max(max, focusedMs(session)), 0);
+/** Quantas vezes cada hábito aparece nas marcações. */
+export function countByHabit(habitLogs: readonly HabitLog[]): number[] {
+  const counts = new Map<string, number>();
+  for (const { habitId } of habitLogs) counts.set(habitId, (counts.get(habitId) ?? 0) + 1);
+  return [...counts.values()];
+}
+
+export function summarizeForAchievements(sources: AchievementSources): AchievementSummary {
+  const { sequencia, sessions, descansos, casa, gelosUsados, timeZone, marcacoesPorHabito, goals, baus, credito } = sources;
+  const focused = sessions.map(focusedMs);
+  const longest = focused.reduce((max, ms) => Math.max(max, ms), 0);
+  const total = focused.reduce((sum, ms) => sum + ms, 0);
+  const done = sessions.filter((session) => session.state === 'concluida');
+  const marcacoes = marcacoesPorHabito.reduce((sum, count) => sum + count, 0);
   const partes = partesDaCasa(casa);
+  // Hábitos e descansos chegam contados: a joia deles soma por fora.
+  const outrasJoias = joiasGanhas({ habitLogs: [], sessions, restDays: [], goals, baus, credito }).total;
   return {
     sequencia,
     maiorFocoMinutos: Math.floor(longest / MINUTE_MS),
@@ -59,6 +110,16 @@ export function summarizeForAchievements({ sequencia, sessions, descansos, casa,
     comodos: comodosProntos(partes).length,
     temSegundoAndar: partes.some((parte) => parte.id === 'segundo-andar' && parte.construida),
     gelosUsados,
+    focosConcluidos: done.length,
+    focosDeManha: done.filter((session) => periodOf(session.startedAt, timeZone) === 'manha').length,
+    horasDeFoco: Math.floor(total / (60 * MINUTE_MS)),
+    maiorHabito: marcacoesPorHabito.reduce((max, count) => Math.max(max, count), 0),
+    marcacoes,
+    tarefasConcluidas: sources.tarefasConcluidas,
+    metasConcluidas: goals.filter((goal) => goal.state === 'concluida').length,
+    marcosConcluidos: goals.reduce((sum, goal) => sum + goal.milestones.filter((m) => m.doneAt !== undefined).length, 0),
+    joias: outrasJoias + marcacoes * JOIAS.por.habitDone + descansos * JOIAS.por.restDay,
+    decoracoes: sources.decoracoes,
   };
 }
 
@@ -109,24 +170,43 @@ export function providesAchievements(repo: Repository): repo is Repository & Ach
 /** As conquistas de um repositório: as do servidor, quando ele as fornece; senão (memória), calculadas dos registros, sem data. */
 export async function verConquistas(repo: Repository, clock: Clock): Promise<Achievement[]> {
   if (providesAchievements(repo)) return repo.getAchievements();
-  const [user, habitLogs, sessions, restDays, casa, freezes] = await Promise.all([
+  const [user, habitLogs, sessions, restDays, casa, freezes, tasks, goals, baus, credito, decor] = await Promise.all([
     repo.getUser(),
     repo.listHabitLogs(),
     repo.listSessions(),
     repo.listRestDays(),
     repo.listHousePurchases(),
     listFreezeDatesOf(repo),
+    repo.listTasks(),
+    repo.listGoals(),
+    repo.listGoalChests(),
+    repo.getJoiaCredit(),
+    repo.listRoomDecor(),
   ]);
+  const timeZone = user?.timezone ?? DEFAULT_TIMEZONE;
   const sequencia = computeStreak({
     habitLogs,
     sessions,
     restDays,
     freezes,
-    timeZone: user?.timezone ?? DEFAULT_TIMEZONE,
+    timeZone,
     dayStartMinutes: user?.dayStartMinutes,
     now: clock.now(),
   });
-  const summary = summarizeForAchievements({ sequencia, sessions, descansos: restDays.length, casa, gelosUsados: freezes.length });
+  const summary = summarizeForAchievements({
+    sequencia,
+    sessions,
+    descansos: restDays.length,
+    casa,
+    gelosUsados: freezes.length,
+    timeZone,
+    marcacoesPorHabito: countByHabit(habitLogs),
+    tarefasConcluidas: tasks.filter((task) => task.status === 'feito').length,
+    goals,
+    baus,
+    credito,
+    decoracoes: decor.length,
+  });
   const passing = new Set(passingAchievements(summary));
   return ACHIEVEMENTS.map(({ id }) => (passing.has(id) ? earnedAchievement(id) : pending(id, summary)));
 }

@@ -9,6 +9,7 @@ import {
   comprarParte,
   estadoDaCasa,
   moverDecoracao,
+  precoDaDecoracao,
   podeComprar,
   progressoPorCamada,
   textoDoRequisito,
@@ -76,6 +77,18 @@ describe('casa', () => {
     const movido = await moverDecoracao(repo, 'tapete', { x: 2, y: 3, rotation: 90 });
     expect(movido).toMatchObject({ ok: true, value: { saldo: 15 } });
     expect(await repo.listRoomDecor()).toEqual([{ item: 'tapete', cost: 10, createdAt: 5, x: 2, y: 3, rotation: 90 }]);
+  });
+
+  it('todo item se vende em toda cor, com o acréscimo da cor', async () => {
+    expect(precoDaDecoracao('relogio')).toBe(ROOM_DECOR.itemCost.relogio);
+    expect(precoDaDecoracao('relogio-brilho')).toBe(ROOM_DECOR.itemCost.relogio + ROOM_DECOR.colorCost.brilho);
+    for (const id of ['relogio-roxo', 'praia-rosa', 'relogio-rosa-verde', '-rosa']) expect(precoDaDecoracao(id)).toBeNull();
+    const repo = createMemoryRepository({ habitLogs: habitos(60) });
+    expect(await comprarDecoracao(repo, clock, 'relogio-rosa', canto)).toMatchObject({ ok: true });
+    expect(await comprarDecoracao(repo, clock, 'relogio-rosa', canto)).toMatchObject({ ok: false, error: { code: 'ja_comprado' } });
+    const casa = await verCasa(repo);
+    expect(casa.decoracoes.find((d) => d.id === 'relogio-rosa')).toMatchObject({ nome: 'Relógio rosa', custo: 20, posicao: canto });
+    expect(casa.decoracoes.find((d) => d.id === 'relogio')?.posicao).toBeNull();
   });
 
   it('decorar um cômodo pede que ele esteja construído, e mover leva o item de um para outro', async () => {

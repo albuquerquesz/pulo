@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { Sapo } from '@/mascot';
+import { SapoRosto } from '@/mascot';
 import { Botao, Texto } from '@/ui';
 
 import { Tela } from '../app';
@@ -29,7 +29,7 @@ export function EntrarOAuth() {
   return (
     <Tela>
       <div className="flex justify-center pt-6">
-        <Sapo fase={1} momento="conectando-conta" tamanho={140} />
+        <SapoRosto momento="conectando-conta" className="w-[140px]" />
       </div>
       <Texto como="h1" variante="display" className="text-center">
         Conectar ao Pulo

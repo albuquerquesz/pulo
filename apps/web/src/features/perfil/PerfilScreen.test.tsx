@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import type { Repository } from '@pulo/core/domain/types';
@@ -54,26 +54,30 @@ describe('PerfilScreen', () => {
     window.location.hash = '#metricas';
     await abrir();
     await screen.findByRole('heading', { name: 'Ritmo' });
-    expect(document.activeElement?.id).toBe('metricas');
-    expect(screen.getByRole('heading', { name: 'Descanso e gelo' })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: 'Concluído' })).toBeTruthy();
+    // O foco vai para a seção logo depois de ela aparecer; com a máquina ocupada, isso pode levar um instante.
+    await waitFor(() => expect(document.activeElement?.id).toBe('metricas'));
+    expect(screen.getByRole('heading', { name: 'Descanso e concluído' })).toBeTruthy();
+    for (const name of ['Foco por dia', 'Hábitos feitos', 'Descanso e gelo', 'Concluído']) {
+      expect(screen.getByRole('figure', { name })).toBeTruthy();
+    }
+    expect(within(screen.getByRole('figure', { name: 'Foco por dia' })).getByRole('row', { name: /\(hoje\)/ })).toBeTruthy();
     window.location.hash = '';
   });
 
   test('mudar preferência grava na conta', async () => {
     const repo = await abrir();
-    await clicar(screen.getByRole('switch', { name: 'Sons do sapo' }));
     await clicar(screen.getByRole('switch', { name: 'Modo férias' }));
-    await act(async () => void fireEvent.change(screen.getByRole('combobox', { name: 'Duração do foco' }), { target: { value: '40' } }));
     const preferencias = await repo.getPreferences();
-    expect(preferencias).toMatchObject({ sounds: false, focusMinutes: 40, vacation: { ligado: true } });
-    expect(screen.getByRole('switch', { name: 'Sons do sapo' }).getAttribute('aria-checked')).toBe('false');
+    expect(preferencias).toMatchObject({ vacation: { ligado: true } });
+    expect(screen.queryByRole('combobox', { name: 'Duração do foco' })).toBeNull();
+    expect(screen.queryByRole('switch', { name: 'Sons do sapo' })).toBeNull();
   });
 
   test('tema e começo do dia vão para o usuário', async () => {
     const repo = await abrir();
     await clicar(screen.getByRole('button', { name: 'Escuro' }));
-    await act(async () => void fireEvent.change(screen.getByRole('combobox', { name: 'Meu dia começa' }), { target: { value: '480' } }));
+    await clicar(screen.getByRole('combobox', { name: 'Meu dia começa' }));
+    await clicar(screen.getByRole('option', { name: '08h00' }));
     expect(await repo.getUser()).toMatchObject({ theme: 'escuro', dayStartMinutes: 480 });
   });
 

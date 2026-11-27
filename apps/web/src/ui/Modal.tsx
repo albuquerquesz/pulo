@@ -1,5 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 
+import { BotaoFechar } from './BotaoFechar';
+
 export type ModalProps = {
   aberto: boolean;
   /** Esc ou clique no fundo. */
@@ -48,15 +50,8 @@ export function Modal({ aberto, onFechar, rotulo, children, contido = false }: M
         >
           {children}
         </div>
-        <button
-          type="button"
-          onClick={onFechar}
-          aria-label="Fechar"
-          title="Fechar"
-          className="absolute -top-4 -right-4 grid size-11 cursor-pointer place-items-center rounded-full border-4 border-contorno bg-cancelar text-lg font-black text-contorno shadow-[inset_0_-3px_0_var(--pulo-cancelar-borda)] active:translate-y-[2px]"
-        >
-          <span aria-hidden="true">✕</span>
-        </button>
+        {/* Dentro de um quadro (contido), o X fica para dentro, senão a borda corta. */}
+        <BotaoFechar onFechar={onFechar} className={contido ? 'top-1 right-1' : '-top-4 -right-4'} />
       </div>
     </div>
   );

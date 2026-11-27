@@ -209,8 +209,8 @@ const logKey = (habitId: EntityId, date: DateKey) => `${habitId}|${date}`;
 /** Chaves das escritas que podem mudar a sequência: hábitos e registros, sessões, descansos, perfil e apagar tudo. */
 const SESSION_OPTIONALS = ['intention', 'habitId', 'goalId', 'taskId'] as const;
 const STREAK_LOCKS = /^(habit|log|session|rest):|^(user|all)$/;
-/** As que mudam a sequência e as compras da casa mudam as conquistas. */
-const ACHIEVEMENT_LOCKS = /^(habit|log|session|rest|house):|^(user|all)$/;
+/** As que mudam a sequência, as compras, as tarefas e as metas mudam as conquistas. */
+const ACHIEVEMENT_LOCKS = /^(habit|log|session|rest|house|room|task|goal):|^(user|all)$/;
 
 class ApiRepository implements RemoteRepository {
   private readonly client: ApiClient;
@@ -712,7 +712,8 @@ class ApiRepository implements RemoteRepository {
 
   saveGoal(goal: Goal): Promise<void> {
     return this.write(this.goals, `goal:${goal.id}`, goal.id, goal, async () => {
-      await readJson(await this.client.api.goals[':id'].$put({ param: { id: goal.id }, json: goal }));
+      const { newAchievements } = await readJson(await this.client.api.goals[':id'].$put({ param: { id: goal.id }, json: goal }));
+      this.unlocked(newAchievements);
     });
   }
 
@@ -756,6 +757,7 @@ class ApiRepository implements RemoteRepository {
     return this.write(this.goalChests, `goal:${goalId}`, goalId, chest, async () => {
       const saved = await readJson(await this.client.api.goals[':id'].chest.$post({ param: { id: goalId } }));
       this.goalChests.put(saved.chest);
+      this.unlocked(saved.newAchievements);
     });
   }
 
@@ -776,13 +778,14 @@ class ApiRepository implements RemoteRepository {
     const done = this.write(this.tasks, `task:${id}`, id, next, async () => {
       // A meta pode estar sendo criada agora: espera a escrita dela.
       if (goalId !== undefined) await this.locks.get(`goal:${goalId}`);
-      const { task: saved } = await readJson(await this.client.api.tasks[':id'].$put({ param: { id }, json: task }));
+      const { task: saved, newAchievements } = await readJson(await this.client.api.tasks[':id'].$put({ param: { id }, json: task }));
       // Muda as instâncias guardadas no lugar: o rollback compara identidade.
       const server = { createdAt: saved.createdAt };
       // A minha cópia (a que um rollback posterior devolve) e a atual.
       for (const cached of [stored, this.tasks.peek(id)]) {
         if (cached) Object.assign(cached, server);
       }
+      this.unlocked(newAchievements);
     });
     // `write` já guardou a cópia otimista antes de devolver a promessa.
     stored = this.tasks.peek(id);
@@ -881,7 +884,8 @@ class ApiRepository implements RemoteRepository {
   saveRoomDecor(decor: RoomDecor): Promise<void> {
     const { item } = decor;
     return this.write(this.roomDecor, `room:${item}`, item, decor, async () => {
-      await readJson(await this.client.api.room[':item'].$put({ param: { item }, json: decor }));
+      const { newAchievements } = await readJson(await this.client.api.room[':item'].$put({ param: { item }, json: decor }));
+      this.unlocked(newAchievements);
     });
   }
 

@@ -85,23 +85,23 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `GET /api/habits/:id/stats` | | `{ stats: HabitStats }` (404 `referencia_inexistente`) | 5 |
 | `DELETE /api/habits/:id` | | `{ deleted }` (os registros do hábito saem junto) | 9 |
 | `GET /api/habit-logs?from&to` | | `{ habitLogs: HabitLog[] }` | 3 |
-| `PUT /api/habit-logs/:habitId/:date` | `HabitLog` | `{ habitLog, newAchievements }` | 12 (mais ao destravar) |
+| `PUT /api/habit-logs/:habitId/:date` | `HabitLog` | `{ habitLog, newAchievements }` | 18 (mais ao destravar) |
 | `DELETE /api/habit-logs/:habitId/:date` | | `{ deleted }` | 9 |
 | `GET /api/sessions?from&to` | | `{ sessions: FocusSession[] }` | 3 |
-| `PUT /api/sessions/:id` | `FocusSession` (`intention` e vínculo aceitam `null`) | `{ session, mascot: MascotState \| null, newAchievements }` | 4 em andamento, 16 ao encerrar (mais ao destravar); 1 a mais ao gravar um vínculo novo |
+| `PUT /api/sessions/:id` | `FocusSession` (`intention` e vínculo aceitam `null`) | `{ session, mascot: MascotState \| null, newAchievements }` | 4 em andamento, 22 ao encerrar (mais ao destravar); 1 a mais ao gravar um vínculo novo |
 | `GET /api/rest-days?from&to` | | `{ restDays: RestDay[] }` | 3 |
-| `PUT /api/rest-days/:date` | (sem corpo) | `{ restDay, mascot: MascotState, newAchievements }` | 17 (mais ao destravar) |
+| `PUT /api/rest-days/:date` | (sem corpo) | `{ restDay, mascot: MascotState, newAchievements }` | 23 (mais ao destravar) |
 | `DELETE /api/rest-days/:date` | | `{ deleted, mascot: MascotState }` | 15 |
 | `GET /api/proposals` | | `{ proposals: WeeklyProposal[] }` (semana mais nova primeiro) | 3 |
 | `PUT /api/proposals/:id` | `WeeklyProposal` | `{ proposal }` | 4 |
 | `POST /api/proposals/generate` | `{ date? }` (qualquer dia da semana) | `{ outcome, proposal? }` | 8 sem criar, 9 criando |
 | `POST /api/proposals/:id/decision` | `{ action: 'aceitar' \| 'editar' \| 'negar' \| 'desfazer', change? }` | `{ proposal, blocks }` | 6 aplicando blocos, 5 ao negar, 4 repetindo |
 | `GET /api/goals` | | `{ goals: Goal[], chests: GoalChest[] }` (mais antiga primeiro) | 4 |
-| `PUT /api/goals/:id` | `Goal` (marcos dentro) | `{ goal }` | 4 |
+| `PUT /api/goals/:id` | `Goal` (marcos dentro) | `{ goal, newAchievements }` | 4 (18 com meta concluída ou marco riscado, mais ao destravar) |
 | `DELETE /api/goals/:id` | | `{ deleted }` (o baú sai junto; hábitos e tarefas ficam sem a meta) | 3 |
-| `POST /api/goals/:id/chest` | (sem corpo) | `{ chest: GoalChest }` | 4 |
+| `POST /api/goals/:id/chest` | (sem corpo) | `{ chest: GoalChest, newAchievements }` | 18 (mais ao destravar) |
 | `GET /api/tasks` | | `{ tasks: Task[], subtasks: TaskSubtask[], pomodoros }` | 5 |
-| `PUT /api/tasks/:id` | `Task` | `{ task }` | 6 criando ou mudando coluna, prioridade ou prazo (5 sem mudança neles; 1 a mais ao trocar a meta) |
+| `PUT /api/tasks/:id` | `Task` | `{ task, newAchievements }` | 6 criando ou mudando coluna, prioridade ou prazo (5 sem mudança neles; 1 a mais ao trocar a meta; 14 a mais com a tarefa feita) |
 | `DELETE /api/tasks/:id` | | `{ deleted }` (subtarefas, comentários e histórico saem junto) | 4 |
 | `PUT /api/tasks/:id/subtasks/:subId` | `TaskSubtask` | `{ subtask }` | 6 |
 | `DELETE /api/tasks/:id/subtasks/:subId` | | `{ deleted }` | 3 |
@@ -110,9 +110,9 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `GET /api/island/purchases` | | `{ purchases: IslandPurchase[] }` (mais antiga primeiro) | 3 |
 | `PUT /api/island/purchases/:item` | `IslandPurchase` | `{ purchase }` | 10 comprando, 9 repetindo |
 | `GET /api/house` | | `{ purchases: Purchase[], joiaCredit: number }` | 4 |
-| `PUT /api/house/:item` | `Purchase` | `{ purchase, newAchievements }` | 19 comprando (mais ao destravar) |
+| `PUT /api/house/:item` | `Purchase` | `{ purchase, newAchievements }` | 26 comprando (mais ao destravar) |
 | `GET /api/room` | | `{ decor: RoomDecor[] }` (mais antiga primeiro) | 3 |
-| `PUT /api/room/:item` | `RoomDecor` | `{ decor }` | 13 comprando |
+| `PUT /api/room/:item` | `RoomDecor` | `{ decor, newAchievements }` | 27 comprando (mais ao destravar) |
 | `PATCH /api/room/:item` | `RoomSpot` | `{ item, spot }` | 3 |
 | `GET /api/mascot` | | `{ mascot: MascotState \| null }` | 3 |
 | `GET /api/week-summary?date` | | `{ summary: WeekSummary }` | 5 |
@@ -122,12 +122,12 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `PUT /api/gelo/visto` | (sem corpo) | `{ vistos: n }` | 3 |
 | `GET /api/profile/metrics` | | `{ metrics: ProfileMetrics }` | fixo |
 | `GET /api/stats` | | `{ stats: ProfileStats }` | 4 |
-| `GET /api/achievements` | | `{ achievements: Achievement[] }` | 8 |
+| `GET /api/achievements` | | `{ achievements: Achievement[] }` | 14 |
 | `GET /api/data/export` | | arquivo JSON com tudo da pessoa | 21 |
 | `DELETE /api/account` | `{ confirm: 'EXCLUIR' }` | `{ deleted: true }` e o cookie apagado | fixo (igual com 1 ou 50 registros) |
 | `GET /api/mcp/connections` | | `{ connections: McpConnection[] }` (a mais recente primeiro) | 3 |
 | `DELETE /api/mcp/connections/:clientId` | | `{ deleted }` | 6 |
-| `GET /api/sync?from&to` | | ver abaixo (inclui `goals`, `goalChests`, `tasks`, `subtasks`, `islandPurchases`, `housePurchases`, `roomDecor`, `joiaCredit`, `streak`, `stats`, `achievements`, `gelo`, `gelosComprados` e `descanso`) | 23 |
+| `GET /api/sync?from&to` | | ver abaixo (inclui `goals`, `goalChests`, `tasks`, `subtasks`, `islandPurchases`, `housePurchases`, `roomDecor`, `joiaCredit`, `streak`, `stats`, `achievements`, `gelo`, `gelosComprados` e `descanso`) | 24 |
 | `DELETE /api/data` | | `{ deleted: { sessions, blocks, habits, restDays, proposals, goals, islandPurchases, mascot, tasks, achievements, freezeUses } }` | 14 |
 
 Já existiam e continuam: `GET /health`, `/api/auth/*`, `GET /api/me`, `PATCH /api/me/metadata`, `POST /weekly-ai`.
@@ -413,11 +413,25 @@ catálogo inteiro, na mesma ordem. A secreta não conquistada vem sem `nome` e `
 | `cinco-comodos` | cômodos prontos (o quarto já conta) | 5 |
 | `casa-inteira` | partes da casa prontas (o quarto já conta) | 24 |
 | `gelo-na-hora` | gelos já usados | 1 |
+| `primeiro-foco` | focos concluídos | 1 |
+| `vinte-cinco-focos` | focos concluídos | 25 |
+| `dez-horas` | horas inteiras focadas em todas as sessões encerradas | 10 |
+| `madrugador` | focos concluídos que começaram de manhã (`PERIODS.manha`) | 10 |
+| `habito-firme` | marcações do hábito mais marcado | 21 |
+| `cem-marcas` | marcações de todos os hábitos | 100 |
+| `dez-tarefas` | tarefas na coluna `feito` | 10 |
+| `cinquenta-tarefas` | tarefas na coluna `feito` | 50 |
+| `primeira-meta` | metas concluídas | 1 |
+| `dez-marcos` | marcos riscados | 10 |
+| `quinhentas-joias` | joias ganhas desde sempre (com o crédito histórico) | 500 |
+| `quarto-decorado` | decorações compradas | 5 |
+| `cem-dias` | dias seguidos | 100 |
 | `segredo` | regra ainda não escolhida: ninguém recebe | 1 |
 
 - **Gravação:** só `(conquista, conquistadaEm)`, na primeira vez que a regra passa, com o relógio do servidor. Nunca some, mesmo
   apagando os registros (só `DELETE /api/data` e a exclusão da conta). O progresso é calculado e não é gravado.
-- **Quem destrava:** `PUT` de hábito feito, de sessão encerrada, de descanso e de compra na casa, depois da escrita confirmada.
+- **Quem destrava:** `PUT` de hábito feito, de sessão encerrada, de descanso, de compra na casa e no quarto, de tarefa feita, de meta concluída ou com marco
+  riscado e o `POST` do baú, depois da escrita confirmada.
   A resposta traz `newAchievements` só com as gravadas naquela chamada (lista vazia no resto): repetir o `PUT` não repete a comemoração,
   e dois aparelhos juntos não comemoram a mesma duas vezes.
 - **Antes da primeira escrita:** quem já cumpria uma regra vê `conquistada: false` com o progresso cheio e a ganha na próxima dessas escritas.
@@ -425,7 +439,7 @@ catálogo inteiro, na mesma ordem. A secreta não conquistada vem sem `nome` e `
 
 ### `GET /api/sync?from&to`
 
-`from` e `to` obrigatórios, até 400 dias. Vinte e uma leituras numa transação (as estatísticas reaproveitam as da sequência), resposta:
+`from` e `to` obrigatórios, até 400 dias. Vinte e duas leituras numa transação (as estatísticas reaproveitam as da sequência), resposta:
 
 ```json
 {

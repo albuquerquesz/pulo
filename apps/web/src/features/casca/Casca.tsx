@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 
+import { SapoRosto } from '@/mascot';
 import { useConsultaDeMidia } from '@/theme';
 import { Botao, Modal } from '@/ui';
 
@@ -10,7 +11,6 @@ import { CartaoDoGelo } from './CartaoDoGelo';
 import { Conta } from './Conta';
 import { abaAtiva, carregarTrilho, contaNaTela, telaDeImersao } from './logic';
 import { Navegacao } from './Navegacao';
-import { RostoDoSapo } from './RostoDoSapo';
 import { CartaoDaCasa, CartaoDasMetas, NumerosDoDia } from './Trilho';
 
 /** A partir daqui cabem as três colunas do rascunho (barra 312, conteúdo e trilho 460). */
@@ -19,7 +19,9 @@ export const CONSULTA_DO_TRILHO = '(min-width: 80rem)';
 function Marca() {
   return (
     <div className="flex items-center gap-2.5 px-2 text-[22px] font-extrabold">
-      <RostoDoSapo className="size-[34px]" />
+      <span aria-hidden="true" className="contents">
+        <SapoRosto className="w-10" />
+      </span>
       Pulo
     </div>
   );
@@ -59,7 +61,7 @@ export function Casca({ caminho, children }: CascaProps) {
 
   return (
     <div className={`md:grid md:min-h-dvh ${comTrilho ? 'md:grid-cols-[312px_minmax(0,1fr)_460px]' : 'md:grid-cols-[312px_minmax(0,1fr)]'}`}>
-      <div className="md:sticky md:top-0 md:flex md:h-dvh md:flex-col md:gap-6 md:overflow-y-auto md:border-r md:border-line md:bg-surface md:px-4 md:py-6">
+      <div className="md:sticky md:top-0 md:flex md:h-dvh md:flex-col md:gap-6 md:overflow-y-auto md:border-r md:border-line md:bg-[color-mix(in_srgb,var(--pulo-bg)_55%,var(--pulo-surface))] md:px-4 md:py-6">
         <div className="hidden md:block">
           <Marca />
         </div>

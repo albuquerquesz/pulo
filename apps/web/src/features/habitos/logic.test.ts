@@ -60,6 +60,8 @@ test('dias, taxa, hora e busca', () => {
   expect(lerCampoDeHora('')).toBeNull();
   expect(lerBuscaDeHabitos({ habito: 'a' })).toEqual({ habito: 'a' });
   expect(lerBuscaDeHabitos({ habito: 3 })).toEqual({});
+  expect(lerBuscaDeHabitos({ novo: true })).toEqual({ novo: true });
+  expect(lerBuscaDeHabitos({ novo: 'sim' })).toEqual({});
 });
 
 test('o calendário vira uma linha por dia da semana, com hoje marcado', () => {

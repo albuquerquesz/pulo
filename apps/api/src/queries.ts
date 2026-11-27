@@ -7,9 +7,9 @@ import type { UserMetadata } from '@pulo/core/domain/user-metadata';
 import type { MascotState, ProfileStats, Streak, WeekSummary } from '@pulo/core/domain/types';
 import { computeMascotState } from '@pulo/core/domain/phase';
 import { buildWeekSummary } from '@pulo/core/domain/week-summary';
-import { type Db, type Prisma, dateKeyToDate, focusSessionMapper, freezeUseMapper, habitLogMapper, islandPurchaseMapper, mascotStateMapper, restDayMapper } from '@pulo/db';
+import { type Db, type Prisma, dateKeyToDate, focusSessionMapper, freezeUseMapper, goalChestMapper, goalMapper, habitLogMapper, islandPurchaseMapper, mascotStateMapper, restDayMapper } from '@pulo/db';
 import type { Client } from './http';
-import { achievementSelect, freezeUseSelect, habitLogSelect, islandPurchaseSelect, mascotSelect, restDaySelect, sessionSelect } from './selects';
+import { achievementSelect, freezeUseSelect, goalChestSelect, goalSelect, habitLogSelect, islandPurchaseSelect, mascotSelect, restDaySelect, sessionSelect } from './selects';
 
 /** Filtro de uma coluna `date` por intervalo de DateKey (extremos incluídos); sem extremos, sem filtro. */
 export function dateFilter(range: DateRangeQuery): { gte?: Date; lte?: Date } | undefined {
@@ -140,27 +140,53 @@ export function streakFromRows(metadata: UserMetadata, now: number, rows: Streak
   return computeStreak(streakInput(metadata, now, rows));
 }
 
+/** Quantas vezes cada hábito foi marcado, contado pelo banco numa query. */
+export function habitMarkRead(db: Db, userId: string) {
+  return db.habitLog.groupBy({ by: ['habitId'], where: { userId }, orderBy: { habitId: 'asc' }, _count: { date: true } });
+}
+
 /**
- * As leituras das conquistas além das três da sequência, para entrar numa `db.$transaction([...])`
- * (ordem: gravadas, partes da casa compradas).
+ * As leituras das conquistas além das da sequência, para entrar numa `db.$transaction([...])` (ordem: gravadas, partes
+ * da casa compradas, marcações por hábito, tarefas feitas, metas, baús, crédito de joias, decorações compradas).
  */
 export function achievementReads(db: Db, userId: string) {
   return [
     db.achievement.findMany({ where: { userId }, select: achievementSelect }),
     db.islandPurchase.findMany({ where: { userId, kind: 'casa' }, select: islandPurchaseSelect, orderBy: { createdAt: 'asc' } }),
+    habitMarkRead(db, userId),
+    db.task.count({ where: { userId, status: 'feito' } }),
+    db.goal.findMany({ where: { userId }, select: goalSelect }),
+    db.goalChest.findMany({ where: { userId }, select: goalChestSelect }),
+    db.joiaCredit.findUnique({ where: { userId }, select: { amount: true } }),
+    db.islandPurchase.count({ where: { userId, kind: 'decoracao' } }),
   ] as const;
 }
 
-type AchievementRows = StreakRows & { casa: Parameters<typeof islandPurchaseMapper.toDomain>[0][] };
+type AchievementRows = StreakRows & {
+  casa: Parameters<typeof islandPurchaseMapper.toDomain>[0][];
+  habitMarks: { _count: { date: number } }[];
+  tarefasConcluidas: number;
+  goals: Parameters<typeof goalMapper.toDomain>[0][];
+  goalChests: Parameters<typeof goalChestMapper.toDomain>[0][];
+  joiaCredit: { amount: number } | null;
+  decoracoes: number;
+};
 
 /** O resumo que as regras olham, a partir das linhas de todo o histórico e da sequência já calculada. */
-export function achievementSummaryFromRows(streak: Streak, rows: AchievementRows): AchievementSummary {
+export function achievementSummaryFromRows(metadata: UserMetadata, streak: Streak, rows: AchievementRows): AchievementSummary {
   return summarizeForAchievements({
     sequencia: streak,
     sessions: rows.sessions.map(focusSessionMapper.toDomain),
     descansos: rows.restDays.length,
     casa: rows.casa.map(islandPurchaseMapper.toDomain),
     gelosUsados: rows.freezeUses.length,
+    timeZone: metadata.timezone,
+    marcacoesPorHabito: rows.habitMarks.map((row) => row._count.date),
+    tarefasConcluidas: rows.tarefasConcluidas,
+    goals: rows.goals.map(goalMapper.toDomain),
+    baus: rows.goalChests.map(goalChestMapper.toDomain),
+    credito: rows.joiaCredit?.amount ?? 0,
+    decoracoes: rows.decoracoes,
   });
 }
 

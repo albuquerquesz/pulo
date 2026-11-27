@@ -431,6 +431,19 @@ export type AchievementId =
   | 'cinco-comodos'
   | 'casa-inteira'
   | 'gelo-na-hora'
+  | 'primeiro-foco'
+  | 'vinte-cinco-focos'
+  | 'dez-horas'
+  | 'madrugador'
+  | 'habito-firme'
+  | 'cem-marcas'
+  | 'dez-tarefas'
+  | 'cinquenta-tarefas'
+  | 'primeira-meta'
+  | 'dez-marcos'
+  | 'quinhentas-joias'
+  | 'quarto-decorado'
+  | 'cem-dias'
   | 'segredo';
 
 /** Uma conquista gravada. `id` é o que está no banco (do catálogo). */

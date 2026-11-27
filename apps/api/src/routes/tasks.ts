@@ -3,6 +3,7 @@ import { idParamSchema, subtaskParamSchema, taskCommentSchema, taskSchema, taskS
 import { taskChanges } from '@pulo/core/domain/tasks';
 import { taskCommentMapper, taskEventMapper, taskMapper, taskSubtaskMapper } from '@pulo/db';
 import { Hono } from 'hono';
+import { unlockAchievements } from '../achievements';
 import { pomodoroRead, pomodorosFromRows } from '../queries';
 import { ApiError, type AppEnv, type Client, type RouteDeps, assertNotInFuture, jsonBody, pathParams, requireMatch, requireSession, sameValue } from '../http';
 import { taskCommentSelect, taskEventSelect, taskSelect, taskSubtaskSelect } from '../selects';
@@ -72,7 +73,9 @@ export function taskRoutes({ auth, db, now }: RouteDeps) {
         }
         return taskMapper.toDomain(stored);
       });
-      return c.json({ task: saved });
+      // Só uma tarefa feita muda as conquistas.
+      const newAchievements = saved.status === 'feito' ? await unlockAchievements(db, c.var.user, serverNow) : [];
+      return c.json({ task: saved, newAchievements });
     })
     .delete('/:id', pathParams(idParamSchema), async (c) => {
       const userId = c.var.user.id;

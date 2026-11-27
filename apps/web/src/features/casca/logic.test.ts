@@ -1,12 +1,10 @@
 import { createMemoryRepository } from '@/data';
-import { precoDaParte } from '@pulo/core/domain/casa';
 import type { Goal } from '@pulo/core/domain/types';
 
 import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
-import { abaAtiva, carregarTrilho, fraseDaProximaParte, metasDoTrilho, minutosDeFocoDoDia, telaDeImersao } from './logic';
+import { abaAtiva, carregarTrilho, metasDoTrilho, minutosDeFocoDoDia, telaDeImersao } from './logic';
 
 const meta = (id: string, extra: Partial<Goal> = {}): Goal => ({ id, title: id, state: 'ativa', milestones: [], createdAt: 0, ...extra });
-const texto = (f: ReturnType<typeof fraseDaProximaParte>) => `${f.antes}${f.destaque}${f.depois}`;
 
 describe('navegação', () => {
   test('a aba acesa segue o caminho; Casa e Perfil não têm item no menu', () => {
@@ -18,18 +16,6 @@ describe('navegação', () => {
   test('Casa, Ilha e Tarefas são de imersão', () => {
     expect(['/casa', '/ilha', '/tarefas'].every(telaDeImersao)).toBe(true);
     expect(['/', '/habitos', '/metas', '/perfil'].some(telaDeImersao)).toBe(false);
-  });
-});
-
-describe('próxima parte da casa', () => {
-  const cerca = { id: 'cerca', nome: 'Cerca', custo: precoDaParte('cerca') ?? 0 } as const;
-  test('quanto falta em joias e horas de foco', () => {
-    expect(texto(fraseDaProximaParte({ ...cerca, faltam: 25, horasDeFoco: 3 }))).toBe('Próxima: 🪵 Cerca · faltam 25 joias, uns 3h de foco');
-    expect(texto(fraseDaProximaParte({ ...cerca, faltam: 1, horasDeFoco: 1 }))).toBe('Próxima: 🪵 Cerca · falta 1 joia, uns 1h de foco');
-  });
-  test('já dá para construir, ou a casa está completa', () => {
-    expect(texto(fraseDaProximaParte({ ...cerca, faltam: 0, horasDeFoco: 0 }))).toBe('Você já pode construir: 🪵 Cerca');
-    expect(texto(fraseDaProximaParte(null))).toBe('Casa completa!');
   });
 });
 

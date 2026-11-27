@@ -456,7 +456,7 @@ body {
   animation: passeia 26s ease-in-out infinite;
 }
 .cena-casa.focando .corpo-q {
-  animation: pulinho 0.5s ease-in-out infinite;
+  animation: none;
 }
 .cena-casa.decorando .sapo-casa {
   opacity: 0.55;
@@ -480,11 +480,6 @@ body {
   }
   90% {
     transform: translate(-90px, 40px);
-  }
-}
-@keyframes pulinho {
-  50% {
-    transform: translateY(-6px);
   }
 }
 @keyframes respira-q {
@@ -584,4 +579,719 @@ body {
   animation-duration: 0.01ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
+}
+
+/* Entrada no bosque (tela de login): a terra do sapo, sempre no tema claro, em camadas que se mexem devagar. */
+.entrada-bosque {
+  --b-ceu-1: #fff6dc;
+  --b-ceu-2: #e9f6e4;
+  --b-morro-1: #d7ecc0;
+  --b-morro-2: #b9e08f;
+  --b-mata: #79c84e;
+  --b-mata-escura: #58a83a;
+  --b-tronco: #a7744f;
+  --b-chao: #8fe05a;
+  --b-capim: #6cc23f;
+  --b-agua: #3fc9a2;
+  --b-agua-clara: #8fe3c8;
+  --b-agua-funda: #2fae8a;
+  --b-regia: #6cc23f;
+  --b-lima: #c7e36b;
+  --b-sol: #ffd166;
+  --b-sol-borda: #ffb347;
+  --b-raio: #ffe08a;
+  --b-contorno: #3b2a2f;
+  --b-folha: #fbf4ee;
+  --b-tinta: #3b2a2f;
+  --b-apagado: #5e6b62;
+  --b-linha: #e4e0cc;
+}
+.bosque {
+  background: linear-gradient(180deg, var(--b-ceu-1) 0%, #fdf1cf 38%, var(--b-ceu-2) 70%);
+}
+.bosque .camada {
+  position: absolute;
+  inset: -40px;
+  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+  will-change: transform;
+}
+.bosque .raios {
+  transform-origin: 1080px 230px;
+  animation: bosque-gira 90s linear infinite;
+}
+.bosque .brilho {
+  transform-origin: 1080px 230px;
+  animation: bosque-respira 6s ease-in-out infinite;
+}
+.bosque .nuvem {
+  animation: bosque-passa linear infinite;
+}
+.bosque .arvore {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: bosque-balanca 7s ease-in-out infinite;
+}
+.bosque .capim path {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: bosque-vento 3.4s ease-in-out infinite;
+}
+.bosque .onda-lagoa {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bosque-onda 4.5s ease-out infinite;
+}
+.bosque .regia {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: bosque-boia 5s ease-in-out infinite;
+}
+.bosque .brilho-agua {
+  animation: bosque-cintila 3s ease-in-out infinite;
+}
+.bosque .folha-cai {
+  position: absolute;
+  top: -40px;
+  width: 22px;
+  height: 22px;
+  animation: bosque-cai linear infinite;
+}
+.bosque .libelula {
+  position: absolute;
+  top: 34%;
+  left: -80px;
+  width: 56px;
+  animation: bosque-voa 22s ease-in-out 4s infinite;
+}
+.bosque .libelula .asa {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: bosque-bate 0.12s linear infinite alternate;
+}
+@keyframes bosque-gira {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes bosque-respira {
+  50% {
+    transform: scale(1.08);
+    opacity: 0.75;
+  }
+}
+@keyframes bosque-passa {
+  from {
+    transform: translateX(-420px);
+  }
+  to {
+    transform: translateX(1900px);
+  }
+}
+@keyframes bosque-balanca {
+  50% {
+    transform: rotate(1.6deg);
+  }
+}
+@keyframes bosque-vento {
+  50% {
+    transform: rotate(6deg);
+  }
+}
+@keyframes bosque-onda {
+  from {
+    transform: scale(0.4);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+@keyframes bosque-boia {
+  50% {
+    transform: translateY(3px) rotate(-2deg);
+  }
+}
+@keyframes bosque-cintila {
+  50% {
+    opacity: 0.2;
+  }
+}
+@keyframes bosque-cai {
+  0% {
+    transform: translate(0, 0) rotate(0);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  50% {
+    transform: translate(60px, 50dvh) rotate(200deg);
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-30px, 105dvh) rotate(420deg);
+    opacity: 0;
+  }
+}
+@keyframes bosque-voa {
+  0% {
+    transform: translate(0, 0);
+  }
+  30% {
+    transform: translate(38vw, -6dvh);
+  }
+  45% {
+    transform: translate(44vw, 4dvh);
+  }
+  70% {
+    transform: translate(78vw, -8dvh);
+  }
+  100% {
+    transform: translate(115vw, 2dvh);
+  }
+}
+@keyframes bosque-bate {
+  to {
+    transform: scaleY(0.35);
+  }
+}
+
+/* O rosto do sapo, o mascote, com as cores dele em qualquer tema. */
+.sapo-rosto {
+  --b-contorno: #3b2a2f;
+  --b-sapo: #8fe05a;
+  --b-bochecha: #f08a7a;
+}
+/* O rosto do sapo: a cena parado do mascote, em ciclos de 4 s. Respira, pisca em 1,3 s e 3,4 s
+   (a pálpebra desce por dentro do olho) e, entre 1,8 s e 3,1 s, olha para um lado e para o outro. */
+.sapo-rosto .rosto {
+  transform-origin: 150px 200px;
+  animation: bosque-folego 3.6s ease-in-out infinite;
+}
+.sapo-rosto .palpebra {
+  transform: translateY(-100px);
+  animation: bosque-pisca 4s infinite;
+}
+.sapo-rosto .pupila {
+  animation: bosque-aperta 4s infinite;
+}
+.sapo-rosto .olhar {
+  animation: bosque-olha 4s infinite;
+}
+@keyframes bosque-folego {
+  50% {
+    transform: scale(1.015, 0.985);
+  }
+}
+@keyframes bosque-pisca {
+  0%,
+  30%,
+  82.5% {
+    transform: translateY(-100px);
+    animation-timing-function: cubic-bezier(0.5, 0, 1, 1);
+  }
+  32.5%,
+  85% {
+    transform: translateY(0);
+  }
+  33.5%,
+  86% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0, 0.3, 1);
+  }
+  37%,
+  89.5%,
+  100% {
+    transform: translateY(-100px);
+  }
+}
+@keyframes bosque-aperta {
+  0%,
+  30%,
+  37%,
+  82.5%,
+  89.5%,
+  100% {
+    transform: translateY(0);
+  }
+  32.5%,
+  33.5%,
+  85%,
+  86% {
+    transform: translateY(5px);
+  }
+}
+@keyframes bosque-olha {
+  0%,
+  45%,
+  77.5%,
+  100% {
+    transform: translateX(0);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  50%,
+  58% {
+    transform: translateX(-7px);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  64%,
+  72% {
+    transform: translateX(7px);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+}
+
+/* Menos movimento: o bosque e o sapo ficam parados, sem folhas nem libélula. */
+@media (prefers-reduced-motion: reduce) {
+  :is(.bosque, .sapo-rosto) * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .bosque :is(.folha-cai, .libelula) {
+    display: none;
+  }
+}
+:root[data-reduzir-movimento='true'] :is(.bosque, .sapo-rosto) * {
+  animation: none !important;
+  transition: none !important;
+}
+:root[data-reduzir-movimento='true'] .bosque :is(.folha-cai, .libelula) {
+  display: none;
+}
+
+/* Topo do Hoje: a lagoa com o céu da hora. As cores são da cena, iguais no tema claro e no escuro, como o bosque do login. */
+.lagoa-topo {
+  --l-contorno: #3b2a2f;
+  --l-folha: #79c94a;
+  --l-colina: #a6dd7a;
+  --l-colina-perto: #79c94a;
+  --l-agua: #3fc9a2;
+  color: #1f2a24;
+}
+.lagoa-topo .lagoa-frase {
+  color: #5e6b62;
+}
+.lagoa-topo[data-periodo='noite'] {
+  --l-folha: #5aa83a;
+  --l-colina: #4f7f52;
+  --l-colina-perto: #3e6b44;
+  color: #fff;
+}
+.lagoa-topo[data-periodo='noite'] .lagoa-frase {
+  color: #e2e0ff;
+}
+.lagoa-ceu {
+  background: linear-gradient(180deg, #cbf1f6, #fff3da 85%);
+}
+.lagoa-topo[data-periodo='tarde'] .lagoa-ceu {
+  background: linear-gradient(180deg, #ffd9a8, #ffe9c9 60%, #fff3da);
+}
+.lagoa-topo[data-periodo='noite'] .lagoa-ceu {
+  background: linear-gradient(180deg, #2b3a67, #4a4e8f 60%, #6c63b5);
+}
+.lagoa-estrelas {
+  opacity: 0;
+}
+.lagoa-topo[data-periodo='noite'] .lagoa-estrelas {
+  opacity: 1;
+}
+.lagoa-estrelas i {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #fff;
+  animation: bosque-cintila 2.4s ease-in-out infinite;
+}
+.lagoa-nuvem {
+  position: absolute;
+  top: 30px;
+  left: -120px;
+  width: 90px;
+  height: 26px;
+  border-radius: 999px;
+  background: #fff;
+  opacity: 0.9;
+  animation: lagoa-passa 38s linear infinite;
+}
+.lagoa-nuvem::before {
+  content: '';
+  position: absolute;
+  left: 18px;
+  top: -14px;
+  width: 40px;
+  height: 32px;
+  border-radius: 50%;
+  background: inherit;
+}
+.lagoa-topo[data-periodo='noite'] .lagoa-nuvem {
+  opacity: 0.12;
+}
+@keyframes lagoa-passa {
+  to {
+    left: 100%;
+  }
+}
+.lagoa-astro {
+  position: absolute;
+  top: 22px;
+  right: 290px;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff6c9 0 40%, #ffd166 41%);
+  box-shadow: 0 0 0 10px color-mix(in srgb, #ffd166 30%, transparent);
+}
+.lagoa-topo[data-periodo='tarde'] .lagoa-astro {
+  top: 70px;
+  background: radial-gradient(circle, #ffe2a8 0 40%, #ffb347 41%);
+}
+.lagoa-topo[data-periodo='noite'] .lagoa-astro {
+  background: #fff6d8;
+  box-shadow:
+    inset -12px -4px 0 #e9dfb6,
+    0 0 0 10px rgba(255, 255, 255, 0.08);
+}
+.lagoa-margem path:first-child {
+  fill: var(--l-colina);
+}
+.lagoa-margem path:last-child {
+  fill: var(--l-colina-perto);
+}
+.lagoa-agua {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--l-agua) 45%, #fff), var(--l-agua));
+}
+.lagoa-topo[data-periodo='tarde'] .lagoa-agua {
+  background: linear-gradient(180deg, #ffd3a0, #6fc6a6 45%, #3aa58f);
+}
+.lagoa-topo[data-periodo='noite'] .lagoa-agua {
+  background: linear-gradient(180deg, #5a5aa6, #34437a 55%, #263460);
+}
+.lagoa-folha {
+  position: relative;
+  width: 72px;
+  max-width: 90%;
+  height: 26px;
+  margin-top: 34px;
+  border: 3px solid var(--l-contorno);
+  border-radius: 50%;
+  background: var(--l-folha);
+  animation: lagoa-boia 3s ease-in-out infinite;
+}
+.lagoa-folha::after {
+  content: '';
+  position: absolute;
+  right: 8px;
+  top: 7px;
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--l-contorno);
+  transform: rotate(-24deg);
+}
+[data-feito='false'] > .lagoa-folha {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--l-folha) 35%, #fff);
+}
+.lagoa-topo[data-periodo='noite'] [data-feito='false'] > .lagoa-folha {
+  border-color: #c9c6ef;
+  background: color-mix(in srgb, var(--l-folha) 30%, #34437a);
+}
+.lagoa-onda {
+  position: absolute;
+  top: 40px;
+  width: 90px;
+  max-width: 100%;
+  height: 30px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  animation: bosque-onda 2.4s ease-out infinite;
+}
+.lagoa-rotulo {
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+}
+.lagoa-sapinho {
+  transform-origin: 50% 100%;
+  animation: lagoa-pulinho 2.6s ease-in-out infinite;
+}
+@keyframes lagoa-boia {
+  50% {
+    transform: translateY(-4px);
+  }
+}
+@keyframes lagoa-pulinho {
+  0%,
+  70%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  78% {
+    transform: translateY(2px) scale(1.06, 0.92);
+  }
+  86% {
+    transform: translateY(-16px) scale(0.96, 1.05);
+  }
+  94% {
+    transform: translateY(0) scale(1.04, 0.95);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lagoa-topo *,
+  .lagoa-topo *::before {
+    animation: none !important;
+  }
+}
+:root[data-reduzir-movimento='true'] .lagoa-topo *,
+:root[data-reduzir-movimento='true'] .lagoa-topo *::before {
+  animation: none !important;
+}
+
+/* O balão do sapo no topo sem hábito: branco e com texto escuro em qualquer hora. */
+.lagoa-balao {
+  position: relative;
+  padding: 12px 16px;
+  border: 2.5px solid var(--l-contorno);
+  border-radius: 18px;
+  background: #fff;
+  color: #1f2a24;
+  box-shadow: 0 3px 0 var(--l-contorno);
+}
+.lagoa-balao p {
+  color: #5e6b62;
+}
+.lagoa-balao::before {
+  content: '';
+  position: absolute;
+  left: 28px;
+  top: -11px;
+  width: 18px;
+  height: 18px;
+  border-top: 2.5px solid var(--l-contorno);
+  border-left: 2.5px solid var(--l-contorno);
+  background: #fff;
+  transform: rotate(45deg);
+}
+@media (min-width: 48rem) {
+  .lagoa-balao::before {
+    left: -11px;
+    top: calc(50% - 9px);
+    border-top: 0;
+    border-bottom: 2.5px solid var(--l-contorno);
+    transform: rotate(45deg);
+  }
+}
+.lagoa-destaque {
+  color: #1f2a24;
+}
+.lagoa-topo[data-periodo='noite'] .lagoa-destaque {
+  color: #fff;
+}
+
+/* A lista do seletor (Escolha) abre crescendo um pouco a partir do botão. */
+@keyframes escolha-abre {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-4px);
+  }
+}
+
+/* O sapo de corpo inteiro, da cena "andando" do creator-mcp: um pulinho sutil por segundo.
+   Agacha, sai esticado, sobe 14 px com as pernas soltas, pousa achatado e assenta. */
+.sapo-pulando {
+  --b-contorno: #3b2a2f;
+  --b-sapo: #8fe05a;
+  --b-barriga: #e6f6a8;
+  --b-bochecha: #f08a7a;
+}
+.sapo-pulando .sp-corpo {
+  transform-origin: 150px 280px;
+}
+.sapo-pulando .sp-perna-e {
+  transform-origin: 114px 214px;
+}
+.sapo-pulando .sp-perna-d {
+  transform-origin: 186px 214px;
+}
+.sapo-pulando .sp-braco-e {
+  transform-origin: 114px 204px;
+}
+.sapo-pulando .sp-braco-d {
+  transform-origin: 186px 204px;
+}
+.sapo-pulando :is(.sp-olho, .sp-sombra) {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+:is(.sapo-pulando.pulando, .cena-casa.focando .sapo-pulando) .sp-corpo {
+  animation: sp-corpo 1s infinite;
+}
+:is(.sapo-pulando.pulando, .cena-casa.focando .sapo-pulando) .sp-perna-e {
+  animation: sp-perna-e 1s infinite;
+}
+:is(.sapo-pulando.pulando, .cena-casa.focando .sapo-pulando) .sp-perna-d {
+  animation: sp-perna-d 1s infinite;
+}
+:is(.sapo-pulando.pulando, .cena-casa.focando .sapo-pulando) .sp-braco-e {
+  animation: sp-braco-e 1s infinite;
+}
+:is(.sapo-pulando.pulando, .cena-casa.focando .sapo-pulando) .sp-braco-d {
+  animation: sp-braco-d 1s infinite;
+}
+:is(.sapo-pulando.pulando, .cena-casa.focando .sapo-pulando) .sp-cabeca {
+  animation: sp-cabeca 1s infinite;
+}
+:is(.sapo-pulando.pulando, .cena-casa.focando .sapo-pulando) .sp-olho {
+  animation: sp-olho 1s infinite;
+}
+:is(.sapo-pulando.pulando, .cena-casa.focando .sapo-pulando) .sp-sombra {
+  animation: sp-sombra 1s infinite;
+}
+@keyframes sp-corpo {
+  0% {
+    transform: translateY(0) scale(1, 1);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  15% {
+    transform: translateY(0) scale(1.04, 0.96);
+  }
+  27% {
+    transform: translateY(0) scale(0.97, 1.04);
+    animation-timing-function: cubic-bezier(0.15, 0.7, 0.35, 1);
+  }
+  42% {
+    transform: translateY(-14px) scale(0.99, 1.01);
+    animation-timing-function: cubic-bezier(0.65, 0, 0.85, 0.3);
+  }
+  57% {
+    transform: translateY(0) scale(1.05, 0.95);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  68% {
+    transform: translateY(0) scale(0.99, 1.01);
+  }
+  78%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+@keyframes sp-perna-e {
+  0%,
+  27%,
+  57%,
+  100% {
+    transform: translateY(0) rotate(0);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  42% {
+    transform: translateY(3px) rotate(-3.4deg);
+  }
+}
+@keyframes sp-perna-d {
+  0%,
+  27%,
+  57%,
+  100% {
+    transform: translateY(0) rotate(0);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  42% {
+    transform: translateY(3px) rotate(3.4deg);
+  }
+}
+@keyframes sp-braco-e {
+  0%,
+  75%,
+  100% {
+    transform: rotate(0);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  40% {
+    transform: rotate(6.9deg);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  60% {
+    transform: rotate(-1.1deg);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+}
+@keyframes sp-braco-d {
+  0%,
+  75%,
+  100% {
+    transform: rotate(0);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  40% {
+    transform: rotate(-6.9deg);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  60% {
+    transform: rotate(1.1deg);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+}
+@keyframes sp-cabeca {
+  0%,
+  85%,
+  100% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  18% {
+    transform: translateY(1.5px);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  32% {
+    transform: translateY(-1.5px);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  60% {
+    transform: translateY(2.5px);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  74% {
+    transform: translateY(-0.5px);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+}
+@keyframes sp-olho {
+  0%,
+  57%,
+  72%,
+  100% {
+    transform: scale(1, 1);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  62% {
+    transform: scale(1.02, 0.94);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+}
+@keyframes sp-sombra {
+  0%,
+  27% {
+    transform: scale(1, 1);
+    animation-timing-function: cubic-bezier(0.15, 0.7, 0.35, 1);
+  }
+  42% {
+    transform: scale(0.88, 0.9);
+    animation-timing-function: cubic-bezier(0.65, 0, 0.85, 0.3);
+  }
+  57% {
+    transform: scale(1.03, 1);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  70%,
+  100% {
+    transform: scale(1, 1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sapo-pulando * {
+    animation: none !important;
+  }
 }

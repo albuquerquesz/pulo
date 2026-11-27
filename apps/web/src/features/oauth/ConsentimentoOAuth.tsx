@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { Sapo } from '@/mascot';
+import { SapoRosto } from '@/mascot';
 import { Botao, Cartao, Texto } from '@/ui';
 
 import { Tela } from '../app';
@@ -36,7 +36,7 @@ export function ConsentimentoOAuth() {
   return (
     <Tela>
       <div className="flex justify-center pt-6">
-        <Sapo fase={1} momento="pedido-de-acesso" tamanho={140} />
+        <SapoRosto momento="pedido-de-acesso" className="w-[140px]" />
       </div>
       <Texto como="h1" variante="titulo" className="text-center">
         {nome} quer usar o seu Pulo

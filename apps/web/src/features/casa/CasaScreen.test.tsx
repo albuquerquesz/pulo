@@ -58,7 +58,7 @@ beforeEach(() => {
 });
 
 describe('Casa', () => {
-  test('o timer anda de 5 em 5 entre os limites, e Voltar não grava nada', async () => {
+  test('o timer anda de 5 em 5 entre os limites, e fechar não grava nada', async () => {
     const { repo } = await abrir();
     const antes = (await repo.listSessions()).length;
     await clicar('Focar!');
@@ -68,7 +68,7 @@ describe('Casa', () => {
     fireEvent.change(screen.getByRole('slider', { name: 'Minutos de foco' }), { target: { value: '50' } });
     await clicar('Mais 5 minutos');
     expect(noMostrador()).toBe('50');
-    await clicar('Voltar');
+    await clicar('Fechar');
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(await repo.listSessions()).toHaveLength(antes);
   });
@@ -187,13 +187,14 @@ describe('Casa', () => {
     expect(window.localStorage.getItem('pulo.comodo')).toBe('quarto');
   });
 
-  test('só dá para comprar o que a API vende', async () => {
+  test('itens novos e coloridos têm preço na loja', async () => {
     await abrir();
     await clicar('Decorar');
     await clicar('Decorar: chão, primeiro lugar');
     await clicar('Cama', within(screen.getByRole('group', { name: 'Tipo de item' })));
-    expect(screen.getByRole('button', { name: 'Em breve' }).hasAttribute('disabled')).toBe(true);
-    expect(screen.getByRole('button', { name: 'Rosa, em breve' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Rosa, 60 joias' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Brilho, 70 joias' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Em breve' })).toBeNull();
   });
 
   test('a loja de canto abre sem lugar, e Sair de casa vai para a Ilha', async () => {

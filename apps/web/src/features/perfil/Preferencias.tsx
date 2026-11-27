@@ -44,13 +44,10 @@ export function Preferencias({ tema, preferencias, onTema, onMudar, claude, onCl
             ))}
           </div>
         </Linha>
-        <Linha titulo="Sons do sapo">
-          <Chave rotulo="Sons do sapo" ligada={preferencias.sounds} onMudar={(sounds) => onMudar({ sounds })} />
-        </Linha>
         <Linha titulo="Assistente de IA" detalhe="sugere ajustes na semana">
           <Chave rotulo="Assistente de IA" ligada={preferencias.aiEnabled} onMudar={(aiEnabled) => onMudar({ aiEnabled })} />
         </Linha>
-        <Linha titulo="Conectar com o Claude" detalhe="servidor MCP do Pulo">
+        <Linha titulo="Conectar com o Claude" detalhe="funciona com o Claude e com qualquer agente que use MCP">
           <button type="button" onClick={onClaude} aria-label={`Conectar com o Claude: ${claude ?? 'verificando'}`} className={VALOR}>
             {claude ?? '…'}
           </button>

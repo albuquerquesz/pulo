@@ -1,7 +1,5 @@
-import type { Phase } from '@pulo/core/domain/types';
-
 import type { Momento } from '@/mascot/momentos';
-import { Sapo } from '@/mascot/sapo/Sapo';
+import { SapoRosto } from '@/mascot/sapo/SapoRosto';
 
 import { Botao } from './Botao';
 import { Texto } from './Texto';
@@ -19,16 +17,15 @@ export type TelaDeEstadoProps = {
   acao?: AcaoDeEstado;
   /** Botões fantasma, embaixo da principal. */
   secundarias?: readonly AcaoDeEstado[];
-  fase?: Phase;
   testID?: string;
 };
 
 /** Tela de página inteira (erro, sem sinal, não encontrado): coluna centralizada, sapo grande, texto e ações. */
-export function TelaDeEstado({ momento, titulo, texto, acao, secundarias = [], fase = 1, testID }: TelaDeEstadoProps) {
+export function TelaDeEstado({ momento, titulo, texto, acao, secundarias = [], testID }: TelaDeEstadoProps) {
   return (
     <div className="mx-auto flex w-full max-w-sm flex-col gap-4 pt-2 text-center md:pt-[8vh]" data-testid={testID}>
       <div className="flex justify-center">
-        <Sapo fase={fase} momento={momento} tamanho={240} />
+        <SapoRosto momento={momento} className="w-[240px]" />
       </div>
       <Texto como="h1" variante="titulo">
         {titulo}
