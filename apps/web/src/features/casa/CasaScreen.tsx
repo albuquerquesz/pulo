@@ -7,38 +7,34 @@ import { BarraValor, BotaoCanto, Foguinho, Joia, Nuvens, Placa, pontoNaCena, use
 
 import { useApp, useCarregar } from '../app';
 import type { VinculoDaCasa } from '../foco/vinculo';
-import { COR_NATURAL, ITENS, type Escolha } from './catalogo';
+import { escolhaInicial, type Escolha } from './catalogo';
 import { guardarComodo, useComodoAtual } from './comodoAtual';
 import { Comodo } from './Comodo';
-import { colocadosNoQuarto, comprarOuColocar, estadoDaCompra, tirarDoLugar } from './decoracao';
-import { ItensDoQuarto, LugaresDoQuarto } from './Decoracao';
+import { colocadosNoQuarto, type Colocados } from './decoracao';
+import { Mobilia } from './Decoracao';
 import { carregarCasa, type OpcaoDeVinculo } from './logic';
-import { BOTAO_DE_COMPRA, BOTAO_NEUTRO, LojaModal, RotuloDaCompra } from './LojaModal';
-import type { Lugar } from './lugares';
-import { SapoDaCasa } from './SapoDaCasa';
+import type { Movel } from './mobilia';
+import { CAMA } from './mobilia/cama';
+import { BOTAO_NEUTRO, PainelDaLoja } from './PainelDaLoja';
 import { SeletorDeComodo } from './SeletorDeComodo';
 import { TimerModal } from './TimerModal';
+import { useCompraNoQuarto } from './useCompraNoQuarto';
 import { useFoco } from './useFoco';
 import { useTelaCheia } from './useTelaCheia';
 
 /** A câmera do quarto, com os números do rascunho. */
 const CAMERA: LimitesDaCamera = { cx: 400, cy: 400, w: 1400, wEstreito: 760, min: 450, max: 2400, x0: -300, x1: 1100, y0: -200, y1: 900 };
 /** De onde sai o +1 enquanto a cena ainda não foi medida. */
-const SOBRE_O_SAPO: Ponto = { x: 400, y: 470 };
+const SOBRE_O_SAPO: Ponto = { x: 400, y: 520 };
+/** Com a loja aberta, o cômodo inteiro fica à vista. */
+const QUARTO_INTEIRO = '-220 -340 1240 1200';
 const DURACAO_DO_POP_MS = 1700;
+const SEM_MOVEIS: Colocados = new Map();
 export const DICA_DURANTE_O_FOCO = 'Disponível quando o foco acabar';
 
 interface Pop extends Ponto {
   id: number;
   texto: string;
-}
-
-interface LojaAberta {
-  /** `null`: aberta pelo botão de canto. */
-  lugar: Lugar | null;
-  escolha: Escolha;
-  /** "Ver no quarto": o item aparece no lugar antes da compra. */
-  vendo: boolean;
 }
 
 export type CasaScreenProps = {
@@ -48,14 +44,9 @@ export type CasaScreenProps = {
   onComecou?: () => void;
 };
 
-const primeiraEscolha = (lugar: Lugar | null): Escolha | null => {
-  const item = ITENS.find((i) => !lugar || i.tipo === lugar.tipo);
-  return item ? { item, cor: COR_NATURAL } : null;
-};
-
 /** A Casa: os cômodos do sapo, o foco e a decoração com loja. */
 export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
-  const { repo, clock, user, refresh } = useApp();
+  const { repo, clock, user } = useApp();
   const navegar = useNavigate();
   const { estado, recarregar } = useCarregar(async () => {
     if (!user) throw new Error('sem usuário');
@@ -104,38 +95,34 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
 
   const [timer, setTimer] = useState(false);
   const [decorando, setDecorando] = useState(false);
-  const [aberta, setAberta] = useState<LojaAberta | null>(null);
-  const comprando = useRef(false);
+  /** O que o painel da loja está mostrando; `null` com a loja fechada. */
+  const [escolha, setEscolha] = useState<Escolha | null>(null);
+  /** A pessoa tocou num modelo ou numa cor: o quarto mostra a prévia. */
+  const [vendo, setVendo] = useState(false);
+  const efeitos = useRef<SVGGElement>(null);
+  const barraDeJoias = useRef<HTMLDivElement>(null);
+  const compra = useCompraNoQuarto({ cena, efeitos, sapo, saldo: barraDeJoias, comodo: comodoId, recarregar });
+  const colocados = dados ? colocadosNoQuarto(dados.quarto, comodoId) : SEM_MOVEIS;
 
-  const abrirLoja = (lugar: Lugar | null) => {
-    const atual = dados && lugar ? colocadosNoQuarto(dados.quarto, comodoId).find((c) => c.lugar.id === lugar.id) : undefined;
-    const escolha = atual?.escolha ?? primeiraEscolha(lugar);
-    if (escolha) setAberta({ lugar, escolha, vendo: false });
+  const fecharLoja = () => {
+    setEscolha(null);
+    setVendo(false);
   };
-
-  /** Uma escrita de cada vez; se o servidor recusar, o aviso já foi mostrado e a loja continua aberta. */
-  const gravar = async (acao: () => Promise<boolean>) => {
-    if (comprando.current) return;
-    comprando.current = true;
-    try {
-      if (await acao()) setAberta(null);
-    } catch {
-      // Nada a fazer além do aviso do repositório.
-    } finally {
-      comprando.current = false;
-      refresh();
-    }
+  const abrirLugar = (lugar: Movel) => {
+    if (!dados || compra.ocupado) return;
+    setDecorando(true);
+    setEscolha(colocados.get(lugar.id) ?? escolhaInicial(lugar));
+    setVendo(false);
   };
-  const comprar = () => aberta && void gravar(() => comprarOuColocar(repo, clock, { lugar: aberta.lugar, escolha: aberta.escolha, comodo: comodoId }));
-  const tirar = () => {
-    const lugar = aberta?.lugar;
-    if (lugar) void gravar(() => tirarDoLugar(repo, lugar, comodoId).then(() => true));
+  const escolher = (nova: Escolha) => {
+    setEscolha(nova);
+    setVendo(true);
   };
 
   const apertarPlaca = () => {
     if (decorando) {
       setDecorando(false);
-      setAberta(null);
+      fecharLoja();
     } else if (foco.focando) void foco.parar();
     else if (dados) setTimer(true);
   };
@@ -148,9 +135,9 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
 
   if (!user) return null;
 
-  const colocados = dados ? colocadosNoQuarto(dados.quarto, comodoId) : [];
-  const previa = aberta?.vendo && aberta.lugar ? { lugar: aberta.lugar, escolha: aberta.escolha } : null;
-  const compraDaPrevia = previa && dados ? estadoDaCompra({ quarto: dados.quarto, saldo: dados.saldo, comodo: comodoId, ...previa }) : null;
+  const lojaAberta = escolha !== null && dados !== null && comodo !== undefined;
+  const previa = vendo && !compra.encenando ? escolha : null;
+  const saldoNaBarra = dados ? (compra.saldoNaTela ?? dados.saldo) + foco.estimativa : '…';
 
   return (
     <main className="md:px-10 md:pt-8 md:pb-12">
@@ -158,13 +145,14 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
       <div
         ref={cena}
         data-testid="cena-da-casa"
-        className={`cena-casa relative h-[calc(100dvh-5rem)] min-h-[520px] overflow-hidden bg-ceu md:min-h-[620px] md:rounded-lg ${foco.focando ? 'focando' : ''} ${decorando ? 'decorando' : ''}`}
+        className={`cena-casa relative flex h-[calc(100dvh-5rem)] min-h-[520px] flex-col overflow-hidden bg-ceu md:min-h-[620px] md:flex-row md:rounded-lg ${foco.focando ? 'focando' : ''}`}
       >
+        <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
         <Nuvens />
         <svg
           {...eventos}
           ref={ligarCena}
-          viewBox={viewBox ?? '-20 90 840 620'}
+          viewBox={lojaAberta ? QUARTO_INTEIRO : (viewBox ?? '-20 90 840 620')}
           preserveAspectRatio="xMidYMid meet"
           role="group"
           aria-label={`${comodo?.nome ?? 'Cômodo'} do Pulo`}
@@ -172,10 +160,15 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
         >
           <g transform="translate(400,490) scale(2) translate(-400,-490)">
             <Comodo comodo={comodoId} />
-            <ItensDoQuarto colocados={colocados} previa={previa} />
-            {decorando ? <LugaresDoQuarto colocados={colocados} onAbrir={abrirLoja} /> : null}
+            <Mobilia
+              colocados={compra.naCena(colocados)}
+              previa={previa}
+              escolhido={escolha?.lugar.id ?? null}
+              onAbrir={decorando ? abrirLugar : undefined}
+              sapo={sapo}
+            />
+            <g ref={efeitos} pointerEvents="none" aria-hidden="true" />
           </g>
-          <SapoDaCasa ref={sapo} />
           <linearGradient id="g-joia-da-casa" x1="0" y1="0" x2="1" y2="1">
             <stop offset=".22" stopColor="var(--pulo-joia-clara)" />
             <stop offset=".23" stopColor="var(--pulo-joia)" />
@@ -201,12 +194,14 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
         </svg>
 
         <div className="absolute top-7 left-0 z-3 flex gap-[34px] pl-8 md:right-0 md:justify-center md:gap-9 md:pl-0">
-          <BarraValor
-            icone={<Joia largura={46} altura={54} />}
-            valor={dados ? dados.saldo + foco.estimativa : '…'}
-            rotulo="joias"
-            onMais={() => !foco.focando && !decorando && dados && setTimer(true)}
-          />
+          <div ref={barraDeJoias}>
+            <BarraValor
+              icone={<Joia largura={46} altura={54} />}
+              valor={saldoNaBarra}
+              rotulo="joias"
+              onMais={() => !foco.focando && !decorando && dados && setTimer(true)}
+            />
+          </div>
           <BarraValor
             icone={<Foguinho className="size-[58px]" />}
             valor={dados?.diasSeguidos ?? '…'}
@@ -215,7 +210,7 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
             onMais={() => void navegar({ to: '/' })}
           />
         </div>
-        <div className="absolute top-[84px] right-3 z-3 md:top-6 md:right-6">
+        <div className={`absolute top-[84px] right-3 z-3 md:top-6 md:right-6 ${lojaAberta ? 'hidden' : ''}`}>
           <BotaoCanto
             pequeno
             rotulo={telaCheia.cheia ? 'Sair da tela cheia' : 'Tela cheia'}
@@ -227,21 +222,21 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
             }
           />
         </div>
-        {dados ? (
+        {dados && !lojaAberta ? (
           <div className="pointer-events-none absolute inset-x-0 top-[146px] z-3 flex justify-center md:top-[92px] md:px-24">
             <SeletorDeComodo
               meus={dados.comodos}
               atual={comodoId}
               onEscolher={(escolhido) => {
-                setAberta(null);
+                fecharLoja();
                 guardarComodo(escolhido);
               }}
             />
           </div>
         ) : null}
-        {decorando ? (
+        {decorando && !lojaAberta ? (
           <p className="absolute top-[214px] left-1/2 z-3 w-max max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-3xl bg-white/80 px-7 py-3 text-center text-sm font-black tracking-wider text-contorno uppercase md:top-[164px] md:text-base md:whitespace-nowrap">
-            Toque num <b>+</b> para decorar {doPulo}
+            Toque num <b>móvel</b> para decorar {doPulo}
           </p>
         ) : null}
         {estado.tipo === 'erro' ? (
@@ -253,7 +248,7 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
           </div>
         ) : null}
 
-        <div className="absolute right-3 bottom-4 left-3 z-3 flex items-end justify-between gap-4 md:right-7 md:bottom-[26px] md:left-7">
+        <div className={`absolute right-3 bottom-4 left-3 z-3 items-end justify-between gap-4 md:right-7 md:bottom-[26px] md:left-7 ${lojaAberta ? 'hidden' : 'flex'}`}>
           <div className="hidden w-16 md:block" />
           <div className="flex flex-1 justify-center pb-2 md:flex-none">
             <Placa titulo={decorando ? 'Pronto' : foco.focando ? 'Parar' : 'Focar!'} tom={decorando ? 'clara' : foco.focando ? 'escura' : 'madeira'} onPress={apertarPlaca} />
@@ -264,9 +259,9 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
                 {DICA_DURANTE_O_FOCO}
               </p>
             ) : null}
-            <BotaoCanto icone="🛍️" rotulo="Loja" {...bloqueio} onPress={() => dados && abrirLoja(null)} />
+            <BotaoCanto icone="🛍️" rotulo="Loja" {...bloqueio} onPress={() => abrirLugar(CAMA)} />
             <BotaoCanto icone="🚪" rotulo="Sair de casa" onPress={() => void navegar({ to: '/ilha' })} />
-            <BotaoCanto icone="🖌️" rotulo="Decorar" {...bloqueio} onPress={() => setDecorando((d) => !d)} />
+            <BotaoCanto icone="🖌️" rotulo="Decorar" {...bloqueio} onPress={() => (decorando ? apertarPlaca() : setDecorando(true))} />
           </div>
         </div>
 
@@ -278,34 +273,23 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
             onComecar={(minutos, opcao) => void comecar(minutos, opcao)}
           />
         ) : null}
-        {aberta && dados && comodo && !aberta.vendo ? (
-          <LojaModal
-            lugar={aberta.lugar}
-            escolha={aberta.escolha}
+        </div>
+        {escolha && dados && comodo ? (
+          <PainelDaLoja
+            escolha={escolha}
             quarto={dados.quarto}
             saldo={dados.saldo}
             comodo={comodo}
-            onEscolher={(escolha) => setAberta({ ...aberta, escolha })}
-            onVer={() => setAberta({ ...aberta, vendo: true })}
-            onComprar={comprar}
-            onTirar={tirar}
-            onCancelar={() => setAberta(null)}
+            ocupado={compra.ocupado}
+            onLugar={abrirLugar}
+            onEscolher={escolher}
+            onComprar={(botao) => void compra.comprar({ escolha, botao, quarto: dados.quarto, saldo: dados.saldo })}
+            onTirar={() => {
+              setVendo(false);
+              void compra.tirar(escolha.lugar, dados.quarto);
+            }}
+            onFechar={fecharLoja}
           />
-        ) : null}
-        {aberta && compraDaPrevia ? (
-          <div
-            role="group"
-            aria-label="Prévia no quarto"
-            className="absolute bottom-[240px] left-1/2 z-10 flex w-max max-w-[calc(100%-1.5rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-3 rounded-[20px] border-4 border-contorno bg-folha py-3 pr-3.5 pl-[22px] font-black text-contorno md:bottom-[120px]"
-          >
-            <span>Gostou?</span>
-            <button type="button" disabled={compraDaPrevia.bloqueado} onClick={comprar} className={`${BOTAO_DE_COMPRA} !py-2 text-sm`}>
-              <RotuloDaCompra compra={compraDaPrevia} />
-            </button>
-            <button type="button" onClick={() => setAberta({ ...aberta, vendo: false })} className={`${BOTAO_NEUTRO} !py-2 text-sm`}>
-              Voltar
-            </button>
-          </div>
         ) : null}
       </div>
     </main>

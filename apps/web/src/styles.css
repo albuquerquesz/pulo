@@ -331,16 +331,6 @@ body {
 .parte-da-casa:not(.feita) :is(polygon, circle, path, ellipse, rect) {
   stroke-dasharray: 8 7;
 }
-/* A parte recém comprada cai do alto. */
-.parte-da-casa.nova {
-  animation: constroi 0.6s ease-out;
-}
-@keyframes constroi {
-  from {
-    opacity: 0.2;
-    transform: translateY(-30px);
-  }
-}
 
 /* O cais para a próxima ilha: a ilha de lá fica apagada e tracejada até a casa ficar inteira. */
 .portal-da-ilha {
@@ -458,9 +448,6 @@ body {
 .cena-casa.focando .corpo-q {
   animation: none;
 }
-.cena-casa.decorando .sapo-casa {
-  opacity: 0.55;
-}
 @keyframes passeia {
   0%,
   100% {
@@ -500,50 +487,84 @@ body {
     transform: translateY(-60px);
   }
 }
-.deco-item {
-  pointer-events: none;
-  animation: brota 0.45s ease-out;
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
-}
-@keyframes brota {
-  from {
-    scale: 0;
-  }
-}
-.lugar {
+/* Mobília do quarto: o lugar escolhido brilha, a prévia flutua meio transparente e a luz da luminária respira. */
+.lugar-do-quarto[role='button'] {
   cursor: pointer;
   outline: none;
 }
-.lugar circle {
-  fill: var(--pulo-lima);
-  stroke: var(--pulo-contorno);
-  stroke-width: 3.5;
+.lugar-do-quarto .fantasma {
+  opacity: 0.55;
 }
-.lugar path {
-  stroke: var(--pulo-contorno);
-  stroke-width: 3.5;
-  stroke-linecap: round;
+.lugar-do-quarto .fantasma:hover {
+  opacity: 0.9;
 }
-.lugar .pulso {
-  animation: pulso-lugar 1.6s ease-in-out infinite;
-  transform-box: fill-box;
-  transform-origin: center;
+.lugar-do-quarto:is(.escolhido, :focus-visible) {
+  filter: drop-shadow(0 0 6px rgb(255 255 255 / 0.95)) drop-shadow(0 0 2px var(--pulo-lima-forte));
 }
-.lugar.tem circle {
-  fill: #fff;
+.lugar-do-quarto .previa > * {
+  opacity: 0.6;
 }
-.lugar:hover circle,
-.lugar:focus-visible circle {
-  fill: var(--pulo-lima-clara);
+.lugar-do-quarto .previa {
+  animation: flutua 1.6s ease-in-out infinite;
 }
-.lugar:focus-visible circle {
-  stroke-width: 6;
-}
-@keyframes pulso-lugar {
+@keyframes flutua {
   50% {
-    transform: scale(1.12);
+    transform: translateY(-5px);
   }
+}
+.mobilia-luz {
+  animation: luz-da-mobilia 3s ease-in-out infinite;
+}
+@keyframes luz-da-mobilia {
+  50% {
+    opacity: 0.2;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lugar-do-quarto .previa,
+  .mobilia-luz {
+    animation: none;
+  }
+}
+
+/* Animação da compra (Casa e Ilha): as joias que voam do botão e o preço que sobe. */
+.joia-voando {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2.5px solid var(--pulo-contorno);
+  border-radius: 4px;
+  background: linear-gradient(135deg, var(--pulo-joia-clara), var(--pulo-joia));
+  pointer-events: none;
+}
+.preco-subindo {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 10px;
+  border: 3px solid var(--pulo-contorno);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--pulo-contorno);
+  font-size: 15px;
+  font-weight: 900;
+  pointer-events: none;
+}
+.preco-subindo-joia {
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--pulo-contorno);
+  border-radius: 3px;
+  background: var(--pulo-joia);
+  transform: rotate(45deg);
 }
 
 /* Controle deslizante dos minutos: o preenchido vem de --p. */

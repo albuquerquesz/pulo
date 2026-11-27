@@ -260,7 +260,8 @@ Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBl
   (`podeComprar`, `progressoPorCamada`).
 - **Quarto**: `PUT /api/room/:item` compra uma decoração (`ROOM_DECOR`) já com a posição: `x` e `y` dentro de `ROOM_GRID` e
   `rotation` 0, 90, 180 ou 270. `PATCH /api/room/:item` muda só a posição, de graça (item não comprado: 404 `nao_encontrado`).
-  Mais de um item pode ocupar o mesmo ponto.
+  Mais de um item pode ocupar o mesmo ponto. O id do item é `lugar-modelo` na cor natural e `lugar-modelo-cor` nas outras
+  (ex.: `cama-estofada-rosa`). Ids que saíram do catálogo continuam nas leituras e o web os ignora; mudar um deles dá 404.
 - **Cômodos** (spec 31): cada item fica num cômodo (`comodo`: o id de uma parte de camada `comodo`) e continua sendo comprado uma
   vez só. No `PUT`, `comodo` ausente é o `quarto`; no `PATCH`, ausente mantém o atual. Repetir o `PUT` da mesma compra com outro
   `comodo` muda o item de cômodo sem cobrar. Cômodo que a pessoa não tem: 400 `comodo_nao_comprado`; id desconhecido: 400

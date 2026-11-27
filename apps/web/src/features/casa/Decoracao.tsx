@@ -1,83 +1,81 @@
-import type { Colocado } from './decoracao';
-import { LUGARES, type Lugar } from './lugares';
+import type { KeyboardEvent, Ref } from 'react';
 
-/** A inclinação que deita o item na parede. */
-const INCLINACAO = { esquerda: -26.57, direita: 26.57 } as const;
+import { idDaCompra, tintaDe, type Escolha } from './catalogo';
+import type { Colocados } from './decoracao';
+import { MOVEIS_NA_ORDEM_DE_DESENHO, type LugarId, type Movel } from './mobilia';
+import { SapoDaCasa } from './SapoDaCasa';
 
-type ItemNoQuartoProps = Colocado & { previa: boolean };
+/** O sapo é desenhado logo depois deste lugar. */
+const ANTES_DO_SAPO: LugarId = 'bau';
 
-function ItemNoQuarto({ lugar, escolha, previa }: ItemNoQuartoProps) {
-  const opacidade = previa ? 0.75 : undefined;
-  const { x, y, tipo, lado } = lugar;
-  const nome = `${escolha.item.nome}, ${escolha.cor.nome}`;
-  if (tipo === 'tapete') {
-    return (
-      <g className="deco-item" opacity={opacidade} data-testid={`item-${lugar.id}`} aria-label={nome}>
-        <ellipse cx={x} cy={y} rx="62" ry="30" fill={escolha.cor.tapete} stroke="var(--pulo-contorno)" strokeWidth="3" />
-        <ellipse cx={x} cy={y} rx="44" ry="20" fill="none" stroke="#fff" strokeWidth="3" strokeDasharray="7 6" opacity=".8" />
-      </g>
-    );
-  }
-  const noChao = tipo === 'chao';
-  // A inclinação fica num grupo de fora: o `.deco-item` usa transform-box fill-box para brotar, e isso mudaria o
-  // ponto de apoio do skew, tirando o item da parede.
+type MovelNoLugarProps = {
+  lugar: Movel;
+  /** O que o lugar mostra; sem nada, o contorno tracejado (só ao decorar). */
+  visto: Escolha | undefined;
+  previa: boolean;
+  escolhido: boolean;
+  /** Com ele, o lugar é um botão. */
+  onAbrir?: (lugar: Movel) => void;
+};
+
+function MovelNoLugar({ lugar, visto, previa, escolhido, onAbrir }: MovelNoLugarProps) {
+  if (!visto && !onAbrir) return null;
+  const abrir = onAbrir
+    ? {
+        role: 'button',
+        tabIndex: 0,
+        'aria-label': `Decorar: ${lugar.nome}`,
+        'aria-pressed': escolhido,
+        onClick: () => onAbrir(lugar),
+        onKeyDown: (e: KeyboardEvent) => {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          e.preventDefault();
+          onAbrir(lugar);
+        },
+      }
+    : { 'aria-hidden': !visto };
   return (
-    <g
-      opacity={opacidade}
-      data-testid={`item-${lugar.id}`}
-      aria-label={nome}
-      transform={lado ? `translate(${x} ${y}) skewY(${INCLINACAO[lado]}) translate(${-x} ${-y})` : undefined}
-    >
-      <g className="deco-item">
-        {noChao ? <ellipse cx={x} cy={y + 2} rx="20" ry="7" fill="rgba(59,42,47,.18)" /> : null}
-        <text x={x} y={y + (noChao ? 0 : 14)} textAnchor="middle" fontSize={noChao ? 48 : 40} style={{ filter: escolha.cor.filtro }}>
-          {escolha.item.emoji}
-        </text>
-      </g>
+    <g data-lugar={lugar.id} className={`lugar-do-quarto${escolhido ? ' escolhido' : ''}`} {...abrir}>
+      {visto ? (
+        <g data-testid={`item-${lugar.id}`} aria-label={`${visto.modelo.nome}, ${visto.cor.nome}`} className={previa ? 'previa' : undefined}>
+          {/* A chave troca o elemento junto com o móvel: a animação do antigo não passa para o novo. */}
+          <g key={idDaCompra(visto)} className="movel">
+            <visto.modelo.Desenho cor={tintaDe(visto)} />
+          </g>
+        </g>
+      ) : (
+        <g className="fantasma">
+          <lugar.Fantasma />
+        </g>
+      )}
     </g>
   );
 }
 
-/** Os itens no quarto, de trás para a frente. */
-export function ItensDoQuarto({ colocados, previa }: { colocados: readonly Colocado[]; previa: Colocado | null }) {
-  const todos = [...colocados.filter((c) => c.lugar.id !== previa?.lugar.id), ...(previa ? [previa] : [])];
-  return (
-    <>
-      {todos
-        .sort((a, b) => a.lugar.y - b.lugar.y)
-        .map((c) => (
-          <ItemNoQuarto key={`${c.lugar.id}-${c.escolha.item.id}-${c.escolha.cor.id}`} {...c} previa={c === previa} />
-        ))}
-    </>
-  );
-}
+type MobiliaProps = {
+  colocados: Colocados;
+  /** O que a pessoa está olhando antes de comprar. */
+  previa: Escolha | null;
+  escolhido: LugarId | null;
+  onAbrir?: (lugar: Movel) => void;
+  sapo?: Ref<SVGGElement>;
+};
 
-/** Os + do modo decorar. */
-export function LugaresDoQuarto({ colocados, onAbrir }: { colocados: readonly Colocado[]; onAbrir: (lugar: Lugar) => void }) {
-  const ocupados = new Set(colocados.map((c) => c.lugar.id));
+/** Os móveis e o sapo, de trás para a frente. */
+export function Mobilia({ colocados, previa, escolhido, onAbrir, sapo }: MobiliaProps) {
   return (
     <>
-      {LUGARES.map((lugar) => (
-        <g
-          key={lugar.id}
-          className={`lugar${ocupados.has(lugar.id) ? ' tem' : ''}`}
-          transform={`translate(${lugar.x} ${lugar.y - (lugar.tipo === 'chao' ? 36 : 0)})`}
-          role="button"
-          tabIndex={0}
-          aria-label={`Decorar: ${lugar.nome}`}
-          onClick={() => onAbrir(lugar)}
-          onKeyDown={(e) => {
-            if (e.key !== 'Enter' && e.key !== ' ') return;
-            e.preventDefault();
-            onAbrir(lugar);
-          }}
-        >
-          <g className="pulso">
-            <circle r="15" />
-            <path d="M-7 0h14M0-7v14" />
+      {MOVEIS_NA_ORDEM_DE_DESENHO.map((lugar) => {
+        const atual = colocados.get(lugar.id);
+        const daPrevia = previa?.lugar.id === lugar.id ? previa : undefined;
+        const ehPrevia = daPrevia !== undefined && (!atual || idDaCompra(atual) !== idDaCompra(daPrevia));
+        return (
+          <g key={lugar.id}>
+            <MovelNoLugar lugar={lugar} visto={daPrevia ?? atual} previa={ehPrevia} escolhido={lugar.id === escolhido} onAbrir={onAbrir} />
+            {lugar.id === ANTES_DO_SAPO ? <SapoDaCasa ref={sapo} /> : null}
           </g>
-        </g>
-      ))}
+        );
+      })}
     </>
   );
 }

@@ -71,36 +71,46 @@ describe('casa', () => {
 
   it('compra decoração com posição e mover é grátis', async () => {
     const repo = createMemoryRepository({ habitLogs: habitos(20), joiaCredit: 5 });
-    expect(await moverDecoracao(repo, 'tapete', canto)).toMatchObject({ ok: false, error: { code: 'nao_encontrado' } });
-    expect(await comprarDecoracao(repo, clock, 'tapete', { ...canto, x: ROOM_GRID.columns })).toMatchObject({ ok: false, error: { code: 'corpo_invalido' } });
-    expect(await comprarDecoracao(repo, clock, 'tapete', canto)).toMatchObject({ ok: true, value: { saldo: 25 - ROOM_DECOR.itemCost.tapete } });
-    const movido = await moverDecoracao(repo, 'tapete', { x: 2, y: 3, rotation: 90 });
-    expect(movido).toMatchObject({ ok: true, value: { saldo: 15 } });
-    expect(await repo.listRoomDecor()).toEqual([{ item: 'tapete', cost: 10, createdAt: 5, x: 2, y: 3, rotation: 90 }]);
+    expect(await moverDecoracao(repo, 'tapete-redondo', canto)).toMatchObject({ ok: false, error: { code: 'nao_encontrado' } });
+    expect(await comprarDecoracao(repo, clock, 'tapete-redondo', { ...canto, x: ROOM_GRID.columns })).toMatchObject({ ok: false, error: { code: 'corpo_invalido' } });
+    expect(await comprarDecoracao(repo, clock, 'tapete-redondo', canto)).toMatchObject({ ok: true, value: { saldo: 25 - ROOM_DECOR.itemCost['tapete-redondo'] } });
+    const movido = await moverDecoracao(repo, 'tapete-redondo', { x: 2, y: 3, rotation: 90 });
+    expect(movido).toMatchObject({ ok: true, value: { saldo: 5 } });
+    expect(await repo.listRoomDecor()).toEqual([{ item: 'tapete-redondo', cost: 20, createdAt: 5, x: 2, y: 3, rotation: 90 }]);
   });
 
   it('todo item se vende em toda cor, com o acréscimo da cor', async () => {
-    expect(precoDaDecoracao('relogio')).toBe(ROOM_DECOR.itemCost.relogio);
-    expect(precoDaDecoracao('relogio-brilho')).toBe(ROOM_DECOR.itemCost.relogio + ROOM_DECOR.colorCost.brilho);
-    for (const id of ['relogio-roxo', 'praia-rosa', 'relogio-rosa-verde', '-rosa']) expect(precoDaDecoracao(id)).toBeNull();
+    expect(precoDaDecoracao('cama-estofada')).toBe(ROOM_DECOR.itemCost['cama-estofada']);
+    expect(precoDaDecoracao('cama-estofada-brilho')).toBe(ROOM_DECOR.itemCost['cama-estofada'] + ROOM_DECOR.colorCost.brilho);
+    for (const id of ['cama-estofada-roxo', 'praia-rosa', 'cama-estofada-rosa-verde', '-rosa', 'cama', 'cama-rosa', 'vaso']) {
+      expect(precoDaDecoracao(id)).toBeNull();
+    }
     const repo = createMemoryRepository({ habitLogs: habitos(60) });
-    expect(await comprarDecoracao(repo, clock, 'relogio-rosa', canto)).toMatchObject({ ok: true });
-    expect(await comprarDecoracao(repo, clock, 'relogio-rosa', canto)).toMatchObject({ ok: false, error: { code: 'ja_comprado' } });
+    expect(await comprarDecoracao(repo, clock, 'relogio-redondo-rosa', canto)).toMatchObject({ ok: true });
+    expect(await comprarDecoracao(repo, clock, 'relogio-redondo-rosa', canto)).toMatchObject({ ok: false, error: { code: 'ja_comprado' } });
     const casa = await verCasa(repo);
-    expect(casa.decoracoes.find((d) => d.id === 'relogio-rosa')).toMatchObject({ nome: 'Relógio rosa', custo: 20, posicao: canto });
-    expect(casa.decoracoes.find((d) => d.id === 'relogio')?.posicao).toBeNull();
+    expect(casa.decoracoes.find((d) => d.id === 'relogio-redondo-rosa')).toMatchObject({ nome: 'Relógio redondo rosa', custo: 20, posicao: canto });
+    expect(casa.decoracoes.find((d) => d.id === 'relogio-redondo')?.posicao).toBeNull();
+  });
+
+  it('um registro com id que a loja não vende mais é ignorado na lista', async () => {
+    const repo = createMemoryRepository({ habitLogs: habitos(60) });
+    await repo.saveRoomDecor({ item: 'vaso-rosa', cost: 15, createdAt: 1, ...canto });
+    const casa = await verCasa(repo);
+    expect(casa.decoracoes.some((d) => d.id === 'vaso-rosa')).toBe(false);
+    expect(casa.gastas).toBe(15);
   });
 
   it('decorar um cômodo pede que ele esteja construído, e mover leva o item de um para outro', async () => {
     const repo = createMemoryRepository({ habitLogs: habitos(220) });
     const naCozinha = { ...canto, comodo: 'cozinha' } as const;
-    expect(await comprarDecoracao(repo, clock, 'tapete', naCozinha)).toMatchObject({ ok: false, error: { code: 'comodo_nao_comprado' } });
-    await comprarDecoracao(repo, clock, 'tapete', canto);
-    expect(await moverDecoracao(repo, 'tapete', naCozinha)).toMatchObject({ ok: false, error: { code: 'comodo_nao_comprado' } });
+    expect(await comprarDecoracao(repo, clock, 'tapete-redondo', naCozinha)).toMatchObject({ ok: false, error: { code: 'comodo_nao_comprado' } });
+    await comprarDecoracao(repo, clock, 'tapete-redondo', canto);
+    expect(await moverDecoracao(repo, 'tapete-redondo', naCozinha)).toMatchObject({ ok: false, error: { code: 'comodo_nao_comprado' } });
     await comprarParte(repo, clock, 'cozinha');
-    expect(await moverDecoracao(repo, 'tapete', naCozinha)).toMatchObject({ ok: true, value: { comodos: ['quarto', 'cozinha'] } });
+    expect(await moverDecoracao(repo, 'tapete-redondo', naCozinha)).toMatchObject({ ok: true, value: { comodos: ['quarto', 'cozinha'] } });
     // Mover sem dizer o cômodo mantém o atual.
-    await moverDecoracao(repo, 'tapete', { x: 1, y: 1, rotation: 0 });
+    await moverDecoracao(repo, 'tapete-redondo', { x: 1, y: 1, rotation: 0 });
     expect((await repo.listRoomDecor())[0]).toMatchObject({ x: 1, comodo: 'cozinha' });
   });
 
