@@ -107,6 +107,27 @@ describe('Ilha', () => {
     expect((await repo.listHousePurchases()).map((c) => c.item)).toEqual(['cerca']);
   });
 
+  test('com Web Animations, as joias voam e a parte cai no fim com o saldo certo', async () => {
+    const animate = vi.fn(() => ({ finished: Promise.resolve() }));
+    Object.defineProperty(Element.prototype, 'animate', { configurable: true, value: animate });
+    Object.defineProperty(SVGElement.prototype, 'getBBox', { configurable: true, value: () => ({ x: 0, y: 0, width: 40, height: 40 }) });
+    try {
+      await abrir({ saldo: 100 });
+      await aba('Exterior');
+      await act(async () => {
+        fireEvent.click(parte(/Cerca/));
+      });
+      await screen.findByText('2 de 24', {}, { timeout: 4000 });
+      await waitFor(() => expect(noTopo()).toBe(`${100 - HOUSE.partCost.cerca} joias`), { timeout: 4000 });
+      expect(animate).toHaveBeenCalled();
+      expect(naCena('cerca')?.classList.contains('feita')).toBe(true);
+      expect(document.querySelector('.joia-voando')).toBeNull();
+    } finally {
+      Reflect.deleteProperty(Element.prototype, 'animate');
+      Reflect.deleteProperty(SVGElement.prototype, 'getBBox');
+    }
+  });
+
   test('comprar pede confirmação com o nome e o preço, e cancelar não gasta', async () => {
     const gravar = vi.fn();
     await abrir({ saldo: 100, trocar: (repo) => ({ ...repo, saveHousePurchase: gravar }) });
