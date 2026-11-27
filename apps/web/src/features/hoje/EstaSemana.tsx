@@ -14,7 +14,7 @@ export function EstaSemana({ grafico }: { grafico: GraficoDaSemana }) {
           {grafico.diasDeCuidado} de {grafico.barras.length} dias
         </span>
       </div>
-      <dl className="mt-3.5 grid grid-cols-2 gap-3 border-b border-line pb-3.5">
+      <dl className="mt-3.5 grid grid-cols-2 gap-3">
         <div>
           <dt className={LEGENDA}>Foco</dt>
           <dd className="text-xl font-extrabold">{grafico.minutos} min</dd>
