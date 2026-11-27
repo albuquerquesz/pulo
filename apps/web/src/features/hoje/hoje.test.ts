@@ -103,7 +103,6 @@ describe('gráfico da semana', () => {
     expect(g.barras.map((b) => b.tipo)).toEqual(['foco', 'foco', 'descanso', 'vazia', 'vazia', 'vazia', 'vazia']);
     expect(g.barras.map((b) => b.altura)).toEqual([90, 45, 40, 6, 6, 6, 6]);
     expect(g.minutos).toBe(75);
-    expect(g.diasDeCuidado).toBe(3);
     // 1 hábito, 15 do foco e 2 do descanso
     expect(g.joias).toBe(18);
   });

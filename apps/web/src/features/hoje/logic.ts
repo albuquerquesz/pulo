@@ -145,8 +145,6 @@ export interface BarraDoGrafico {
 }
 
 export interface GraficoDaSemana {
-  /** Dias da semana feitos ou de descanso. */
-  diasDeCuidado: number;
   barras: BarraDoGrafico[];
   minutos: number;
   joias: number;
@@ -196,7 +194,6 @@ export function graficoDaSemana(registros: RegistrosDaSemana): GraficoDaSemana {
     return { date: dia.date, letra: LETRAS[weekdayOf(dia.date)], minutos: doDia, tipo, altura };
   });
   return {
-    diasDeCuidado: semana.filter(cuidado).length,
     barras,
     minutos: minutos.reduce((total, n) => total + n, 0),
     joias: joiasDosDias(registros, new Set(semana.filter((d) => d.estado !== 'futuro').map((d) => d.date))),

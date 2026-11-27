@@ -8,12 +8,7 @@ const PREFIXO_DA_BARRA: Record<TipoDaBarra, string> = { foco: '', descanso: 'des
 export function EstaSemana({ grafico }: { grafico: GraficoDaSemana }) {
   return (
     <section aria-label="Esta semana" className={`${CARTAO} p-5`}>
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className={TITULO}>Esta semana</h2>
-        <span className={LEGENDA}>
-          {grafico.diasDeCuidado} de {grafico.barras.length} dias
-        </span>
-      </div>
+      <h2 className={TITULO}>Esta semana</h2>
       <dl className="mt-3.5 grid grid-cols-2 gap-3">
         <div>
           <dt className={LEGENDA}>Foco</dt>
