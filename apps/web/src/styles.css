@@ -1089,3 +1089,9 @@ body {
     transform: rotate(45deg);
   }
 }
+.lagoa-destaque {
+  color: #1f2a24;
+}
+.lagoa-topo[data-periodo='noite'] .lagoa-destaque {
+  color: #fff;
+}

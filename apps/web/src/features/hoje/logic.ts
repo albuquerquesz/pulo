@@ -272,11 +272,17 @@ export function pulosDoDia(habitos: readonly HabitoDeHoje[], tarefas: readonly T
 
 const pulos = (n: number) => (n === 1 ? '1 pulo' : `${n} pulos`);
 
+/** A frase embaixo da saudação: o destaque vai em negrito, o resto segue normal. */
+export interface FraseDosPulos {
+  destaque: string;
+  resto: string;
+}
+
 /** A frase embaixo da saudação, conforme o que já foi pulado. */
-export function fraseDosPulos({ feitos, total }: PulosDoDia): string {
-  if (total === 1) return 'Primeiro pulo dado! Crie um hábito ou uma tarefa para seguir pulando.';
-  if (feitos === total) return 'Chegou na outra margem! Tudo feito hoje.';
-  return `${pulos(feitos)} hoje. Mais ${total - feitos} até a outra margem.`;
+export function fraseDosPulos({ feitos, total }: PulosDoDia): FraseDosPulos {
+  if (total === 1) return { destaque: 'Primeiro pulo dado!', resto: ' Crie um hábito ou uma tarefa para seguir pulando.' };
+  if (feitos === total) return { destaque: 'Chegou na outra margem!', resto: ' Tudo feito hoje.' };
+  return { destaque: pulos(feitos), resto: ` hoje. Mais ${total - feitos} até a outra margem.` };
 }
 
 // ---------- Próximo foco e vínculo ----------

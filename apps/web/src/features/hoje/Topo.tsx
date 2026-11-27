@@ -94,6 +94,7 @@ export function Topo({ saudacao, periodo, semHabitos, foco, pulos }: TopoProps) 
   const { folhas, feitos } = pulos;
   // O sapo fica na última folha pulada (a da entrada já conta como pulo).
   const ondeEsta = Math.min(feitos, folhas.length) - 1;
+  const frase = fraseDosPulos(pulos);
   const colunas = `${COLUNAS_NO_CELULAR[Math.min(folhas.length, FOLHAS_NO_CELULAR)]} ${COLUNAS_NO_LARGO[folhas.length]}`;
   return (
     <section aria-label="Próximo foco" data-periodo={periodo} className={`${CARTAO} lagoa-topo relative flex min-h-[290px] flex-col overflow-hidden`}>
@@ -102,7 +103,10 @@ export function Topo({ saudacao, periodo, semHabitos, foco, pulos }: TopoProps) 
       <div className="relative z-2 flex flex-col gap-4 p-5 md:flex-row md:items-start md:justify-between md:px-9 md:pt-8">
         <div className="min-w-0">
           <h1 className="text-[32px] leading-[1.1] font-extrabold">{saudacao}</h1>
-          <p className="lagoa-frase mt-1.5">{fraseDosPulos(pulos)}</p>
+          <p className="lagoa-frase mt-1.5">
+            <b className="lagoa-destaque font-extrabold">{frase.destaque}</b>
+            {frase.resto}
+          </p>
         </div>
         <Link to="/casa" search={foco.busca} className={BOTAO}>
           ▶ Começar foco

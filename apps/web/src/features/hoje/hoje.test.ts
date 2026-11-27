@@ -164,7 +164,8 @@ describe('pulos do dia', () => {
     [3, 8, '3 pulos hoje. Mais 5 até a outra margem.'],
     [4, 4, 'Chegou na outra margem! Tudo feito hoje.'],
   ])('%i de %i: %s', (feitos, total, frase) => {
-    expect(fraseDosPulos({ folhas: [], feitos, total })).toBe(frase);
+    const { destaque, resto } = fraseDosPulos({ folhas: [], feitos, total });
+    expect(`${destaque}${resto}`).toBe(frase);
   });
 });
 
