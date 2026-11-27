@@ -83,7 +83,7 @@ export function Sequencia({ dias, barra, descanso, gravando, onDescanso }: Seque
           </div>
         </div>
       </div>
-      <div className="mt-4">
+      <div className="mt-4 flex justify-end">
         <button
           type="button"
           disabled={gravando}

@@ -456,7 +456,7 @@ body {
   animation: passeia 26s ease-in-out infinite;
 }
 .cena-casa.focando .corpo-q {
-  animation: pulinho 0.5s ease-in-out infinite;
+  animation: none;
 }
 .cena-casa.decorando .sapo-casa {
   opacity: 0.55;
@@ -480,11 +480,6 @@ body {
   }
   90% {
     transform: translate(-90px, 40px);
-  }
-}
-@keyframes pulinho {
-  50% {
-    transform: translateY(-6px);
   }
 }
 @keyframes respira-q {
@@ -1101,5 +1096,202 @@ body {
   from {
     opacity: 0;
     transform: scale(0.97) translateY(-4px);
+  }
+}
+
+/* O sapo de corpo inteiro, da cena "andando" do creator-mcp: um pulinho sutil por segundo.
+   Agacha, sai esticado, sobe 14 px com as pernas soltas, pousa achatado e assenta. */
+.sapo-pulando {
+  --b-contorno: #3b2a2f;
+  --b-sapo: #8fe05a;
+  --b-barriga: #e6f6a8;
+  --b-bochecha: #f08a7a;
+}
+.sapo-pulando .sp-corpo {
+  transform-origin: 150px 280px;
+}
+.sapo-pulando .sp-perna-e {
+  transform-origin: 114px 214px;
+}
+.sapo-pulando .sp-perna-d {
+  transform-origin: 186px 214px;
+}
+.sapo-pulando .sp-braco-e {
+  transform-origin: 114px 204px;
+}
+.sapo-pulando .sp-braco-d {
+  transform-origin: 186px 204px;
+}
+.sapo-pulando :is(.sp-olho, .sp-sombra) {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+:is(.sapo-pulando.pulando, .cena-casa.focando .sapo-pulando) .sp-corpo {
+  animation: sp-corpo 1s infinite;
+}
+:is(.sapo-pulando.pulando, .cena-casa.focando .sapo-pulando) .sp-perna-e {
+  animation: sp-perna-e 1s infinite;
+}
+:is(.sapo-pulando.pulando, .cena-casa.focando .sapo-pulando) .sp-perna-d {
+  animation: sp-perna-d 1s infinite;
+}
+:is(.sapo-pulando.pulando, .cena-casa.focando .sapo-pulando) .sp-braco-e {
+  animation: sp-braco-e 1s infinite;
+}
+:is(.sapo-pulando.pulando, .cena-casa.focando .sapo-pulando) .sp-braco-d {
+  animation: sp-braco-d 1s infinite;
+}
+:is(.sapo-pulando.pulando, .cena-casa.focando .sapo-pulando) .sp-cabeca {
+  animation: sp-cabeca 1s infinite;
+}
+:is(.sapo-pulando.pulando, .cena-casa.focando .sapo-pulando) .sp-olho {
+  animation: sp-olho 1s infinite;
+}
+:is(.sapo-pulando.pulando, .cena-casa.focando .sapo-pulando) .sp-sombra {
+  animation: sp-sombra 1s infinite;
+}
+@keyframes sp-corpo {
+  0% {
+    transform: translateY(0) scale(1, 1);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  15% {
+    transform: translateY(0) scale(1.04, 0.96);
+  }
+  27% {
+    transform: translateY(0) scale(0.97, 1.04);
+    animation-timing-function: cubic-bezier(0.15, 0.7, 0.35, 1);
+  }
+  42% {
+    transform: translateY(-14px) scale(0.99, 1.01);
+    animation-timing-function: cubic-bezier(0.65, 0, 0.85, 0.3);
+  }
+  57% {
+    transform: translateY(0) scale(1.05, 0.95);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  68% {
+    transform: translateY(0) scale(0.99, 1.01);
+  }
+  78%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+@keyframes sp-perna-e {
+  0%,
+  27%,
+  57%,
+  100% {
+    transform: translateY(0) rotate(0);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  42% {
+    transform: translateY(3px) rotate(-3.4deg);
+  }
+}
+@keyframes sp-perna-d {
+  0%,
+  27%,
+  57%,
+  100% {
+    transform: translateY(0) rotate(0);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  42% {
+    transform: translateY(3px) rotate(3.4deg);
+  }
+}
+@keyframes sp-braco-e {
+  0%,
+  75%,
+  100% {
+    transform: rotate(0);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  40% {
+    transform: rotate(6.9deg);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  60% {
+    transform: rotate(-1.1deg);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+}
+@keyframes sp-braco-d {
+  0%,
+  75%,
+  100% {
+    transform: rotate(0);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  40% {
+    transform: rotate(-6.9deg);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  60% {
+    transform: rotate(1.1deg);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+}
+@keyframes sp-cabeca {
+  0%,
+  85%,
+  100% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  18% {
+    transform: translateY(1.5px);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  32% {
+    transform: translateY(-1.5px);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  60% {
+    transform: translateY(2.5px);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  74% {
+    transform: translateY(-0.5px);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+}
+@keyframes sp-olho {
+  0%,
+  57%,
+  72%,
+  100% {
+    transform: scale(1, 1);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  62% {
+    transform: scale(1.02, 0.94);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+}
+@keyframes sp-sombra {
+  0%,
+  27% {
+    transform: scale(1, 1);
+    animation-timing-function: cubic-bezier(0.15, 0.7, 0.35, 1);
+  }
+  42% {
+    transform: scale(0.88, 0.9);
+    animation-timing-function: cubic-bezier(0.65, 0, 0.85, 0.3);
+  }
+  57% {
+    transform: scale(1.03, 1);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  70%,
+  100% {
+    transform: scale(1, 1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sapo-pulando * {
+    animation: none !important;
   }
 }
