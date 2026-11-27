@@ -19,18 +19,21 @@ function ItemNoQuarto({ lugar, escolha, previa }: ItemNoQuartoProps) {
     );
   }
   const noChao = tipo === 'chao';
+  // A inclinação fica num grupo de fora: o `.deco-item` usa transform-box fill-box para brotar, e isso mudaria o
+  // ponto de apoio do skew, tirando o item da parede.
   return (
     <g
-      className="deco-item"
       opacity={opacidade}
       data-testid={`item-${lugar.id}`}
       aria-label={nome}
       transform={lado ? `translate(${x} ${y}) skewY(${INCLINACAO[lado]}) translate(${-x} ${-y})` : undefined}
     >
-      {noChao ? <ellipse cx={x} cy={y + 2} rx="20" ry="7" fill="rgba(59,42,47,.18)" /> : null}
-      <text x={x} y={y + (noChao ? 0 : 14)} textAnchor="middle" fontSize={noChao ? 48 : 40} style={{ filter: escolha.cor.filtro }}>
-        {escolha.item.emoji}
-      </text>
+      <g className="deco-item">
+        {noChao ? <ellipse cx={x} cy={y + 2} rx="20" ry="7" fill="rgba(59,42,47,.18)" /> : null}
+        <text x={x} y={y + (noChao ? 0 : 14)} textAnchor="middle" fontSize={noChao ? 48 : 40} style={{ filter: escolha.cor.filtro }}>
+          {escolha.item.emoji}
+        </text>
+      </g>
     </g>
   );
 }
