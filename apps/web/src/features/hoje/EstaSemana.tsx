@@ -8,17 +8,19 @@ const PREFIXO_DA_BARRA: Record<TipoDaBarra, string> = { foco: '', descanso: 'des
 export function EstaSemana({ grafico }: { grafico: GraficoDaSemana }) {
   return (
     <section aria-label="Esta semana" className={`${CARTAO} p-5`}>
-      <h2 className={TITULO}>Esta semana</h2>
-      <dl className="mt-3.5 grid grid-cols-2 gap-3">
-        <div>
-          <dt className={LEGENDA}>Foco</dt>
-          <dd className="text-xl font-extrabold">{grafico.minutos} min</dd>
-        </div>
-        <div>
-          <dt className={LEGENDA}>Joias</dt>
-          <dd className="text-xl font-extrabold">+{grafico.joias}</dd>
-        </div>
-      </dl>
+      <div className="flex items-start justify-between gap-4">
+        <h2 className={TITULO}>Esta semana</h2>
+        <dl className="flex gap-6 text-right">
+          <div>
+            <dt className={LEGENDA}>Foco</dt>
+            <dd className="text-xl font-extrabold">{grafico.minutos} min</dd>
+          </div>
+          <div>
+            <dt className={LEGENDA}>Joias</dt>
+            <dd className="text-xl font-extrabold">+{grafico.joias}</dd>
+          </div>
+        </dl>
+      </div>
       <ol aria-label="Foco por dia" className="mt-3.5 grid h-[110px] grid-cols-7 items-end gap-2">
         {grafico.barras.map((barra) => (
           <li key={barra.date} data-tipo={barra.tipo} className="flex h-full flex-col items-center justify-end gap-1.5">
