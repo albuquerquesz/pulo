@@ -48,9 +48,10 @@ export async function concluirOnboarding(repo: Repository, clock: Clock, dados: 
     reduceMotion: false,
     createdAt: now,
   };
-  await repo.saveUser(user);
   await criarPlanoInicial(repo, now);
   await refreshMascotState(repo, user.timezone, now);
+  // O perfil vai por último: é ele que marca o onboarding como feito. Se algo antes falhar, dá para tentar de novo.
+  await repo.saveUser(user);
   // O repositório manda: no servidor o id é o da conta e o horário de criação é o guardado.
   return (await repo.getUser()) ?? user;
 }
