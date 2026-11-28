@@ -6,9 +6,13 @@ import {
   pausarFoco,
   retomarFoco,
   type FocoOutcome,
+  reconcileSession,
 } from '@pulo/core/domain/foco';
 import type { Clock, FocusSession, Repository, User } from '@pulo/core/domain/types';
-import { FOCUS } from '@pulo/core/config/decisions';
+import { FOCUS, RECARGA } from '@pulo/core/config/decisions';
+import { isRemoteError } from '@pulo/client';
+
+import { temRecarga } from '../app/conta';
 
 export type FaseDoFoco = 'ocioso' | 'ativa' | 'concluida' | 'interrompida';
 
@@ -77,3 +81,22 @@ export const retomar = (repo: Repository, clock: Clock, user: User) => rodar(rep
 export const parar = (repo: Repository, clock: Clock, user: User) => rodar(repo, clock, user, () => interromperFoco(repo, clock, user.timezone));
 /** O relógio confirmou que o tempo acabou com a tela aberta. */
 export const concluir = (repo: Repository, clock: Clock, user: User) => rodar(repo, clock, user, () => concluirFoco(repo, clock, user.timezone));
+
+/** Fecha, no fim planejado, o foco em andamento cujo tempo já acabou. `null` se não havia o que fechar. */
+export async function encerrarFocoVencido(repo: Repository, clock: Clock, user: User): Promise<EstadoDoFoco | null> {
+  const ativa = (await repo.listSessions()).find((s) => s.state === 'em_andamento');
+  if (!ativa || reconcileSession(ativa, clock.now()) === ativa) return null;
+  return abrirFoco(repo, clock, user);
+}
+
+/** A espera antes da próxima tentativa, que dobra a cada falha seguida. */
+export const esperaDeNovaTentativa = (falhas: number): number =>
+  Math.min(RECARGA.esperaMaximaMs, RECARGA.esperaInicialMs * 2 ** Math.max(0, falhas - 1));
+
+/** O servidor recusou porque o que ele guarda é outro (ex.: `sessao_encerrada`). */
+export const ehConflito = (erro: unknown): boolean => isRemoteError(erro) && erro.kind === 'api' && erro.status === 409;
+
+/** Relê o servidor, quando há um. Lança se não conseguir. */
+export async function reler(repo: Repository): Promise<void> {
+  if (temRecarga(repo)) await repo.reload();
+}

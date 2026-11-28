@@ -4,7 +4,20 @@ import { timerSnapshot } from '@pulo/core/domain/foco';
 import { joiasDoFoco } from '@pulo/core/domain/joias';
 
 import { useApp } from '../app';
-import { abrirFoco, concluir, iniciar, parar, retomar, TEXTO_CONCLUIU_FORA, type EstadoDoFoco, type ExtrasDoFoco } from '../foco/logic';
+import {
+  abrirFoco,
+  concluir,
+  ehConflito,
+  esperaDeNovaTentativa,
+  FOCO_OCIOSO,
+  iniciar,
+  parar,
+  reler,
+  retomar,
+  TEXTO_CONCLUIU_FORA,
+  type EstadoDoFoco,
+  type ExtrasDoFoco,
+} from '../foco/logic';
 import { joiasEstimadas } from './logic';
 
 /**
@@ -17,6 +30,8 @@ export function useFoco(aoGanhar: (joias: number) => void) {
   const [estimativa, setEstimativa] = useState(0);
   const mostradas = useRef(0);
   const ocupado = useRef(false);
+  /** Falhas seguidas ao concluir e a hora a partir da qual vale tentar de novo. */
+  const tentativas = useRef({ falhas: 0, ate: 0 });
   const ganhar = useRef(aoGanhar);
   useEffect(() => {
     ganhar.current = aoGanhar;
@@ -84,15 +99,40 @@ export function useFoco(aoGanhar: (joias: number) => void) {
   }, [repo, clock, user, versao, executar, aplicar]);
 
   const sessao = estado?.fase === 'ativa' ? estado.sessao : null;
+
+  /** Conclui; se falhar, espera cada vez mais. Numa recusa por conflito, relê o servidor e larga o foco já encerrado. */
+  const terminar = useCallback(
+    async (id: string): Promise<EstadoDoFoco> => {
+      if (!user) return FOCO_OCIOSO;
+      const t = tentativas.current;
+      try {
+        if (t.falhas > 0) await reler(repo);
+        const e = await concluir(repo, clock, user);
+        t.falhas = 0;
+        return e;
+      } catch (erro) {
+        t.falhas += 1;
+        t.ate = clock.now() + esperaDeNovaTentativa(t.falhas);
+        if (!ehConflito(erro)) throw erro;
+        await reler(repo);
+        if ((await repo.listSessions()).some((s) => s.id === id && s.state === 'em_andamento')) throw erro;
+        t.falhas = 0;
+        refresh();
+        return FOCO_OCIOSO;
+      }
+    },
+    [repo, clock, user, refresh],
+  );
+
   useEffect(() => {
     if (!sessao || !user) return;
     const id = setInterval(() => {
       const agora = clock.now();
-      if (timerSnapshot(sessao, agora).state === 'concluido') void executar(() => concluir(repo, clock, user));
-      else anunciar(joiasEstimadas(sessao, agora));
+      if (timerSnapshot(sessao, agora).state !== 'concluido') anunciar(joiasEstimadas(sessao, agora));
+      else if (agora >= tentativas.current.ate) void executar(() => terminar(sessao.id));
     }, 1000);
     return () => clearInterval(id);
-  }, [sessao, repo, clock, user, executar, anunciar]);
+  }, [sessao, clock, user, executar, anunciar, terminar]);
 
   return {
     focando: sessao !== null,
@@ -103,6 +143,7 @@ export function useFoco(aoGanhar: (joias: number) => void) {
       await executar(async () => {
         const e = await iniciar(repo, clock, user, minutos, extras);
         mostradas.current = 0;
+        tentativas.current = { falhas: 0, ate: 0 };
         return e;
       });
     },

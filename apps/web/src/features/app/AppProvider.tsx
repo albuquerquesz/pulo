@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import { FROG_EVENT_MS } from '@pulo/core/config/decisions';
+import { FROG_EVENT_MS, RECARGA } from '@pulo/core/config/decisions';
 import { createRemoteRepository, isRemoteError } from '@pulo/client';
 import { systemClock } from '@pulo/core/domain/clock';
 import type { WeeklyAiClient } from '@pulo/core/domain/ia';
@@ -11,7 +11,7 @@ import { MENSAGEM_LOGIN, MENSAGEM_SAIR, MENSAGEM_SESSAO_ACABOU, type Autenticaca
 import { ambienteDoApp, endpointDaIa } from '../sessao/config';
 import { useVoltaDaPagina } from '../sessao/useVoltaDaPagina';
 import { apagarTodosOsDados, concluirOnboarding, criarClienteDeIa, perfilCom, salvarPerfil, type DadosDoOnboarding } from './core';
-import { temConta } from './conta';
+import { temConta, temRecarga } from './conta';
 import { criarFonteLocal, criarFonteRemota, type PropostaFonte } from '../semana/fonte';
 import { comAvisosDeErro, repositorioFechado } from './repositorio';
 
@@ -278,6 +278,35 @@ export function AppProvider({ children, repoInicial, relogioInicial, autenticaca
     // Só na primeira vez: depois, cada ação chama `abrir` por conta própria.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Ao voltar para a aba, busca o que mudou em outro aparelho.
+  const releuEm = useRef(Number.NEGATIVE_INFINITY);
+  useEffect(() => {
+    const repo = ativo.repo;
+    if (!temRecarga(repo)) return;
+    let vale = true;
+    const aoVoltar = () => {
+      const agora = ativo.clock.now();
+      if (document.visibilityState !== 'visible' || agora - releuEm.current < RECARGA.aoVoltarIntervaloMs) return;
+      releuEm.current = agora;
+      void (async () => {
+        try {
+          await repo.reload();
+          const lido = await repo.getUser();
+          if (!vale) return;
+          setUser(lido);
+          refresh();
+        } catch {
+          // Sem rede, a tela fica com o que tinha; a próxima volta tenta de novo.
+        }
+      })();
+    };
+    document.addEventListener('visibilitychange', aoVoltar);
+    return () => {
+      vale = false;
+      document.removeEventListener('visibilitychange', aoVoltar);
+    };
+  }, [ativo, refresh]);
 
   const onboarding = useCallback(
     async (dados: DadosDoOnboarding) => {

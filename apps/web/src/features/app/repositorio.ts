@@ -8,10 +8,10 @@ import { providesMetrics } from '@pulo/core/domain/metricas';
 import { providesStats } from '@pulo/core/domain/stats';
 import { providesStreak } from '@pulo/core/domain/streak';
 import { providesPomodoros } from '@pulo/core/domain/tasks';
-import type { Repository } from '@pulo/core/domain/types';
+import type { FocusSession, Repository } from '@pulo/core/domain/types';
 
 import { mensagemNaTela } from '../casca/erros';
-import { temAvisosDeConquista, temConta, temDatasDoGelo, temPreferencias } from './conta';
+import { temAvisosDeConquista, temConta, temDatasDoGelo, temPreferencias, temRecarga } from './conta';
 
 /** Repositório "fechado": enquanto não há dados (login ou carregando), qualquer uso falha em vez de gravar no lugar errado. */
 export const repositorioFechado: Repository = (() => {
@@ -86,6 +86,19 @@ export function comAvisosDeErro(repo: Repository, avisos: AvisosDeErro): Reposit
         throw erro;
       }
     };
+  /** Focos cujo encerramento já falhou e foi avisado: as novas tentativas do app ficam caladas até dar certo. */
+  const focosAvisados = new Set<string>();
+  const salvarSessao = async (sessao: FocusSession) => {
+    try {
+      await repo.saveSession(sessao);
+      focosAvisados.delete(sessao.id);
+    } catch (erro) {
+      if (isRemoteError(erro) && erro.kind === 'sessao') avisos.sessaoExpirou();
+      else if (!focosAvisados.has(sessao.id)) avisos.avisar(mensagemNaTela(erro));
+      if (sessao.state === 'concluida') focosAvisados.add(sessao.id);
+      throw erro;
+    }
+  };
   const base: Repository = {
     getUser: () => repo.getUser(),
     saveUser: guardar((u) => repo.saveUser(u)),
@@ -99,7 +112,7 @@ export function comAvisosDeErro(repo: Repository, avisos: AvisosDeErro): Reposit
     saveHabitLog: guardar((l) => repo.saveHabitLog(l)),
     deleteHabitLog: guardar((id, date) => repo.deleteHabitLog(id, date)),
     listSessions: () => repo.listSessions(),
-    saveSession: guardar((s) => repo.saveSession(s)),
+    saveSession: salvarSessao,
     listRestDays: () => repo.listRestDays(),
     saveRestDay: guardar((r) => repo.saveRestDay(r)),
     deleteRestDay: guardar((date) => repo.deleteRestDay(date)),
@@ -134,6 +147,19 @@ export function comAvisosDeErro(repo: Repository, avisos: AvisosDeErro): Reposit
   // calcularia só com o que veio no sync ou ficaria sem a função.
   const contado: Repository = {
     ...base,
+    // A releitura é do app, não da pessoa: sem rede ela falha calada.
+    ...(temRecarga(repo)
+      ? {
+          reload: async () => {
+            try {
+              await repo.reload();
+            } catch (erro) {
+              if (isRemoteError(erro) && erro.kind === 'sessao') avisos.sessaoExpirou();
+              throw erro;
+            }
+          },
+        }
+      : {}),
     ...(providesPomodoros(repo) ? { getPomodoros: () => repo.getPomodoros() } : {}),
     ...(providesHabitStats(repo) ? { getHabitStats: (id: string) => repo.getHabitStats(id) } : {}),
     ...(providesStreak(repo) ? { getStreak: () => repo.getStreak() } : {}),

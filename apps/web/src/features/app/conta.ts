@@ -29,6 +29,13 @@ export function temDatasDoGelo(repo: Repository): repo is Repository & FonteDasD
   return 'getFreezeDates' in repo;
 }
 
+/** Reler tudo do servidor (só o remoto tem o que reler). */
+export type FonteComRecarga = Pick<RemoteRepository, 'reload'>;
+
+export function temRecarga(repo: Repository): repo is Repository & FonteComRecarga {
+  return 'reload' in repo;
+}
+
 /** As preferências da conta; os padrões onde o repositório não as guarda. */
 export async function verPreferencias(repo: Repository): Promise<Preferences> {
   return temPreferencias(repo) ? repo.getPreferences() : DEFAULT_PREFERENCES;

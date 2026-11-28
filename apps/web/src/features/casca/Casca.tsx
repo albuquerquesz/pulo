@@ -1,10 +1,12 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
+import { MINUTE_MS } from '@pulo/core/domain/clock';
 import { SapoRosto } from '@/mascot';
 import { useConsultaDeMidia } from '@/theme';
 import { Botao, Modal } from '@/ui';
 
 import { useApp, useCarregar } from '../app';
+import { useFocoVencido } from '../foco/useFocoVencido';
 import { AvisoDoGelo } from './AvisoDoGelo';
 import { ReacaoDoSapo } from './ReacaoDoSapo';
 import { CartaoDoGelo } from './CartaoDoGelo';
@@ -40,6 +42,14 @@ export function Casca({ caminho, children }: CascaProps) {
     if (!user) throw new Error('sem usuário');
     return carregarTrilho(repo, clock, user);
   });
+
+  // Como o Hoje: os números andam com o relógio, e a virada do dia aparece sem recarregar a página.
+  useEffect(() => {
+    const id = setInterval(() => void recarregar(), MINUTE_MS);
+    return () => clearInterval(id);
+  }, [recarregar]);
+  // Na Casa quem encerra o foco é a própria tela, com a comemoração.
+  useFocoVencido(caminho !== '/casa', caminho);
 
   const [lojaDoGelo, setLojaDoGelo] = useState(false);
   const abrirLojaDoGelo = () => setLojaDoGelo(true);
