@@ -1,4 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
+
+import { useDialogo } from './useDialogo';
 
 type GavetaProps = {
   aberta: boolean;
@@ -22,24 +24,7 @@ export const BOTAO_DA_GAVETA =
 /** Painel que entra pela direita sobre a tela escurecida. Fica montado para animar a saída. */
 export function Gaveta({ aberta, onFechar, rotulo, titulo, acoes, largura = 'md:w-[min(1000px,94vw)]', corpo = '', children }: GavetaProps) {
   const painel = useRef<HTMLElement>(null);
-  const fechar = useRef(onFechar);
-  useLayoutEffect(() => {
-    fechar.current = onFechar;
-  });
-
-  useEffect(() => {
-    if (!aberta) return;
-    const anterior = document.activeElement;
-    painel.current?.focus();
-    const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') fechar.current();
-    };
-    window.addEventListener('keydown', aoTeclar);
-    return () => {
-      window.removeEventListener('keydown', aoTeclar);
-      if (anterior instanceof HTMLElement) anterior.focus();
-    };
-  }, [aberta]);
+  useDialogo({ aberto: aberta, onFechar, caixa: painel });
 
   return (
     <>

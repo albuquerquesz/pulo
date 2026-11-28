@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 
 import { FOCUS } from '@pulo/core/config/decisions';
-import { BotaoFechar, Placa } from '@/ui';
+import { BotaoFechar, Placa, useDialogo } from '@/ui';
 
 import { ajustarMinutos, PASSO_DOS_MINUTOS, preenchimento, type OpcaoDeVinculo } from './logic';
 
@@ -48,18 +48,7 @@ export function TimerModal({ minutosIniciais, opcoes, onVoltar, onComecar }: Tim
   const [minutos, setMinutos] = useState(() => ajustarMinutos(minutosIniciais));
   const [chave, setChave] = useState(opcoes[0]?.chave);
   const caixa = useRef<HTMLDivElement>(null);
-  const voltar = useRef(onVoltar);
-  useEffect(() => {
-    voltar.current = onVoltar;
-  });
-  useEffect(() => {
-    caixa.current?.focus();
-    const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') voltar.current();
-    };
-    window.addEventListener('keydown', aoTeclar);
-    return () => window.removeEventListener('keydown', aoTeclar);
-  }, []);
+  useDialogo({ aberto: true, onFechar: onVoltar, caixa });
   const escolhida = opcoes.find((o) => o.chave === chave) ?? opcoes[0];
   const mudar = (valor: number) => setMinutos(ajustarMinutos(valor));
   const estilo: EstiloDoControle = { '--p': `${preenchimento(minutos)}%` };

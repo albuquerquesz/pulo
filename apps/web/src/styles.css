@@ -60,6 +60,8 @@
   --pulo-etiqueta-azul: #5ca8ff;
   --pulo-etiqueta-rosa: #ff9db4;
   --pulo-etiqueta-cinza: #9db3a5;
+  /* Texto de ação perigosa sobre o fundo do tema (contraste de pelo menos 4,5). */
+  --pulo-perigo-texto: #b23a1e;
   color-scheme: light;
 }
 
@@ -69,6 +71,7 @@
   --pulo-line: #2a3f33;
   --pulo-ink: #eafff0;
   --pulo-muted: #9db3a5;
+  --pulo-perigo-texto: #ff9a80;
   color-scheme: dark;
 }
 
@@ -80,8 +83,20 @@
     --pulo-line: #2a3f33;
     --pulo-ink: #eafff0;
     --pulo-muted: #9db3a5;
+    --pulo-perigo-texto: #ff9a80;
     color-scheme: dark;
   }
+}
+
+/* A folha do modal é clara nos dois temas: os controles dentro dela usam o contorno e a folha. */
+.folha-clara {
+  --pulo-bg: var(--pulo-folha);
+  --pulo-surface: #ffffff;
+  --pulo-line: color-mix(in srgb, var(--pulo-contorno) 40%, var(--pulo-folha));
+  --pulo-ink: var(--pulo-contorno);
+  --pulo-muted: color-mix(in srgb, var(--pulo-contorno) 80%, var(--pulo-folha));
+  --pulo-perigo-texto: #b23a1e;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -133,6 +148,7 @@
   --color-etiqueta-azul: var(--pulo-etiqueta-azul);
   --color-etiqueta-rosa: var(--pulo-etiqueta-rosa);
   --color-etiqueta-cinza: var(--pulo-etiqueta-cinza);
+  --color-perigo-texto: var(--pulo-perigo-texto);
 
   --font-sans: 'Nunito', ui-rounded, system-ui, sans-serif;
 
@@ -477,6 +493,15 @@ body {
 }
 .ganho-pop {
   animation: sobe 1.6s ease-out forwards;
+}
+/* Menos movimento: o ganho fica parado e visível até sair da tela. */
+@media (prefers-reduced-motion: reduce) {
+  .ganho-pop {
+    animation: none;
+  }
+}
+:root[data-reduzir-movimento='true'] .ganho-pop {
+  animation: none !important;
 }
 @keyframes sobe {
   from {

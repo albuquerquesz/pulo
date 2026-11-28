@@ -47,3 +47,6 @@ export { BOTAO_DA_GAVETA, Gaveta } from './Gaveta';
 export { BotaoFechar } from './BotaoFechar';
 export { Escolha } from './Escolha';
 export type { OpcaoDeEscolha } from './Escolha';
+export { useDialogo } from './useDialogo';
+export type { OpcoesDoDialogo } from './useDialogo';
+export { EmBreve } from './EmBreve';

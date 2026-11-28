@@ -3,7 +3,13 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 /** Uma opção do seletor: o valor guardado e o texto que aparece. */
 export type OpcaoDeEscolha = { valor: string; rotulo: string };
 
-type EscolhaProps = { rotulo: string; valor: string; opcoes: readonly OpcaoDeEscolha[]; onEscolher: (valor: string) => void };
+type EscolhaProps = {
+  rotulo: string;
+  valor: string;
+  opcoes: readonly OpcaoDeEscolha[];
+  onEscolher: (valor: string) => void;
+  desativado?: boolean;
+};
 
 /** Altura máxima da lista; abaixo disso de espaço livre, ela abre para cima. */
 const ALTURA_DA_LISTA = 288;
@@ -12,7 +18,7 @@ const ALTURA_DA_LISTA = 288;
  * Um seletor com a cara do app: o botão mostra o valor e a setinha, e a lista abre num cartão
  * com a opção escolhida marcada. Teclado: setas, Home e End andam; Enter ou espaço escolhem; Esc fecha.
  */
-export function Escolha({ rotulo, valor, opcoes, onEscolher }: EscolhaProps) {
+export function Escolha({ rotulo, valor, opcoes, onEscolher, desativado = false }: EscolhaProps) {
   const id = useId();
   const caixa = useRef<HTMLSpanElement>(null);
   const lista = useRef<HTMLUListElement>(null);
@@ -68,7 +74,11 @@ export function Escolha({ rotulo, valor, opcoes, onEscolher }: EscolhaProps) {
       e.preventDefault();
       escolher(ativa);
     } else if (e.key === 'Escape' || e.key === 'Tab') {
-      if (e.key === 'Escape') e.preventDefault();
+      // Esc fecha só a lista, não o diálogo em volta.
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+      }
       setAberta(false);
     }
   }
@@ -79,13 +89,14 @@ export function Escolha({ rotulo, valor, opcoes, onEscolher }: EscolhaProps) {
         type="button"
         role="combobox"
         aria-label={rotulo}
+        disabled={desativado}
         aria-haspopup="listbox"
         aria-expanded={aberta}
         aria-controls={`${id}-lista`}
         aria-activedescendant={aberta ? `${id}-${ativa}` : undefined}
         onClick={() => (aberta ? setAberta(false) : abrir())}
         onKeyDown={teclar}
-        className={`flex min-h-11 min-w-[132px] cursor-pointer items-center justify-between gap-3 rounded-md border-[1.5px] bg-surface py-2 pr-3 pl-3.5 font-extrabold text-ink outline-none hover:border-muted/50 focus-visible:border-foco ${
+        className={`flex min-h-11 min-w-[132px] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 items-center justify-between gap-3 rounded-md border-[1.5px] bg-surface py-2 pr-3 pl-3.5 font-extrabold text-ink outline-none hover:border-muted/50 focus-visible:border-foco ${
           aberta ? 'border-foco' : 'border-line'
         }`}
       >
