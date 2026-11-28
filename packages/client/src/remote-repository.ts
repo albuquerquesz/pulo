@@ -224,6 +224,9 @@ class ApiRepository implements RemoteRepository {
 
   private accountValue: Account = { id: '', name: '', email: '', image: null };
   private metadata: UserMetadata | null = null;
+  /** O último perfil que o servidor confirmou, e quantas mudanças ainda estão a caminho. */
+  private confirmedMetadata: UserMetadata | null = null;
+  private metadataWrites = 0;
   private mascot: MascotState | null = null;
   private joiaCredit = 0;
   /** Joias dos registros que o sync não traz (veja `JoiasForaDoCache`). */
@@ -340,7 +343,7 @@ class ApiRepository implements RemoteRepository {
   }
 
   /**
-   * Grava `next` no cache (ou apaga, se `null`), manda `send` ao servidor e desfaz se falhar.
+   * Grava `next` no cache (ou apaga, se `null`), manda `send` ao servidor e, se falhar, volta ao último valor confirmado.
    * O rollback só acontece se ninguém mexeu na mesma chave depois (compara a instância guardada).
    */
   private async write<V>(
@@ -351,24 +354,19 @@ class ApiRepository implements RemoteRepository {
     send: () => Promise<void>,
     undoExtra?: () => void,
   ): Promise<void> {
-    const previous = collection.peek(key);
-    const mine = next === null ? undefined : collection.put(next);
-    if (next === null) collection.remove(key);
+    const settle = collection.begin(key, next);
     try {
       await this.serial(lock, () => this.withRetry(send));
     } catch (error) {
-      if (collection.peek(key) === mine) {
-        if (previous === undefined) collection.remove(key);
-        else collection.restore(key, previous);
-        undoExtra?.();
-      }
+      if (settle(false)) undoExtra?.();
       throw error;
     }
+    settle(true);
   }
 
   /**
    * Como `write`, para vários itens numa só chamada (`PUT /api/blocks` ou `/api/habits`, atômica no servidor).
-   * Se falhar, volta cada item ao que era (só os que ninguém mexeu depois).
+   * Se falhar, cada item volta ao confirmado (só os que ninguém mexeu depois).
    */
   private async writeMany<V>(
     collection: Collection<V>,
@@ -377,20 +375,14 @@ class ApiRepository implements RemoteRepository {
     keyOf: (item: V) => string,
     send: () => Promise<void>,
   ): Promise<void> {
-    const entries = items.map((item) => {
-      const key = keyOf(item);
-      return { key, previous: collection.peek(key), mine: collection.put(item) };
-    });
+    const settles = items.map((item) => collection.begin(keyOf(item), item));
     try {
       await this.serial(lock, () => this.withRetry(send));
     } catch (error) {
-      for (const { key, previous, mine } of entries) {
-        if (collection.peek(key) !== mine) continue;
-        if (previous === undefined) collection.remove(key);
-        else collection.restore(key, previous);
-      }
+      for (const settle of settles) settle(false);
       throw error;
     }
+    for (const settle of settles) settle(true);
   }
 
   private mascotFrom(mascot: MascotState | null): void {
@@ -424,19 +416,25 @@ class ApiRepository implements RemoteRepository {
   }
 
   private async patchMetadata(patch: UserMetadataPatch): Promise<void> {
-    const before = this.metadata;
+    if (this.metadataWrites === 0) this.confirmedMetadata = this.metadata;
+    this.metadataWrites += 1;
     // Otimista, com a mesma função que o servidor usa (o `completedAt` real vem na resposta).
-    if (before) this.metadata = applyUserMetadataPatch(before, patch, this.clock.now());
+    if (this.metadata) this.metadata = applyUserMetadataPatch(this.metadata, patch, this.clock.now());
+    const mine = this.metadata;
     try {
       await this.serial('user', () =>
         this.withRetry(async () => {
           const { metadata } = await readJson(await this.client.api.me.metadata.$patch({ json: patch }));
           this.metadata = metadata;
+          this.confirmedMetadata = metadata;
         }),
       );
     } catch (error) {
-      this.metadata = before;
+      // Volta ao confirmado, a não ser que uma mudança mais nova já esteja na tela.
+      if (this.metadata === mine) this.metadata = this.confirmedMetadata;
       throw error;
+    } finally {
+      this.metadataWrites -= 1;
     }
   }
 

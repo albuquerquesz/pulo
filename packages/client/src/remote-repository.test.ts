@@ -428,6 +428,21 @@ describe('RemoteRepository: erros e rollback', () => {
     expect(await repo.listBlocks()).toEqual([segunda]);
   });
 
+  it('duas edições seguidas sem rede voltam ao que o servidor confirmou', async () => {
+    let fora = false;
+    const repo = await open(await h.newUser(), (request) => {
+      if (fora && request.method !== 'GET') return Response.json({ error: 'erro_interno' }, { status: 500 });
+      return h.app.fetch(request);
+    });
+    const id = uuid();
+    const salvo = bloco({ id, title: 'Confirmado' });
+    await repo.saveBlock(salvo);
+    fora = true;
+    const falhas = [repo.saveBlock({ ...salvo, title: 'A' }), repo.saveBlock({ ...salvo, title: 'B' })];
+    for (const falha of falhas) await expect(falha).rejects.toBeInstanceOf(RemoteError);
+    expect(await repo.listBlocks()).toEqual([salvo]);
+  });
+
   it('colisão no servidor (conflito_concorrente) é repetida e passa', async () => {
     const me = await h.newUser();
     let tentativas = 0;
