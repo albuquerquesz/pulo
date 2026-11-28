@@ -80,8 +80,8 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | Método e caminho | Corpo | Resposta 200 | Queries |
 | --- | --- | --- | --- |
 | `GET /api/blocks` | | `{ blocks: RoutineBlock[] }` | 3 |
-| `PUT /api/blocks` (lote) | `{ blocks: RoutineBlock[] }` (`icon` pode ser `null`), 1 a 100 | `{ blocks }` | 3 com 1 ou com 100 |
-| `PUT /api/blocks/:id` | `RoutineBlock` (`icon` pode ser `null`) | `{ block }` | 3 |
+| `PUT /api/blocks` (lote) | `{ blocks: RoutineBlock[] }` (`icon` pode ser `null`), 1 a 100 | `{ blocks }` | 5 com 1 ou com 100 |
+| `PUT /api/blocks/:id` | `RoutineBlock` (`icon` pode ser `null`) | `{ block }` | 5 |
 | `DELETE /api/blocks/:id` | | `{ deleted }` | 3 |
 | `GET /api/habits` | | `{ habits: Habit[] }` | 3 |
 | `PUT /api/habits` (lote) | `{ habits: Habit[] }`, 1 a 50 | `{ habits }` | 4 com 1 ou com 50 (5 quando algum traz meta) |
@@ -97,7 +97,7 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `PUT /api/rest-days/:date` | (sem corpo) | `{ restDay, mascot: MascotState, newAchievements }` | 23 (mais ao destravar) |
 | `DELETE /api/rest-days/:date` | | `{ deleted, mascot: MascotState }` | 15 |
 | `GET /api/proposals` | | `{ proposals: WeeklyProposal[] }` (semana mais nova primeiro) | 3 |
-| `PUT /api/proposals/:id` | `WeeklyProposal` | `{ proposal }` | 4 |
+| `PUT /api/proposals/:id` | `WeeklyProposal` (só expirar uma pendente) | `{ proposal }` | 3 repetindo |
 | `POST /api/proposals/generate` | `{ date? }` (qualquer dia da semana) | `{ outcome, proposal? }` | 8 sem criar, 9 criando |
 | `POST /api/proposals/:id/decision` | `{ action: 'aceitar' \| 'editar' \| 'negar' \| 'desfazer', change? }` | `{ proposal, blocks }` | 6 aplicando blocos, 5 ao negar, 4 repetindo |
 | `GET /api/goals` | | `{ goals: Goal[], chests: GoalChest[] }` (mais antiga primeiro) | 4 |
@@ -112,7 +112,6 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `POST /api/tasks/:id/comments` | `TaskComment` | `{ comment }` | 6 criando, 5 repetindo |
 | `GET /api/tasks/:id/activity` | | `{ events: TaskEvent[], comments: TaskComment[] }` | 5 |
 | `GET /api/island/purchases` | | `{ purchases: IslandPurchase[] }` (mais antiga primeiro) | 3 |
-| `PUT /api/island/purchases/:item` | `IslandPurchase` | `{ purchase }` | 10 comprando, 9 repetindo |
 | `GET /api/house` | | `{ purchases: Purchase[], joiaCredit: number }` | 4 |
 | `PUT /api/house/:item` | `Purchase` | `{ purchase, newAchievements }` | 26 comprando (mais ao destravar) |
 | `GET /api/room` | | `{ decor: RoomDecor[] }` (mais antiga primeiro) | 3 |
@@ -197,7 +196,8 @@ Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBl
 - Cada item segue as regras da rota de um item (`routineBlockInputSchema` e `habitInputSchema`, id de outra pessoa, limite por dia).
   Ids repetidos no mesmo lote dão 400 `corpo_invalido`.
 - Horários: bloco novo ou que mudou de horário não pode cruzar com outro do mesmo dia (409 `horario_ocupado`, também no
-  `PUT /api/blocks/:id`, com `issues` em `blocks.N`). A conferência e a escrita são uma transação serializável.
+  `PUT /api/blocks/:id`, com `issues` em `blocks.N`). As escritas de blocos de uma
+  pessoa são serializadas no banco (`pg_advisory_xact_lock`).
 - Atômico: nada é salvo se algum item falhar. O erro lista os itens: `issues` com `path` `blocks.3.durationMinutes`, `habits.1.title`,
   `habits.0.weekdays` (409 `limite_por_dia`) ou `blocks.2.id` (409 `conflito_de_id`).
 - Queries constantes: um `INSERT ... SELECT ... FROM unnest(arrays) ON CONFLICT (id) DO UPDATE ... WHERE userId = EXCLUDED.userId`
@@ -285,8 +285,9 @@ Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBl
   serializável o servidor lê as fontes de joias e as compras e valida com o core (`@pulo/core/domain/casa`). Duas compras ao mesmo tempo
   não gastam o mesmo saldo (a perdedora recebe 409 `conflito_concorrente` ou `ja_comprado`). Repetir a mesma compra (item, `cost` e
   `createdAt`) é 200 sem gravar; no quarto a resposta traz a posição gravada, que pode já ter mudado.
-- **Ilha antiga** (`/api/island`, legado da spec 12 até a tela nova): mesma mecânica com o catálogo `ISLAND`, ordem das áreas e área aberta.
-  As compras dela **não gastam joias na casa nem no quarto** (o valor volta). O saldo da ilha antiga desconta as compras antigas e as novas.
+- **Ilha antiga** (`/api/island`, legado da spec 12): só leitura. As compras que existem **não gastam joias na casa nem no
+  quarto** (o valor volta). As de `ponte` e `balanco`, que colidiam com a casa, ficam gravadas como `antiga:<id>` e são lidas
+  sem o prefixo.
 
 ### Metas: `/api/goals`
 
@@ -502,7 +503,7 @@ propostas, metas (e baús), tarefas (com subtarefas, comentários e histórico),
 | `listTasks`, `saveTask`, `deleteTask` | `GET /api/tasks`, `PUT`, `DELETE /api/tasks/:id` |
 | `listSubtasks`, `saveSubtask`, `deleteSubtask` | `GET /api/tasks`, `PUT`, `DELETE /api/tasks/:id/subtasks/:subId` |
 | `addTaskComment`, `listTaskActivity` | `POST /api/tasks/:id/comments`, `GET /api/tasks/:id/activity` |
-| `listIslandPurchases`, `saveIslandPurchase` | `GET /api/island/purchases`, `PUT /api/island/purchases/:item` |
+| `listIslandPurchases` (`saveIslandPurchase` é recusado) | `GET /api/island/purchases` |
 | `listHousePurchases`, `saveHousePurchase` | `GET /api/house`, `PUT /api/house/:item` |
 | `listRoomDecor`, `saveRoomDecor`, `moveRoomDecor` | `GET /api/room`, `PUT`, `PATCH /api/room/:item` |
 | `getJoiaCredit` | `joiaCredit` do `GET /api/sync` (ou de `GET /api/house`) |
