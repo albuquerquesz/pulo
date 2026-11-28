@@ -30,7 +30,7 @@ import { syncRoutes } from './routes/sync';
 import { taskRoutes } from './routes/tasks';
 import { weekSummaryRoutes } from './routes/week-summary';
 import { resolveWebConfig } from './web-config';
-import { type AiEnv, type ProviderAdapter, aiClientFromEnv, createProviderFromEnv, handleWeeklyAi, providerAsClient } from './weekly-ai';
+import { type AiEnv, type ProviderAdapter, aiClientFromEnv, dentroDoLimite, handleWeeklyAi, providerAsClient, providerFromEnvOrNull } from './weekly-ai';
 
 export type ApiEnv = AiEnv &
   AuthEnv & {
@@ -50,7 +50,7 @@ export interface AppOptions {
  * (e o fecha depois), os testes passam o do Postgres de teste.
  */
 export function createApp(env: ApiEnv, db: Db, now = Date.now, options: AppOptions = {}) {
-  const provider = options.provider ?? createProviderFromEnv(env);
+  const provider = options.provider ?? providerFromEnvOrNull(env);
   const web = resolveWebConfig(env);
   const auth = createAuth(env, web, db);
   const deps: RouteDeps = {
@@ -82,7 +82,7 @@ export function createApp(env: ApiEnv, db: Db, now = Date.now, options: AppOptio
     .use('*', originGuard(web.origins))
     .get('/health', (c) => c.json({ ok: true }))
     .on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
-    .route('/api/me', meRoutes(auth, now))
+    .route('/api/me', meRoutes(auth, db, now))
     .route('/api/blocks', blockRoutes(deps))
     .route('/api/habits', habitRoutes(deps))
     .route('/api/habit-logs', habitLogRoutes(deps))
@@ -107,6 +107,9 @@ export function createApp(env: ApiEnv, db: Db, now = Date.now, options: AppOptio
     .route('/api/mcp/connections', connectionRoutes(deps))
     .route('/', mcp)
     .post('/weekly-ai', async (c) => {
+      if (!dentroDoLimite(c.req.header('cf-connecting-ip') ?? 'desconhecido', now())) {
+        return c.json({ error: 'limite' }, 429);
+      }
       const body = await c.req.json().catch(() => null);
       const response = await handleWeeklyAi({ method: 'POST', body }, { provider });
       return Response.json(response.body, { status: response.status });

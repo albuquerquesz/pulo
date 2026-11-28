@@ -343,6 +343,15 @@ export const FOCUS = {
   pausaMaxHoras: 24,
 } as const;
 
+/** Quando o app aberto volta a buscar dados e a insistir no que falhou. */
+export const RECARGA = {
+  /** Ao voltar para a aba, relê o servidor no máximo uma vez neste intervalo. */
+  aoVoltarIntervaloMs: 60_000,
+  /** Espera antes de tentar de novo encerrar um foco; dobra a cada falha, até o teto. */
+  esperaInicialMs: 5_000,
+  esperaMaximaMs: 5 * 60_000,
+} as const;
+
 /** Sons de fundo do foco (spec 15). */
 export const AMBIENT_SOUNDS = ['silencio', 'lagoa', 'chuva'] as const;
 
@@ -397,4 +406,6 @@ export const WEEKLY_AI = {
   undoSeconds: 8,
   /** Tempo máximo de espera pela IA antes de cair na regra. */
   timeoutMs: 8000,
+  /** `/weekly-ai` é aberta: pedidos por endereço dentro da janela. */
+  rotaAberta: { maxPedidos: 10, janelaMs: 60_000 },
 } as const;

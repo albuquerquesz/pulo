@@ -2,7 +2,7 @@
  * Função de servidor da IA semanal (spec 08). Agnóstica de provedor.
  *
  * - O app chama POST com { summary, candidates, tone } (ver src/domain/ia/request.ts).
- * - Este arquivo valida o corpo (lista de permissão), monta o prompt, chama um
+ * - Este arquivo valida o corpo (schema zod estrito), monta o prompt, chama um
  *   `ProviderAdapter` e valida a saída antes de devolver.
  * - A CHAVE do provedor só existe aqui, lida do ambiente do Worker
  *   (PULO_AI_PROVIDER como var e PULO_AI_API_KEY como secret). Nunca vai para o app nem
@@ -11,10 +11,12 @@
  *   provedor real, implemente `ProviderAdapter` num arquivo novo e registre em
  *   `createProviderFromEnv`. Nenhum SDK de IA está instalado.
  */
+import { WEEKLY_AI } from '@pulo/core/config/decisions';
 import { validateAiOutput } from '@pulo/core/domain/ia/validate';
 import { AI_TONES } from '@pulo/core/domain/ia/limits';
 import type { WeeklyAiClient } from '@pulo/core/domain/ia/client';
 import type { WeeklyAiRequest } from '@pulo/core/domain/ia/request';
+import { z } from 'zod';
 
 export interface ProviderAdapter {
   /** Recebe o prompt e devolve o texto bruto do modelo (esperado: JSON). */
@@ -39,34 +41,61 @@ export const SYSTEM_PROMPT = [
   'Responda somente com JSON: {"candidata_escolhida": número, "padrao": texto, "motivo": texto, "tom": "leve"|"neutro"|"acolhedor"}.',
 ].join('\n');
 
-const PERIODS = ['manha', 'tarde', 'noite'];
-const KINDS = ['mover_foco', 'encurtar_foco'];
+const count = z.number().finite().nonnegative();
+const periodSchema = z.enum(['manha', 'tarde', 'noite']);
+const byPeriod = <S extends z.ZodType>(value: S) => z.strictObject({ manha: value, tarde: value, noite: value });
+const dateKey = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const slot = z.strictObject({
+  weekday: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)]),
+  startMinutes: count,
+  durationMinutes: count,
+});
 
-function isNum(v: unknown): v is number {
-  return typeof v === 'number' && Number.isFinite(v);
-}
-function isSlot(v: unknown): boolean {
-  const s = v as Record<string, unknown>;
-  return !!s && isNum(s.weekday) && isNum(s.startMinutes) && isNum(s.durationMinutes);
-}
+/** Exatamente o que `buildAiRequest` monta: campo a mais, texto livre ou tipo errado é recusado. */
+const requestSchema = z.strictObject({
+  summary: z.strictObject({
+    weekStart: dateKey,
+    weekEnd: dateKey,
+    focusMinutesByPeriod: byPeriod(count),
+    sessionsByPeriod: byPeriod(z.strictObject({ completed: count, interrupted: count, completionRate: count.nullable() })),
+    totalSessions: count,
+    restDays: count,
+    careDays: count,
+    daysWithRecord: count,
+    stable: z.boolean(),
+  }),
+  candidates: z
+    .array(
+      z.strictObject({
+        index: count,
+        kind: z.enum(['mover_foco', 'encurtar_foco']),
+        fromPeriod: periodSchema,
+        toPeriod: periodSchema,
+        from: slot,
+        to: slot,
+      }),
+    )
+    .min(1)
+    .max(3),
+  tone: z.enum(AI_TONES),
+}) satisfies z.ZodType<WeeklyAiRequest>;
 
 /** Aceita só o formato esperado; qualquer outra coisa (texto livre, campos extras) é rejeitada. */
 export function parseRequestBody(body: unknown): WeeklyAiRequest | null {
-  const b = body as Record<string, unknown> | null;
-  if (!b || typeof b !== 'object') return null;
-  const s = b.summary as Record<string, unknown> | undefined;
-  if (!s || typeof s !== 'object') return null;
-  for (const key of ['focusMinutesByPeriod', 'sessionsByPeriod']) {
-    const rec = s[key] as Record<string, unknown> | undefined;
-    if (!rec || !PERIODS.every((p) => p in rec)) return null;
-  }
-  if (!Array.isArray(b.candidates) || b.candidates.length === 0 || b.candidates.length > 3) return null;
-  for (const c of b.candidates as Record<string, unknown>[]) {
-    if (!c || !KINDS.includes(c.kind as string) || !isSlot(c.from) || !isSlot(c.to)) return null;
-    if (!PERIODS.includes(c.fromPeriod as string) || !PERIODS.includes(c.toPeriod as string)) return null;
-  }
-  if (!(AI_TONES as readonly string[]).includes(b.tone as string)) return null;
-  return body as WeeklyAiRequest;
+  const parsed = requestSchema.safeParse(body);
+  return parsed.success ? parsed.data : null;
+}
+
+/** Janela em curso de cada endereço. Vive na memória do processo: no Worker, cada instância conta a sua. */
+const janelas = new Map<string, { inicio: number; pedidos: number }>();
+
+/** Limite simples da rota aberta: `false` quando o endereço já passou dos pedidos da janela. */
+export function dentroDoLimite(endereco: string, now: number): boolean {
+  const { maxPedidos, janelaMs } = WEEKLY_AI.rotaAberta;
+  for (const [chave, janela] of janelas) if (now - janela.inicio >= janelaMs) janelas.delete(chave);
+  const atual = janelas.get(endereco) ?? { inicio: now, pedidos: 0 };
+  janelas.set(endereco, { ...atual, pedidos: atual.pedidos + 1 });
+  return atual.pedidos < maxPedidos;
 }
 
 export function buildPrompt(req: WeeklyAiRequest): { system: string; user: string } {
@@ -77,11 +106,12 @@ export function buildPrompt(req: WeeklyAiRequest): { system: string; user: strin
 
 export async function handleWeeklyAi(
   request: ServerRequest,
-  deps: { provider: ProviderAdapter },
+  deps: { provider: ProviderAdapter | null },
 ): Promise<ServerResponse> {
   if (request.method !== 'POST') return { status: 405, body: { error: 'metodo' } };
   const req = parseRequestBody(request.body);
   if (!req) return { status: 400, body: { error: 'corpo_invalido' } };
+  if (!deps.provider) return { status: 502, body: { error: 'provedor' } };
   let text: string;
   try {
     text = await deps.provider.complete(buildPrompt(req));
@@ -139,6 +169,19 @@ export function providerAsClient(provider: ProviderAdapter): WeeklyAiClient {
  * A IA só entra na geração de propostas quando o ambiente pede (`PULO_AI_PROVIDER` preenchido, ou um provedor injetado).
  * Sem isso vale só a regra e a proposta é rotulada "Sugestão": o provedor falso nunca se passa por IA em produção.
  */
-export function aiClientFromEnv(env: AiEnv, provider: ProviderAdapter): WeeklyAiClient | null {
-  return env.PULO_AI_PROVIDER ? providerAsClient(provider) : null;
+export function aiClientFromEnv(env: AiEnv, provider: ProviderAdapter | null): WeeklyAiClient | null {
+  return env.PULO_AI_PROVIDER && provider ? providerAsClient(provider) : null;
+}
+
+/**
+ * Como `createProviderFromEnv`, sem derrubar a API: ambiente mal configurado só avisa no log e fica sem IA
+ * (vale a regra; o provedor falso nunca se passa por IA).
+ */
+export function providerFromEnvOrNull(env: AiEnv): ProviderAdapter | null {
+  try {
+    return createProviderFromEnv(env);
+  } catch (error) {
+    console.warn('provedor_de_ia_indisponivel', error instanceof Error ? error.message : error);
+    return null;
+  }
 }
