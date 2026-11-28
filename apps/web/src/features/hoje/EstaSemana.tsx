@@ -28,7 +28,7 @@ export function EstaSemana({ grafico }: { grafico: GraficoDaSemana }) {
             <span aria-hidden="true" className="text-[11px] text-muted">
               {barra.letra}
             </span>
-            <span className="sr-only">{`${barra.letra}: ${PREFIXO_DA_BARRA[barra.tipo]}${barra.minutos} min de foco`}</span>
+            <span className="sr-only">{`${barra.nome}: ${PREFIXO_DA_BARRA[barra.tipo]}${barra.minutos} min de foco`}</span>
           </li>
         ))}
       </ol>

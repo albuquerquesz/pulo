@@ -1,8 +1,9 @@
 import { Link } from '@tanstack/react-router';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
 import { CARTAO, TITULO } from './estilos';
 import { horaCheia, posicaoDoAgora, type BlocoNaLinha, type EstadoDoBloco, type ItemDaLinha, type MarcoDaLinha } from './logic';
+import { Vazio } from './Vazio';
 
 /** Medidas do cartão: no celular as colunas encolhem; a partir de md valem as do rascunho. */
 const MEDIDAS = '[--dl-pad:14px] [--dl-hora:44px] [--dl-vao:10px] md:[--dl-pad:24px] md:[--dl-hora:52px] md:[--dl-vao:18px]';
@@ -31,16 +32,16 @@ function Bloco({ bloco, semHora, registrar }: BlocoProps) {
       <span ref={registrar} aria-hidden="true" className={`relative z-2 grid size-11 place-items-center rounded-full border-[2.5px] text-xl ${CIRCULO[bloco.estado]}`}>
         {bloco.icone}
       </span>
-      <div className="flex min-w-0 flex-col gap-0.5">
+      <div className={`flex min-w-0 flex-col gap-0.5 ${bloco.focar ? 'max-sm:col-span-2' : ''}`}>
         <span className="text-[13px] text-muted">{bloco.faixa}</span>
-        <b className={`text-base ${feito ? 'text-muted line-through' : ''}`}>{bloco.titulo}</b>
+        <b className={`min-w-0 text-base break-words ${feito ? 'text-muted line-through' : ''}`}>{bloco.titulo}</b>
       </div>
       {bloco.focar ? (
         <Link
           to="/casa"
           search={bloco.focar}
           aria-label={`Focar em ${bloco.titulo}`}
-          className="flex min-h-11 items-center rounded-full bg-foco px-4 py-2 font-black text-ink-sobre-acao shadow-[inset_0_-3px_0_var(--pulo-foco-borda)] md:min-h-0"
+          className="flex min-h-11 items-center rounded-full max-sm:col-start-3 max-sm:row-start-2 max-sm:mb-2 max-sm:justify-self-start bg-foco px-4 py-2 font-black text-ink-sobre-acao shadow-[inset_0_-3px_0_var(--pulo-foco-borda)] md:min-h-0"
         >
           ▶ Focar
         </Link>
@@ -63,6 +64,20 @@ interface Medidas {
 }
 
 type LinhaDoDiaProps = { itens: ItemDaLinha[]; minutos: number };
+
+/** Sem bloco hoje: o mesmo vazio das outras listas, com a ação que fizer sentido. */
+export function LinhaDoDiaVazia({ titulo, texto, children }: { titulo: string; texto: string; children: ReactNode }) {
+  return (
+    <section aria-label="Linha do dia" className="flex flex-col gap-3">
+      <h2 className={TITULO}>Linha do dia</h2>
+      <div className={`${CARTAO} px-5`}>
+        <Vazio icone="🗓️" titulo={titulo} texto={texto}>
+          {children}
+        </Vazio>
+      </div>
+    </section>
+  );
+}
 
 /** Os blocos de hoje ligados por uma linha: verde até agora, cinza depois, com o ponto laranja da hora. */
 export function LinhaDoDia({ itens, minutos }: LinhaDoDiaProps) {

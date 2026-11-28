@@ -1,5 +1,8 @@
+import { Link } from '@tanstack/react-router';
+
 import { CARTAO, LEGENDA, TITULO } from './estilos';
 import type { HabitoDeHoje } from './logic';
+import { BOTAO_DO_VAZIO, Vazio } from './Vazio';
 
 type HabitosDeHojeProps = { habitos: HabitoDeHoje[]; onAlternar: (habito: HabitoDeHoje) => void };
 
@@ -16,7 +19,13 @@ export function HabitosDeHoje({ habitos, onAlternar }: HabitosDeHojeProps) {
         ) : null}
       </div>
       {habitos.length === 0 ? (
-        <p className={`${CARTAO} p-5 text-muted`}>Nenhum hábito para hoje.</p>
+        <div className={`${CARTAO} px-5`}>
+          <Vazio icone="🌱" titulo="Nenhum hábito para hoje" texto="Um hábito do dia aparece aqui, pronto para marcar.">
+            <Link to="/habitos" search={{ novo: true }} className={BOTAO_DO_VAZIO}>
+              Criar hábito
+            </Link>
+          </Vazio>
+        </div>
       ) : (
         <div className="flex flex-col gap-2.5">
           {habitos.map((h) => (
@@ -36,7 +45,7 @@ export function HabitosDeHoje({ habitos, onAlternar }: HabitosDeHojeProps) {
                 {h.feito ? '✓' : null}
               </span>
               <span className="flex min-w-0 flex-col">
-                <b className={h.feito ? 'text-muted line-through' : undefined}>{h.titulo}</b>
+                <b className={`min-w-0 break-words ${h.feito ? 'text-muted line-through' : ''}`}>{h.titulo}</b>
                 <span className={LEGENDA}>{h.quando}</span>
               </span>
             </button>

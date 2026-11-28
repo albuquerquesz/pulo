@@ -94,6 +94,8 @@ export function Topo({ saudacao, periodo, semHabitos, foco, pulos }: TopoProps) 
   const { folhas, feitos } = pulos;
   // O sapo fica na última folha pulada (a da entrada já conta como pulo).
   const ondeEsta = Math.min(feitos, folhas.length) - 1;
+  // No celular a lagoa mostra uma janela de folhas que sempre contém a do sapo.
+  const primeiraNoCelular = Math.max(0, Math.min(ondeEsta - Math.floor(FOLHAS_NO_CELULAR / 2), folhas.length - FOLHAS_NO_CELULAR));
   const frase = fraseDosPulos(pulos);
   const colunas = `${COLUNAS_NO_CELULAR[Math.min(folhas.length, FOLHAS_NO_CELULAR)]} ${COLUNAS_NO_LARGO[folhas.length]}`;
   return (
@@ -121,7 +123,7 @@ export function Topo({ saudacao, periodo, semHabitos, foco, pulos }: TopoProps) 
             <li
               key={folha.chave}
               data-feito={folha.feito}
-              className={`relative grid min-w-0 place-items-center ${i >= FOLHAS_NO_CELULAR ? 'max-sm:hidden' : ''}`}
+              className={`relative grid min-w-0 place-items-center ${i < primeiraNoCelular || i >= primeiraNoCelular + FOLHAS_NO_CELULAR ? 'max-sm:hidden' : ''}`}
             >
               {i === ondeEsta ? <span aria-hidden="true" className="lagoa-onda" /> : null}
               <span aria-hidden="true" className="lagoa-folha" style={{ animationDelay: `${i * 0.3}s` }} />

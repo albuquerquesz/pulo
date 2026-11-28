@@ -108,15 +108,16 @@ describe('Tela Hoje', () => {
 
   test('no limite da semana mostra a mensagem e nada muda', async () => {
     const { repo } = await abrir({
+      dias: 3,
       preparar: async (r) => {
-        await r.saveRestDay({ date: '2026-11-16' });
-        await r.saveRestDay({ date: '2026-11-17' });
+        await r.saveRestDay({ date: '2026-11-22' });
+        await r.saveRestDay({ date: '2026-11-23' });
       },
     });
     const antes = await repo.listRestDays();
     await clicar(screen.getByRole('button', { name: 'Descansar hoje' }));
     expect(screen.getByTestId('aviso').textContent).toBe('Você já usou os 2 descansos desta semana.');
-    expect(regiao('Sequência').getByText('sábado, hoje')).toBeTruthy();
+    expect(regiao('Sequência').getByText('terça, hoje')).toBeTruthy();
     expect(await repo.listRestDays()).toEqual(antes);
   });
 
@@ -125,5 +126,26 @@ describe('Tela Hoje', () => {
     await clicar(screen.getByRole('button', { name: 'Descansar hoje' }));
     expect(await regiao('Sequência').findByRole('button', { name: 'Descansar hoje' })).toBeTruthy();
     expect(regiao('Sequência').getByText('domingo, hoje')).toBeTruthy();
+  });
+
+  test('com o dia já feito, descansar fica desligado e as vagas aparecem', async () => {
+    await abrir();
+    const botao = regiao('Sequência').getByRole('button', { name: 'Descansar hoje' });
+    expect(botao.hasAttribute('disabled')).toBe(true);
+    expect(regiao('Sequência').getByText(/Hoje já está feito.*descanso/)).toBeTruthy();
+  });
+
+  test('a marca do hábito aparece antes de a escrita responder', async () => {
+    await abrir({ preparar: async (r) => void vi.spyOn(r, 'saveHabitLog').mockReturnValue(new Promise(() => {})) });
+    await clicar(regiao('Hábitos de hoje').getByRole('checkbox', { name: 'Ler 10 páginas' }));
+    expect(regiao('Hábitos de hoje').getByRole('checkbox', { name: 'Ler 10 páginas' }).getAttribute('aria-checked')).toBe('true');
+  });
+
+  test('dia sem blocos mostra o vazio com o caminho para focar', async () => {
+    const semHoje = async (repo: Repository) => {
+      for (const b of [...(await repo.listBlocks())]) if (b.weekday === 5) await repo.deleteBlock(b.id);
+    };
+    await abrir({ preparar: semHoje });
+    expect(regiao('Linha do dia').getByRole('link', { name: 'Começar um foco' }).getAttribute('href')).toBe('/casa?');
   });
 });

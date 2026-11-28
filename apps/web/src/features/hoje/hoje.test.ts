@@ -99,6 +99,7 @@ describe('gráfico da semana', () => {
       goals: [],
       baus: [],
       fuso: FUSO,
+      comecoDoDia: 7 * 60,
     });
     expect(g.barras.map((b) => b.tipo)).toEqual(['foco', 'foco', 'descanso', 'vazia', 'vazia', 'vazia', 'vazia']);
     expect(g.barras.map((b) => b.altura)).toEqual([90, 45, 40, 6, 6, 6, 6]);

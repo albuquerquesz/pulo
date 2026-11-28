@@ -45,7 +45,13 @@ describe('números do dia', () => {
       { ...base, id: 'a', startedAt: inicio, endedAt: inicio + 25 * 60_000 },
       { ...base, id: 'b', startedAt: inicio - 86_400_000, endedAt: inicio - 86_400_000 + 25 * 60_000 },
     ];
-    expect(minutosDeFocoDoDia(sessoes, '2026-11-22', 'America/Sao_Paulo')).toBe(25);
+    expect(minutosDeFocoDoDia(sessoes, '2026-11-22', 'America/Sao_Paulo', 7 * 60)).toBe(25);
+  });
+  test('o foco antes do começo do dia da pessoa conta no dia anterior, como na sequência', () => {
+    const fim = Date.parse('2026-11-22T09:00:00Z'); // 06h em São Paulo
+    const sessoes = [{ id: 'cedo', plannedMinutes: 25, pausedMs: 0, state: 'concluida', startedAt: fim - 25 * 60_000, endedAt: fim } as const];
+    expect(minutosDeFocoDoDia(sessoes, '2026-11-21', 'America/Sao_Paulo', 7 * 60)).toBe(25);
+    expect(minutosDeFocoDoDia(sessoes, '2026-11-22', 'America/Sao_Paulo', 7 * 60)).toBe(0);
   });
   test('a conta de exemplo tem o que o trilho mostra', async () => {
     const { repo, clock } = await criarContaDeExemplo();

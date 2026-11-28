@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 
 import { CARTAO, TITULO } from './estilos';
 import type { TarefaDeHoje } from './logic';
+import { BOTAO_DO_VAZIO, Vazio } from './Vazio';
 
 type TarefasDeHojeProps = { tarefas: TarefaDeHoje[]; onAlternar: (tarefa: TarefaDeHoje) => void };
 
@@ -16,21 +17,12 @@ export function TarefasDeHoje({ tarefas, onAlternar }: TarefasDeHojeProps) {
         </Link>
       </div>
       <div className={`${CARTAO} flex flex-col px-5 py-1.5`}>
-        {/* Vazio mostra o caminho, não o aviso: ícone, uma frase e o botão de criar, como no cartão de Metas. */}
         {tarefas.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-6 text-center">
-            <span aria-hidden="true" className="mb-1 grid size-14 place-items-center rounded-full bg-sapo/22 text-[28px]">
-              📝
-            </span>
-            <h3 className="text-base font-extrabold">Planeje algo para hoje</h3>
-            <p className="text-sm text-muted">Uma tarefa com prazo para hoje aparece aqui, pronta para marcar.</p>
-            <Link
-              to="/tarefas"
-              className="mt-2 rounded-md bg-sapo px-5 py-2.5 font-extrabold text-ink-sobre-acao shadow-[inset_0_-4px_0_var(--pulo-sapo-borda)] active:translate-y-[3px]"
-            >
+          <Vazio icone="📝" titulo="Planeje algo para hoje" texto="Uma tarefa com prazo para hoje aparece aqui, pronta para marcar.">
+            <Link to="/tarefas" className={BOTAO_DO_VAZIO}>
               Criar tarefa
             </Link>
-          </div>
+          </Vazio>
         ) : null}
         {tarefas.map((t) => (
           <div key={t.id} className="grid grid-cols-[28px_minmax(0,1fr)] items-center gap-3.5 border-b border-line py-3 last:border-b-0">
@@ -49,7 +41,7 @@ export function TarefasDeHoje({ tarefas, onAlternar }: TarefasDeHojeProps) {
                 {t.feita ? '✓' : null}
               </span>
             </button>
-            <b className={t.feita ? 'text-muted line-through' : undefined}>{t.titulo}</b>
+            <b className={`min-w-0 break-words ${t.feita ? 'text-muted line-through' : ''}`}>{t.titulo}</b>
           </div>
         ))}
       </div>

@@ -3,8 +3,9 @@ import type { ReactNode } from 'react';
 import { Foguinho } from '@/ui';
 
 import { Floco } from '../casca/Floco';
+import { textoDeDescansos } from '../casca/gelo';
 
-import { CARTAO, TITULO } from './estilos';
+import { CARTAO, LEGENDA, TITULO } from './estilos';
 import type { BarraDaSemana, DescansoDeHoje, TomDoDia } from './logic';
 
 const COR_DA_LETRA: Record<TomDoDia, string> = {
@@ -35,6 +36,8 @@ type SequenciaProps = {
 
 /** A sequência com o foguinho e a barra da semana, que enche até hoje. */
 export function Sequencia({ dias, barra, descanso, gravando, onDescanso }: SequenciaProps) {
+  // Desmarcar continua valendo, mesmo com o dia feito.
+  const bloqueado = descanso.feito && !descanso.marcado;
   return (
     <section
       aria-label="Sequência"
@@ -83,12 +86,16 @@ export function Sequencia({ dias, barra, descanso, gravando, onDescanso }: Seque
           </div>
         </div>
       </div>
-      <div className="mt-4 flex justify-end">
+      <div className="mt-4 flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
+        <p className={`${LEGENDA} min-w-0`}>
+          {bloqueado ? 'Hoje já está feito, não precisa descansar. ' : ''}
+          {textoDeDescansos(descanso.restantesNaSemana, descanso.maxPorSemana)}
+        </p>
         <button
           type="button"
-          disabled={gravando}
+          disabled={gravando || bloqueado}
           onClick={onDescanso}
-          className={`min-h-11 cursor-pointer rounded-md px-5 py-2.5 font-extrabold enabled:active:translate-y-[3px] disabled:cursor-wait ${
+          className={`min-h-11 cursor-pointer rounded-md px-5 py-2.5 font-extrabold enabled:active:translate-y-[3px] disabled:cursor-not-allowed disabled:opacity-60 ${
             descanso.marcado
               ? 'border-[1.5px] border-descanso text-ink shadow-[inset_0_-3px_0_var(--pulo-descanso)]'
               : 'bg-descanso text-on-descanso shadow-[inset_0_-4px_0_var(--pulo-descanso-borda)]'

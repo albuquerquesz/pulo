@@ -27,7 +27,7 @@ import type {
 } from '@pulo/core/domain/types';
 
 import { verPreferencias } from '../app/conta';
-import { minutosDeFocoDoDia } from '../casca/logic';
+import { diaDoFoco, minutosDeFocoDoDia } from '../casca/logic';
 import type { VinculoDaCasa } from '../foco/vinculo';
 
 const MINUTOS_DO_DIA = 24 * 60;
@@ -139,6 +139,8 @@ export type TipoDaBarra = 'foco' | 'descanso' | 'gelo' | 'vazia';
 export interface BarraDoGrafico {
   date: DateKey;
   letra: string;
+  /** O dia por extenso, para o leitor de tela. */
+  nome: string;
   minutos: number;
   tipo: TipoDaBarra;
   altura: number;
@@ -158,14 +160,16 @@ export interface RegistrosDaSemana {
   goals: readonly Goal[];
   baus: readonly GoalChest[];
   fuso: string;
+  /** Hora em que o dia vira para a pessoa, em minutos desde 00:00. */
+  comecoDoDia: number;
 }
 
 /** Joias ganhas só nos dias dados, pela mesma regra do saldo. */
-function joiasDosDias({ sessions, restDays, habitLogs, goals, baus, fuso }: RegistrosDaSemana, dias: ReadonlySet<DateKey>): number {
+function joiasDosDias({ sessions, restDays, habitLogs, goals, baus, fuso, comecoDoDia }: RegistrosDaSemana, dias: ReadonlySet<DateKey>): number {
   const nosDias = (instante: number) => dias.has(dateKeyOf(instante, fuso));
   return joiasGanhas({
     habitLogs: habitLogs.filter((r) => dias.has(r.date)),
-    sessions: sessions.filter((s) => nosDias(s.endedAt ?? s.startedAt)),
+    sessions: sessions.filter((s) => dias.has(diaDoFoco(s, fuso, comecoDoDia))),
     restDays: restDays.filter((r) => dias.has(r.date)),
     goals: goals.map((g) => ({ ...g, milestones: g.milestones.filter((m) => m.doneAt !== undefined && nosDias(m.doneAt)) })),
     baus: baus.filter((b) => nosDias(b.abertoEm)),
@@ -175,9 +179,9 @@ function joiasDosDias({ sessions, restDays, habitLogs, goals, baus, fuso }: Regi
 
 /** O gráfico "Esta semana", nos mesmos 7 dias da sequência (domingo a sábado). */
 export function graficoDaSemana(registros: RegistrosDaSemana): GraficoDaSemana {
-  const { semana, sessions, restDays, fuso } = registros;
+  const { semana, sessions, restDays, fuso, comecoDoDia } = registros;
   const descansos = new Set(restDays.map((r) => r.date));
-  const minutos = semana.map((dia) => minutosDeFocoDoDia(sessions, dia.date, fuso));
+  const minutos = semana.map((dia) => minutosDeFocoDoDia(sessions, dia.date, fuso, comecoDoDia));
   const maior = Math.max(0, ...minutos);
   const barras = semana.map((dia, i): BarraDoGrafico => {
     const doDia = minutos[i] ?? 0;
@@ -191,7 +195,8 @@ export function graficoDaSemana(registros: RegistrosDaSemana): GraficoDaSemana {
       vazia: ALTURA.vazia,
     };
     const altura = alturas[tipo];
-    return { date: dia.date, letra: LETRAS[weekdayOf(dia.date)], minutos: doDia, tipo, altura };
+    const weekday = weekdayOf(dia.date);
+    return { date: dia.date, letra: LETRAS[weekday], nome: NOMES_DOS_DIAS[weekday], minutos: doDia, tipo, altura };
   });
   return {
     barras,
@@ -439,6 +444,8 @@ export interface DescansoDeHoje extends RestStatus {
   /** O dia de hoje da sequência, o único que se pode marcar. */
   date: DateKey;
   marcado: boolean;
+  /** Hoje já tem cuidado: descansar só gastaria uma vaga da semana. */
+  feito: boolean;
 }
 
 export interface DadosHoje {
@@ -466,7 +473,8 @@ export interface DadosHoje {
 
 export function descansoDeHoje(semana: readonly StreakDay[], restDays: readonly RestDay[]): DescansoDeHoje {
   const date = semana[indiceDeHoje(semana)]?.date ?? '';
-  return { date, marcado: restDays.some((r) => r.date === date), ...situacaoDoDescanso(date, restDays) };
+  const feito = semana[indiceDeHoje(semana)]?.estado === 'feito';
+  return { date, feito, marcado: restDays.some((r) => r.date === date), ...situacaoDoDescanso(date, restDays) };
 }
 
 export async function carregarHoje(repo: Repository, clock: Clock, user: User, nome: string): Promise<DadosHoje> {
@@ -508,7 +516,7 @@ export async function carregarHoje(repo: Repository, clock: Clock, user: User, n
     recorde: sequencia.recorde,
     semana: sequencia.semana,
     descanso: descansoDeHoje(sequencia.semana, restDays),
-    grafico: graficoDaSemana({ semana: sequencia.semana, sessions, restDays, habitLogs, goals, baus, fuso }),
+    grafico: graficoDaSemana({ semana: sequencia.semana, sessions, restDays, habitLogs, goals, baus, fuso, comecoDoDia: user.dayStartMinutes }),
     habitos: habitsForDate(habitos, hoje).map((h) => ({ id: h.id, titulo: h.title, quando: quandoDoHabito(h), feito: feitos.has(h.id) })),
     tarefas: tarefasDeHoje(tarefas, hoje),
     linha: linhaDoDia({

@@ -38,7 +38,7 @@ function Numero({ titulo, valor, cor, icone, destinoDasJoias }: NumeroProps) {
 /** A linha de números do dia: sequência, hábitos, foco e joias. */
 export function NumerosDoDia({ dados, onGelo }: { dados: DadosDoTrilho; onGelo: () => void }) {
   return (
-    <div data-testid="numeros-do-dia" className="flex items-center justify-between px-1 pt-1 md:flex-wrap md:px-3">
+    <div data-testid="numeros-do-dia" className="flex flex-wrap items-center justify-between gap-x-1 px-1 pt-1 md:px-3">
       <Numero titulo="dias seguidos" valor={dados.sequencia} cor="text-foco" icone={<Foguinho className="contorno-branco -m-[3px] size-9" />} />
       {dados.gelo ? (
         <button

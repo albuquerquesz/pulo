@@ -7,7 +7,7 @@ import { habitsForDate } from '@pulo/core/domain/habits';
 import { verGelo } from '@pulo/core/domain/gelo';
 import { focusedMs } from '@pulo/core/domain/joias';
 import { verSequencia } from '@pulo/core/domain/streak';
-import type { AccentColor, Clock, DateKey, FocusSession, FreezeSummary, Goal, GoalChest, Habit, HabitLog, Repository, User } from '@pulo/core/domain/types';
+import type { AccentColor, Clock, DateKey, FocusSession, FreezeSummary, Goal, GoalChest, Habit, HabitLog, Repository, StreakDay, User } from '@pulo/core/domain/types';
 
 export interface ContaNaTela {
   nome: string;
@@ -86,10 +86,22 @@ export function habitosDoDia(habitos: readonly Habit[], registros: readonly Habi
   return { feitos: doDia.filter((h) => feitos.has(h.id)).length, total: doDia.length };
 }
 
+/**
+ * O dia em que uma sessão conta, pela regra da sequência: o do fim, virando no começo do dia da pessoa
+ * (`dayStartMinutes`).
+ */
+export const diaDoFoco = (sessao: FocusSession, fuso: string, comecoDoDia: number): DateKey =>
+  dateKeyOf(sessao.endedAt ?? sessao.startedAt, fuso, comecoDoDia);
+
+/** O dia de hoje da sequência: o último da semana que não é futuro. */
+export function hojeDaSequencia(semana: readonly StreakDay[], reserva: DateKey): DateKey {
+  return semana.filter((dia) => dia.estado !== 'futuro').at(-1)?.date ?? reserva;
+}
+
 /** Minutos inteiros focados nas sessões encerradas no dia (sem as pausas e até o planejado). */
-export function minutosDeFocoDoDia(sessoes: readonly FocusSession[], hoje: DateKey, fuso: string): number {
+export function minutosDeFocoDoDia(sessoes: readonly FocusSession[], dia: DateKey, fuso: string, comecoDoDia: number): number {
   const ms = sessoes
-    .filter((s) => dateKeyOf(s.endedAt ?? s.startedAt, fuso) === hoje)
+    .filter((s) => diaDoFoco(s, fuso, comecoDoDia) === dia)
     .reduce((total, s) => total + focusedMs(s), 0);
   return Math.floor(ms / MINUTE_MS);
 }
@@ -125,7 +137,7 @@ export async function carregarTrilho(repo: Repository, clock: Clock, user: User)
     sequencia: sequencia.atual,
     gelo,
     habitos: habitosDoDia(habitos, registros, hoje),
-    minutosDeFoco: minutosDeFocoDoDia(sessoes, hoje, fuso),
+    minutosDeFoco: minutosDeFocoDoDia(sessoes, hojeDaSequencia(sequencia.semana, hoje), fuso, user.dayStartMinutes),
     joias: casa.saldo,
     partesConstruidas: casa.partes.filter((p) => p.construida).map((p) => p.id),
     totalDePartes: casa.total,
