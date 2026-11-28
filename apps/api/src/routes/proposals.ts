@@ -1,5 +1,4 @@
 import { decideProposal } from '@pulo/core/api/proposal-decision';
-import { checkProposalTransition } from '@pulo/core/api/proposal-state';
 import {
   type GenerateProposalResponse,
   generateProposalBodySchema,
@@ -29,7 +28,7 @@ import { blockSelect, proposalSelect } from '../selects';
 
 const returnedIds = z.array(z.object({ id: z.string() }));
 
-/** Propostas semanais: `/api/proposals`. A máquina de estados fica em @pulo/core/api/proposal-state. */
+/** Propostas semanais: `/api/proposals`. A decisão fica em @pulo/core/api/proposal-decision. */
 export function proposalRoutes({ auth, db, now, ai, newId }: RouteDeps) {
   return new Hono<AppEnv>()
     .use(requireSession(auth))
@@ -149,42 +148,30 @@ export function proposalRoutes({ auth, db, now, ai, newId }: RouteDeps) {
       );
       return c.json({ proposal: done.proposal, blocks: done.blocks });
     })
+    // A proposta nasce em `/generate` e é decidida em `/:id/decision`: aqui só dá para expirar uma pendente
+    // (repetir o que já está gravado é aceito). Assim ninguém forja `origin: 'ia'` nem marca como aceita.
     .put('/:id', pathParams(idParamSchema), jsonBody(weeklyProposalSchema), async (c) => {
       const proposal = c.req.valid('json');
       requireMatch(c.req.valid('param').id, proposal.id, 'id_divergente');
-      const serverNow = now();
-      assertNotInFuture(proposal.createdAt, serverNow, 'createdAt');
-      assertNotInFuture(proposal.decidedAt, serverNow, 'decidedAt');
+      assertNotInFuture(proposal.decidedAt, now(), 'decidedAt');
       const userId = c.var.user.id;
+      const where = { id_userId: { id: proposal.id, userId } };
 
-      const saved = await db.$transaction(async (tx) => {
-        // Uma query: a própria proposta e a que já ocupa a semana (uma por pessoa e semana).
-        const rows = await tx.weeklyProposal.findMany({
-          where: { userId, OR: [{ id: proposal.id }, { weekStart: dateKeyToDate(proposal.weekStart) }] },
-          select: proposalSelect,
-        });
-        const existing = rows.find((row) => row.id === proposal.id);
-        if (rows.some((row) => row.id !== proposal.id)) {
-          throw new ApiError(409, 'semana_ja_tem_proposta', 'Esta semana já tem uma proposta.');
-        }
-        if (existing) {
-          const current = weeklyProposalMapper.toDomain(existing);
-          const problem = checkProposalTransition(current, proposal, serverNow, sameValue);
-          if (problem === 'proposta_imutavel') {
-            throw new ApiError(409, problem, 'Semana, origem e criação da proposta não mudam.');
+      const saved = await db.$transaction(
+        async (tx) => {
+          const row = await tx.weeklyProposal.findUnique({ where, select: proposalSelect });
+          if (!row) throw new ApiError(404, 'nao_encontrado', 'Não encontrei essa sugestão.');
+          const current = weeklyProposalMapper.toDomain(row);
+          if (sameValue(current, proposal)) return current;
+          const expired = { ...current, state: proposal.state, decidedAt: proposal.decidedAt };
+          if (current.state !== 'pendente' || proposal.state !== 'expirada' || !sameValue(expired, proposal)) {
+            throw new ApiError(409, 'proposta_transicao_invalida', 'Esta mudança de estado não é permitida.');
           }
-          if (problem !== null) throw new ApiError(409, problem, 'Esta mudança de estado não é permitida.');
-          if (current.state === proposal.state && current.state !== 'pendente') return current;
-        }
-        const { id: _id, userId: _owner, ...update } = weeklyProposalMapper.fromDomain(userId, proposal);
-        const row = await tx.weeklyProposal.upsert({
-          where: { id_userId: { id: proposal.id, userId } },
-          create: weeklyProposalMapper.fromDomain(userId, proposal),
-          update,
-          select: proposalSelect,
-        });
-        return weeklyProposalMapper.toDomain(row);
-      });
+          const { id: _id, userId: _owner, ...data } = weeklyProposalMapper.fromDomain(userId, proposal);
+          return weeklyProposalMapper.toDomain(await tx.weeklyProposal.update({ where, data, select: proposalSelect }));
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
       return c.json({ proposal: saved });
     });
 }
