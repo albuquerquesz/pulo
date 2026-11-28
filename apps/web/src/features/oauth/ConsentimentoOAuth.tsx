@@ -6,33 +6,54 @@ import { Botao, Cartao, Texto } from '@/ui';
 import { Tela } from '../app';
 import { clienteOAuth, escoposLegiveis } from './cliente';
 
-type Estado = { tipo: 'pronto'; nome: string } | { tipo: 'enviando' } | { tipo: 'erro'; mensagem: string };
+type Envio = { tipo: 'parado' } | { tipo: 'enviando'; liberar: boolean } | { tipo: 'erro'; mensagem: string };
 
-/** Consentimento: a pessoa libera (ou não) um app para usar o Pulo pelo MCP, com as mesmas ações das telas. */
+const PEDIDO_VENCIDO = 'O pedido expirou ou não vale mais. Volte ao app e conecte de novo.';
+const SEM_CONEXAO = 'Não foi possível falar com o Pulo. Confira sua conexão e tente de novo.';
+
+/** O que as ferramentas do MCP fazem (apps/api/src/mcp/ferramentas.ts). */
+const ACESSOS = [
+  'Ver sua rotina, hábitos, focos, descansos, métricas, metas, tarefas, perfil e ilha.',
+  'Criar, mudar e remover hábitos, blocos da rotina e metas.',
+  'Marcar hábitos, controlar focos e descansos e decidir as propostas da semana.',
+  'Criar e mover tarefas.',
+  'Mudar seu perfil: nome do sapo, horário do dia, tema e movimento.',
+  'Gastar suas joias em partes da casa e decorações (sem desfazer) e mudar decorações de lugar.',
+];
+
+/** Consentimento: a pessoa libera (ou não) um app para usar o Pulo pelo MCP. */
 export function ConsentimentoOAuth() {
   const cliente = clienteOAuth();
   const busca = typeof window === 'undefined' ? new URLSearchParams() : new URLSearchParams(window.location.search);
   const clientId = busca.get('client_id');
-  const [estado, setEstado] = useState<Estado>({ tipo: 'pronto', nome: 'Um app' });
+  const [nome, setNome] = useState('Um app');
+  const [envio, setEnvio] = useState<Envio>({ tipo: 'parado' });
+  const enviando = envio.tipo === 'enviando';
 
   useEffect(() => {
     if (!cliente || !clientId) return;
     // O nome vem do próprio app que se registrou: é o que ele diz ser, não algo que o Pulo verificou.
-    void cliente.oauth2.publicClient({ query: { client_id: clientId } }).then(({ data }) => {
-      if (data?.client_name) setEstado({ tipo: 'pronto', nome: data.client_name });
-    });
+    cliente.oauth2
+      .publicClient({ query: { client_id: clientId } })
+      .then(({ data }) => {
+        if (data?.client_name) setNome(data.client_name);
+      })
+      // Sem o nome, a tela segue com "Um app" e os botões continuam valendo.
+      .catch(() => undefined);
     // Só na abertura da tela.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
-  const decidir = async (accept: boolean) => {
+  const decidir = async (liberar: boolean) => {
     if (!cliente) return;
-    setEstado({ tipo: 'enviando' });
-    const { error } = await cliente.oauth2.consent({ accept });
-    if (error) setEstado({ tipo: 'erro', mensagem: 'O pedido expirou ou não vale mais. Volte ao app e conecte de novo.' });
+    setEnvio({ tipo: 'enviando', liberar });
+    const resposta = await cliente.oauth2.consent({ accept: liberar }).catch(() => null);
+    // Sem erro, o cliente leva a página de volta ao app: os botões continuam ocupados.
+    if (resposta && !resposta.error) return;
+    const semConexao = !resposta?.error || resposta.error.status === 0 || resposta.error.status >= 500;
+    setEnvio({ tipo: 'erro', mensagem: semConexao ? SEM_CONEXAO : PEDIDO_VENCIDO });
   };
 
-  const nome = estado.tipo === 'pronto' ? estado.nome : 'O app';
   return (
     <Tela>
       <div className="flex justify-center pt-6">
@@ -43,23 +64,34 @@ export function ConsentimentoOAuth() {
       </Texto>
       <Cartao>
         <Texto variante="subtitulo">Se você liberar, ele poderá:</Texto>
-        <Texto>Ver e mudar sua rotina, hábitos, focos, descansos, metas e propostas da semana, como você faz nas telas.</Texto>
+        <ul className="m-0 grid list-disc gap-1 pl-5">
+          {ACESSOS.map((acesso) => (
+            <li key={acesso}>
+              <Texto como="span">{acesso}</Texto>
+            </li>
+          ))}
+        </ul>
         {escoposLegiveis(busca.get('scope')).map((e) => (
           <Texto key={e} variante="legenda" cor="muted">
             {e}
           </Texto>
         ))}
       </Cartao>
+      <div role="note" className="rounded-md bg-atencao p-4">
+        <Texto cor="inkSobreAcao" className="font-extrabold">
+          Atenção: ele também pode apagar todos os seus dados (sapo, rotina, hábitos, focos, descansos, propostas, metas, tarefas, casa e quarto), em todos os aparelhos. Não dá para desfazer.
+        </Texto>
+      </div>
       <Texto variante="legenda" cor="muted">
         Só libere apps em que você confia.
       </Texto>
-      {estado.tipo === 'erro' ? (
+      {envio.tipo === 'erro' ? (
         <Texto cor="atencao" role="alert">
-          {estado.mensagem}
+          {envio.mensagem}
         </Texto>
       ) : null}
-      <Botao titulo="Liberar" onPress={() => void decidir(true)} carregando={estado.tipo === 'enviando'} desativado={!cliente} testID="oauth-liberar" />
-      <Botao titulo="Agora não" variante="fantasma" onPress={() => void decidir(false)} desativado={!cliente || estado.tipo === 'enviando'} />
+      <Botao titulo="Liberar" onPress={() => void decidir(true)} carregando={envio.tipo === 'enviando' && envio.liberar} desativado={!cliente || enviando} testID="oauth-liberar" />
+      <Botao titulo="Agora não" variante="fantasma" onPress={() => void decidir(false)} carregando={envio.tipo === 'enviando' && !envio.liberar} desativado={!cliente || enviando} />
     </Tela>
   );
 }
