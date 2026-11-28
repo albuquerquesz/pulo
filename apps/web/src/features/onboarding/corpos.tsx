@@ -80,10 +80,14 @@ export function CorpoDoMomento({ respostas, responder }: CorpoProps) {
 const BOTAO_DE_IDADE =
   'grid size-12 shrink-0 cursor-pointer place-items-center rounded-full border-[3px] border-contorno bg-surface text-2xl font-black shadow-[inset_0_-4px_0_var(--pulo-sombra-branca)] enabled:active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40';
 
+const TECLAS_DA_FAIXA = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown', 'Enter', ' '];
+
 /** A idade numa vitória-régia: arrasta a folhinha ou ajusta de um em um. */
 export function CorpoDaIdade({ respostas, escrever }: CorpoProps) {
   const idade = respostas.idade ?? IDADE_INICIAL;
   const mudar = (nova: number) => escrever({ idade: Math.min(IDADE_MAXIMA, Math.max(IDADE_MINIMA, nova)) });
+  // Quem tem exatamente a idade em que a folhinha começa não precisa movê-la: tocar nela já responde.
+  const confirmar = (faixa: HTMLInputElement) => mudar(Number(faixa.value));
   const preenchido = ((idade - IDADE_MINIMA) / (IDADE_MAXIMA - IDADE_MINIMA)) * 100;
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-7 py-2">
@@ -107,7 +111,14 @@ export function CorpoDaIdade({ respostas, escrever }: CorpoProps) {
         min={IDADE_MINIMA}
         max={IDADE_MAXIMA}
         value={idade}
-        onChange={(e) => mudar(Number(e.target.value))}
+        aria-valuetext={respostas.idade === null ? 'não escolhida' : `${respostas.idade} anos`}
+        onChange={(e) => confirmar(e.currentTarget)}
+        onPointerUp={(e) => confirmar(e.currentTarget)}
+        onClick={(e) => confirmar(e.currentTarget)}
+        onKeyUp={(e) => {
+          // O Tab que só traz o foco para cá não é uma resposta.
+          if (TECLAS_DA_FAIXA.includes(e.key)) confirmar(e.currentTarget);
+        }}
         className="onboarding-faixa w-full max-w-[460px]"
         style={{ background: `linear-gradient(to right, #79c94a ${preenchido}%, var(--pulo-bege-borda) ${preenchido}%)` }}
       />

@@ -133,4 +133,47 @@ describe('OnboardingScreen', () => {
     expect(concluirOnboarding).toHaveBeenLastCalledWith({ frogName: 'Pulo', startHour: 7, endHour: 22 });
     expect(navigate).toHaveBeenCalledTimes(1);
   });
+
+  const ateOUltimo = async () => {
+    await clicar('Continuar');
+    await clicar('Um ano a mais');
+    await clicar('Continuar');
+    await clicar('Estudando');
+    await clicar('Continuar');
+    await clicar('Pular este passo');
+  };
+
+  test('tocar na folhinha já responde a idade inicial', async () => {
+    render(<OnboardingScreen />);
+    await clicar('Continuar');
+    const faixa = screen.getByRole('slider', { name: 'Sua idade' });
+    expect(faixa.getAttribute('aria-valuetext')).toBe('não escolhida');
+    fireEvent.keyUp(faixa, { key: 'Tab' });
+    expect(botao('Continuar').disabled).toBe(true);
+    fireEvent.pointerUp(faixa);
+    expect(botao('Continuar').disabled).toBe(false);
+    expect(faixa.getAttribute('aria-valuetext')).toBe('25 anos');
+  });
+
+  test('falha ao gravar o nome aparece na tela e fica no passo', async () => {
+    editarConta.mockRejectedValueOnce(new Error('Não consegui salvar seu perfil. Tente de novo.'));
+    render(<OnboardingScreen />);
+    fireEvent.change(campo('Seu nome'), { target: { value: 'Bia' } });
+    await ateOUltimo();
+    await clicar('Pular este passo');
+    expect(screen.getByRole('alert').textContent).toBe('Não consegui salvar seu perfil. Tente de novo.');
+    expect(passoAtual()).toBe('5');
+    expect(concluirOnboarding).not.toHaveBeenCalled();
+  });
+
+  test('enquanto salva, não envia de novo nem deixa voltar ou sair', async () => {
+    concluirOnboarding.mockReturnValue(new Promise(() => undefined));
+    render(<OnboardingScreen />);
+    await ateOUltimo();
+    await clicar('Pular este passo');
+    expect(botao('Pular este passo').disabled).toBe(true);
+    expect(botao('Voltar').disabled).toBe(true);
+    expect(botao('Voltar ao login').disabled).toBe(true);
+    expect(concluirOnboarding).toHaveBeenCalledTimes(1);
+  });
 });

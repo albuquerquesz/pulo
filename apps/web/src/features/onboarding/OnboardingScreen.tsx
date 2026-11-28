@@ -5,6 +5,7 @@ import { SapoRosto } from '@/mascot';
 import { Botao } from '@/ui';
 
 import { useApp } from '../app';
+import { MENSAGEM_PERFIL } from '../sessao/auth';
 import { dadosParaConcluir, nomeCompleto, respostasIniciais, type RespostasDoOnboarding } from './logic';
 import { PASSOS } from './passos';
 import { Trilha } from './Trilha';
@@ -21,6 +22,9 @@ export function OnboardingScreen() {
   const [comentario, setComentario] = useState<string | null>(null);
   const [pulos, setPulos] = useState(0);
   const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  // A ref barra o segundo envio antes mesmo de a tela redesenhar.
+  const emAndamento = useRef(false);
   const balao = useRef<HTMLDivElement>(null);
   const indiceAnterior = useRef(indice);
 
@@ -43,6 +47,7 @@ export function OnboardingScreen() {
     setIndice(novo);
     setComentario(null);
     setPulos(0);
+    setErro(null);
   };
 
   const escrever = (mudanca: Partial<RespostasDoOnboarding>) => {
@@ -68,22 +73,35 @@ export function OnboardingScreen() {
   };
 
   const entrar = async () => {
+    if (emAndamento.current) return;
+    emAndamento.current = true;
     setSalvando(true);
+    setErro(null);
     try {
       // O nome escrito aqui vira o nome da conta: é ele que o Hoje usa para dar bom dia.
       const nome = nomeCompleto(respostas);
-      if (pessoa && nome !== pessoa.nome) await editarConta({ nome, foto: pessoa.foto ?? null });
+      if (pessoa && nome !== pessoa.nome) {
+        try {
+          await editarConta({ nome, foto: pessoa.foto ?? null });
+        } catch (falha) {
+          // Sessão vencida: o app já volta ao login e a tela sai junto.
+          setErro(falha instanceof Error ? falha.message : MENSAGEM_PERFIL);
+          return;
+        }
+      }
       await concluirOnboarding(dadosParaConcluir());
       await navigate({ to: '/', replace: true });
     } catch {
       // O aviso de erro já foi mostrado pelo repositório; a pessoa pode tentar de novo.
     } finally {
+      emAndamento.current = false;
       setSalvando(false);
     }
   };
 
   return (
-    <div className="onboarding relative flex min-h-dvh flex-col overflow-hidden">
+    // No celular a altura é a da tela: só o corpo do passo rola e o Continuar fica à vista.
+    <div className="onboarding relative flex h-dvh flex-col overflow-hidden md:h-auto md:min-h-dvh">
       <div aria-hidden="true" className="onboarding-nuvem" />
       <div aria-hidden="true" className="onboarding-nuvem onboarding-nuvem-baixa" />
       <svg aria-hidden="true" className="lagoa-margem absolute inset-x-0 bottom-0 h-[150px] w-full" viewBox="0 0 1200 150" preserveAspectRatio="none">
@@ -91,7 +109,7 @@ export function OnboardingScreen() {
         <path d="M0 105 Q260 70 560 95 T1200 88 V150 H0Z" />
       </svg>
 
-          <header className="relative z-2 flex items-center gap-2.5 px-4.5 pt-[max(0.875rem,env(safe-area-inset-top))] pb-3.5 text-[17px] font-black md:px-7 md:pt-4.5 md:pb-4.5 md:text-xl">
+          <header className="relative z-2 flex shrink-0 items-center gap-2.5 px-4.5 pt-[max(0.875rem,env(safe-area-inset-top))] pb-3.5 text-[17px] font-black md:px-7 md:pt-4.5 md:pb-4.5 md:text-xl">
             <span aria-hidden="true" className="w-[38px]">
               <SapoRosto className="block w-full" />
             </span>
@@ -100,19 +118,20 @@ export function OnboardingScreen() {
             <button
               type="button"
               onClick={() => void sair()}
-              className="ml-auto min-h-11 cursor-pointer rounded-full border-[3px] border-contorno bg-surface px-4 text-sm font-extrabold transition-transform active:translate-y-0.5"
+              disabled={salvando}
+              className="ml-auto min-h-11 cursor-pointer disabled:cursor-not-allowed disabled:opacity-45 rounded-full border-[3px] border-contorno bg-surface px-4 text-sm font-extrabold transition-transform active:translate-y-0.5"
             >
               Voltar ao login
             </button>
           </header>
 
-          <main className="relative z-2 flex w-full flex-1 flex-col md:mx-auto md:mt-1.5 md:mb-15 md:h-[660px] md:max-w-[760px] md:flex-none md:rounded-[32px] md:border-4 md:border-contorno md:bg-bg md:shadow-[0_6px_0_rgba(59,42,47,0.06)]">
+          <main className="relative z-2 flex min-h-0 w-full flex-1 flex-col md:mx-auto md:mt-1.5 md:mb-15 md:h-[660px] md:max-w-[760px] md:flex-none md:rounded-[32px] md:border-4 md:border-contorno md:bg-bg md:shadow-[0_6px_0_rgba(59,42,47,0.06)]">
             <div className="flex items-center gap-3 px-4.5 pt-4.5 pb-1.5 md:px-5.5">
-              <button type="button" aria-label="Voltar" disabled={primeiro} onClick={() => irPara(indice - 1)} className={SETA}>
+              <button type="button" aria-label="Voltar" disabled={primeiro || salvando} onClick={() => irPara(indice - 1)} className={SETA}>
                 <span aria-hidden="true">‹</span>
               </button>
               <Trilha ids={PASSOS.map((p) => p.id)} atual={indice} />
-              <button type="button" aria-label="Pular este passo" disabled={!passo.podePular} onClick={() => (ultimo ? void entrar() : irPara(indice + 1))} className={SETA}>
+              <button type="button" aria-label="Pular este passo" disabled={!passo.podePular || salvando} onClick={() => (ultimo ? void entrar() : irPara(indice + 1))} className={SETA}>
                 <span aria-hidden="true">›</span>
               </button>
             </div>
@@ -131,7 +150,13 @@ export function OnboardingScreen() {
                 <Corpo respostas={respostas} responder={responder} escrever={escrever} />
               </div>
 
-              <div className="flex justify-center px-4.5 pt-1.5 pb-[max(1.375rem,env(safe-area-inset-bottom))] md:px-7 md:pb-6">
+              {erro ? (
+                <p role="alert" className="m-0 px-4.5 text-center text-sm font-extrabold">
+                  {erro}
+                </p>
+              ) : null}
+
+              <div className="flex shrink-0 justify-center px-4.5 pt-1.5 pb-[max(1.375rem,env(safe-area-inset-bottom))] md:px-7 md:pb-6">
                 <Botao titulo={passo.botao ?? 'Continuar'} tipo="submit" variante="foco" desativado={!pronto} carregando={salvando} className="min-h-14 rounded-[18px] [&_span]:text-lg [&_span]:font-black" />
               </div>
             </form>
