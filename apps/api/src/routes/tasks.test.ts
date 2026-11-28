@@ -112,7 +112,7 @@ describe('/api/tasks', () => {
     const me = await h.newUser();
     const other = await h.newUser();
     const goalId = uuid();
-    await other.call('PUT', `/api/goals/${goalId}`, { id: goalId, title: 'm', state: 'ativa', milestones: [], createdAt: 1 });
+    await other.call('PUT', `/api/goals/${goalId}`, { id: goalId, title: 'm', state: 'ativa', milestones: [], createdAt: TEST_NOW });
     const id = uuid();
     const foreign = await me.call('PUT', `/api/tasks/${id}`, task(id, { goalId }));
     expect(foreign.status).toBe(404);
@@ -120,7 +120,7 @@ describe('/api/tasks', () => {
     expect((await sync(me)).tasks).toEqual([]);
 
     const mine = uuid();
-    await me.call('PUT', `/api/goals/${mine}`, { id: mine, title: 'm', state: 'ativa', milestones: [], createdAt: 1 });
+    await me.call('PUT', `/api/goals/${mine}`, { id: mine, title: 'm', state: 'ativa', milestones: [], createdAt: TEST_NOW });
     await me.call('PUT', `/api/tasks/${id}`, task(id, { goalId: mine }));
     expect((await sync(me)).tasks[0]).toMatchObject({ goalId: mine });
     await me.call('DELETE', `/api/goals/${mine}`);

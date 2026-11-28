@@ -1,6 +1,6 @@
 import { GOALS } from '@pulo/core/config/decisions';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
-import { createHarness, queriesOf } from '../testing';
+import { TEST_NOW, createHarness, queriesOf } from '../testing';
 
 let database: TestDatabase;
 let h: ReturnType<typeof createHarness>;
@@ -20,8 +20,8 @@ const goal = (id: string, extra: Record<string, unknown> = {}) => ({
   why: 'saúde',
   targetDate: '2027-06-01',
   state: 'ativa',
-  milestones: [{ id: 'm1', title: '5 km', doneAt: 5 }, { id: 'm2', title: '10 km' }],
-  createdAt: 1,
+  milestones: [{ id: 'm1', title: '5 km', doneAt: TEST_NOW - 5 }, { id: 'm2', title: '10 km' }],
+  createdAt: TEST_NOW - 9,
   ...extra,
 });
 
@@ -39,7 +39,7 @@ describe('/api/goals', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ goal: goal(id), newAchievements: [] });
 
-    const done = goal(id, { state: 'concluida', completedAt: 9, why: undefined, targetDate: undefined });
+    const done = goal(id, { state: 'concluida', completedAt: TEST_NOW - 1, why: undefined, targetDate: undefined });
     await me.call('PUT', `/api/goals/${id}`, done);
     const { why: _why, targetDate: _target, ...semOpcionais } = done;
     expect((await (await me.call('GET', '/api/goals')).json()).goals).toEqual([semOpcionais]);
@@ -59,9 +59,11 @@ describe('/api/goals', () => {
     expect(blocked.status).toBe(409);
     expect((await blocked.json()).error).toBe('limite_de_metas');
 
-    expect((await me.call('PUT', `/api/goals/${extra}`, goal(extra, { state: 'concluida', completedAt: 2 }))).status).toBe(200);
+    // Meta nova não nasce concluída (concluir não pode ser um jeito de criar sem fim).
+    const nascida = await me.call('PUT', `/api/goals/${extra}`, goal(extra, { state: 'concluida', completedAt: TEST_NOW }));
+    expect((await nascida.json()).error).toBe('meta_criada_concluida');
     expect((await me.call('PUT', `/api/goals/${ids[0]}`, goal(ids[0], { title: 'Editada' }))).status).toBe(200);
-    expect((await me.call('PUT', `/api/goals/${ids[0]}`, goal(ids[0], { state: 'concluida', completedAt: 3 }))).status).toBe(200);
+    expect((await me.call('PUT', `/api/goals/${ids[0]}`, goal(ids[0], { state: 'concluida', completedAt: TEST_NOW }))).status).toBe(200);
     expect((await me.call('PUT', `/api/goals/${extra}`, goal(extra))).status).toBe(200);
   });
 
@@ -80,6 +82,24 @@ describe('/api/goals', () => {
     ];
     for (const bad of invalid) expect((await me.call('PUT', `/api/goals/${id}`, bad)).status).toBe(400);
     expect((await me.call('PUT', `/api/goals/${uuid()}`, goal(id))).status).toBe(400);
+  });
+
+  it('recusa datas fora do razoável e guarda o createdAt da primeira gravação', async () => {
+    const me = await h.newUser();
+    const id = uuid();
+    const antigas = [
+      goal(id, { createdAt: 1 }),
+      goal(id, { milestones: [{ id: 'm1', title: 'a', doneAt: 5 }] }),
+      goal(id, { targetDate: '2999-01-01' }),
+      goal(id, { targetDate: '2020-01-01' }),
+    ];
+    for (const bad of antigas) {
+      const res = await me.call('PUT', `/api/goals/${id}`, bad);
+      expect([res.status, (await res.json()).error]).toEqual([409, 'data_da_meta_invalida']);
+    }
+    await me.call('PUT', `/api/goals/${id}`, goal(id));
+    const editada = await me.call('PUT', `/api/goals/${id}`, goal(id, { createdAt: 1 }));
+    expect((await editada.json()).goal.createdAt).toBe(TEST_NOW - 9);
   });
 
   it('isolamento: outra pessoa não lê, não sobrescreve e não apaga', async () => {
@@ -111,8 +131,8 @@ describe('/api/goals', () => {
     await big.call('PUT', `/api/goals/${bigId}`, goal(bigId));
     const put = await queriesOf(database, small, 'PUT', `/api/goals/${id}`, goal(id));
     expect(await queriesOf(database, big, 'PUT', `/api/goals/${bigId}`, goal(bigId))).toBe(put);
-    // 4 da escrita + 14 leituras das conquistas (a meta do teste tem marco riscado).
-    expect(put).toBe(18);
+    // 5 da escrita + 14 leituras das conquistas (a meta do teste tem marco riscado).
+    expect(put).toBe(19);
     expect(await queriesOf(database, small, 'DELETE', `/api/goals/${id}`)).toBe(3);
   });
 });

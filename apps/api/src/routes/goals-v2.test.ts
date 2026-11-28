@@ -1,6 +1,6 @@
-import { JOIAS } from '@pulo/core/config/decisions';
+import { GOALS, JOIAS } from '@pulo/core/config/decisions';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
-import { type TestUser, TEST_NOW, createHarness, queriesOf } from '../testing';
+import { type TestUser, TEST_NOW, createHarness, envelhecerMeta, queriesOf } from '../testing';
 
 let database: TestDatabase;
 let h: ReturnType<typeof createHarness>;
@@ -14,8 +14,8 @@ afterAll(async () => {
 });
 
 const uuid = () => crypto.randomUUID();
-const goal = (id: string, extra: Record<string, unknown> = {}) => ({ id, title: 'Maratona', state: 'ativa', milestones: [], createdAt: 1, ...extra });
-const concluida = (id: string) => goal(id, { state: 'concluida', completedAt: 2 });
+const goal = (id: string, extra: Record<string, unknown> = {}) => ({ id, title: 'Maratona', state: 'ativa', milestones: [], createdAt: TEST_NOW - 9, ...extra });
+const concluida = (id: string) => goal(id, { state: 'concluida', completedAt: TEST_NOW - 2 });
 /** O corpo que um hábito tem na resposta: `active` acompanha o `state`. */
 const habit = (id: string, extra: Record<string, unknown> = {}) => {
   const body = { id, title: 'Ler', weekdays: [0], active: true, ...extra };
@@ -24,7 +24,15 @@ const habit = (id: string, extra: Record<string, unknown> = {}) => {
 
 async function novaMeta(user: TestUser, body: (id: string) => object = goal) {
   const id = uuid();
+  // Meta nova nasce ativa: a concluída é criada e concluída em seguida.
+  expect((await user.call('PUT', `/api/goals/${id}`, goal(id))).status).toBe(200);
   expect((await user.call('PUT', `/api/goals/${id}`, body(id))).status).toBe(200);
+  return id;
+}
+/** Uma meta concluída com idade para o baú. */
+async function metaMadura(user: TestUser) {
+  const id = await novaMeta(user, concluida);
+  await envelhecerMeta(database, id);
   return id;
 }
 const sync = async (user: TestUser) => (await user.call('GET', '/api/sync?from=2026-11-01&to=2026-11-30')).json();
@@ -55,7 +63,7 @@ describe('POST /api/goals/:id/chest', () => {
 
   it('abre uma vez, e só então as joias contam', async () => {
     const me = await h.newUser();
-    const id = await novaMeta(me, concluida);
+    const id = await metaMadura(me);
     // Falta exatamente o prêmio da meta para o tapete. Concluída sem abrir, ela não paga.
     await database.db.joiaCredit.create({ data: { userId: me.id, amount: 20 - JOIAS.por.goalCompleted } });
     const compra = { item: 'tapete-redondo', cost: 20, createdAt: TEST_NOW, x: 0, y: 0, rotation: 0 };
@@ -79,10 +87,24 @@ describe('POST /api/goals/:id/chest', () => {
 
   it('duas aberturas ao mesmo tempo gravam um resgate só', async () => {
     const me = await h.newUser();
-    const id = await novaMeta(me, concluida);
+    const id = await metaMadura(me);
     const status = (await Promise.all([1, 2].map(() => me.call('POST', `/api/goals/${id}/chest`)))).map((r) => r.status);
     expect(status.sort()).toEqual([200, 409]);
     expect(await database.db.goalChest.count({ where: { userId: me.id } })).toBe(1);
+  });
+
+  it('meta recém criada, com marco aberto ou além do teto do período não abre', async () => {
+    const me = await h.newUser();
+    const nova = await novaMeta(me, concluida);
+    expect(await erro(await me.call('POST', `/api/goals/${nova}/chest`))).toEqual([409, 'meta_nova_demais']);
+    const pendente = await novaMeta(me, (i) => ({ ...concluida(i), milestones: [{ id: 'm1', title: 'a' }] }));
+    await envelhecerMeta(database, pendente);
+    expect(await erro(await me.call('POST', `/api/goals/${pendente}/chest`))).toEqual([409, 'marcos_pendentes']);
+    for (let i = 0; i < GOALS.bau.maxPorPeriodo; i += 1) {
+      expect((await me.call('POST', `/api/goals/${await metaMadura(me)}/chest`)).status).toBe(200);
+    }
+    expect(await erro(await me.call('POST', `/api/goals/${await metaMadura(me)}/chest`))).toEqual([409, 'limite_de_baus']);
+    expect(await database.db.goalChest.count({ where: { userId: me.id } })).toBe(GOALS.bau.maxPorPeriodo);
   });
 
   it('meta ativa dá 409; inexistente ou de outra pessoa dá 404', async () => {
