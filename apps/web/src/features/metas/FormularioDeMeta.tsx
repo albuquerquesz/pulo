@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 
-import { GOALS } from '@pulo/core/config/decisions';
+import { GOALS, NAME_MAX_CHARS } from '@pulo/core/config/decisions';
 import type { GoalInput } from '@pulo/core/domain/goals';
 import type { AccentColor, DateKey, EntityId, Goal } from '@pulo/core/domain/types';
 import { Botao, CAMPO_DO_MODAL, Modal, SeletorDeCor } from '@/ui';
@@ -37,6 +37,7 @@ export function FormularioDeMeta({ hoje, meta, onSalvar, onRemoverMarco, onFecha
       setSemNome(true);
       return;
     }
+    const primeiros = marcosDoTexto(marcos);
     setSalvando(true);
     const gravou = await onSalvar({
       title: titulo,
@@ -44,7 +45,7 @@ export function FormularioDeMeta({ hoje, meta, onSalvar, onRemoverMarco, onFecha
       targetDate: prazo || undefined,
       icon: icone,
       color: cor,
-      ...(meta ? {} : { milestones: marcosDoTexto(marcos) }),
+      ...(meta ? {} : { milestones: primeiros }),
     });
     if (!gravou) setSalvando(false);
   };
@@ -69,7 +70,7 @@ export function FormularioDeMeta({ hoje, meta, onSalvar, onRemoverMarco, onFecha
                 setSemNome(false);
               }}
               placeholder="Correr uma maratona"
-              maxLength={80}
+              maxLength={NAME_MAX_CHARS}
               aria-required="true"
               aria-invalid={semNome}
               aria-describedby={semNome ? idDoErro : undefined}

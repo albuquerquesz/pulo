@@ -61,7 +61,7 @@ type CasaDaIlhaProps = Omit<SVGProps<SVGSVGElement>, 'children'> & {
 export function CasaDaIlha({ construidas, nova, onPortal, efeitos, viewBox = VIEWBOX_DA_ILHA, rotulo = 'Sua ilha', ...svg }: CasaDaIlhaProps) {
   const prontas = new Set(construidas);
   return (
-    <svg {...svg} viewBox={viewBox} preserveAspectRatio="xMidYMid meet" role="img" aria-label={rotulo}>
+    <svg {...svg} viewBox={viewBox} preserveAspectRatio="xMidYMid meet" role={onPortal ? 'group' : 'img'} aria-label={rotulo}>
       {TERRENO}
       {ORDEM_DE_DESENHO.map((id) => (
         <g key={id} data-parte={id} className={['parte-da-casa', prontas.has(id) ? 'feita' : '', nova === id ? 'nova' : ''].filter(Boolean).join(' ')}>

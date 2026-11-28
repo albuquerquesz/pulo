@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { TASKS } from '@pulo/core/config/decisions';
-import { TASK_COLUMNS } from '@pulo/core/domain/tasks';
+import { isOverdue, TASK_COLUMNS } from '@pulo/core/domain/tasks';
 import type { DateKey, Task, TaskStatus, TaskSubtask } from '@pulo/core/domain/types';
 
 import { CampoNovo } from './CampoNovo';
@@ -12,7 +12,7 @@ export interface AcoesDoCartao {
   abrir(id: string): void;
   alternarSubtarefas(id: string): void;
   marcarSubtarefa(subtarefa: TaskSubtask, feita: boolean): void;
-  novaSubtarefa(tarefa: Task, titulo: string): void;
+  novaSubtarefa(tarefa: Task, titulo: string): Promise<boolean>;
   mover(tarefa: Task, status: TaskStatus): void;
   passo(tarefa: Task, passo: Passo): void;
   arrastar(id: string | null): void;
@@ -44,10 +44,10 @@ function Prioridade({ alta, pomodoros }: { alta: boolean; pomodoros: string }) {
   );
 }
 
-/** Menu de mover para telas de toque, onde não há arrastar. */
+/** Menu de mover: à vista nas telas de toque, onde não há arrastar; com mouse, aparece quando recebe o foco do teclado. */
 function Mover({ tarefa, acoes }: { tarefa: Task; acoes: AcoesDoCartao }) {
   return (
-    <label className="relative grid size-8 flex-none place-items-center rounded-[8px] text-muted [@media(hover:hover)]:hidden">
+    <label className="relative grid size-8 flex-none place-items-center rounded-[8px] text-muted focus-within:outline-2 focus-within:outline-sapo-borda [@media(hover:hover)]:pointer-events-none [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:focus-within:opacity-100">
       <span aria-hidden="true">⇅</span>
       <select
         aria-label={`Mover ${tarefa.title}`}
@@ -121,7 +121,13 @@ export function CartaoDaTarefa({ tarefa, subtarefas, pomodoros, hoje, aberto, ar
         {tarefa.tags.map((nome) => (
           <Etiqueta key={nome} nome={nome} />
         ))}
-        {tarefa.dueDate ? <span className={CHIP}>📅 {textoDoPrazo(tarefa.dueDate, hoje)}</span> : null}
+        {tarefa.dueDate ? (
+          isOverdue(tarefa, hoje) ? (
+            <span className={`${CHIP} border-foco-borda! bg-foco/22 font-extrabold`}>⚠️ atrasada · {textoDoPrazo(tarefa.dueDate, hoje)}</span>
+          ) : (
+            <span className={CHIP}>📅 {textoDoPrazo(tarefa.dueDate, hoje)}</span>
+          )
+        ) : null}
       </div>
       {total ? (
         <div className="-mx-3.5 mt-0.5 border-t border-line">
@@ -169,7 +175,7 @@ export function CartaoDaTarefa({ tarefa, subtarefas, pomodoros, hoje, aberto, ar
                   onClick={() => setEscrevendo(true)}
                   className="cursor-pointer self-start px-1 py-1.5 text-[13px] font-extrabold text-muted hover:text-ink"
                 >
-                  + subtarefa
+                  + Subtarefa
                 </button>
               )}
             </div>

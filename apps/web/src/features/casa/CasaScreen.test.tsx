@@ -59,6 +59,12 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
+/** Aperta Comprar na loja e diz sim. */
+async function comprar() {
+  await clicar(/Comprar/);
+  await clicar('Comprar', within(screen.getByRole('dialog', { name: /^Comprar / })));
+}
+
 describe('Casa', () => {
   test('o timer anda de 5 em 5 entre os limites, e fechar não grava nada', async () => {
     const { repo } = await abrir();
@@ -148,7 +154,7 @@ describe('Casa', () => {
     await clicar('Retrato, 35 joias', noModelo());
     expect(screen.getByTestId('item-quadro').getAttribute('class')).toBe('previa');
     expect(await repo.listRoomDecor()).toEqual([]);
-    await clicar(/Comprar/);
+    await comprar();
     expect(screen.getByTestId('item-quadro').getAttribute('aria-label')).toBe('Retrato, Natural');
     expect(screen.getByTestId('item-quadro').getAttribute('class')).toBeNull();
     expect(await screen.findByText(String(antes - 35), { selector: 'b' })).toBeTruthy();
@@ -170,9 +176,9 @@ describe('Casa', () => {
     await clicar('Loja');
     await clicar('Quadro', noLugares());
     await clicar('Paisagem, 30 joias', noModelo());
-    await clicar(/Comprar/);
+    await comprar();
     await clicar('Retrato, 35 joias', noModelo());
-    await clicar(/Comprar/);
+    await comprar();
     expect(screen.getByTestId('item-quadro').getAttribute('aria-label')).toBe('Retrato, Natural');
     expect(await saldo()).toBe(antes - 65);
     await clicar('Paisagem, já é seu', noModelo());
@@ -191,7 +197,7 @@ describe('Casa', () => {
       const antes = await saldo();
       await clicar('Loja');
       await clicar('Simples, 40 joias', noModelo());
-      await clicar(/Comprar/);
+      await comprar();
       await waitFor(() => expect(screen.getByRole('button', { name: 'No lugar ✓' })).toBeTruthy(), { timeout: 4000 });
       expect(animate).toHaveBeenCalled();
       expect(screen.getByTestId('item-cama').getAttribute('aria-label')).toBe('Simples, Natural');
@@ -210,7 +216,7 @@ describe('Casa', () => {
 
     await clicar('Decorar');
     await clicar('Decorar: Quadro');
-    await clicar(/Comprar/);
+    await comprar();
     expect(screen.getByTestId('item-quadro')).toBeTruthy();
     await clicar('Fechar');
 

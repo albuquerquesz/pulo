@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { GOALS } from '@pulo/core/config/decisions';
 import { TASK_COLUMNS } from '@pulo/core/domain/tasks';
@@ -15,6 +15,7 @@ import {
   rotuloDaMeta,
   type Mudanca,
 } from './logic';
+import { useTextoAdiado } from './useTextoAdiado';
 
 type LinhaProps = {
   rotulo: string;
@@ -48,6 +49,35 @@ function Grupo({ titulo, children }: { titulo: string; children: ReactNode }) {
       <h3 className="mb-1.5 text-sm font-bold text-muted">{titulo}</h3>
       {children}
     </div>
+  );
+}
+
+/** O campo de data do aparelho, para um prazo que não está na lista. Grava depois de uma pausa: o ano é digitado aos poucos. */
+function DataDoPrazo({ prazo, onMudar }: { prazo: DateKey | undefined; onMudar: (prazo: DateKey | undefined) => void }) {
+  const [texto, setTexto] = useState(prazo ?? '');
+  const [visto, setVisto] = useState(prazo);
+  if (prazo !== visto) {
+    setVisto(prazo);
+    setTexto(prazo ?? '');
+  }
+  const adiado = useTextoAdiado((valor) => onMudar(valor || undefined));
+  return (
+    <label className="-mx-2 flex items-center gap-2.5 rounded-[8px] px-2 py-1.5 focus-within:bg-line/45 hover:bg-line/45">
+      <span className="grid size-4 flex-none place-items-center text-muted">
+        <IconeDoPrazo />
+      </span>
+      <input
+        type="date"
+        aria-label="Data do prazo"
+        value={texto}
+        onChange={(e) => {
+          setTexto(e.target.value);
+          adiado.digitar(e.target.value);
+        }}
+        onBlur={adiado.agora}
+        className={`min-w-0 flex-1 bg-transparent text-[15px] outline-none ${prazo ? 'font-bold' : 'font-semibold text-muted'}`}
+      />
+    </label>
   );
 }
 
@@ -107,6 +137,7 @@ export function Propriedades({ tarefa, metas, hoje, onMover, onMudar }: Propried
             </option>
           ))}
         </Linha>
+        <DataDoPrazo prazo={tarefa.dueDate} onMudar={(dueDate) => onMudar({ dueDate })} />
         <Linha
           rotulo="Pomodoros"
           icone={<span className="text-[13px]">🍅</span>}

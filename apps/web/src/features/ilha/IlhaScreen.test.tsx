@@ -59,16 +59,22 @@ const pronta = (nome: RegExp) => within(screen.getByRole('list', { name: 'Partes
 const parte = (nome: RegExp) => within(screen.getByRole('list', { name: 'Partes da casa' })).getByRole('button', { name: nome });
 const desligado = (el: HTMLElement) => el.hasAttribute('disabled');
 const noTopo = () => screen.getByText('joias', { exact: false, selector: 'span.sr-only' }).closest('b')?.textContent;
-const naCena = (id: string) => screen.getByRole('img', { name: 'Sua ilha' }).querySelector(`[data-parte="${id}"]`);
+const naCena = (id: string) => screen.getByRole('group', { name: 'Sua ilha' }).querySelector(`[data-parte="${id}"]`);
 
-const confirm = vi.fn(() => true);
+const responder = (botao: 'Construir' | 'Cancelar') =>
+  act(async () => {
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: botao }));
+  });
 
-beforeEach(() => {
-  navegar.mockClear();
-  confirm.mockReset().mockReturnValue(true);
-  vi.stubGlobal('confirm', confirm);
-});
-afterEach(() => vi.unstubAllGlobals());
+/** Toca no cartão e diz sim. */
+async function construir(nome: RegExp) {
+  await act(async () => {
+    fireEvent.click(parte(nome));
+  });
+  await responder('Construir');
+}
+
+beforeEach(() => navegar.mockClear());
 
 describe('Ilha', () => {
   test('mostra o saldo, o contador e só o quarto pronto', async () => {
@@ -95,9 +101,7 @@ describe('Ilha', () => {
   test('comprar desconta o saldo, muda o contador da camada e a parte cai', async () => {
     const { repo, saldo } = await abrir({ saldo: 100 });
     await aba('Exterior');
-    await act(async () => {
-      fireEvent.click(parte(/Cerca/));
-    });
+    await construir(/Cerca/);
     await screen.findByText('2 de 24');
     expect(contador('Exterior')).toBe('Exterior1/12');
     expect(await saldo()).toBe(100 - HOUSE.partCost.cerca);
@@ -114,9 +118,7 @@ describe('Ilha', () => {
     try {
       await abrir({ saldo: 100 });
       await aba('Exterior');
-      await act(async () => {
-        fireEvent.click(parte(/Cerca/));
-      });
+      await construir(/Cerca/);
       await screen.findByText('2 de 24', {}, { timeout: 4000 });
       await waitFor(() => expect(noTopo()).toBe(`${100 - HOUSE.partCost.cerca} joias`), { timeout: 4000 });
       expect(animate).toHaveBeenCalled();
@@ -132,11 +134,11 @@ describe('Ilha', () => {
     const gravar = vi.fn();
     await abrir({ saldo: 100, trocar: (repo) => ({ ...repo, saveHousePurchase: gravar }) });
     await aba('Exterior');
-    confirm.mockReturnValue(false);
     await act(async () => {
       fireEvent.click(parte(/Cerca/));
     });
-    expect(confirm).toHaveBeenCalledWith(`Construir Cerca?\nCusta ${HOUSE.partCost.cerca} joias.`);
+    expect(screen.getByRole('dialog', { name: 'Construir Cerca?' }).textContent).toContain(`Custa ${HOUSE.partCost.cerca} joias.`);
+    await responder('Cancelar');
     expect(gravar).not.toHaveBeenCalled();
     expect(noTopo()).toBe('100 joias');
     expect(naCena('cerca')?.classList.contains('feita')).toBe(false);
@@ -180,9 +182,7 @@ describe('Ilha', () => {
       }),
     });
     await aba('Exterior');
-    await act(async () => {
-      fireEvent.click(parte(/Cerca/));
-    });
+    await construir(/Cerca/);
     await waitFor(() => expect(app()?.aviso?.mensagem).toBe(mensagem));
     expect(screen.getByText('1 de 24')).toBeTruthy();
     expect(naCena('cerca')?.classList.contains('feita')).toBe(false);
@@ -193,16 +193,12 @@ describe('Ilha', () => {
     await aba('Cômodos');
     for (const nome of [/Sala de estar/, /Cozinha/]) {
       await waitFor(() => expect(desligado(parte(nome))).toBe(false));
-      await act(async () => {
-        fireEvent.click(parte(nome));
-      });
+      await construir(nome);
     }
     await aba('Estrutura');
     for (const nome of [/Chaminé/, /Segundo andar, /]) {
       await waitFor(() => expect(desligado(parte(nome))).toBe(false));
-      await act(async () => {
-        fireEvent.click(parte(nome));
-      });
+      await construir(nome);
     }
     await screen.findByText('5 de 24');
     expect(screen.getByTestId('fumaca')).toBeTruthy();

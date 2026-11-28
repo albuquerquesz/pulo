@@ -88,28 +88,28 @@ describe('Hábitos', () => {
     expect(await doDia()).toContain('ex-habito-ler');
   });
 
-  test('a agenda grava dias, período e lembrete', async () => {
+  test('a agenda grava dias e período, e o lembrete está desligado', async () => {
     const repo = await abrir();
     await escolher(/^Caminhar/);
     await clicar(detalhe().getByRole('button', { name: 'sábado' }));
     await clicar(detalhe().getByRole('combobox', { name: 'Período' }));
     await clicar(detalhe().getByRole('option', { name: /Tarde/ }));
-    await clicar(detalhe().getByRole('switch', { name: 'Lembrete' }));
-    const campo = detalhe().getByLabelText('Horário do lembrete');
-    fireEvent.change(campo, { target: { value: '18:15' } });
+    expect(await habito(repo, 'ex-habito-caminhar')).toMatchObject({ weekdays: [0, 2, 4], period: 'tarde' });
+    expect(detalhe().getByRole('switch', { name: 'Lembrete' })).toHaveProperty('disabled', true);
+    expect(detalhe().getByText('em breve')).toBeTruthy();
+  });
+
+  test('toques seguidos nos dias não se perdem', async () => {
+    const repo = await abrir();
+    await escolher(/^Caminhar/);
+    const antes = (await habito(repo, 'ex-habito-caminhar'))?.weekdays ?? [];
     await act(async () => {
-      fireEvent.blur(campo);
+      fireEvent.click(detalhe().getByRole('button', { name: 'terça' }));
     });
-    expect(await habito(repo, 'ex-habito-caminhar')).toMatchObject({
-      weekdays: [0, 2, 4],
-      period: 'tarde',
-      reminderMinutes: 18 * 60 + 15,
-      reminderOn: true,
+    await act(async () => {
+      fireEvent.click(detalhe().getByRole('button', { name: 'quinta' }));
     });
-    await clicar(await detalhe().findByRole('switch', { name: 'Lembrete', checked: true }));
-    const depois = await habito(repo, 'ex-habito-caminhar');
-    expect(depois?.reminderOn).toBeUndefined();
-    expect(depois?.reminderMinutes).toBe(18 * 60 + 15);
+    await waitFor(async () => expect((await habito(repo, 'ex-habito-caminhar'))?.weekdays).toHaveLength(antes.length + (antes.includes(1) ? -1 : 1) + (antes.includes(3) ? -1 : 1)));
   });
 
   test('o limite por dia mostra a mensagem e não grava', async () => {
@@ -149,9 +149,11 @@ describe('Hábitos', () => {
     await clicar(dialogo.getByRole('option', { name: /Noite/ }));
     await clicar(dialogo.getByRole('button', { name: 'Salvar' }));
     expect(await detalhe().findByRole('heading', { name: 'Meditar' })).toBeTruthy();
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     await clicar(detalhe().getByRole('button', { name: 'Arquivar' }));
-    await waitFor(() => expect(screen.queryByRole('button', { name: /Meditar/ })).toBeNull());
+    await clicar(within(screen.getByRole('dialog', { name: 'Arquivar este hábito?' })).getByRole('button', { name: 'Arquivar' }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: /^(?!Restaurar).*Meditar/ })).toBeNull());
     expect((await repo.listHabits()).find((h) => h.title === 'Meditar')?.state).toBe('arquivado');
+    await clicar(screen.getByRole('button', { name: 'Restaurar Meditar', hidden: true }));
+    await waitFor(async () => expect((await repo.listHabits()).find((h) => h.title === 'Meditar')?.state).toBe('ativo'));
   });
 });

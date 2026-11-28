@@ -40,6 +40,7 @@ const clicar = async (elemento: HTMLElement) => {
     fireEvent.click(elemento);
   });
 };
+const responder = (pergunta: string, botao: string) => clicar(within(screen.getByRole('dialog', { name: pergunta })).getByRole('button', { name: botao }));
 const meta = async (repo: Repository, id: string) => (await repo.listGoals()).find((g) => g.id === id);
 
 afterEach(() => vi.restoreAllMocks());
@@ -91,7 +92,7 @@ describe('Tela de Metas', () => {
     // A conta de exemplo já está no limite de hábitos por dia: abre espaço antes.
     const repo = await abrir('ex-meta-ingles', (r) => r.deleteHabit('ex-habito-agua'));
     await clicar(detalhe().getByRole('button', { name: '+ Atrelar hábito' }));
-    await clicar(screen.getByRole('button', { name: '+ Criar hábito pra essa meta' }));
+    await clicar(screen.getByRole('button', { name: '+ Criar hábito para essa meta' }));
     const form = within(screen.getByRole('dialog', { name: 'Novo hábito' }));
     fireEvent.change(form.getByLabelText('Nome'), { target: { value: 'Ver um filme sem legenda' } });
     await clicar(form.getByRole('button', { name: 'Salvar' }));
@@ -152,24 +153,26 @@ describe('Tela de Metas', () => {
   });
 
   test('concluir pede confirmação e deixa o baú esperando', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     const repo = await abrir('ex-meta-livros');
     await clicar(detalhe().getByRole('button', { name: 'Concluir meta' }));
+    await responder('Concluir esta meta?', 'Concluir');
     expect(await detalhe().findByRole('button', { name: 'Abrir o baú' })).toBeTruthy();
     expect((await meta(repo, 'ex-meta-livros'))?.state).toBe('concluida');
     await clicar(detalhe().getByRole('button', { name: 'Reabrir meta' }));
     await waitFor(async () => expect((await meta(repo, 'ex-meta-livros'))?.state).toBe('ativa'));
   });
 
-  test('editar remove marco, e apagar tira a meta', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+  test('editar remove marco, e excluir tira a meta', async () => {
     const repo = await abrir('ex-meta-livros');
     await clicar(detalhe().getByRole('button', { name: 'Editar' }));
     const form = within(screen.getByRole('dialog', { name: 'Editar meta' }));
     await clicar(form.getByRole('button', { name: 'Remover o marco Livro 4' }));
+    await responder('Excluir este marco?', 'Excluir');
     await waitFor(async () => expect((await meta(repo, 'ex-meta-livros'))?.milestones).toHaveLength(3));
     fireEvent.keyDown(window, { key: 'Escape' });
-    await clicar(detalhe().getByRole('button', { name: 'Apagar' }));
+    await clicar(detalhe().getByRole('button', { name: 'Excluir' }));
+    expect(screen.getByRole('dialog', { name: 'Excluir esta meta?' }).textContent).toContain('Você perde');
+    await responder('Excluir esta meta?', 'Excluir');
     await waitFor(async () => expect(await meta(repo, 'ex-meta-livros')).toBeUndefined());
   });
 });

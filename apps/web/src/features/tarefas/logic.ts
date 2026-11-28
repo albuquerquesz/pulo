@@ -38,6 +38,12 @@ export function montarQuadro(tarefas: readonly Task[], filtro: Filtro, hoje: Dat
   return TASK_COLUMNS.map((status) => ({ status, nome: NOME_DA_COLUNA[status], tarefas: columnTasks(visiveis, status) }));
 }
 
+/** O prazo de uma tarefa criada com o filtro ligado, para ela aparecer onde foi criada. */
+export function prazoDoFiltro(filtro: Filtro, hoje: DateKey): DateKey | undefined {
+  if (filtro === 'todas') return undefined;
+  return filtro === 'hoje' ? hoje : weekEndOf(hoje);
+}
+
 // ---------- Arrastar ----------
 
 /** O cartão antes do qual o ponteiro está: o primeiro cujo meio fica abaixo dele. Sem nenhum, é o fim da coluna. */

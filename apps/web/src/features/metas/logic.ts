@@ -97,9 +97,11 @@ export function textoDaData(meta: Goal, hoje: DateKey, timeZone: string): string
   return meta.targetDate ? `até ${dataPorExtenso(meta.targetDate, hoje)}` : 'sem data';
 }
 
-/** Um traço quando não há o que contar: sem data, no dia, vencida ou concluída. */
+/** Os dias até o prazo, "hoje" no dia e "vencida" depois dele. Um traço sem data ou na meta concluída. */
 export function textoDosDias(meta: Goal, dias: number | null): string {
-  return meta.state === 'concluida' || dias === null || dias <= 0 ? '—' : String(dias);
+  if (meta.state === 'concluida' || dias === null) return '—';
+  if (dias === 0) return 'hoje';
+  return dias < 0 ? 'vencida' : String(dias);
 }
 
 /** Linhas do campo de marcos: uma por marco, sem as vazias. */

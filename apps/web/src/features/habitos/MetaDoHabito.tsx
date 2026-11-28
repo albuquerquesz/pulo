@@ -48,8 +48,8 @@ export function MetaDoHabito({ habito, metas, baus, onTrocar, onVerMeta }: MetaD
             <span aria-hidden="true" className={`${ICONE} size-12 rounded-[14px] text-2xl ${FUNDO_DA_COR[meta.cor]}`}>
               {meta.icone}
             </span>
-            <div>
-              <b className="mb-1.5 block">{meta.titulo}</b>
+            <div className="min-w-0">
+              <b className="mb-1.5 block break-words">{meta.titulo}</b>
               <ProgressoDaMeta meta={meta} bau="-my-3.5 -mr-1 size-12" />
             </div>
           </div>
@@ -76,7 +76,7 @@ export function MetaDoHabito({ habito, metas, baus, onTrocar, onVerMeta }: MetaD
                   <span aria-hidden="true" className={`grid size-8 shrink-0 place-items-center rounded-[10px] ${FUNDO_DA_COR[opcao.cor]}`}>
                     {opcao.icone}
                   </span>
-                  <b>{opcao.titulo}</b>
+                  <b className="min-w-0 break-words">{opcao.titulo}</b>
                 </Opcao>
               );
             })}

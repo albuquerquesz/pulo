@@ -1,11 +1,12 @@
 import { useState } from 'react';
 
-import { atrelarHabito, criarHabito, editarHabito, type HabitErrorCode, type HabitInput } from '@pulo/core/domain/habits';
+import { atrelarHabito, criarHabito, editarHabito, restaurarHabito, type HabitErrorCode, type HabitInput } from '@pulo/core/domain/habits';
 import type { Result } from '@pulo/core/domain/result';
 import type { EntityId, Habit } from '@pulo/core/domain/types';
 import { Botao, EstadoVazio } from '@/ui';
 
-import { confirmar, Tela, useApp, useCarregar, ErroDeCarga } from '../app';
+import { comEscritaOtimista, ErroDeCarga, Tela, useApp, useCarregar, useConfirmacao } from '../app';
+import { Arquivados } from './Arquivados';
 import { DetalheDoHabito, type AcoesDoHabito } from './DetalheDoHabito';
 import { FormularioDeHabito } from './FormularioDeHabito';
 import { ListaDeHabitos } from './ListaDeHabitos';
@@ -33,6 +34,8 @@ export function HabitosScreen({ aberto, abrirNovo, onAbrir, onVerMeta }: Habitos
   });
   // À parte: no remoto as estatísticas vêm do servidor, e a lista não pode esperar por elas.
   const contas = useCarregar(() => carregarEstatisticas(repo, clock));
+
+  const { confirmar, confirmacao } = useConfirmacao();
 
   if (!user) return null;
 
@@ -64,7 +67,7 @@ export function HabitosScreen({ aberto, abrirNovo, onAbrir, onVerMeta }: Habitos
   /** Roda um caso de uso: erro esperado vira aviso; erro de rede já é avisado pelo repositório. */
   const tentar = async (acao: () => Promise<Result<Habit, HabitErrorCode>>): Promise<Habit | null> => {
     try {
-      const r = await acao();
+      const r = await comEscritaOtimista(acao, recarregar);
       if (!r.ok) {
         mostrarAviso({ mensagem: r.error.message, variante: 'atencao' });
         return null;
@@ -78,10 +81,14 @@ export function HabitosScreen({ aberto, abrirNovo, onAbrir, onVerMeta }: Habitos
   };
 
   const acoesDe = (h: Habit): AcoesDoHabito => ({
-    mudar: (mudanca) => void tentar(() => editarHabito(repo, h.id, mudanca)),
+    mudar: (mudanca) => tentar(() => editarHabito(repo, h.id, mudanca)),
     mudarEstado: (state) => void tentar(() => editarHabito(repo, h.id, { state })),
     arquivar: () =>
-      void confirmar('Arquivar este hábito?', `"${h.title}" sai das listas. O histórico continua.`).then(async (ok) => {
+      void confirmar({
+        titulo: 'Arquivar este hábito?',
+        detalhe: `"${h.title}" sai das listas. O histórico continua.`,
+        acao: 'Arquivar',
+      }).then(async (ok) => {
         if (ok && (await tentar(() => editarHabito(repo, h.id, { state: 'arquivado' })))) onAbrir(null);
       }),
     trocarMeta: (goalId) => void tentar(() => atrelarHabito(repo, h.id, goalId)),
@@ -105,7 +112,13 @@ export function HabitosScreen({ aberto, abrirNovo, onAbrir, onVerMeta }: Habitos
         <Botao titulo="+ Novo hábito" largura="auto" onPress={() => setFormulario({})} />
       </div>
       {!habito ? (
-        <EstadoVazio momento="lista-vazia" titulo="Nenhum hábito ainda" texto="Comece por um pequeno, que caiba em qualquer dia." />
+        <EstadoVazio
+          momento="lista-vazia"
+          titulo="Nenhum hábito ainda"
+          texto="Comece por um pequeno, que caiba em qualquer dia."
+          acao="Criar meu primeiro hábito"
+          onAcao={() => setFormulario({})}
+        />
       ) : (
         <div className="@container/pagina">
           <div className="grid grid-cols-1 items-start gap-6 @min-[36rem]/pagina:grid-cols-[minmax(240px,380px)_minmax(300px,1fr)]">
@@ -142,6 +155,15 @@ export function HabitosScreen({ aberto, abrirNovo, onAbrir, onVerMeta }: Habitos
           </div>
         </div>
       )}
+      <Arquivados
+        habitos={dados.habitos.filter((h) => h.state === 'arquivado')}
+        onRestaurar={(id) =>
+          void tentar(() => restaurarHabito(repo, id)).then((salvo) => {
+            if (salvo) onAbrir(salvo.id);
+          })
+        }
+      />
+      {confirmacao}
       {formulario ? <FormularioDeHabito habito={formulario.habito} onSalvar={salvar} onFechar={() => setFormulario(null)} /> : null}
     </Tela>
   );

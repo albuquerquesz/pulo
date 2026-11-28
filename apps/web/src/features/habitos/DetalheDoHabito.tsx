@@ -32,7 +32,7 @@ function Secao({ titulo, children }: { titulo: string; children: ReactNode }) {
 }
 
 export interface AcoesDoHabito {
-  mudar: (mudanca: Partial<HabitInput>) => void;
+  mudar: (mudanca: Partial<HabitInput>) => Promise<unknown>;
   mudarEstado: (estado: HabitState) => void;
   arquivar: () => void;
   trocarMeta: (goalId: EntityId | null) => void;
@@ -61,7 +61,7 @@ export function DetalheDoHabito({ habito, stats, metas, baus, acoes }: DetalheDo
           {iconeDoHabito(habito)}
         </span>
         <div className="min-w-0 flex-1 basis-40">
-          <h2 className="text-2xl leading-[1.15] font-extrabold">{habito.title}</h2>
+          <h2 className="text-2xl leading-[1.15] font-extrabold break-words">{habito.title}</h2>
           <div className="mt-3 flex flex-wrap gap-2">
             <span className={`${ETIQUETA} bg-line/70`}>🔁 {textoDaFrequencia(habito.weekdays)}</span>
             {periodo ? (

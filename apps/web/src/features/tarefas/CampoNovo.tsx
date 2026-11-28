@@ -5,8 +5,8 @@ import { TASKS } from '@pulo/core/config/decisions';
 type CampoNovoProps = {
   rotulo: string;
   placeholder: string;
-  /** Enter com texto: grava, e o campo continua aberto para o próximo. */
-  onSalvar: (titulo: string) => void;
+  /** Enter com texto: grava, e o campo continua aberto para o próximo. `false`: não gravou, e o texto volta. */
+  onSalvar: (titulo: string) => Promise<boolean>;
   /** Esc, ou sair do campo sem ter escrito nada. */
   onFechar: () => void;
 };
@@ -14,6 +14,11 @@ type CampoNovoProps = {
 /** O campo que abre no lugar do botão de adicionar tarefa ou subtarefa. */
 export function CampoNovo({ rotulo, placeholder, onSalvar, onFechar }: CampoNovoProps) {
   const [texto, setTexto] = useState('');
+  const salvar = async (titulo: string) => {
+    setTexto('');
+    // O que a pessoa já escreveu depois fica como está.
+    if (!(await onSalvar(titulo))) setTexto((atual) => atual || titulo);
+  };
   return (
     <input
       autoFocus
@@ -28,8 +33,7 @@ export function CampoNovo({ rotulo, placeholder, onSalvar, onFechar }: CampoNovo
       onKeyDown={(e) => {
         if (e.key === 'Enter' && !e.nativeEvent.isComposing && texto.trim()) {
           e.preventDefault();
-          onSalvar(texto.trim());
-          setTexto('');
+          void salvar(texto.trim());
         }
         if (e.key === 'Escape') {
           // Só fecha o campo, não a gaveta.

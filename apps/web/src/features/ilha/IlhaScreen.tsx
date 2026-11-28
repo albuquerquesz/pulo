@@ -9,7 +9,7 @@ import { CasaDaIlha } from '@/mascot/ilha/CasaDaIlha';
 import { BarraValor, BotaoCanto, Joia, Nuvens, useCamera, type LimitesDaCamera } from '@/ui';
 import { centroNaTela, type PontoNaTela } from '@/ui/compra';
 
-import { confirmar, useApp, useCarregar } from '../app';
+import { useApp, useCarregar, useConfirmacao } from '../app';
 import { carregarIlha, conquistasNovas, ilhaNaTela, textoDaConquista, textoDoPortal } from './logic';
 import { Partes } from './Partes';
 import { useChegadaDaParte } from './useChegadaDaParte';
@@ -30,7 +30,10 @@ export function IlhaScreen() {
   const { viewBox, arrastando, props: gestos } = useCamera(CAMERA);
   const [comprando, setComprando] = useState<ParteId | null>(null);
   const [nova, setNova] = useState<ParteId | null>(null);
-  const ocupado = useRef(false);
+  /** A trava vale na hora; o estado apaga os cartões. */
+  const trava = useRef(false);
+  const [ocupado, setOcupado] = useState(false);
+  const { confirmar, confirmacao } = useConfirmacao();
   const cena = useRef<HTMLDivElement>(null);
   const efeitos = useRef<SVGGElement>(null);
   const barraDeJoias = useRef<HTMLDivElement>(null);
@@ -45,9 +48,10 @@ export function IlhaScreen() {
    * Com menos movimento, a parte aparece na hora.
    */
   const comprar = async (parte: ParteId, origem: PontoNaTela) => {
-    if (ocupado.current || !dados || !ilha) return;
+    if (trava.current || !dados || !ilha) return;
     const preco = ilha.partes.find((p) => p.id === parte)?.custo ?? 0;
-    ocupado.current = true;
+    trava.current = true;
+    setOcupado(true);
     setNova(parte);
     let recusada = false;
     const animacao = chegada.animar({
@@ -87,7 +91,8 @@ export function IlhaScreen() {
     } finally {
       await animacao;
       chegada.soltar();
-      ocupado.current = false;
+      trava.current = false;
+      setOcupado(false);
       refresh();
     }
   };
@@ -98,7 +103,7 @@ export function IlhaScreen() {
     if (!parte) return;
     // Medido já: o cartão pode mudar de lugar enquanto a pergunta está aberta.
     const origem = centroNaTela(botao);
-    void confirmar(`Construir ${parte.nome}?`, `Custa ${parte.custo} joias.`).then((ok) => {
+    void confirmar({ titulo: `Construir ${parte.nome}?`, detalhe: `Custa ${parte.custo} joias.`, acao: 'Construir' }).then((ok) => {
       if (ok) void comprar(id, origem);
     });
   };
@@ -143,10 +148,11 @@ export function IlhaScreen() {
         ) : null}
 
         <div className="absolute right-3 bottom-4 left-3 z-3 flex flex-col items-end gap-3 md:relative md:right-0 md:bottom-0 md:left-0 md:flex-row md:gap-4 md:px-6 md:pb-6">
-          <div className="w-full min-w-0 md:w-auto md:flex-1">{ilha ? <Partes ilha={ilha} onComprar={pedirCompra} /> : null}</div>
+          <div className="w-full min-w-0 md:w-auto md:flex-1">{ilha ? <Partes ilha={ilha} ocupado={ocupado} onComprar={pedirCompra} /> : null}</div>
           <BotaoCanto icone="🏠" rotulo="Entrar em casa" onPress={irParaCasa} />
         </div>
       </div>
+      {confirmacao}
     </main>
   );
 }

@@ -1,6 +1,6 @@
 import { useId, useState } from 'react';
 
-import { HABITS } from '@pulo/core/config/decisions';
+import { HABITS, NAME_MAX_CHARS } from '@pulo/core/config/decisions';
 import type { HabitInput } from '@pulo/core/domain/habits';
 import type { AccentColor, Habit, Weekday } from '@pulo/core/domain/types';
 import { Botao, CAMPO_DO_MODAL, Modal, SeletorDeCor } from '@/ui';
@@ -60,6 +60,7 @@ export function FormularioDeHabito({ habito, onSalvar, onFechar }: FormularioDeH
             Nome
             <input
               value={titulo}
+              maxLength={NAME_MAX_CHARS}
               onChange={(e) => {
                 setTitulo(e.target.value);
                 setSemNome(false);

@@ -25,7 +25,7 @@ function Item({ meta, baus, selecionada, onSelecionar }: ItemProps) {
         {naTela.icone}
       </span>
       <span className="block min-w-0">
-        <b className="mb-1.5 block">{naTela.titulo}</b>
+        <b className="mb-1.5 block break-words">{naTela.titulo}</b>
         <ProgressoDaMeta meta={naTela} bau="-my-3 -mr-1 size-11" />
       </span>
     </button>
@@ -43,7 +43,7 @@ export function ListaDeMetas({ dados, selecionada, onSelecionar }: ListaDeMetasP
   const grupos = [
     { titulo: 'Em andamento', metas: dados.ativas },
     { titulo: 'Concluídas', metas: dados.concluidas },
-  ];
+  ].filter((g) => g.metas.length > 0);
   return (
     <div className="flex flex-col gap-3">
       {grupos.map((g) => (

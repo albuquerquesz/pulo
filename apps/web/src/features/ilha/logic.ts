@@ -1,5 +1,6 @@
 import { PARTES, podeComprar, progressoPorCamada, textoDoRequisito, verCasa, type CamadaDaCasa, type EstadoDaCasa, type ParteId, type PodeComprar, type ProgressoDaCamada } from '@pulo/core/domain/casa';
 import { verConquistas } from '@pulo/core/domain/achievements';
+import { textoDeFalta } from '@pulo/core/domain/joias';
 import type { Achievement, Clock, Repository } from '@pulo/core/domain/types';
 
 export type SituacaoDaParte = 'feita' | 'disponivel' | 'cara' | 'trancada';
@@ -13,6 +14,8 @@ export interface ParteAVenda {
   situacao: SituacaoDaParte;
   /** Por que está trancada; null nas outras. */
   motivo: string | null;
+  /** Quanto falta de saldo, em texto; null quando o saldo não é o problema. */
+  falta: string | null;
 }
 
 export interface IlhaNaTela {
@@ -43,7 +46,8 @@ export function ilhaNaTela(casa: EstadoDaCasa, comprando: ParteId | null = null)
   const partes = PARTES.map(({ id, nome, emoji, camada, custo }): ParteAVenda => {
     const pode = podeComprar(id, construidas, saldo);
     const motivo = pode.situacao === 'falta_requisito' ? textoDoRequisito(pode.requer) : null;
-    return { id, nome, emoji, camada, custo, situacao: SITUACAO[pode.situacao], motivo };
+    const falta = pode.situacao === 'joias_insuficientes' ? textoDeFalta(pode.faltam) : null;
+    return { id, nome, emoji, camada, custo, situacao: SITUACAO[pode.situacao], motivo, falta };
   });
   const [alvo] = partes.filter((p) => p.situacao === 'disponivel').sort((a, b) => a.custo - b.custo);
   return { saldo, construidas, total: casa.total, partes, progresso: progressoPorCamada(construidas), alvo: alvo?.id ?? null };

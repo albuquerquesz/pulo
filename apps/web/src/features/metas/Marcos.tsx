@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
-import { GOALS } from '@pulo/core/config/decisions';
+import { GOALS, NAME_MAX_CHARS } from '@pulo/core/config/decisions';
 import { goalProgress } from '@pulo/core/domain/goals';
 import type { EntityId, Goal } from '@pulo/core/domain/types';
 
@@ -26,9 +26,19 @@ export function Marcos({ meta, timeZone, onAlternar, onAdicionar }: MarcosProps)
   const { done, total } = goalProgress(meta);
   const proximo = meta.milestones.find((m) => m.doneAt === undefined)?.id;
 
+  const enviando = useRef(false);
   const adicionar = async () => {
+    // Com um marco a caminho, o Enter não manda outro.
+    if (enviando.current) return;
     if (!titulo.trim()) return setEscrevendo(false);
-    if (await onAdicionar(titulo)) setTitulo('');
+    enviando.current = true;
+    const enviado = titulo;
+    setTitulo('');
+    const gravou = await onAdicionar(enviado);
+    enviando.current = false;
+    if (gravou) return;
+    setTitulo((atual) => atual || enviado);
+    setEscrevendo(true);
   };
 
   return (
@@ -52,7 +62,7 @@ export function Marcos({ meta, timeZone, onAlternar, onAdicionar }: MarcosProps)
                 >
                   {feito ? '✓' : ''}
                 </span>
-                <span className={feito ? 'text-muted line-through' : ''}>{m.title}</span>
+                <span className={`min-w-0 break-words ${feito ? 'text-muted line-through' : ''}`}>{m.title}</span>
                 <span className={`ml-auto shrink-0 text-[13px] ${eOProximo ? 'font-extrabold text-sapo-borda' : 'text-muted'}`}>
                   {m.doneAt !== undefined ? dataCurta(m.doneAt, timeZone) : eOProximo ? 'próximo' : ''}
                 </span>
@@ -73,6 +83,7 @@ export function Marcos({ meta, timeZone, onAlternar, onAdicionar }: MarcosProps)
                 <span aria-hidden="true" className={`${CIRCULO} border-dashed border-muted`} />
                 <input
                   autoFocus
+                  maxLength={NAME_MAX_CHARS}
                   value={titulo}
                   onChange={(e) => setTitulo(e.target.value)}
                   onBlur={() => {

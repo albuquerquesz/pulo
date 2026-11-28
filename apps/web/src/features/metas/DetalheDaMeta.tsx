@@ -63,14 +63,20 @@ export function DetalheDaMeta({ meta, dados, timeZone, acoes }: DetalheDaMetaPro
         <div className="min-w-0">
           <h2 className="text-2xl leading-[1.15] font-extrabold break-words">{meta.title}</h2>
           {meta.why ? <p className="mt-2 text-muted italic">“{meta.why}”</p> : null}
-          <div className="mt-3.5 flex flex-wrap justify-center gap-2">
+          <div className="mt-3.5 flex flex-wrap gap-2">
             <span className={`${ETIQUETA} bg-line/70`}>📅 {textoDaData(meta, dados.hoje, timeZone)}</span>
             {selo ? <span className={`${ETIQUETA} ${TOM[selo.tom]}`}>{selo.texto}</span> : null}
             <span className={`${ETIQUETA} bg-line/70`}>
-              <span className="inline-flex items-center gap-1">
-                <Joia />+{joias}
-              </span>
-              no baú
+              {estadoDoBau(meta, dados.baus) === 'aberto' ? (
+                'baú já aberto'
+              ) : (
+                <>
+                  <span className="inline-flex items-center gap-1">
+                    <Joia />+{joias}
+                  </span>
+                  no baú
+                </>
+              )}
             </span>
           </div>
         </div>
@@ -115,8 +121,8 @@ export function DetalheDaMeta({ meta, dados, timeZone, acoes }: DetalheDaMetaPro
         <button type="button" onClick={acoes.editar} className={BOTAO}>
           Editar
         </button>
-        <button type="button" onClick={acoes.apagar} className={`${BOTAO} text-foco-borda`}>
-          Apagar
+        <button type="button" onClick={acoes.apagar} className={`${BOTAO} text-perigo-texto`}>
+          Excluir
         </button>
       </div>
     </div>

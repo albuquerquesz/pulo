@@ -5,12 +5,12 @@ import { artigoDaParte, COMODOS } from '@pulo/core/domain/casa';
 
 import { BarraValor, BotaoCanto, Foguinho, Joia, Nuvens, Placa, pontoNaCena, useCamera, type LimitesDaCamera, type Ponto } from '@/ui';
 
-import { useApp, useCarregar } from '../app';
+import { useApp, useCarregar, useConfirmacao } from '../app';
 import type { VinculoDaCasa } from '../foco/vinculo';
 import { escolhaInicial, type Escolha } from './catalogo';
 import { guardarComodo, useComodoAtual } from './comodoAtual';
 import { Comodo } from './Comodo';
-import { colocadosNoQuarto, type Colocados } from './decoracao';
+import { colocadosNoQuarto, estadoDaCompra, type Colocados } from './decoracao';
 import { Mobilia } from './Decoracao';
 import { carregarCasa, type OpcaoDeVinculo } from './logic';
 import type { Movel } from './mobilia';
@@ -93,6 +93,7 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
   const idDaDica = useId();
   const bloqueio = { desativado: foco.focando, dica: DICA_DURANTE_O_FOCO, descritoPor: foco.focando ? idDaDica : undefined };
 
+  const { confirmar, confirmacao } = useConfirmacao();
   const [timer, setTimer] = useState(false);
   const [decorando, setDecorando] = useState(false);
   /** O que o painel da loja está mostrando; `null` com a loja fechada. */
@@ -131,6 +132,19 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
     const blockId = dados?.bloco?.id;
     await foco.comecar(minutos, { ...opcao.extras, ...(blockId ? { blockId } : {}) });
     onComecou?.();
+  };
+
+  /** Gastar joias pede um sim antes; colocar o que já é seu, não. */
+  const pedirCompra = async (botao: Element) => {
+    if (!escolha || !dados) return;
+    const { quarto, saldo } = dados;
+    const { acao, preco } = estadoDaCompra({ quarto, saldo, escolha, comodo: comodoId });
+    if (acao === 'comprar') {
+      const { lugar, modelo, cor } = escolha;
+      const item = `${lugar.nome} ${modelo.nome}${cor.api ? ` ${cor.nome}` : ''}`;
+      if (!(await confirmar({ titulo: `Comprar ${item} por ${preco} joias?`, acao: 'Comprar' }))) return;
+    }
+    await compra.comprar({ escolha, botao, quarto, saldo });
   };
 
   if (!user) return null;
@@ -193,13 +207,14 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
           ))}
         </svg>
 
-        <div className="absolute top-7 left-0 z-3 flex gap-[34px] pl-8 md:right-0 md:justify-center md:gap-9 md:pl-0">
+        <div className="absolute top-7 left-0 z-3 flex gap-6 pl-6 md:right-0 md:justify-center md:gap-9 md:pl-0">
           <div ref={barraDeJoias}>
             <BarraValor
               icone={<Joia largura={46} altura={54} />}
               valor={saldoNaBarra}
               rotulo="joias"
-              onMais={() => !foco.focando && !decorando && dados && setTimer(true)}
+              maisDesativado={foco.focando || decorando || !dados}
+              onMais={() => setTimer(true)}
             />
           </div>
           <BarraValor
@@ -241,7 +256,7 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
         ) : null}
         {estado.tipo === 'erro' ? (
           <div role="alert" className="absolute top-[214px] left-1/2 z-3 flex -translate-x-1/2 flex-col items-center gap-2 rounded-3xl bg-white/90 px-7 py-3 text-center font-black text-contorno md:top-[164px]">
-            Não consegui abrir o quarto.
+            Não consegui abrir {comodo ? `${artigoDaParte(comodo.id)} ${comodo.nome.toLowerCase()}` : 'a casa'}.
             <button type="button" onClick={() => void recarregar()} className={BOTAO_NEUTRO}>
               Tentar de novo
             </button>
@@ -283,7 +298,7 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
             ocupado={compra.ocupado}
             onLugar={abrirLugar}
             onEscolher={escolher}
-            onComprar={(botao) => void compra.comprar({ escolha, botao, quarto: dados.quarto, saldo: dados.saldo })}
+            onComprar={(botao) => void pedirCompra(botao)}
             onTirar={() => {
               setVendo(false);
               void compra.tirar(escolha.lugar, dados.quarto);
@@ -292,6 +307,7 @@ export function CasaScreen({ vinculo = {}, onComecou }: CasaScreenProps) {
           />
         ) : null}
       </div>
+      {confirmacao}
     </main>
   );
 }

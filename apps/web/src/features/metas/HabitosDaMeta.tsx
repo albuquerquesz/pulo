@@ -22,7 +22,7 @@ function Linha({ habito, semana }: LinhaProps) {
   return (
     <li className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3.5 border-b border-line py-3">
       <div className="min-w-0">
-        <b className="block">{habito.title}</b>
+        <b className="block break-words">{habito.title}</b>
         <p className={LEGENDA}>
           {textoDaFrequencia(habito.weekdays)}
           {habito.state === 'pausado' ? ' · pausado' : ''}
@@ -83,7 +83,7 @@ export function HabitosDaMeta({ meta, atrelados, habitos, registros, hoje, onAtr
           <ul id={lista} aria-label="Hábitos sem meta" className="mb-3 flex flex-col gap-1.5 rounded-sm bg-line/40 p-2.5">
             {habitosSoltos(habitos).map((h) => (
               <li key={h.id} className={OPCAO}>
-                <b>{h.title}</b>
+                <b className="min-w-0 break-words">{h.title}</b>
                 <span className={`ml-auto ${LEGENDA}`}>{textoDaFrequencia(h.weekdays)}</span>
                 <button
                   type="button"
@@ -97,7 +97,7 @@ export function HabitosDaMeta({ meta, atrelados, habitos, registros, hoje, onAtr
             ))}
             <li>
               <button type="button" onClick={onCriar} className={`${OPCAO} min-h-11 w-full cursor-pointer text-left text-muted`}>
-                + Criar hábito pra essa meta
+                + Criar hábito para essa meta
               </button>
             </li>
           </ul>

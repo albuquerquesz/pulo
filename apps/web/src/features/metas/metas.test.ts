@@ -64,7 +64,8 @@ describe('Metas', () => {
     expect(textoDaData(meta({ state: 'concluida', completedAt: sp(2026, 11, 18, 10, 0) }), HOJE, FUSO)).toBe('concluída em 18 de novembro');
     expect(dataCurta(sp(2026, 9, 12, 10, 0), FUSO)).toBe('12 set');
     expect(textoDosDias(meta(), 26)).toBe('26');
-    expect(textoDosDias(meta(), 0)).toBe('—');
+    expect(textoDosDias(meta(), 0)).toBe('hoje');
+    expect(textoDosDias(meta(), -1)).toBe('vencida');
     expect(textoDosDias(meta(), null)).toBe('—');
     expect(textoDosDias(meta({ state: 'concluida' }), 10)).toBe('—');
   });

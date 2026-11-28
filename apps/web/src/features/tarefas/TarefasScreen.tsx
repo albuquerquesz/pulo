@@ -7,9 +7,9 @@ import { newId } from '@pulo/core/domain/ids';
 import { criarTarefa, moverTarefa, verPomodoros } from '@pulo/core/domain/tasks';
 import type { Task, TaskStatus, TaskSubtask } from '@pulo/core/domain/types';
 
-import { BOTAO_DA_GAVETA, Gaveta } from '@/ui';
+import { BOTAO_DA_GAVETA, EstadoVazio, Gaveta } from '@/ui';
 
-import { confirmar, useApp, useCarregar, ErroDeCarga } from '../app';
+import { comEscritaOtimista, ErroDeCarga, Tela, useApp, useCarregar, useConfirmacao } from '../app';
 import { contaNaTela } from '../casca/logic';
 import { Atividade } from './Atividade';
 import { CartaoDaTarefa, type AcoesDoCartao } from './CartaoDaTarefa';
@@ -22,6 +22,7 @@ import {
   montarQuadro,
   novaSubtarefa,
   posicaoAoSoltar,
+  prazoDoFiltro,
   subtarefasDa,
   vizinhoDoPasso,
   type Filtro,
@@ -47,6 +48,9 @@ export function TarefasScreen() {
   const [arrastada, setArrastada] = useState<string | null>(null);
   const [gaveta, setGaveta] = useState<{ id: string; aberta: boolean } | null>(null);
   const [revisao, setRevisao] = useState(0);
+  /** A pessoa pediu a primeira tarefa: o quadro abre com o campo. */
+  const [primeira, setPrimeira] = useState(false);
+  const { confirmar, confirmacao } = useConfirmacao();
 
   const dados = estado.tipo === 'ok' ? estado.dados : null;
   const fuso = user?.timezone || DEFAULT_TIMEZONE;
@@ -54,30 +58,30 @@ export function TarefasScreen() {
   const hoje = dateKeyOf(agora, fuso);
   const pomodoros = contagem.tipo === 'ok' ? contagem.dados : {};
   const quadro = montarQuadro(dados?.tarefas ?? [], filtro, hoje);
+  const vazio = dados !== null && dados.tarefas.length === 0 && !primeira;
   const primeiraEmAndamento = quadro.find((c) => c.status === 'fazendo')?.tarefas[0]?.id;
 
   /** Mostra a escrita otimista na hora e relê quando ela termina (ou volta atrás, se o servidor recusar). */
   const gravar = async (escrita: () => Promise<unknown>): Promise<boolean> => {
-    const pendente = escrita();
-    const otimista = setTimeout(() => void recarregar());
     try {
-      await pendente;
+      await comEscritaOtimista(escrita, recarregar);
       return true;
     } catch {
       // O repositório remoto já avisou o que houve e voltou ao que era.
       return false;
     } finally {
-      clearTimeout(otimista);
-      await recarregar();
       setRevisao((n) => n + 1);
     }
   };
 
-  const criar = (status: TaskStatus, title: string) => {
-    void gravar(async () => {
-      const resultado = await criarTarefa(repo, { title, status }, clock.now());
+  const criar = async (status: TaskStatus, title: string): Promise<boolean> => {
+    let criada = false;
+    await gravar(async () => {
+      const resultado = await criarTarefa(repo, { title, status, dueDate: prazoDoFiltro(filtro, hoje) }, clock.now());
+      criada = resultado.ok;
       if (!resultado.ok) mostrarAviso({ mensagem: resultado.error.message, variante: 'atencao' });
     });
+    return criada;
   };
 
   const mover = (id: string, status: TaskStatus, antesDe?: string) => {
@@ -87,7 +91,7 @@ export function TarefasScreen() {
 
   const adicionarSubtarefa = (taskId: string, titulo: string) => {
     setAbertos((a) => ({ ...a, [taskId]: true }));
-    void gravar(async () => {
+    return gravar(async () => {
       const existentes = subtarefasDa(await repo.listSubtasks(), taskId);
       if (existentes.length >= TASKS.maxSubtasks) return;
       await repo.saveSubtask(novaSubtarefa(existentes, taskId, titulo, clock.now()));
@@ -125,7 +129,11 @@ export function TarefasScreen() {
   const nome = contaNaTela(pessoa).nome.split(' ')[0] ?? '';
 
   const excluir = (tarefa: Task) => {
-    void confirmar('Excluir esta tarefa?', `"${tarefa.title}" e as subtarefas dela somem. Não dá para desfazer.`).then((ok) => {
+    void confirmar({
+      titulo: 'Excluir esta tarefa?',
+      detalhe: `"${tarefa.title}" e as subtarefas dela somem. Não dá para desfazer.`,
+      acao: 'Excluir',
+    }).then((ok) => {
       if (!ok) return;
       fechar();
       void gravar(() => repo.deleteTask(tarefa.id));
@@ -138,9 +146,9 @@ export function TarefasScreen() {
     });
 
   return (
-    <main className="flex w-full flex-col gap-5 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-6 md:px-10 md:pt-8 md:pb-12">
+    <Tela>
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-[32px] leading-[1.1] font-extrabold">Tarefas</h1>
+        <h1 className="text-2xl leading-[1.1] font-extrabold md:text-[32px]">Tarefas</h1>
         <div role="group" aria-label="Filtrar por prazo" className="inline-flex rounded-[12px] bg-line/55 p-[3px]">
           {FILTROS.map((f) => (
             <button
@@ -158,10 +166,26 @@ export function TarefasScreen() {
 
       {estado.tipo === 'erro' ? <ErroDeCarga falha={estado.falha} guardado="Suas tarefas estão salvas." onTentar={() => void recarregar()} /> : null}
 
-      {dados ? (
+      {estado.tipo === 'carregando' ? (
+        <div aria-label="Carregando as tarefas" role="progressbar" className="flex flex-col gap-3">
+          <div className="h-28 rounded-md bg-line opacity-60" />
+          <div className="h-28 rounded-md bg-line opacity-60" />
+        </div>
+      ) : null}
+
+      {vazio ? (
+        <EstadoVazio
+          titulo="Nenhuma tarefa ainda"
+          texto="Anote o que precisa fazer e leve cada cartão até Feito."
+          acao="Criar minha primeira tarefa"
+          onAcao={() => setPrimeira(true)}
+          momento="lista-vazia"
+          testID="tarefas-vazio"
+        />
+      ) : dados ? (
         <div className="grid grid-cols-1 items-stretch gap-4 pb-2 md:min-h-[calc(100dvh-140px)] md:grid-cols-[repeat(4,minmax(240px,1fr))] md:overflow-x-auto">
           {quadro.map((coluna) => (
-            <ColunaDoQuadro key={coluna.status} coluna={coluna} onNova={(titulo) => criar(coluna.status, titulo)} onSoltar={(antesDe) => soltar(coluna.status, antesDe)}>
+            <ColunaDoQuadro key={coluna.status} coluna={coluna} abrirCampo={primeira && coluna.status === 'afazer'} onNova={(titulo) => criar(coluna.status, titulo)} onSoltar={(antesDe) => soltar(coluna.status, antesDe)}>
               {coluna.tarefas.map((tarefa) => (
                 <CartaoDaTarefa
                   key={tarefa.id}
@@ -248,6 +272,7 @@ export function TarefasScreen() {
           </div>
         ) : null}
       </Gaveta>
-    </main>
+      {confirmacao}
+    </Tela>
   );
 }

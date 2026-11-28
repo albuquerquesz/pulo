@@ -42,7 +42,7 @@ export function ListaDeHabitos({ dados, estatisticas, selecionado, onSelecionar 
                   {iconeDoHabito(h)}
                 </span>
                 <span className="min-w-0 overflow-hidden">
-                  <b className="block">{h.title}</b>
+                  <b className="block break-words">{h.title}</b>
                   <span className="flex min-w-0 items-center gap-2 text-[13px] text-muted">
                     <span className="flex-none whitespace-nowrap">{textoDaFrequencia(h.weekdays)}</span>
                     {meta ? (

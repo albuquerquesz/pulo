@@ -11,7 +11,7 @@ type SubtarefasProps = {
   onMarcar: (subtarefa: TaskSubtask, feita: boolean) => void;
   onRenomear: (subtarefa: TaskSubtask, titulo: string) => void;
   onRemover: (subtarefa: TaskSubtask) => void;
-  onAdicionar: (titulo: string) => void;
+  onAdicionar: (titulo: string) => Promise<boolean>;
 };
 
 export function Subtarefas({ subtarefas, onMarcar, onRenomear, onRemover, onAdicionar }: SubtarefasProps) {
@@ -63,7 +63,7 @@ export function Subtarefas({ subtarefas, onMarcar, onRenomear, onRemover, onAdic
         </div>
       ) : (
         <button type="button" onClick={() => setEscrevendo(true)} className="cursor-pointer self-start px-2 py-1.5 text-sm font-bold text-muted hover:text-ink">
-          + Adicionar subtarefas
+          + Subtarefa
         </button>
       )}
     </div>

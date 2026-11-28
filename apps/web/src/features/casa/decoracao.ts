@@ -31,6 +31,14 @@ const registroDe = (quarto: readonly RoomDecor[], escolha: Escolha) => quarto.fi
 
 export const ehMeu = (quarto: readonly RoomDecor[], escolha: Escolha): boolean => registroDe(quarto, escolha) !== undefined;
 
+/** O outro cômodo onde o item está colocado; `null` se está aqui, guardado ou não é seu. */
+export function emOutroComodo(quarto: readonly RoomDecor[], escolha: Escolha, comodo: ComodoId): ComodoId | null {
+  const registro = registroDe(quarto, escolha);
+  if (!registro || !noLugar(registro)) return null;
+  const onde = comodoDe(registro);
+  return onde === comodo ? null : onde;
+}
+
 export type AcaoDaCompra = 'comprar' | 'colocar' | 'no_lugar';
 
 export interface EstadoDaCompra {

@@ -14,15 +14,17 @@ const PONTO: Record<TaskStatus, string> = {
 
 type ColunaProps = {
   coluna: Coluna;
-  onNova: (titulo: string) => void;
+  onNova: (titulo: string) => Promise<boolean>;
+  /** Já abre com o campo de tarefa nova. */
+  abrirCampo?: boolean;
   /** Soltaram um cartão aqui, antes de `antesDe` (ou no fim). */
   onSoltar: (antesDe: string | undefined) => void;
   children: ReactNode;
 };
 
-export function ColunaDoQuadro({ coluna, onNova, onSoltar, children }: ColunaProps) {
+export function ColunaDoQuadro({ coluna, onNova, abrirCampo = false, onSoltar, children }: ColunaProps) {
   const [alvo, setAlvo] = useState(false);
-  const [escrevendo, setEscrevendo] = useState(false);
+  const [escrevendo, setEscrevendo] = useState(abrirCampo);
   return (
     <section
       aria-label={coluna.nome}

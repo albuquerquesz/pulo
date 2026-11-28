@@ -18,16 +18,17 @@ import type { Result } from '@pulo/core/domain/result';
 import type { EntityId, Goal } from '@pulo/core/domain/types';
 import { Botao, EstadoVazio } from '@/ui';
 
-import { confirmar, Tela, useApp, useCarregar, ErroDeCarga } from '../app';
+import { comEscritaOtimista, ErroDeCarga, Tela, useApp, useCarregar, useConfirmacao } from '../app';
 import { FormularioDeHabito } from '../habitos/FormularioDeHabito';
 import { DetalheDaMeta, type AcoesDaMeta } from './DetalheDaMeta';
 import { FormularioDeMeta } from './FormularioDeMeta';
 import { JoiasVoando } from './JoiasVoando';
 import { ListaDeMetas } from './ListaDeMetas';
 import { carregarMetas } from './logic';
+import { avisoDePerda, joiasPerdidasNaMeta, joiasPerdidasNoMarco } from './perdas';
 import { planejarVoo, type Voo } from './voo';
 
-export const TEXTO_DO_LIMITE = `Até ${GOALS.maxActive} metas ativas de cada vez. Conclua ou apague uma para abrir espaço.`;
+export const TEXTO_DO_LIMITE = `Até ${GOALS.maxActive} metas ativas de cada vez. Conclua ou exclua uma para abrir espaço.`;
 
 type Formulario = { tipo: 'meta'; id?: EntityId } | { tipo: 'habito'; metaId: EntityId } | null;
 
@@ -50,6 +51,8 @@ export function MetasScreen({ metaAberta, abrirNova = false }: MetasScreenProps)
     if (!user) throw new Error('sem usuário');
     return carregarMetas(repo, clock, user);
   });
+
+  const { confirmar, confirmacao } = useConfirmacao();
 
   if (!user) return null;
 
@@ -80,7 +83,7 @@ export function MetasScreen({ metaAberta, abrirNova = false }: MetasScreenProps)
   /** Roda um caso de uso: erro esperado vira aviso; erro de rede já é avisado pelo repositório. */
   const tentar = async <T, E extends string>(acao: () => Promise<Result<T, E>>): Promise<T | null> => {
     try {
-      const r = await acao();
+      const r = await comEscritaOtimista(acao, recarregar);
       if (!r.ok) {
         mostrarAviso({ mensagem: r.error.message, variante: 'atencao' });
         return null;
@@ -122,7 +125,11 @@ export function MetasScreen({ metaAberta, abrirNova = false }: MetasScreenProps)
     criarHabito: () => setFormulario({ tipo: 'habito', metaId: m.id }),
     abrirBau: () => void abrirOBau(m.id),
     concluir: () =>
-      void confirmar('Concluir esta meta?', `"${m.title}" vai para as concluídas e o baú fica esperando.`).then(async (ok) => {
+      void confirmar({
+        titulo: 'Concluir esta meta?',
+        detalhe: `"${m.title}" vai para as concluídas e o baú fica esperando.`,
+        acao: 'Concluir',
+      }).then(async (ok) => {
         if (!ok || !(await tentar(() => concluirMeta(repo, m.id, clock.now())))) return;
         setAberta(m.id);
         emitirEvento('comemorando');
@@ -134,10 +141,14 @@ export function MetasScreen({ metaAberta, abrirNova = false }: MetasScreenProps)
       }),
     editar: () => setFormulario({ tipo: 'meta', id: m.id }),
     apagar: () =>
-      void confirmar('Apagar esta meta?', `"${m.title}" e os marcos dela somem. Não dá para desfazer.`).then(async (ok) => {
+      void confirmar({
+        titulo: 'Excluir esta meta?',
+        detalhe: `"${m.title}" e os marcos dela somem. Não dá para desfazer.${avisoDePerda(joiasPerdidasNaMeta(metas, dados.baus, m.id))}`,
+        acao: 'Excluir',
+      }).then(async (ok) => {
         if (!ok) return;
         try {
-          await apagarMeta(repo, m.id);
+          await comEscritaOtimista(() => apagarMeta(repo, m.id), recarregar);
           setAberta(undefined);
         } catch {
           // O repositório já avisou.
@@ -146,6 +157,17 @@ export function MetasScreen({ metaAberta, abrirNova = false }: MetasScreenProps)
         }
       }),
   });
+
+  const excluirMarco = async (id: EntityId, marcoId: EntityId) => {
+    const marco = metas.find((m) => m.id === id)?.milestones.find((x) => x.id === marcoId);
+    if (!marco) return;
+    const sim = await confirmar({
+      titulo: 'Excluir este marco?',
+      detalhe: `"${marco.title}" some da meta.${avisoDePerda(joiasPerdidasNoMarco(metas, id, marcoId))}`,
+      acao: 'Excluir',
+    });
+    if (sim) await tentar(() => removerMarco(repo, id, marcoId));
+  };
 
   const salvarMeta = async (entrada: GoalInput, id: EntityId | undefined) => {
     const salva = await tentar(() =>
@@ -212,7 +234,7 @@ export function MetasScreen({ metaAberta, abrirNova = false }: MetasScreenProps)
           onSalvar={(entrada) => salvarMeta(entrada, formulario.id)}
           onRemoverMarco={(marco) => {
             const id = formulario.id;
-            if (id) void tentar(() => removerMarco(repo, id, marco));
+            if (id) void excluirMarco(id, marco);
           }}
           onFechar={() => setFormulario(null)}
         />
@@ -220,6 +242,7 @@ export function MetasScreen({ metaAberta, abrirNova = false }: MetasScreenProps)
       {formulario?.tipo === 'habito' ? (
         <FormularioDeHabito onSalvar={(entrada) => salvarHabito(entrada, formulario.metaId)} onFechar={() => setFormulario(null)} />
       ) : null}
+      {confirmacao}
       {voo ? <JoiasVoando voo={voo} onTerminar={() => setVoo(null)} /> : null}
     </Tela>
   );
