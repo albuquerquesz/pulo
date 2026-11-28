@@ -20,7 +20,7 @@ export async function unlockAchievements(db: Db, person: SessionUser, now: numbe
   ]);
   const lidas = { habitDays, sessions, restDays, freezeUses };
   const acerto = await acertarGelos(db, person, now, { ...lidas, gelosComprados, resolvido });
-  const rows = { ...lidas, freezeUses: acerto.freezeUses, casa, habitMarks, tarefasConcluidas, goals, goalChests, joiaCredit, decoracoes };
+  const rows = { ...lidas, sessions: acerto.sessions, freezeUses: acerto.freezeUses, casa, habitMarks, tarefasConcluidas, goals, goalChests, joiaCredit, decoracoes };
   const owned = new Set(unlocked.map((row) => row.achievement));
   const summary = achievementSummaryFromRows(metadata, streakFromRows(metadata, now, rows), rows);
   const fresh = passingAchievements(summary).filter((id) => !owned.has(id));
