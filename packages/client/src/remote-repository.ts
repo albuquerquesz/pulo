@@ -229,13 +229,13 @@ class ApiRepository implements RemoteRepository {
   /** Joias dos registros que o sync não traz (veja `JoiasForaDoCache`). */
   private joiasForaDaJanela = 0;
   private streak: Streak | null = null;
-  /** Dia (do app) em que a sequência guardada foi lida; `null` quando uma escrita a envelheceu. */
-  private streakDay: DateKey | null = null;
+  /** Chave do dia (`dayKey`) em que a sequência guardada foi lida; `null` quando uma escrita a envelheceu. */
+  private streakDay: string | null = null;
   /** Conta as escritas que podem mudar a sequência, para não dar por nova uma leitura que cruzou com elas. */
   private streakVersion = 0;
   private freezes: FreezeSummary | null = null;
   /** Como `streakDay`, para o gelo (que envelhece com as mesmas escritas). */
-  private freezesDay: DateKey | null = null;
+  private freezesDay: string | null = null;
   private stats: ProfileStats | null = null;
   private statsStale = false;
   private achievements: Achievement[] | null = null;
@@ -277,13 +277,15 @@ class ApiRepository implements RemoteRepository {
   }
 
   async reload(): Promise<void> {
+    // Escritas a caminho primeiro: a leitura não pode apagar do cache o que ainda não chegou ao servidor.
+    await Promise.all(this.locks.values());
     const query = syncRange(this.clock.now(), this.historyDays);
     const data = await readJson(await this.client.api.sync.$get({ query }));
     this.accountValue = { id: data.user.id, name: data.user.name, email: data.user.email, image: data.user.image };
     this.metadata = data.metadata;
     this.mascot = data.mascot;
     this.streak = data.streak;
-    this.streakDay = this.today();
+    this.streakDay = this.dayKey();
     this.stats = data.stats;
     this.statsStale = false;
     this.achievements = data.achievements;
@@ -305,7 +307,7 @@ class ApiRepository implements RemoteRepository {
     this.joiaCredit = data.joiaCredit;
     this.joiasForaDaJanela = data.joiasForaDaJanela;
     this.freezes = data.gelo;
-    this.freezesDay = this.today();
+    this.freezesDay = this.dayKey();
     this.freezePurchases.replaceAll(data.gelosComprados);
   }
 
@@ -947,6 +949,12 @@ class ApiRepository implements RemoteRepository {
     return dateKeyOf(this.clock.now(), this.metadata?.timezone ?? DEFAULT_TIMEZONE);
   }
 
+  /** Chave da sequência e do gelo guardados: muda na virada do app e no começo do dia da pessoa. */
+  private dayKey(): string {
+    const timeZone = this.metadata?.timezone ?? DEFAULT_TIMEZONE;
+    return `${this.today()}|${dateKeyOf(this.clock.now(), timeZone, this.metadata?.profile?.dayStartMinutes)}`;
+  }
+
   private expireStreak(): void {
     this.streakVersion += 1;
     this.streakDay = null;
@@ -956,7 +964,7 @@ class ApiRepository implements RemoteRepository {
 
   async getStreak(): Promise<Streak> {
     await Promise.all(this.locks.values());
-    const day = this.today();
+    const day = this.dayKey();
     if (this.streak && this.streakDay === day) return cloneStreak(this.streak);
     const version = this.streakVersion;
     try {
@@ -977,7 +985,7 @@ class ApiRepository implements RemoteRepository {
 
   async getFreezes(): Promise<FreezeSummary> {
     await Promise.all(this.locks.values());
-    const day = this.today();
+    const day = this.dayKey();
     if (this.freezes && this.freezesDay === day) return cloneFreezeSummary(this.freezes);
     const version = this.streakVersion;
     try {
@@ -1004,7 +1012,7 @@ class ApiRepository implements RemoteRepository {
     await Promise.all(this.locks.values());
     const status = await this.callAndParse('gelo', async () => await this.client.api.gelo.$post(), freezeStatusResponseSchema);
     this.applyFreezes(status);
-    this.freezesDay = this.today();
+    this.freezesDay = this.dayKey();
   }
 
   async markFreezesSeen(): Promise<void> {
