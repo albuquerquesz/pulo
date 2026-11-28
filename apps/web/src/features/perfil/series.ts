@@ -20,7 +20,7 @@ import type {
   Vacation,
 } from '@pulo/core/domain/types';
 
-import { verPreferencias } from '../app/conta';
+import { temDatasDoGelo, verPreferencias } from '../app/conta';
 import { duracaoTexto } from '../hoje/logic';
 import { porcentagem } from './metricas';
 
@@ -315,6 +315,25 @@ export function concluidoDoIntervalo(registros: RegistrosDoRitmo, intervalo: num
   };
 }
 
+/** Os dias protegidos por gelo: do repositório em memória, ou as datas que o servidor guarda. */
+async function lerGelosUsados(repo: Repository): Promise<readonly FreezeUse[]> {
+  if (providesFreezeStore(repo)) return repo.listFreezeUses();
+  if (temDatasDoGelo(repo)) return (await repo.getFreezeDates()).map((date) => ({ date }));
+  return [];
+}
+
+/** Conta nova: ainda não há o que desenhar em nenhum cartão. */
+export function semRitmo({ sessions, habitLogs, restDays, freezeUses, tasks, goals }: RegistrosDoRitmo): boolean {
+  return (
+    sessions.length === 0 &&
+    habitLogs.length === 0 &&
+    restDays.length === 0 &&
+    freezeUses.length === 0 &&
+    !tasks.some((t) => t.status === 'feito') &&
+    !goals.some((g) => g.state === 'concluida' || g.milestones.some((m) => m.doneAt !== undefined))
+  );
+}
+
 /** Os registros que os cartões do Ritmo usam; cada cartão calcula o próprio intervalo. */
 export async function carregarRegistros(repo: Repository, clock: Clock): Promise<RegistrosDoRitmo> {
   const [user, sessions, habits, habitLogs, restDays, freezeUses, tasks, goals, baus, preferencias] = await Promise.all([
@@ -323,7 +342,7 @@ export async function carregarRegistros(repo: Repository, clock: Clock): Promise
     repo.listHabits(),
     repo.listHabitLogs(),
     repo.listRestDays(),
-    providesFreezeStore(repo) ? repo.listFreezeUses() : [],
+    lerGelosUsados(repo),
     repo.listTasks(),
     repo.listGoals(),
     repo.listGoalChests(),

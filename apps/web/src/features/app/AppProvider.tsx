@@ -10,7 +10,7 @@ import { eventoAtivo } from '@/mascot';
 import { MENSAGEM_LOGIN, MENSAGEM_SAIR, MENSAGEM_SESSAO_ACABOU, type Autenticacao, type MudancaDeConta, type PessoaLogada } from '../sessao/auth';
 import { ambienteDoApp, endpointDaIa } from '../sessao/config';
 import { useVoltaDaPagina } from '../sessao/useVoltaDaPagina';
-import { apagarTodosOsDados, concluirOnboarding, criarClienteDeIa, salvarPerfil, type DadosDoOnboarding } from './core';
+import { apagarTodosOsDados, concluirOnboarding, criarClienteDeIa, perfilCom, salvarPerfil, type DadosDoOnboarding } from './core';
 import { temConta } from './conta';
 import { criarFonteLocal, criarFonteRemota, type PropostaFonte } from '../semana/fonte';
 import { comAvisosDeErro, repositorioFechado } from './repositorio';
@@ -106,6 +106,11 @@ export function AppProvider({ children, repoInicial, relogioInicial, autenticaca
   const [erroDeLogin, setErroDeLogin] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const carregando = fase === 'carregando';
+  /** O perfil mais novo, para duas mudanças seguidas não partirem do mesmo. */
+  const perfilRef = useRef(user);
+  useLayoutEffect(() => {
+    perfilRef.current = user;
+  }, [user]);
   const [versao, setVersao] = useState(0);
   const refresh = useCallback(() => setVersao((v) => v + 1), []);
   const aiClient = useMemo(() => criarClienteDeIa(endpointDaIa(ambienteDoApp(), import.meta.env.DEV)), []);
@@ -288,15 +293,25 @@ export function AppProvider({ children, repoInicial, relogioInicial, autenticaca
 
   const atualizarPerfil = useCallback(
     async (patch: Parameters<typeof salvarPerfil>[2]) => {
-      if (!user) return;
+      const atual = perfilRef.current;
+      if (!atual) return;
+      // A tela muda na hora, e a próxima mudança parte desta, mesmo antes de o servidor responder.
+      const proximo = perfilCom(atual, patch);
+      perfilRef.current = proximo;
+      setUser(proximo);
       try {
-        setUser(await salvarPerfil(ativo.repo, user, patch));
-        setVersao((v) => v + 1);
+        await salvarPerfil(ativo.repo, atual, patch);
       } catch {
-        // O repositório remoto já avisou o que houve e voltou ao que era.
+        // O repositório remoto já avisou o que houve e voltou ao que era: a tela volta junto.
+        const guardado = await ativo.repo.getUser();
+        if (perfilRef.current) {
+          perfilRef.current = guardado;
+          setUser(guardado);
+        }
       }
+      setVersao((v) => v + 1);
     },
-    [ativo, user],
+    [ativo],
   );
 
   const apagarDados = useCallback(async () => {

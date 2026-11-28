@@ -133,7 +133,14 @@ export interface Medalha {
   meta: number;
 }
 
+const comMaiuscula = (texto: string) => texto.charAt(0).toLocaleUpperCase('pt-BR') + texto.slice(1);
+
 export function medalha(conquista: Achievement, fuso: string): Medalha {
+  const crua = montarMedalha(conquista, fuso);
+  return { ...crua, detalhe: comMaiuscula(crua.detalhe) };
+}
+
+function montarMedalha(conquista: Achievement, fuso: string): Medalha {
   const { id, progresso, meta, conquistada, conquistadaEm } = conquista;
   const secreta = !conquistada && ACHIEVEMENTS.some((c) => c.id === id && c.secreta);
   const comum = { id, progresso, meta };

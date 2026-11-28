@@ -100,8 +100,28 @@ describe('PerfilScreen', () => {
     await abrir();
     await clicar(await screen.findByRole('button', { name: 'Conectar com o Claude: Conectado' }));
     await clicar(screen.getByRole('button', { name: 'Desconectar Claude' }));
+    expect(screen.getByRole('list', { name: 'Aplicativos conectados' })).toBeTruthy();
+    await clicar(within(screen.getByRole('dialog', { name: 'Desconectar Claude?' })).getByRole('button', { name: 'Desconectar' }));
     expect(screen.queryByRole('list', { name: 'Aplicativos conectados' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Conectar com o Claude: Conectar' })).toBeTruthy();
+  });
+
+  test('apagar os dados só libera depois de digitar APAGAR', async () => {
+    const repo = await abrir();
+    const apagar = vi.spyOn(repo, 'clearAll');
+    await clicar(screen.getByRole('button', { name: 'Apagar meus dados' }));
+    const dialogo = within(screen.getByRole('dialog', { name: 'Apagar meus dados' }));
+    const botao = dialogo.getByRole('button', { name: 'Apagar tudo' });
+    expect(botao.hasAttribute('disabled')).toBe(true);
+    fireEvent.change(dialogo.getByRole('textbox'), { target: { value: 'APAGAR' } });
+    await clicar(botao);
+    expect(apagar).toHaveBeenCalledTimes(1);
+  });
+
+  test('reduzir movimento grava no perfil', async () => {
+    const repo = await abrir();
+    await clicar(screen.getByRole('switch', { name: 'Reduzir movimento' }));
+    expect((await repo.getUser())?.reduceMotion).toBe(true);
   });
 
   test('editar o nome grava na conta e muda o cabeçalho', async () => {

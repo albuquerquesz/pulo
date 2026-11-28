@@ -19,13 +19,15 @@ type PreferenciasProps = {
   tema: User['theme'];
   preferencias: Preferences;
   onTema: (tema: User['theme']) => void;
+  reduzirMovimento: boolean;
+  onReduzirMovimento: (ligado: boolean) => void;
   onMudar: (patch: PreferencesPatch) => void;
   /** O estado da conexão com o Claude; `null` enquanto não se sabe. */
   claude: string | null;
   onClaude: () => void;
 };
 
-export function Preferencias({ tema, preferencias, onTema, onMudar, claude, onClaude }: PreferenciasProps) {
+export function Preferencias({ tema, preferencias, onTema, reduzirMovimento, onReduzirMovimento, onMudar, claude, onClaude }: PreferenciasProps) {
   return (
     <Secao titulo="Preferências">
       <Linhas>
@@ -43,6 +45,9 @@ export function Preferencias({ tema, preferencias, onTema, onMudar, claude, onCl
               </button>
             ))}
           </div>
+        </Linha>
+        <Linha titulo="Reduzir movimento" detalhe="para as animações, além do que o aparelho já pede">
+          <Chave rotulo="Reduzir movimento" ligada={reduzirMovimento} onMudar={onReduzirMovimento} />
         </Linha>
         <Linha titulo="Assistente de IA" detalhe="sugere ajustes na semana">
           <Chave rotulo="Assistente de IA" ligada={preferencias.aiEnabled} onMudar={(aiEnabled) => onMudar({ aiEnabled })} />

@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 
 import type { ProfileMetrics } from '@pulo/core/domain/types';
@@ -6,16 +7,33 @@ import { Botao } from '@/ui';
 
 import { useApp, useCarregar } from '../app';
 import { carregarMetricas } from '../casca/metricas';
+import { CARTAO } from './estilos';
 import { GraficosDoDescanso, GraficosDoRitmo } from './GraficosDoRitmo';
 import { Secao } from './Secao';
-import { carregarRegistros, type RegistrosDoRitmo } from './series';
+import { carregarRegistros, semRitmo, type RegistrosDoRitmo } from './series';
 
 /** O fim do endereço que traz a pessoa direto para cá. */
 const ANCORA = 'metricas';
 
 type DadosDaSecao = { metricas: ProfileMetrics; registros: RegistrosDoRitmo };
 
+/** Sem nenhum registro, os gráficos dão lugar ao primeiro passo. */
+function SemRitmo() {
+  const navegar = useNavigate();
+  return (
+    <div className={`${CARTAO} flex flex-col items-center gap-2 p-6 text-center`}>
+      <span aria-hidden="true" className="mb-1 grid size-14 place-items-center rounded-full bg-sapo/22 text-[28px]">
+        📈
+      </span>
+      <h3 className="text-base font-extrabold">Seu ritmo começa aqui</h3>
+      <p className="text-sm text-muted">Depois do primeiro foco, os gráficos aparecem neste lugar.</p>
+      <Botao titulo="Começar um foco" largura="auto" className="mt-2 self-center" onPress={() => void navegar({ to: '/casa' })} />
+    </div>
+  );
+}
+
 function Grupos({ metricas, registros }: DadosDaSecao) {
+  if (semRitmo(registros)) return <SemRitmo />;
   return (
     <div className="flex flex-col gap-4">
       <section aria-labelledby="titulo-do-ritmo" className="flex min-w-0 flex-col gap-2">
@@ -49,7 +67,8 @@ export function Metricas() {
   // Só rola quando os números chegaram, para a seção não mudar de lugar depois.
   useEffect(() => {
     if (!pronta || window.location.hash !== `#${ANCORA}`) return;
-    const suave = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const suave =
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches && document.documentElement.dataset.reduzirMovimento !== 'true';
     alvo.current?.scrollIntoView?.({ behavior: suave ? 'smooth' : 'auto', block: 'start' });
     alvo.current?.focus({ preventScroll: true });
   }, [pronta]);

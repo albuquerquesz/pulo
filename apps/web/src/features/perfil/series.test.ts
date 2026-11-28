@@ -1,6 +1,7 @@
 import type { FocusSession, Habit, HabitLog, Task } from '@pulo/core/domain/types';
 
-import { concluidoDoIntervalo, descansoDoIntervalo, focoDoIntervalo, habitosDoIntervalo, type RegistrosDoRitmo } from './series';
+import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
+import { carregarRegistros, concluidoDoIntervalo, descansoDoIntervalo, focoDoIntervalo, habitosDoIntervalo, type RegistrosDoRitmo } from './series';
 
 const FUSO = 'America/Sao_Paulo';
 /** Hora de São Paulo (UTC-3). */
@@ -140,4 +141,11 @@ describe('descanso e concluído', () => {
     expect(hoje.joias).toBe(6);
     expect(concluidoDoIntervalo(registros, 7).joias).toBe(8);
   });
+});
+
+test('numa conta remota, os gelos usados vêm das datas do servidor', async () => {
+  const { repo, clock } = await criarContaDeExemplo();
+  // O remoto não guarda o gelo: só entrega as datas protegidas.
+  const remoto = { ...repo, listFreezeUses: undefined, getFreezeDates: async () => ['2026-11-20'] };
+  expect((await carregarRegistros(remoto, clock)).freezeUses).toEqual([{ date: '2026-11-20' }]);
 });

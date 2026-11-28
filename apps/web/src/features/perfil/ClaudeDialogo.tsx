@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { SapoRosto } from '@/mascot/sapo/SapoRosto';
 
+import { useConfirmacao } from '../app';
 import { ambienteDoApp, apiUrl } from '../sessao/config';
 import { BOTAO_DO_DIALOGO, Dialogo } from './Dialogo';
 import type { Conexoes } from './useConexoes';
@@ -44,7 +45,14 @@ function SapoComClaude() {
 
 /** Quem tem acesso à conta pelo servidor MCP, com o botão de desconectar, e o endereço para conectar. */
 export function ClaudeDialogo({ conexoes, onDesconectar, onTentarDeNovo, onFechar }: ClaudeDialogoProps) {
-  const desconectar = async (clientId: string) => {
+  const { confirmar, confirmacao } = useConfirmacao();
+  const desconectar = async (clientId: string, nome: string) => {
+    const sim = await confirmar({
+      titulo: `Desconectar ${nome}?`,
+      detalhe: 'O aplicativo perde o acesso à sua conta. Para voltar, é preciso conectar de novo.',
+      acao: 'Desconectar',
+    });
+    if (!sim) return;
     try {
       await onDesconectar(clientId);
     } catch {
@@ -52,38 +60,41 @@ export function ClaudeDialogo({ conexoes, onDesconectar, onTentarDeNovo, onFecha
     }
   };
   return (
-    <Dialogo titulo="Conectar com o Claude" onFechar={onFechar} ilustracao={<SapoComClaude />}>
-      {conexoes.tipo === 'carregando' ? <p role="status">Verificando…</p> : null}
-      {conexoes.tipo === 'erro' ? (
-        <div role="alert" className="flex flex-col items-center gap-2">
-          Não consegui ver as conexões.
-          <button type="button" onClick={onTentarDeNovo} className={`${BOTAO_DO_DIALOGO} bg-white`}>
-            Tentar de novo
-          </button>
-        </div>
-      ) : null}
-      {conexoes.tipo === 'ok' && conexoes.lista.length > 0 ? (
-        <ul aria-label="Aplicativos conectados" className="flex w-full flex-col gap-2">
-          {conexoes.lista.map((c) => (
-            <li key={c.clientId} className="flex items-center justify-between gap-3">
-              <span className="min-w-0 break-words">
-                <b>{c.name ?? 'Aplicativo sem nome'}</b>
-                <small className="block">desde {new Date(c.connectedAt).toLocaleDateString('pt-BR')}</small>
-              </span>
-              <button
-                type="button"
-                onClick={() => void desconectar(c.clientId)}
-                aria-label={`Desconectar ${c.name ?? 'aplicativo sem nome'}`}
-                className={`${BOTAO_DO_DIALOGO} shrink-0 bg-cancelar`}
-              >
-                Desconectar
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      <Endereco />
-    </Dialogo>
+    <>
+      <Dialogo titulo="Conectar com o Claude" onFechar={onFechar} ilustracao={<SapoComClaude />}>
+        {conexoes.tipo === 'carregando' ? <p role="status">Verificando…</p> : null}
+        {conexoes.tipo === 'erro' ? (
+          <div role="alert" className="flex flex-col items-center gap-2">
+            Não consegui ver as conexões.
+            <button type="button" onClick={onTentarDeNovo} className={`${BOTAO_DO_DIALOGO} bg-white`}>
+              Tentar de novo
+            </button>
+          </div>
+        ) : null}
+        {conexoes.tipo === 'ok' && conexoes.lista.length > 0 ? (
+          <ul aria-label="Aplicativos conectados" className="flex w-full flex-col gap-2">
+            {conexoes.lista.map((c) => (
+              <li key={c.clientId} className="flex items-center justify-between gap-3">
+                <span className="min-w-0 break-words">
+                  <b>{c.name ?? 'Aplicativo sem nome'}</b>
+                  <small className="block">desde {new Date(c.connectedAt).toLocaleDateString('pt-BR')}</small>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void desconectar(c.clientId, c.name ?? 'aplicativo sem nome')}
+                  aria-label={`Desconectar ${c.name ?? 'aplicativo sem nome'}`}
+                  className={`${BOTAO_DO_DIALOGO} shrink-0 bg-cancelar`}
+                >
+                  Desconectar
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        <Endereco />
+      </Dialogo>
+      {confirmacao}
+    </>
   );
 }
 

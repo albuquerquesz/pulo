@@ -74,9 +74,17 @@ export function agoraDaLagoa(user: User, now: number, diasDeCuidadoTotal: number
   return { diasDeCuidadoTotal, dentroDoDia: dentroDoDiaDoUsuario(user, now), descansoHoje };
 }
 
-export async function salvarPerfil(repo: Repository, user: User, patch: Partial<Pick<User, 'dayStartMinutes' | 'dayEndMinutes' | 'theme' | 'reduceMotion' | 'frogName'>>): Promise<User> {
+export type MudancaDePerfil = Partial<Pick<User, 'dayStartMinutes' | 'dayEndMinutes' | 'theme' | 'reduceMotion' | 'frogName'>>;
+
+/** O perfil com a mudança, mantendo o fim do dia depois do começo. */
+export function perfilCom(user: User, patch: MudancaDePerfil): User {
   const next: User = { ...user, ...patch };
   if (next.dayEndMinutes <= next.dayStartMinutes) next.dayEndMinutes = Math.min(24 * 60, next.dayStartMinutes + 60);
+  return next;
+}
+
+export async function salvarPerfil(repo: Repository, user: User, patch: MudancaDePerfil): Promise<User> {
+  const next = perfilCom(user, patch);
   await repo.saveUser(next);
   return next;
 }

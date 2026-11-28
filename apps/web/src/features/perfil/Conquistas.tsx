@@ -44,10 +44,10 @@ export function Conquistas({ medalhas }: { medalhas: readonly Medalha[] }) {
           const secreta = m.estado === 'secreta';
           const visual = VISUAL[m.id];
           return (
-            <li key={m.id} data-estado={m.estado} className={`flex items-center gap-3.5 rounded-md border border-line p-3.5 ${secreta ? 'opacity-55' : ''}`}>
+            <li key={m.id} data-estado={m.estado} className={`flex items-center gap-3.5 rounded-md border border-line p-3.5 ${secreta ? 'border-dashed' : ''}`}>
               <span
                 aria-hidden="true"
-                className={`grid size-[52px] shrink-0 place-items-center rounded-2xl text-[26px] shadow-[inset_0_-4px_0_rgba(0,0,0,0.12)] ${secreta ? 'bg-line font-extrabold text-muted' : visual.fundo}`}
+                className={`grid size-[52px] shrink-0 place-items-center rounded-2xl text-[26px] shadow-[inset_0_-4px_0_rgba(0,0,0,0.12)] ${secreta ? 'bg-line font-extrabold text-ink' : visual.fundo}`}
               >
                 {secreta ? '?' : visual.icone}
               </span>

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 
-import { DEFAULT_TIMEZONE } from '@pulo/core/config/decisions';
+import { ACCOUNT, DEFAULT_TIMEZONE } from '@pulo/core/config/decisions';
+import { dateKeyOf } from '@pulo/core/domain/day';
 import type { PreferencesPatch } from '@pulo/core/domain/user-metadata';
 
 import { Botao, Gaveta } from '@/ui';
 
-import { Tela, useApp, useCarregar } from '../app';
-import { temPreferencias } from '../app/conta';
+import { Tela, useApp, useCarregar, useConfirmacao } from '../app';
+import { temConta, temPreferencias } from '../app/conta';
 import { contaNaTela } from '../casca/logic';
 import { Cabecalho } from './Cabecalho';
 import { ClaudeDialogo } from './ClaudeDialogo';
@@ -15,6 +16,7 @@ import { Conta } from './Conta';
 import { EditarPerfil } from './EditarPerfil';
 import { Estatisticas } from './Estatisticas';
 import { ExcluirConta } from './ExcluirConta';
+import { baixarDados } from './baixarDados';
 import { carregarPerfil, desdeQuando, medalha } from './logic';
 import { Metricas } from './Metricas';
 import { Preferencias } from './Preferencias';
@@ -36,12 +38,32 @@ export function PerfilScreen() {
   const { estado, recarregar } = useCarregar(() => carregarPerfil(repo, clock));
   const { conexoes, desconectar, tentarDeNovo } = useConexoes();
   const [dialogo, setDialogo] = useState<DialogoAberto>(null);
+  const { confirmar, confirmacao } = useConfirmacao();
   if (!user) return null;
 
   const fuso = user.timezone || DEFAULT_TIMEZONE;
   const conta = contaNaTela(app.pessoa);
   const dados = estado.tipo === 'ok' ? estado.dados : null;
   const fechar = () => setDialogo(null);
+
+  const baixar = async () => {
+    if (!temConta(repo)) return;
+    try {
+      baixarDados(await repo.exportData(), dateKeyOf(clock.now(), fuso));
+    } catch {
+      // O repositório já avisou.
+    }
+  };
+
+  const apagar = async () => {
+    const sim = await confirmar({
+      titulo: 'Apagar meus dados',
+      detalhe: 'Isso apaga hábitos, tarefas, metas, focos, joias e a casa do sapo. A conta continua. Não dá para desfazer.',
+      acao: 'Apagar tudo',
+      palavra: ACCOUNT.wipeConfirmation,
+    });
+    if (sim) await app.apagarDados();
+  };
 
   const mudar = async (patch: PreferencesPatch) => {
     if (!temPreferencias(repo)) return;
@@ -97,6 +119,8 @@ export function PerfilScreen() {
                 preferencias={dados.preferencias}
                 onTema={(theme) => void atualizarPerfil({ theme })}
                 onMudar={(patch) => void mudar(patch)}
+                reduzirMovimento={user.reduceMotion}
+                onReduzirMovimento={(reduceMotion) => void atualizarPerfil({ reduceMotion })}
                 claude={estadoDoClaude(conexoes)}
                 onClaude={() => setDialogo('claude')}
               />
@@ -106,6 +130,8 @@ export function PerfilScreen() {
           <Conta
             onSair={() => void app.sair()}
             onExcluir={() => setDialogo('excluir')}
+            onBaixar={temConta(repo) ? () => void baixar() : undefined}
+            onApagar={() => void apagar()}
           />
         </div>
       </div>
@@ -117,6 +143,7 @@ export function PerfilScreen() {
       {dialogo === 'excluir' ? (
         <ExcluirConta onExcluir={app.excluirConta} onFechar={fechar} />
       ) : null}
+      {confirmacao}
     </Tela>
   );
 }
