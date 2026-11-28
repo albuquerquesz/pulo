@@ -2,15 +2,13 @@ import type { ComponentType } from 'react';
 
 import {
   CorpoDasTravas,
-  CorpoDoDia,
-  CorpoDoLembrete,
   CorpoDoNome,
-  CorpoDoNomeDoSapo,
-  CorpoDoResumo,
+  CorpoDaIdade,
+  CorpoDoMomento,
   CorpoDosHabitos,
   type CorpoProps,
 } from './corpos';
-import { comoChamar, contarFolhas, PERIODOS, type RespostasDoOnboarding } from './logic';
+import { comentarioDaIdade, comoChamar, contarFolhas, MOMENTOS, TRAVAS, type RespostasDoOnboarding } from './logic';
 
 export interface FalaDoSapo {
   titulo: string;
@@ -35,18 +33,25 @@ export interface Passo {
 export const PASSOS: readonly Passo[] = [
   {
     id: 'nome',
-    fala: () => ({ titulo: 'Oi, eu sou o sapo da sua lagoa!', detalhe: 'E você, como se chama?' }),
+    fala: () => ({ titulo: 'Oi! Como você se chama?' }),
     Corpo: CorpoDoNome,
-    pronto: () => true,
+    pronto: (r) => r.nome.trim() !== '' && r.sobrenome.trim() !== '',
     podePular: false,
   },
   {
-    id: 'dia',
-    fala: (r) => ({ titulo: `Prazer, ${comoChamar(r)}! Me conta do seu dia.`, detalhe: 'Fora desse horário eu fico quietinho.' }),
-    Corpo: CorpoDoDia,
-    pronto: (r) => r.periodo !== null,
+    id: 'idade',
+    fala: (r) => ({ titulo: r.idade === null ? `Prazer, ${comoChamar(r)}! Quantos anos você tem?` : comentarioDaIdade(r.idade), detalhe: r.idade === null ? 'Arrasta a folhinha ou usa o + e o −.' : undefined }),
+    Corpo: CorpoDaIdade,
+    pronto: (r) => r.idade !== null,
     podePular: false,
-    comentario: (r) => PERIODOS.find((p) => p.id === r.periodo)?.comentario ?? null,
+  },
+  {
+    id: 'momento',
+    fala: () => ({ titulo: 'Como anda a sua vida hoje?' }),
+    Corpo: CorpoDoMomento,
+    pronto: (r) => r.momento !== null,
+    podePular: false,
+    comentario: (r) => MOMENTOS.find((m) => m.id === r.momento)?.comentario ?? null,
   },
   {
     id: 'travas',
@@ -54,17 +59,8 @@ export const PASSOS: readonly Passo[] = [
     Corpo: CorpoDasTravas,
     pronto: (r) => r.travas.length > 0,
     podePular: true,
-    comentario: (r) => {
-      if (r.travas.length === 0) return null;
-      return r.travas.includes('comecar') ? 'Então vou sugerir focos curtinhos para destravar.' : 'Beleza, vou ficar de olho nisso com você.';
-    },
-  },
-  {
-    id: 'lembrete',
-    fala: () => ({ titulo: 'Como você prefere que eu te chame para focar?' }),
-    Corpo: CorpoDoLembrete,
-    pronto: (r) => r.tom !== null && r.focoMinutos !== null,
-    podePular: true,
+    // Comenta a última marcada; desmarcar volta ao comentário da anterior.
+    comentario: (r) => TRAVAS.find((t) => t.id === r.travas.at(-1))?.comentario ?? null,
   },
   {
     id: 'habitos',
@@ -73,24 +69,6 @@ export const PASSOS: readonly Passo[] = [
     pronto: (r) => r.habitos.length > 0,
     podePular: true,
     comentario: (r) => (r.habitos.length > 0 ? `${contarFolhas(r.habitos.length)} na lagoa!` : null),
-  },
-  {
-    id: 'sapo',
-    fala: () => ({ titulo: 'Agora que a gente se conhece: como você quer me chamar?', detalhe: 'Pode trocar depois no Perfil.' }),
-    Corpo: CorpoDoNomeDoSapo,
-    pronto: () => true,
-    podePular: true,
-    comentario: (r) => (r.nomeDoSapo ? `${r.nomeDoSapo}? Adorei!` : null),
-  },
-  {
-    id: 'aprender',
-    fala: () => ({
-      titulo: 'Última coisa: posso aprender com o seu jeito?',
-      detalhe: 'Uso só o que você me contou e como os seus focos vão indo, para ajustar as sugestões.',
-    }),
-    Corpo: CorpoDoResumo,
-    pronto: () => true,
-    podePular: false,
     botao: 'Pular na lagoa',
   },
 ];

@@ -1128,7 +1128,7 @@ body {
   color-scheme: light;
 }
 .onboarding :focus-visible {
-  outline: 3px solid var(--pulo-joia-escura);
+  outline: 3px solid var(--pulo-sapo-borda);
   outline-offset: 2px;
 }
 .onboarding [tabindex='-1']:focus-visible {
@@ -1215,14 +1215,6 @@ body {
 .onboarding-sapo[data-pulando='true'] {
   animation: onboarding-pulo 0.55s cubic-bezier(0.3, 0.7, 0.4, 1);
 }
-.onboarding-final {
-  animation: onboarding-surge 0.4s;
-}
-/* A posição parada é a última folha: vale quando o movimento está reduzido. */
-.onboarding-atravessa {
-  transform: translate(160px, 0);
-  animation: onboarding-atravessa 1.8s 0.3s cubic-bezier(0.4, 0, 0.3, 1) both;
-}
 @keyframes onboarding-avanca {
   from {
     opacity: 0;
@@ -1250,24 +1242,6 @@ body {
   }
   80% {
     transform: scale(1.05, 0.95);
-  }
-}
-@keyframes onboarding-atravessa {
-  0% {
-    transform: translate(0, 0);
-  }
-  25% {
-    transform: translate(40px, -40px);
-  }
-  40% {
-    transform: translate(80px, 0) scale(1.08, 0.9);
-  }
-  65% {
-    transform: translate(120px, -40px);
-  }
-  80%,
-  100% {
-    transform: translate(160px, 0);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1487,5 +1461,94 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .sapo-pulando * {
     animation: none !important;
+  }
+}
+
+/* Rolagem do onboarding: trilho bege e alça verde de pílula, no lugar da barra do navegador. */
+.onboarding-rolagem {
+  padding-right: 14px;
+}
+.onboarding-rolagem::-webkit-scrollbar {
+  width: 12px;
+}
+.onboarding-rolagem::-webkit-scrollbar-track {
+  margin-block: 6px;
+  border-radius: 99px;
+  background: var(--pulo-bege-borda);
+}
+.onboarding-rolagem::-webkit-scrollbar-thumb {
+  border: 2.5px solid var(--l-contorno, #3b2a2f);
+  border-radius: 99px;
+  background: #79c94a;
+}
+.onboarding-rolagem::-webkit-scrollbar-thumb:hover {
+  background: var(--pulo-sapo-borda);
+}
+.onboarding-rolagem::-webkit-scrollbar-button {
+  display: none;
+}
+/* Firefox não tem os pseudo-elementos acima. */
+@supports not selector(::-webkit-scrollbar) {
+  .onboarding-rolagem {
+    scrollbar-width: thin;
+    scrollbar-color: #79c94a var(--pulo-bege-borda);
+  }
+}
+
+/* Marcar uma opção: a caixinha dá um pulinho, sem mexer no tamanho de nada em volta. */
+.onboarding [aria-pressed='true'] .onboarding-marca {
+  animation: onboarding-marca 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes onboarding-marca {
+  0% {
+    scale: 0.6;
+  }
+  100% {
+    scale: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .onboarding [aria-pressed='true'] .onboarding-marca {
+    animation: none;
+  }
+}
+:root[data-reduzir-movimento='true'] .onboarding [aria-pressed='true'] .onboarding-marca {
+  animation: none;
+}
+
+/* Idade no onboarding: a faixa é o trilho, e a bolinha é uma folhinha com contorno. */
+.onboarding-faixa {
+  appearance: none;
+  height: 14px;
+  border: 3px solid var(--l-contorno, #3b2a2f);
+  border-radius: 99px;
+  cursor: pointer;
+}
+.onboarding-faixa::-webkit-slider-thumb {
+  appearance: none;
+  width: 34px;
+  height: 34px;
+  border: 3px solid var(--l-contorno, #3b2a2f);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: inset 0 -4px 0 var(--pulo-sombra-branca);
+  transition: scale 0.15s;
+}
+.onboarding-faixa:active::-webkit-slider-thumb {
+  scale: 1.15;
+}
+.onboarding-faixa::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--l-contorno, #3b2a2f);
+  border-radius: 50%;
+  background: #fff;
+}
+.onboarding-idade {
+  animation: onboarding-marca 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-idade {
+    animation: none;
   }
 }

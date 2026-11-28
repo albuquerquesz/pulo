@@ -15,7 +15,7 @@ export function Trilha({ ids, atual }: TrilhaProps) {
         />
       ))}
       {/* A folha tem 24 px: o sapinho (32 px) anda no mesmo intervalo, 4 px antes dela. */}
-      <span aria-hidden="true" className="onboarding-sapinho pointer-events-none absolute -top-[9px] w-8" style={{ left: `calc((100% - 24px) * ${fracao} - 4px)` }}>
+      <span aria-hidden="true" className="onboarding-sapinho pointer-events-none absolute -top-[15px] w-8" style={{ left: `calc((100% - 24px) * ${fracao} - 4px)` }}>
         <SapoRosto className="block w-full" />
       </span>
     </div>
