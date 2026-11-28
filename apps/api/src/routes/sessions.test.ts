@@ -37,25 +37,26 @@ describe('/api/sessions', () => {
   it('ciclo completo: inicia, pausa, retoma e conclui, e o sapo ganha um dia de cuidado', async () => {
     const me = await h.newUser();
     const id = uuid();
-    const start = await put(me, running(id));
+    const started = { startedAt: TEST_NOW - 27 * MIN };
+    const start = await put(me, running(id, started));
     expect(start.status).toBe(200);
-    expect(await start.json()).toEqual({ session: running(id), mascot: null, newAchievements: [] });
+    expect(await start.json()).toEqual({ session: running(id, started), mascot: null, newAchievements: [] });
 
     // Repetir é idempotente; pausar e retomar atualizam a mesma sessão.
-    await put(me, running(id));
-    const paused = await put(me, running(id, { pausedSince: TEST_NOW - 10 * MIN }));
+    await put(me, running(id, started));
+    const paused = await put(me, running(id, { ...started, pausedSince: TEST_NOW - 10 * MIN }));
     expect((await paused.json()).session.pausedSince).toBe(TEST_NOW - 10 * MIN);
-    await put(me, running(id, { pausedMs: 2 * MIN }));
+    await put(me, running(id, { ...started, pausedMs: 2 * MIN }));
 
-    const end = await put(me, finished(id, { pausedMs: 2 * MIN }));
+    const end = await put(me, finished(id, { ...started, pausedMs: 2 * MIN }));
     expect(end.status).toBe(200);
     expect(await end.json()).toEqual({
-      session: finished(id, { pausedMs: 2 * MIN }),
+      session: finished(id, { ...started, pausedMs: 2 * MIN }),
       mascot: { phase: 1, careDays: 1, updatedAt: TEST_NOW },
       newAchievements: [expect.objectContaining({ id: 'primeiro-foco' })],
     });
     expect((await (await me.call('GET', '/api/mascot')).json()).mascot).toMatchObject({ careDays: 1 });
-    expect(await listOf(me)).toEqual([finished(id, { pausedMs: 2 * MIN })]);
+    expect(await listOf(me)).toEqual([finished(id, { ...started, pausedMs: 2 * MIN })]);
   });
 
   it('interrompida cedo demais não conta como cuidado; a fase não regride', async () => {
@@ -88,7 +89,7 @@ describe('/api/sessions', () => {
     expect(await listOf(me)).toHaveLength(1);
 
     // Encerrada a primeira, outra pode começar.
-    await put(me, finished(first));
+    await put(me, finished(first, { state: 'interrompida', endedAt: TEST_NOW - 2 * MIN }));
     expect((await put(me, running(uuid(), { startedAt: TEST_NOW - MIN }))).status).toBe(200);
     // E cada pessoa tem a sua.
     const other = await h.newUser();
@@ -150,7 +151,8 @@ describe('/api/sessions', () => {
     }
     for (const plannedMinutes of [FOCUS.minMinutes, FOCUS.maxMinutes]) {
       const sid = uuid();
-      const body = finished(sid, { plannedMinutes, startedAt: TEST_NOW - 60 * MIN });
+      const startedAt = TEST_NOW - (plannedMinutes === FOCUS.minMinutes ? 120 : 60) * MIN;
+      const body = finished(sid, { plannedMinutes, startedAt, endedAt: startedAt + plannedMinutes * MIN });
       expect((await put(me, body)).status).toBe(200);
     }
     const future = await put(me, running(uuid(), { startedAt: TEST_NOW + 60 * MIN }));
@@ -182,15 +184,15 @@ describe('/api/sessions', () => {
     const weekId = uuid();
     const activeId = uuid();
     const day = (n: number) => TEST_NOW - n * 24 * 60 * MIN;
-    await put(me, finished(oldId, { startedAt: day(30) - 25 * MIN, endedAt: day(30) }));
+    await put(me, finished(oldId, { startedAt: day(6) - 25 * MIN, endedAt: day(6) }));
     await put(me, finished(weekId, { startedAt: day(1) - 25 * MIN, endedAt: day(1) }));
     await put(me, running(activeId));
 
     const ids = async (query: string) => (await listOf(me, query)).map((s: { id: string }) => s.id);
     expect(await ids('')).toEqual([oldId, weekId, activeId]);
-    // 2026-11-17 (ontem) e a sessão ativa; a de 30 dias atrás fica de fora.
+    // 2026-11-17 (ontem) e a sessão ativa; a de 6 dias atrás fica de fora.
     expect(await ids('?from=2026-11-16&to=2026-11-17')).toEqual([weekId, activeId]);
-    expect(await ids('?from=2026-10-01&to=2026-10-31')).toEqual([oldId, activeId]);
+    expect(await ids('?from=2026-11-11&to=2026-11-13')).toEqual([oldId, activeId]);
     expect((await me.call('GET', '/api/sessions?from=nao&to=nao')).status).toBe(400);
   });
 
@@ -236,10 +238,40 @@ describe('/api/sessions', () => {
     expect(start).toBe(4);
 
     // Grava o que o histórico já destrava, para a contagem abaixo não incluir o INSERT de uma conquista.
-    await put(big, finished(uuid(), { startedAt: TEST_NOW - 2 * 24 * 60 * MIN, endedAt: TEST_NOW - 2 * 24 * 60 * MIN + 25 * MIN }));
+    await put(big, finished(uuid(), { startedAt: TEST_NOW - 2 * 24 * 60 * MIN + 60 * MIN, endedAt: TEST_NOW - 2 * 24 * 60 * MIN + 85 * MIN }));
     const finish = await queriesOf(database, small, 'PUT', `/api/sessions/${startId.small}`, finished(startId.small));
     expect(await queriesOf(database, big, 'PUT', `/api/sessions/${startId.big}`, finished(startId.big))).toBe(finish);
     // 2 de sessão + leitura + upsert + (sessões, descansos, sapo, upsert do sapo) + 11 leituras das conquistas.
     expect(finish).toBe(22);
+  });
+
+  it('recusa foco forjado: incompleto, antigo, cruzado ou com pausa sem fim', async () => {
+    const me = await h.newUser();
+    const recusa = async (body: { id: string }) => {
+      const res = await put(me, body);
+      return [res.status, (await res.json()).error];
+    };
+    expect(await recusa(finished(uuid(), { endedAt: TEST_NOW - 25 * MIN }))).toEqual([409, 'foco_incompleto']);
+    expect(await recusa(finished(uuid(), { pausedMs: MIN }))).toEqual([409, 'foco_incompleto']);
+    const antigo = TEST_NOW - (FOCUS.inicioMaxDiasAtras + 1) * 24 * 60 * MIN;
+    expect(await recusa(finished(uuid(), { startedAt: antigo, endedAt: antigo + 25 * MIN }))).toEqual([409, 'foco_antigo_demais']);
+    const pausedMs = FOCUS.pausaMaxHoras * 60 * MIN + 1;
+    expect(await recusa(running(uuid(), { startedAt: TEST_NOW - pausedMs - MIN, pausedMs }))).toEqual([400, 'corpo_invalido']);
+
+    expect((await put(me, finished(uuid()))).status).toBe(200);
+    expect(await recusa(finished(uuid()))).toEqual([409, 'foco_sobreposto']);
+    expect(await recusa(running(uuid(), { startedAt: TEST_NOW - 10 * MIN }))).toEqual([409, 'foco_sobreposto']);
+    // Encostar pode, e outra pessoa não conta.
+    const antes = finished(uuid(), { startedAt: TEST_NOW - 50 * MIN, endedAt: TEST_NOW - 25 * MIN });
+    expect((await put(me, antes)).status).toBe(200);
+    expect((await put(await h.newUser(), finished(uuid()))).status).toBe(200);
+    expect(await listOf(me)).toHaveLength(2);
+  });
+
+  it('duas sessões cruzadas ao mesmo tempo gravam uma só', async () => {
+    const me = await h.newUser();
+    const status = (await Promise.all([put(me, finished(uuid())), put(me, finished(uuid()))])).map((r) => r.status);
+    expect(status.sort()).toEqual([200, 409]);
+    expect(await listOf(me)).toHaveLength(1);
   });
 });

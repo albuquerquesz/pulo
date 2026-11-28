@@ -26,6 +26,9 @@ const running = (id: string, extra: Record<string, unknown> = {}) => ({
 const finished = (id: string, extra: Record<string, unknown> = {}) =>
   running(id, { state: 'concluida', endedAt: TEST_NOW, ...extra });
 const put = (user: TestUser, body: { id: string }) => user.call('PUT', `/api/sessions/${body.id}`, body);
+/** O foco concluído de `horas` atrás, para vários não se cruzarem. */
+const antes = (id: string, horas: number, extra: Record<string, unknown> = {}) =>
+  finished(id, { startedAt: TEST_NOW - horas * 60 * MIN - 25 * MIN, endedAt: TEST_NOW - horas * 60 * MIN, ...extra });
 const sessionOf = async (response: Response) => (await response.json()).session;
 
 async function targets(userId: string) {
@@ -44,11 +47,11 @@ async function targets(userId: string) {
 describe('/api/sessions: intenção e vínculo', () => {
   it('grava e devolve a intenção aparada e o vínculo, um de cada tipo', async () => {
     const me = await h.newUser();
-    for (const [key, id] of Object.entries(await targets(me.id))) {
+    for (const [horas, [key, id]] of Object.entries(await targets(me.id)).entries()) {
       const sid = uuid();
-      const response = await put(me, finished(sid, { intention: '  Capítulo 2 ', [key]: id }));
+      const response = await put(me, antes(sid, horas, { intention: '  Capítulo 2 ', [key]: id }));
       expect(response.status).toBe(200);
-      expect(await sessionOf(response)).toEqual(finished(sid, { intention: 'Capítulo 2', [key]: id }));
+      expect(await sessionOf(response)).toEqual(antes(sid, horas, { intention: 'Capítulo 2', [key]: id }));
     }
   });
 
@@ -105,8 +108,8 @@ describe('/api/sessions: intenção e vínculo', () => {
     const me = await h.newUser();
     const { habitId, goalId, taskId } = await targets(me.id);
     const [a, b, c] = [uuid(), uuid(), uuid()];
-    await put(me, finished(a, { goalId }));
-    await put(me, finished(b, { taskId }));
+    await put(me, antes(a, 2, { goalId }));
+    await put(me, antes(b, 1, { taskId }));
     await put(me, running(c, { habitId }));
     for (const path of [`/api/habits/${habitId}`, `/api/goals/${goalId}`, `/api/tasks/${taskId}`]) {
       expect((await me.call('DELETE', path)).status).toBe(200);
@@ -117,7 +120,7 @@ describe('/api/sessions: intenção e vínculo', () => {
       expect(session.goalId ?? session.taskId ?? session.habitId).toBeUndefined();
     }
     // Retry do corpo antigo de uma encerrada e encerramento da aberta com o vínculo que sumiu.
-    expect((await put(me, finished(a, { goalId }))).status).toBe(200);
+    expect((await put(me, antes(a, 2, { goalId }))).status).toBe(200);
     const end = await put(me, finished(c, { habitId }));
     expect(end.status).toBe(200);
     expect(await sessionOf(end)).toEqual(finished(c));
@@ -126,10 +129,13 @@ describe('/api/sessions: intenção e vínculo', () => {
   it('pomodoros: sessões concluídas da tarefa, de todo o histórico, nas tarefas e no sync', async () => {
     const me = await h.newUser();
     const { taskId } = await targets(me.id);
+    // O antigo entra direto no banco: pela API só os focos recentes.
     const old = TEST_NOW - 500 * 24 * 60 * MIN;
-    await put(me, finished(uuid(), { taskId, startedAt: old - 25 * MIN, endedAt: old }));
+    await database.db.focusSession.create({
+      data: { userId: me.id, taskId, plannedMinutes: 25, state: 'concluida', startedAt: new Date(old - 25 * MIN), endedAt: new Date(old) },
+    });
     await put(me, finished(uuid(), { taskId }));
-    await put(me, finished(uuid(), { taskId, state: 'interrompida' }));
+    await put(me, antes(uuid(), 1, { taskId, state: 'interrompida' }));
     const tasks = await (await me.call('GET', '/api/tasks')).json();
     expect(tasks.pomodoros).toEqual({ [taskId]: 2 });
     const sync = await (await me.call('GET', '/api/sync?from=2026-11-01&to=2026-11-30')).json();
