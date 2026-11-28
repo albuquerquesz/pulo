@@ -32,6 +32,7 @@ export { Nuvens } from './Nuvens';
 export { Avatar } from './Avatar';
 export type { AvatarProps } from './Avatar';
 export { Chave } from './Chave';
+export { Copyright } from './Copyright';
 export type { ChaveProps } from './Chave';
 export { Modal } from './Modal';
 export type { ModalProps } from './Modal';

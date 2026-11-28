@@ -1,5 +1,5 @@
 import { SapoRosto } from "@/mascot";
-import { TelaDeEstado } from "@/ui";
+import { Copyright, TelaDeEstado } from "@/ui";
 
 import { Tela, useApp } from "../app";
 import { BosqueDeFundo } from "./BosqueDeFundo";
@@ -49,9 +49,9 @@ export function WelcomeScreen() {
       <main className="relative z-1 grid min-h-dvh place-items-center px-4 pt-28 pb-24">
         <section
           aria-labelledby="titulo-da-entrada"
-          className="relative flex min-h-[290px] w-full max-w-[480px] flex-col justify-center rounded-[28px] border-4 border-(--b-contorno) bg-(--b-folha) px-[22px] pt-[60px] pb-[26px] text-center text-(--b-tinta) shadow-[0_6px_0_rgba(59,42,47,0.2),0_14px_28px_rgba(59,42,47,0.12)] md:min-h-[320px] md:px-11 md:pt-[72px] md:pb-11"
+          className="relative flex min-h-[325px] w-full max-w-[480px] flex-col rounded-[28px] border-4 border-(--b-contorno) bg-(--b-folha) px-[22px] pt-[44px] pb-4 text-center text-(--b-tinta) shadow-[0_6px_0_rgba(59,42,47,0.2),0_14px_28px_rgba(59,42,47,0.12)] md:min-h-[370px] md:px-11 md:pt-[54px] md:pb-5"
         >
-          <SapoRosto momento="boas-vindas" className="absolute -top-[78px] left-1/2 w-40 -translate-x-1/2 md:-top-[92px] md:w-[190px]" />
+          <SapoRosto momento="boas-vindas" className="absolute -top-[68px] left-1/2 w-36 -translate-x-1/2 md:-top-[76px] md:w-[160px]" />
           <h1 id="titulo-da-entrada" className="text-[26px] leading-[1.1] font-black md:text-[34px]">
             Boas-vindas ao Pulo
           </h1>
@@ -64,7 +64,7 @@ export function WelcomeScreen() {
             disabled={!loginDisponivel || entrando}
             aria-busy={entrando}
             data-testid="entrar-google"
-            className="mt-[30px] flex min-h-[58px] w-full cursor-pointer items-center justify-center gap-3 rounded-[18px] border-4 border-(--b-contorno) bg-white text-[17px] font-black text-(--b-tinta) shadow-[inset_0_-5px_0_var(--b-linha)] enabled:active:translate-y-[3px] enabled:active:shadow-[inset_0_-2px_0_var(--b-linha)] disabled:cursor-not-allowed disabled:opacity-55"
+            className="mt-12 flex min-h-[58px] md:mt-16 w-full cursor-pointer items-center justify-center gap-3 rounded-[18px] border-4 border-(--b-contorno) bg-white text-[17px] font-black text-(--b-tinta) shadow-[inset_0_-5px_0_var(--b-linha)] enabled:active:translate-y-[3px] enabled:active:shadow-[inset_0_-2px_0_var(--b-linha)] disabled:cursor-not-allowed disabled:opacity-55"
           >
             {entrando ? (
               <span aria-hidden="true" className="size-5 animate-spin rounded-full border-[3px] border-current border-t-transparent" />
@@ -78,7 +78,7 @@ export function WelcomeScreen() {
               {erroDeLogin}
             </p>
           ) : null}
-          {!loginDisponivel ? <p className="mt-3 text-sm text-(--b-apagado)">O login ainda não está configurado neste app.</p> : null}
+          <Copyright />
         </section>
       </main>
     </div>
