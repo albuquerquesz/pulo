@@ -7,10 +7,11 @@ import type { Db } from '@pulo/db';
 import { verifyBearerToken } from 'better-auth/oauth2';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { z } from 'zod';
 import type { Auth } from '../auth';
 import type { SessionUser } from '../http';
-import { AUTH_BASE_PATH, MCP_PATH, MCP_SCOPES, type McpConfig } from '../mcp-config';
-import { registrarFerramentas } from './ferramentas';
+import { AUTH_BASE_PATH, ESCOPOS_DO_PULO, MCP_PATH, MCP_SCOPES, type McpConfig } from '../mcp-config';
+import { escopoDaFerramenta, registrarFerramentas } from './ferramentas';
 import { clienteInterno, repositorioInterno } from './repositorio';
 
 export interface McpDeps {
@@ -44,8 +45,34 @@ export async function lerPessoa(db: Db, id: string): Promise<SessionUser | null>
   );
 }
 
-/** Lê o `sub` de um access token do nosso servidor OAuth, com `aud` = o recurso `/mcp`. */
-async function pessoaDoToken(deps: McpDeps, autorizacao: string | undefined): Promise<string | 'sem_token' | 'token_invalido'> {
+/** 403 da RFC 6750: o token vale, mas sem o escopo; o cliente MCP pede o consentimento de novo. */
+function semEscopo(config: McpConfig): Response {
+  const partes = [`resource_metadata="${config.resourceMetadataUrl}"`, 'error="insufficient_scope"', `scope="${ESCOPOS_DO_PULO.join(' ')}"`];
+  return Response.json(
+    { jsonrpc: '2.0', error: { code: -32001, message: 'Conecte o Pulo de novo e libere o acesso aos seus dados.' }, id: null },
+    { status: 403, headers: { 'WWW-Authenticate': `Bearer ${partes.join(', ')}` } },
+  );
+}
+
+const chamadaDeFerramenta = z.object({ method: z.literal('tools/call'), params: z.object({ name: z.string() }) });
+
+/** Se o token cobre o pedido: algum escopo do Pulo sempre, e o de cada ferramenta chamada (o corpo pode ser um lote). */
+function cobre(escopos: readonly string[], corpo: unknown): boolean {
+  if (!ESCOPOS_DO_PULO.some((escopo) => escopos.includes(escopo))) return false;
+  const mensagens: unknown[] = Array.isArray(corpo) ? corpo : [corpo];
+  return mensagens.every((mensagem) => {
+    const chamada = chamadaDeFerramenta.safeParse(mensagem);
+    return !chamada.success || escopos.includes(escopoDaFerramenta(chamada.data.params.name));
+  });
+}
+
+interface Acesso {
+  userId: string;
+  escopos: string[];
+}
+
+/** Lê o `sub` e os escopos de um access token do nosso servidor OAuth, com `aud` = o recurso `/mcp`. */
+async function acessoDoToken(deps: McpDeps, autorizacao: string | undefined): Promise<Acesso | 'sem_token' | 'token_invalido'> {
   const token = autorizacao?.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) return 'sem_token';
   try {
@@ -58,7 +85,8 @@ async function pessoaDoToken(deps: McpDeps, autorizacao: string | undefined): Pr
     // O consentimento é o que dá acesso: some quando a pessoa desconecta o aplicativo ou exclui a conta,
     // e o token (JWT, ainda dentro do prazo) para de valer na hora.
     const consentimentos = await deps.db.oauthConsent.count({ where: { userId: payload.sub, clientId: payload.azp } });
-    return consentimentos > 0 ? payload.sub : 'token_invalido';
+    if (consentimentos === 0) return 'token_invalido';
+    return { userId: payload.sub, escopos: typeof payload.scope === 'string' ? payload.scope.split(' ') : [] };
   } catch {
     return 'token_invalido';
   }
@@ -94,9 +122,13 @@ export function mcpRoutes(deps: McpDeps): Hono {
       .get(`/.well-known/openid-configuration${AUTH_BASE_PATH}`, (c) => openId(c.req.raw))
       .get(`${AUTH_BASE_PATH}/.well-known/openid-configuration`, (c) => openId(c.req.raw))
       .post(MCP_PATH, async (c) => {
-        const userId = await pessoaDoToken(deps, c.req.header('authorization'));
-        if (userId === 'sem_token') return naoAutorizado(config);
-        if (userId === 'token_invalido') return naoAutorizado(config, 'invalid_token');
+        const acesso = await acessoDoToken(deps, c.req.header('authorization'));
+        if (acesso === 'sem_token') return naoAutorizado(config);
+        if (acesso === 'token_invalido') return naoAutorizado(config, 'invalid_token');
+        // JSON quebrado segue para o transporte, que responde o erro do protocolo.
+        const corpo: unknown = await c.req.raw.clone().json().catch(() => null);
+        if (!cobre(acesso.escopos, corpo)) return semEscopo(config);
+        const { userId } = acesso;
 
         const api = clienteInterno((request) => deps.chamarComo(userId, request));
         // O Workers não permite gerar código em tempo de execução (o Ajv padrão do SDK faz isso): validador do cfworker.

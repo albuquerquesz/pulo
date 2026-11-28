@@ -20,7 +20,7 @@ const REDIRECT = 'http://localhost:6274/oauth/callback';
 const base64url = (bytes: Buffer) => bytes.toString('base64url');
 
 /** O fluxo que um cliente MCP faz: registro dinâmico, authorize com PKCE, consentimento e troca do código pelo token. */
-async function tokenDe(me: TestUser): Promise<string> {
+async function tokenDe(me: TestUser, scope = 'openid profile email offline_access pulo:read pulo:write'): Promise<string> {
   const registro = await h.app.request('/api/auth/oauth2/register', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -41,7 +41,7 @@ async function tokenDe(me: TestUser): Promise<string> {
     response_type: 'code',
     client_id: clientId,
     redirect_uri: REDIRECT,
-    scope: 'openid profile email offline_access',
+    scope,
     state: 'estado',
     code_challenge: challenge,
     code_challenge_method: 'S256',
@@ -93,6 +93,27 @@ async function ferramenta(token: string, name: string, args: Record<string, unkn
 }
 
 describe('servidor MCP', () => {
+  it('só com pulo:read as leituras funcionam e as escritas pedem o escopo', async () => {
+    const me = await h.newUser();
+    const token = await tokenDe(me, 'openid pulo:read');
+    expect((await rpc(token, 'tools/call', { name: 'ver_perfil', arguments: {} })).status).toBe(200);
+    const escrita = await rpc(token, 'tools/call', { name: 'concluir_onboarding', arguments: {} });
+    expect(escrita.status).toBe(403);
+    expect(escrita.headers.get('www-authenticate')).toContain('error="insufficient_scope"');
+  });
+
+  it('só com a identidade, sem escopo do Pulo, o /mcp responde 403', async () => {
+    const me = await h.newUser();
+    expect((await rpc(await tokenDe(me, 'openid profile'), 'tools/list')).status).toBe(403);
+  });
+
+  it('toda ferramenta de leitura se chama ver_*, e só elas', async () => {
+    const me = await h.newUser();
+    const { result } = await (await rpc(await tokenDe(me), 'tools/list')).json();
+    const tools: { name: string; annotations: { readOnlyHint: boolean } }[] = result.tools;
+    for (const tool of tools) expect(tool.annotations.readOnlyHint, tool.name).toBe(tool.name.startsWith('ver_'));
+  });
+
   it('desconectar no Perfil corta o acesso na hora, mesmo com o token ainda no prazo', async () => {
     const me = await h.newUser();
     const token = await tokenDe(me);

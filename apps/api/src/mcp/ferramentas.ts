@@ -40,6 +40,7 @@ import { TASK_COLUMNS, columnTasks, criarTarefa, matchesDueFilter, moverTarefa, 
 import type { Clock, DateKey, Goal, Habit, Repository, RoutineBlock, Task, TaskSubtask, User, Weekday } from '@pulo/core/domain/types';
 import { type ProposalDecisionBody, generateProposalResponseSchema, habitStateSchema, periodSchema } from '@pulo/core/api/schemas';
 import { z } from 'zod';
+import { ESCOPO_DE_ESCRITA, ESCOPO_DE_LEITURA } from '../mcp-config';
 import { ErroDaApi, type ClienteInterno, lerJson } from './repositorio';
 
 /** O que cada ferramenta recebe: a pessoa do token já resolvida em repositório e cliente da API. */
@@ -206,6 +207,9 @@ const DECISOES_SIMPLES = {
   negar: { action: 'negar' },
   desfazer: { action: 'desfazer' },
 } as const satisfies Record<string, ProposalDecisionBody>;
+
+/** Toda ferramenta de leitura se chama `ver_*` (o teste confere): é por aí que o `/mcp` sabe o escopo de cada chamada. */
+export const escopoDaFerramenta = (nome: string) => (nome.startsWith('ver_') ? ESCOPO_DE_LEITURA : ESCOPO_DE_ESCRITA);
 
 const LEITURA = { readOnlyHint: true, openWorldHint: false } as const;
 const ESCRITA = { readOnlyHint: false, destructiveHint: false, openWorldHint: false } as const;

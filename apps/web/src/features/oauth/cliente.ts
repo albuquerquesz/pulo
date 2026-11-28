@@ -21,6 +21,8 @@ const ESCOPOS: Record<string, string> = {
   profile: 'Ver seu nome',
   email: 'Ver seu email',
   offline_access: 'Continuar conectado sem pedir de novo',
+  'pulo:read': 'Ver seus dados do Pulo',
+  'pulo:write': 'Mudar e apagar seus dados do Pulo',
 };
 
 export function escoposLegiveis(escopo: string | null): string[] {

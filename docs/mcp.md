@@ -49,6 +49,11 @@ O endereço também aparece em Perfil, "Conectar uma IA".
 - **Quem é a pessoa:** o `/mcp` aceita só access tokens JWT do nosso servidor OAuth com `aud` igual ao recurso `/mcp`,
   `typ` `at+jwt` e `azp` (`verifyBearerToken`, chaves do próprio Better Auth). O `sub` vira a pessoa das chamadas internas
   (`usuarioInterno` em `requireSession`, que só existe no segundo argumento de `app.fetch` e nenhuma requisição de fora preenche).
+- **Escopos:** `pulo:read` libera as ferramentas de leitura (todas `ver_*`) e `pulo:write` as que mudam ou apagam dados.
+  Token sem nenhum dos dois, ou chamando uma ferramenta fora do que ele cobre, recebe 403 com `WWW-Authenticate: Bearer
+  error="insufficient_scope"`. Os dois são anunciados na descoberta (`scopes_supported`) e aparecem na tela de consentimento.
+  Quem conectou antes dos escopos precisa conectar de novo (a migração `escopos_mcp` libera os escopos para os clientes já
+  registrados, sem ampliar o que a pessoa já tinha consentido).
 - **Desconectar:** além da assinatura, o `/mcp` exige que o consentimento daquela pessoa para o cliente (`azp`) ainda exista.
   Desconectar no Perfil (`DELETE /api/mcp/connections/:clientId`) ou excluir a conta corta o acesso na hora.
 - **Preferências:** `comecar_foco` sem `minutos` usa a duração escolhida no perfil. Exportar, desconectar e excluir a conta não são ferramentas.

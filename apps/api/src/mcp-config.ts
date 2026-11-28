@@ -12,8 +12,13 @@ export interface McpEnv {
 export const DEFAULT_WEB_URL = 'http://localhost:3000';
 export const MCP_PATH = '/mcp';
 export const AUTH_BASE_PATH = '/api/auth';
-/** Escopos pedidos por quem conecta uma IA: identidade (OpenID) e o token de renovação. */
-export const MCP_SCOPES = ['openid', 'profile', 'email', 'offline_access'] as const;
+/** Ler os dados pelas ferramentas do MCP. */
+export const ESCOPO_DE_LEITURA = 'pulo:read';
+/** Mudar os dados pelas ferramentas do MCP (inclusive apagar). */
+export const ESCOPO_DE_ESCRITA = 'pulo:write';
+export const ESCOPOS_DO_PULO = [ESCOPO_DE_LEITURA, ESCOPO_DE_ESCRITA] as const;
+/** Escopos pedidos por quem conecta uma IA: identidade (OpenID), o token de renovação e o acesso aos dados. */
+export const MCP_SCOPES = ['openid', 'profile', 'email', 'offline_access', ...ESCOPOS_DO_PULO] as const;
 
 export interface McpConfig {
   /** Emissor dos tokens (RFC 8414): a base do Better Auth. */
