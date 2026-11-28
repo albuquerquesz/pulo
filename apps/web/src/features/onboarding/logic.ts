@@ -74,6 +74,11 @@ export function comoChamar(respostas: RespostasDoOnboarding): string {
   return respostas.nome.trim() || SEM_NOME;
 }
 
+/** Nome e sobrenome juntos, como a conta guarda. */
+export function nomeCompleto(respostas: RespostasDoOnboarding): string {
+  return `${respostas.nome.trim()} ${respostas.sobrenome.trim()}`.trim();
+}
+
 /** O sapo reage à idade enquanto a pessoa arrasta. */
 export function comentarioDaIdade(idade: number): string {
   if (idade < 18) return 'Um girino cheio de energia!';

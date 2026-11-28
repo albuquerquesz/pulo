@@ -49,7 +49,7 @@ export function Casca({ caminho, children }: CascaProps) {
   const comTrilho = largo && !imersao;
   const noConteudo = !largo && noHoje;
   const dados = estado.tipo === 'ok' ? estado.dados : null;
-  const conta = contaNaTela(pessoa, user);
+  const conta = contaNaTela(pessoa);
   const noPerfil = caminho === '/perfil';
   const falha =
     estado.tipo === 'erro' ? (

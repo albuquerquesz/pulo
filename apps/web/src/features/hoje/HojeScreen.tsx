@@ -21,7 +21,7 @@ export function HojeScreen() {
   const [descansoPedido, setDescansoPedido] = useState<boolean | null>(null);
   const { estado, recarregar } = useCarregar(async () => {
     if (!user) throw new Error('sem usuário');
-    return carregarHoje(repo, clock, user, contaNaTela(pessoa, user).nome);
+    return carregarHoje(repo, clock, user, contaNaTela(pessoa).nome);
   });
 
   // A saudação e o ponto da hora atual andam com o relógio.

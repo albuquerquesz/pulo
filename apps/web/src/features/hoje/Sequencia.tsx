@@ -46,7 +46,7 @@ export function Sequencia({ dias, barra, descanso, gravando, onDescanso }: Seque
           <Foguinho className="size-16 origin-[50%_90%] animate-tremula drop-shadow-[0_6px_14px_color-mix(in_srgb,var(--pulo-foco)_45%,transparent)]" />
           <p className="text-[44px] leading-none font-extrabold">
             {dias}
-            <small className="ml-1 text-base font-bold text-muted">{dias === 1 ? 'dia' : 'dias'}</small>
+            <span className="sr-only">{dias === 1 ? ' dia' : ' dias'}</span>
           </p>
         </div>
         <div className="mt-1 flex flex-col gap-[9px] rounded-md bg-bg/70 px-[18px] pt-3 pb-3.5">

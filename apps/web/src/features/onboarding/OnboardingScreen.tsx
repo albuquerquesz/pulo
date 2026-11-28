@@ -5,7 +5,7 @@ import { SapoRosto } from '@/mascot';
 import { Botao } from '@/ui';
 
 import { useApp } from '../app';
-import { dadosParaConcluir, respostasIniciais, type RespostasDoOnboarding } from './logic';
+import { dadosParaConcluir, nomeCompleto, respostasIniciais, type RespostasDoOnboarding } from './logic';
 import { PASSOS } from './passos';
 import { Trilha } from './Trilha';
 
@@ -13,7 +13,7 @@ const SETA =
   'grid size-11 shrink-0 cursor-pointer place-items-center rounded-full border-[3px] border-contorno bg-surface text-xl font-black disabled:invisible';
 
 export function OnboardingScreen() {
-  const { concluirOnboarding, pessoa, sair } = useApp();
+  const { concluirOnboarding, editarConta, pessoa, sair } = useApp();
   const navigate = useNavigate();
   const [respostas, setRespostas] = useState(() => respostasIniciais(pessoa?.nome));
   const [indice, setIndice] = useState(0);
@@ -70,6 +70,9 @@ export function OnboardingScreen() {
   const entrar = async () => {
     setSalvando(true);
     try {
+      // O nome escrito aqui vira o nome da conta: é ele que o Hoje usa para dar bom dia.
+      const nome = nomeCompleto(respostas);
+      if (pessoa && nome !== pessoa.nome) await editarConta({ nome, foto: pessoa.foto ?? null });
       await concluirOnboarding(dadosParaConcluir());
       await navigate({ to: '/', replace: true });
     } catch {

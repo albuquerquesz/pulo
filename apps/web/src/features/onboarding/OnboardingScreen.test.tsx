@@ -6,10 +6,11 @@ import { OnboardingScreen } from './OnboardingScreen';
 const navigate = vi.fn();
 const concluirOnboarding = vi.fn();
 const sair = vi.fn();
+const editarConta = vi.fn();
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigate, Link: () => null }));
 vi.mock('../app', async (original) => ({
   ...(await original<typeof App>()),
-  useApp: () => ({ concluirOnboarding, sair, pessoa: { id: '1', nome: 'Ana Souza', email: 'ana@exemplo.test' } }),
+  useApp: () => ({ concluirOnboarding, editarConta, sair, pessoa: { id: '1', nome: 'Ana Souza', email: 'ana@exemplo.test' } }),
 }));
 
 const botao = (name: string | RegExp) => screen.getByRole<HTMLButtonElement>('button', { name });
@@ -23,6 +24,7 @@ describe('OnboardingScreen', () => {
     navigate.mockReset();
     concluirOnboarding.mockReset();
     sair.mockReset();
+    editarConta.mockReset();
   });
 
   test('dá para sair e voltar ao login sem terminar', async () => {
@@ -96,7 +98,23 @@ describe('OnboardingScreen', () => {
     await clicar('Pular na lagoa');
     expect(concluirOnboarding).toHaveBeenCalledTimes(1);
     expect(concluirOnboarding).toHaveBeenCalledWith({ frogName: 'Pulo', startHour: 7, endHour: 22 });
+    expect(editarConta).not.toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith({ to: '/', replace: true });
+  });
+
+  test('o nome escrito no onboarding vira o nome da conta', async () => {
+    render(<OnboardingScreen />);
+    fireEvent.change(campo('Seu nome'), { target: { value: ' Bia ' } });
+    fireEvent.change(campo('Sobrenome'), { target: { value: 'Lima' } });
+    await clicar('Continuar');
+    await clicar('Um ano a mais');
+    await clicar('Continuar');
+    await clicar('Estudando');
+    await clicar('Continuar');
+    await clicar('Pular este passo');
+    await clicar('Pular este passo');
+    expect(editarConta).toHaveBeenCalledWith({ nome: 'Bia Lima', foto: null });
+    expect(concluirOnboarding).toHaveBeenCalledTimes(1);
   });
 
   test('se salvar falhar, fica no último passo e deixa tentar de novo', async () => {

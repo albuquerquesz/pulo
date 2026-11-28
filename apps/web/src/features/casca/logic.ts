@@ -15,9 +15,9 @@ export interface ContaNaTela {
   foto?: string | null;
 }
 
-/** Quem a casca e o Hoje mostram: a conta logada ou, sem conta, o nome do sapo. */
-export function contaNaTela(pessoa: ContaNaTela | null, user: User | null): ContaNaTela {
-  return pessoa ?? { nome: user?.frogName ?? 'Você', email: '' };
+/** Quem a casca e o Hoje mostram: a conta logada. Sem conta não há nome, e o nome do sapo nunca faz as vezes do da pessoa. */
+export function contaNaTela(pessoa: ContaNaTela | null): ContaNaTela {
+  return pessoa ?? { nome: '', email: '' };
 }
 
 export type ChaveDaAba = 'hoje' | 'ilha' | 'tarefas' | 'habitos' | 'metas';

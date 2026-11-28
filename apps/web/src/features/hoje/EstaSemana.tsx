@@ -1,4 +1,4 @@
-import { CARTAO, LEGENDA, TITULO } from './estilos';
+import { CARTAO, ROTULO_DO_NUMERO, TITULO } from './estilos';
 import type { GraficoDaSemana, TipoDaBarra } from './logic';
 
 const COR_DA_BARRA: Record<TipoDaBarra, string> = { foco: 'bg-sapo', descanso: 'bg-descanso', gelo: 'bg-agua', vazia: 'bg-line' };
@@ -10,13 +10,13 @@ export function EstaSemana({ grafico }: { grafico: GraficoDaSemana }) {
     <section aria-label="Esta semana" className={`${CARTAO} p-5`}>
       <div className="flex items-start justify-between gap-4">
         <h2 className={TITULO}>Esta semana</h2>
-        <dl className="flex gap-6 text-right">
+        <dl className="flex gap-6">
           <div>
-            <dt className={LEGENDA}>Foco</dt>
+            <dt className={ROTULO_DO_NUMERO}>Foco</dt>
             <dd className="text-xl font-extrabold">{grafico.minutos} min</dd>
           </div>
           <div>
-            <dt className={LEGENDA}>Joias</dt>
+            <dt className={ROTULO_DO_NUMERO}>Joias</dt>
             <dd className="text-xl font-extrabold">+{grafico.joias}</dd>
           </div>
         </dl>
