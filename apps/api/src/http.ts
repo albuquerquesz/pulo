@@ -121,12 +121,20 @@ function ehConflitoNoCommit(error: Error): boolean {
   return lido.success && lido.data.cause.kind === 'TransactionWriteConflict';
 }
 
+/** Índice único parcial "um foco em andamento por pessoa" (migração `restricoes`). */
+const INDICE_DO_FOCO_ATIVO = 'focus_session_one_active_per_user';
+
+function ehIndiceDoFocoAtivo(meta: unknown): boolean {
+  return (JSON.stringify(meta) ?? '').includes(INDICE_DO_FOCO_ATIVO);
+}
+
 const conflitoConcorrente = () => new ApiError(409, 'conflito_concorrente', 'Outra escrita aconteceu ao mesmo tempo. Tente de novo.');
 
 /** Erros do Prisma que viram resposta de cliente (o resto é 500 sem detalhes). */
 function fromPrisma(error: Prisma.PrismaClientKnownRequestError): ApiError | null {
   switch (error.code) {
     case 'P2002':
+      if (ehIndiceDoFocoAtivo(error.meta)) return new ApiError(409, 'sessao_em_andamento', 'Já existe um foco em andamento.');
       return new ApiError(409, 'conflito_de_id', 'Já existe um registro com este identificador.');
     case 'P2003':
       return new ApiError(404, 'referencia_inexistente', 'O registro referenciado não existe.');
