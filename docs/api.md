@@ -46,6 +46,10 @@ Nunca há stack trace; erro inesperado vira 500 `erro_interno` e o detalhe fica 
 | 404 | `meta_inexistente` | `POST /api/goals/:id/chest` numa meta que não existe ou é de outra pessoa |
 | 409 | `meta_nao_concluida` | abrir o baú de uma meta que não está concluída |
 | 409 | `bau_ja_aberto` | o baú dessa meta já foi aberto |
+| 409 | `marcos_pendentes`, `meta_nova_demais`, `limite_de_baus` | baú de meta com marco aberto, com menos de `GOALS.bau.idadeMinimaDias` dias ou além de `GOALS.bau.maxPorPeriodo` baús no período |
+| 409 | `meta_criada_concluida`, `data_da_meta_invalida` | meta nova já concluída; data nova de criação, marco, conclusão ou prazo fora do aceito |
+| 409 | `data_no_futuro`, `data_antiga`, `data_antes_do_habito`, `habito_arquivado`, `dia_fora_do_habito` | marca nova de hábito num dia que não vale |
+| 409 | `foco_antigo_demais`, `foco_incompleto`, `foco_sobreposto` | sessão nova antiga demais, concluída sem o tempo planejado ou cruzando com outra |
 | 409 | `limite_de_subtarefas` | passaria de `TASKS.maxSubtasks` subtarefas na tarefa |
 | 404 | `item_inexistente` | compra ou mudança de lugar de um item que não está no catálogo da rota (`HOUSE`, `ROOM_DECOR` ou, na ilha antiga, `ISLAND`) |
 | 400 | `preco_divergente` | compra com `cost` diferente do preço do catálogo |
@@ -85,7 +89,7 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `GET /api/habits/:id/stats` | | `{ stats: HabitStats }` (404 `referencia_inexistente`) | 5 |
 | `DELETE /api/habits/:id` | | `{ deleted }` (os registros do hábito saem junto) | 9 |
 | `GET /api/habit-logs?from&to` | | `{ habitLogs: HabitLog[] }` | 3 |
-| `PUT /api/habit-logs/:habitId/:date` | `HabitLog` | `{ habitLog, newAchievements }` | 18 (mais ao destravar) |
+| `PUT /api/habit-logs/:habitId/:date` | `HabitLog` | `{ habitLog, newAchievements }` | 20 (mais ao destravar) |
 | `DELETE /api/habit-logs/:habitId/:date` | | `{ deleted }` | 9 |
 | `GET /api/sessions?from&to` | | `{ sessions: FocusSession[] }` | 3 |
 | `PUT /api/sessions/:id` | `FocusSession` (`intention` e vínculo aceitam `null`) | `{ session, mascot: MascotState \| null, newAchievements }` | 4 em andamento, 22 ao encerrar (mais ao destravar); 1 a mais ao gravar um vínculo novo |
@@ -97,9 +101,9 @@ Todas com cookie de sessão. Queries = total por chamada (2 da sessão + as da r
 | `POST /api/proposals/generate` | `{ date? }` (qualquer dia da semana) | `{ outcome, proposal? }` | 8 sem criar, 9 criando |
 | `POST /api/proposals/:id/decision` | `{ action: 'aceitar' \| 'editar' \| 'negar' \| 'desfazer', change? }` | `{ proposal, blocks }` | 6 aplicando blocos, 5 ao negar, 4 repetindo |
 | `GET /api/goals` | | `{ goals: Goal[], chests: GoalChest[] }` (mais antiga primeiro) | 4 |
-| `PUT /api/goals/:id` | `Goal` (marcos dentro) | `{ goal, newAchievements }` | 4 (18 com meta concluída ou marco riscado, mais ao destravar) |
+| `PUT /api/goals/:id` | `Goal` (marcos dentro) | `{ goal, newAchievements }` | 5 (19 com meta concluída ou marco riscado, mais ao destravar) |
 | `DELETE /api/goals/:id` | | `{ deleted }` (o baú sai junto; hábitos e tarefas ficam sem a meta) | 3 |
-| `POST /api/goals/:id/chest` | (sem corpo) | `{ chest: GoalChest, newAchievements }` | 18 (mais ao destravar) |
+| `POST /api/goals/:id/chest` | (sem corpo) | `{ chest: GoalChest, newAchievements }` | 19 (mais ao destravar) |
 | `GET /api/tasks` | | `{ tasks: Task[], subtasks: TaskSubtask[], pomodoros }` | 5 |
 | `PUT /api/tasks/:id` | `Task` | `{ task, newAchievements }` | 6 criando ou mudando coluna, prioridade ou prazo (5 sem mudança neles; 1 a mais ao trocar a meta; 14 a mais com a tarefa feita) |
 | `DELETE /api/tasks/:id` | | `{ deleted }` (subtarefas, comentários e histórico saem junto) | 4 |
@@ -192,6 +196,8 @@ responder 401 na hora. Idempotente (`{ deleted: 0 }`).
 Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBlocks` = 100 e `batchMaxHabits` = 50), resposta com a mesma lista.
 - Cada item segue as regras da rota de um item (`routineBlockInputSchema` e `habitInputSchema`, id de outra pessoa, limite por dia).
   Ids repetidos no mesmo lote dão 400 `corpo_invalido`.
+- Horários: bloco novo ou que mudou de horário não pode cruzar com outro do mesmo dia (409 `horario_ocupado`, também no
+  `PUT /api/blocks/:id`, com `issues` em `blocks.N`). A conferência e a escrita são uma transação serializável.
 - Atômico: nada é salvo se algum item falhar. O erro lista os itens: `issues` com `path` `blocks.3.durationMinutes`, `habits.1.title`,
   `habits.0.weekdays` (409 `limite_por_dia`) ou `blocks.2.id` (409 `conflito_de_id`).
 - Queries constantes: um `INSERT ... SELECT ... FROM unnest(arrays) ON CONFLICT (id) DO UPDATE ... WHERE userId = EXCLUDED.userId`
@@ -242,7 +248,8 @@ Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBl
   Decidida só volta a `pendente` (desfazer) até `WEEKLY_AI.undoSeconds` + 5 s depois de `decidedAt`, pelo relógio do servidor;
   `expirada` é final; repetir a mesma decisão com o mesmo conteúdo é idempotente; `weekStart`, `origin` e `createdAt` não mudam.
   `pendente` não tem `decidedAt`, as outras exigem. No máximo `WEEKLY_AI.maxChangesPerProposal` mudanças.
-  `PUT /api/proposals/:id` só grava a proposta (usado pelo `saveProposal` do `Repository`) e NÃO mexe nos blocos. No app da conta, gerar e decidir
+  `PUT /api/proposals/:id` só expira uma proposta pendente (nada mais muda; repetir o que está gravado é 200) e NÃO mexe nos
+  blocos: não cria (404 `nao_encontrado`) nem decide (409 `proposta_transicao_invalida`). Gerar e decidir
   passam pelas duas rotas abaixo, que aplicam os blocos junto. A regra pura da máquina de estados está em `@pulo/core/api/proposal-state`
   e a da decisão em `@pulo/core/api/proposal-decision`.
 - **Descanso** (spec 29): `PUT` e `DELETE` só aceitam o dia de hoje (400 `descanso_so_hoje`), o da sequência: vira no começo
@@ -254,6 +261,14 @@ Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBl
   `@pulo/core/domain/joias`). Rendem: hábito feito, dia de descanso, marco e baú de meta aberto (`JOIAS.por`) e o foco, com
   `floor(minutos focados / JOIAS.focusMinutesPerJoia)` por sessão encerrada (concluída ou interrompida), sem as pausas e até o planejado.
   `joiaCredit` é o ganho histórico dado pela migração a quem ganharia menos com a regra nova do foco.
+  Cada dia paga no máximo `MAX_HABITS_PER_DAY` hábitos e `JOIAS.maxMarcosPorDia` marcos. O sync traz `joiasForaDaJanela`
+  (hábitos, focos e descansos de fora do intervalo), que o app soma ao que calcula do cache.
+- **Registro de hábito**: uma marca nova vale de `HABITS.registroMaxDiasAtras` dias atrás até hoje (fuso e começo do dia da
+  pessoa), nunca antes de o hábito existir, num hábito não arquivado e num dia da frequência dele. Repetir uma marca já
+  gravada é sempre aceito. Regra em `validarDiaDoRegistro` (`@pulo/core/domain/habits`).
+- **Registro de foco**: a sessão nova começa há no máximo `FOCUS.inicioMaxDiasAtras` dias; `concluida` pede o planejado
+  focado e nenhuma sessão cruza com outra (folga de `FOCUS.toleranciaSegundos`). `pausedMs` vai até `FOCUS.pausaMaxHoras`;
+  passando disso o app encerra o foco onde pausou. Regra em `@pulo/core/domain/foco/rules`.
 - **Casa** (spec 31): `PUT /api/house/:item` compra uma das partes de `HOUSE.parts` (`decisions.ts`): 24 partes nas camadas
   `comodo`, `estrutura` e `exterior`. Parte com `requer` pede essa outra antes: sem ela, 409 `falta_requisito` com o id em `requer`.
   O `quarto` já vem pronto. Compras são imutáveis: só `DELETE /api/data` apaga. Regras puras em `@pulo/core/domain/casa`
@@ -281,6 +296,10 @@ Corpo `{ blocks: [...] }` ou `{ habits: [...] }` (limites `API_LIMITS.batchMaxBl
 - **Baú**: concluir a meta não dá joias sozinho. `POST /api/goals/:id/chest` grava o resgate `GoalChest { goalId, abertoEm, joias }`
   (hora do servidor, `JOIAS.por.goalCompleted`) numa transação serializável, e as joias passam a contar. Um por meta: reabrir e
   concluir de novo responde 409 `bau_ja_aberto`, e o resgate continua valendo. Apagar a meta apaga o resgate (as joias saem do saldo).
+  O baú pede todos os marcos riscados, a meta com `GOALS.bau.idadeMinimaDias` dias e respeita `GOALS.bau.maxPorPeriodo` baús a
+  cada `GOALS.bau.periodoDias` dias (`podeAbrirBau`).
+- **Datas**: meta nova nasce ativa; `createdAt`, `doneAt` e `completedAt` novos são de até `GOALS.datasMaxHorasAtras` horas
+  atrás e o prazo fica entre ontem e `GOALS.prazoMaxAnos` anos. O `createdAt` é o da primeira gravação (`validarEscritaDaMeta`).
 - **Hábito atrelado**: `Habit.goalId` (no máximo uma meta). No `PUT /api/habits/:id` e no lote: omitido mantém a meta gravada,
   `null` solta, um id atrela ou troca (meta de outra pessoa: 404 `referencia_inexistente`). Não há limite próprio.
 - **Ritmo e números** não são rotas: `ritmo`, `numerosDaMeta` e `estadoDoBau` em `@pulo/core/domain/goals`. O foco por meta soma
@@ -338,7 +357,10 @@ Resposta 200 `{ outcome, proposal? }` (`generateProposalResponseSchema`):
   (`WEEKLY_AI.timeoutMs`), erro, JSON inválido, índice fora das candidatas, termo proibido ou horário escrito no texto, vale a proposta por regra
   (`origin: 'regra'`, rótulo "Sugestão"). Nunca é 5xx por culpa da IA.
 - Duas gerações simultâneas: o índice único (pessoa e semana) deixa uma só; a outra devolve `existente`.
-- `POST /weekly-ai` continua aberto e sem login. O app com conta usa as rotas de proposta acima.
+- `POST /weekly-ai` continua aberto e sem login, com corpo estrito (só os campos de `buildAiRequest`; senão 400
+  `corpo_invalido`) e limite de `WEEKLY_AI.rotaAberta` pedidos por endereço (429 `limite`; contado por instância do Worker).
+  Provedor de IA mal configurado: a API segue no ar, sem IA, e `/weekly-ai` responde 502 `provedor`.
+  O app com conta usa as rotas de proposta acima.
 
 ### `POST /api/proposals/:id/decision`
 
@@ -447,7 +469,7 @@ catálogo inteiro, na mesma ordem. A secreta não conquistada vem sem `nome` e `
   "user": { "id": "", "name": "", "email": "", "image": null },
   "metadata": { "version": 1, "theme": "sistema", "reduceMotion": false, "timezone": "America/Sao_Paulo", "onboarding": { "completed": false, "completedAt": null }, "profile": null },
   "blocks": [], "habits": [], "habitLogs": [], "sessions": [], "restDays": [],
-  "proposals": [], "goals": [], "goalChests": [], "tasks": [], "subtasks": [], "pomodoros": {}, "islandPurchases": [], "housePurchases": [], "roomDecor": [], "joiaCredit": 0, "mascot": null,
+  "proposals": [], "goals": [], "goalChests": [], "tasks": [], "subtasks": [], "pomodoros": {}, "islandPurchases": [], "housePurchases": [], "roomDecor": [], "joiaCredit": 0, "joiasForaDaJanela": 0, "mascot": null,
   "streak": { "atual": 0, "recorde": 0, "semana": [{ "date": "2026-11-15", "estado": "vazio" }] }, "stats": { "habitosFeitos": 0, "minutosDeFoco": 0, "desde": 1795000000000 },
   "achievements": [{ "id": "primeira-semana", "nome": "Primeira semana", "emoji": "🔥", "conquistada": false, "progresso": 0, "meta": 7 }],
   "gelo": { "guardados": 1, "max": 2, "recentes": [] }, "gelosComprados": [], "descanso": { "restantesNaSemana": 2, "maxPorSemana": 2 },
