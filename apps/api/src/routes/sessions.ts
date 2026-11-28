@@ -54,7 +54,8 @@ export function sessionRoutes({ auth, db, now }: RouteDeps) {
         const otherActive = rows.some((row) => row.id !== body.id && row.state === 'em_andamento');
         const others = rows.filter((row) => row.id !== body.id).map(focusSessionMapper.toDomain);
         const current = existing ? focusSessionMapper.toDomain(existing) : undefined;
-        const session = await ownLink(tx, userId, current, applyInput(current, body));
+        const linked = await ownLink(tx, userId, current, applyInput(current, body));
+        const session = await releaseDeletedBlock(tx, current, linked);
 
         if (current) {
           if (current.state !== 'em_andamento') {
@@ -129,6 +130,17 @@ async function ownLink(tx: Client, userId: string, current: FocusSession | undef
   if (row || !current) throw new ApiError(404, 'referencia_inexistente', TARGETS[key].missing);
   const { habitId: _habit, goalId: _goal, taskId: _task, ...rest } = next;
   return { ...rest, ...linkOf(current) };
+}
+
+/**
+ * Bloco apagado com o foco já gravado (o banco soltou a sessão): o pedido de um aparelho que ainda cita o bloco
+ * segue sem ele, para o foco não se perder.
+ */
+async function releaseDeletedBlock(tx: Client, current: FocusSession | undefined, next: FocusSession): Promise<FocusSession> {
+  if (!current || current.blockId !== undefined || next.blockId === undefined) return next;
+  if ((await tx.routineBlock.count({ where: { id: next.blockId } })) > 0) return next;
+  const { blockId: _gone, ...rest } = next;
+  return rest;
 }
 
 function changedIdentity(current: FocusSession, next: FocusSession): boolean {
