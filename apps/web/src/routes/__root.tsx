@@ -1,7 +1,7 @@
 import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 
-import { AppProvider, useApp } from '@/features/app';
+import { AppProvider, Carregando, useApp } from '@/features/app';
 import { autenticacaoDoApp } from '@/features/sessao/auth';
 import { TemaProvider } from '@/theme';
 import { Toast } from '@/ui';
@@ -67,8 +67,8 @@ function TemaDoUsuario({ children }: ComFilhos) {
 
 function Conteudo() {
   const { carregando, aviso, esconderAviso } = useApp();
-  // Os dados ficam no aparelho: até ler o armazenamento local, não há o que mostrar.
-  if (carregando) return null;
+  // Até a abertura responder, não há tela para mostrar.
+  if (carregando) return <Carregando />;
 
   return (
     <>

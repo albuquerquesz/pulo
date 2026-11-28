@@ -1,4 +1,5 @@
 export * from './AppProvider';
+export { Carregando } from './Carregando';
 export { ErroDeCarga } from './ErroDeCarga';
 export type { Falha } from './falha';
 export * from './core';
