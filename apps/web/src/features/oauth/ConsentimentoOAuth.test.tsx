@@ -20,6 +20,13 @@ describe('ConsentimentoOAuth', () => {
     expect(botao('Liberar').disabled).toBe(false);
   });
 
+  test('pedido só de leitura não promete mudanças', async () => {
+    window.history.pushState({}, '', '/oauth/consentimento?scope=openid+pulo%3Aread');
+    await act(async () => void render(<ConsentimentoOAuth />));
+    expect(screen.queryByRole('note')).toBeNull();
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+  });
+
   test('só o botão escolhido fica carregando', async () => {
     oauth2.publicClient.mockRejectedValue(new TypeError('Failed to fetch'));
     oauth2.consent.mockReturnValue(new Promise(() => undefined));

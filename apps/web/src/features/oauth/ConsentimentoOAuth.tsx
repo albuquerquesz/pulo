@@ -11,9 +11,9 @@ type Envio = { tipo: 'parado' } | { tipo: 'enviando'; liberar: boolean } | { tip
 const PEDIDO_VENCIDO = 'O pedido expirou ou não vale mais. Volte ao app e conecte de novo.';
 const SEM_CONEXAO = 'Não foi possível falar com o Pulo. Confira sua conexão e tente de novo.';
 
-/** O que as ferramentas do MCP fazem (apps/api/src/mcp/ferramentas.ts). */
-const ACESSOS = [
-  'Ver sua rotina, hábitos, focos, descansos, métricas, metas, tarefas, perfil e ilha.',
+/** O que as ferramentas do MCP fazem (apps/api/src/mcp/ferramentas.ts): ler e, com escrita, mudar. */
+const LEITURA = 'Ver sua rotina, hábitos, focos, descansos, métricas, metas, tarefas, perfil e ilha.';
+const ESCRITA = [
   'Criar, mudar e remover hábitos, blocos da rotina e metas.',
   'Marcar hábitos, controlar focos e descansos e decidir as propostas da semana.',
   'Criar e mover tarefas.',
@@ -29,6 +29,9 @@ export function ConsentimentoOAuth() {
   const [nome, setNome] = useState('Um app');
   const [envio, setEnvio] = useState<Envio>({ tipo: 'parado' });
   const enviando = envio.tipo === 'enviando';
+  // Só quem pede leitura sem escrita fica sem mudar nada; na dúvida, a tela avisa do acesso completo.
+  const escopos = busca.get('scope')?.split(' ') ?? [];
+  const somenteLeitura = escopos.includes('pulo:read') && !escopos.includes('pulo:write');
 
   useEffect(() => {
     if (!cliente || !clientId) return;
@@ -65,7 +68,7 @@ export function ConsentimentoOAuth() {
       <Cartao>
         <Texto variante="subtitulo">Se você liberar, ele poderá:</Texto>
         <ul className="m-0 grid list-disc gap-1 pl-5">
-          {ACESSOS.map((acesso) => (
+          {(somenteLeitura ? [LEITURA] : [LEITURA, ...ESCRITA]).map((acesso) => (
             <li key={acesso}>
               <Texto como="span">{acesso}</Texto>
             </li>
@@ -77,11 +80,13 @@ export function ConsentimentoOAuth() {
           </Texto>
         ))}
       </Cartao>
-      <div role="note" className="rounded-md bg-atencao p-4">
-        <Texto cor="inkSobreAcao" className="font-extrabold">
-          Atenção: ele também pode apagar todos os seus dados (sapo, rotina, hábitos, focos, descansos, propostas, metas, tarefas, casa e quarto), em todos os aparelhos. Não dá para desfazer.
-        </Texto>
-      </div>
+      {somenteLeitura ? null : (
+        <div role="note" className="rounded-md bg-atencao p-4">
+          <Texto cor="inkSobreAcao" className="font-extrabold">
+            Atenção: ele também pode apagar todos os seus dados (sapo, rotina, hábitos, focos, descansos, propostas, metas, tarefas, casa e quarto), em todos os aparelhos. Não dá para desfazer.
+          </Texto>
+        </div>
+      )}
       <Texto variante="legenda" cor="muted">
         Só libere apps em que você confia.
       </Texto>
