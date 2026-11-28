@@ -1,6 +1,7 @@
-import { DEFAULT_TIMEZONE, GOALS, JOIAS } from '../config/decisions';
+import { DEFAULT_TIMEZONE, GOALS, JOIAS, NAME_MAX_CHARS } from '../config/decisions';
 import { DAY_MS, HOUR_MS, MINUTE_MS } from './clock';
 import { dateKeyOf, diffDays } from './day';
+import { ehUmEmoji, TEXTO_DO_ICONE } from './emoji';
 import { newId } from './ids';
 import { focusedMs } from './joias';
 import { fail, ok, type Result } from './result';
@@ -13,6 +14,7 @@ export type GoalErrorCode =
   | ChestErrorCode
   | GoalWriteErrorCode
   | 'titulo_vazio'
+  | 'titulo_longo'
   | 'limite_de_metas'
   | 'limite_de_marcos'
   | 'meta_inexistente'
@@ -39,8 +41,10 @@ export interface GoalProgress {
   ratio: number;
 }
 
-const LIMITE_DE_METAS = `Até ${GOALS.maxActive} metas ativas de cada vez. Conclua ou apague uma para abrir espaço.`;
+const LIMITE_DE_METAS = `Até ${GOALS.maxActive} metas ativas de cada vez. Conclua ou exclua uma para abrir espaço.`;
 const LIMITE_DE_MARCOS = `Uma meta comporta até ${GOALS.maxMilestones} marcos.`;
+
+const nomeLongo = (de: 'da meta' | 'do marco') => fail('titulo_longo', `O nome ${de} vai até ${NAME_MAX_CHARS} letras.`);
 
 const activeCount = (goals: readonly Goal[], exceptId?: EntityId) =>
   goals.filter((g) => g.state === 'ativa' && g.id !== exceptId).length;
@@ -115,9 +119,14 @@ function checkTarget(targetDate: DateKey | undefined, today: DateKey): Result<Da
   return ok(targetDate);
 }
 
-function checkLook(icon: string | undefined, color: AccentColor | undefined): Result<Pick<Goal, 'icon' | 'color'>, GoalErrorCode> {
+function checkLook(
+  icon: string | undefined,
+  color: AccentColor | undefined,
+  atual?: string,
+): Result<Pick<Goal, 'icon' | 'color'>, GoalErrorCode> {
   const clean = cleanText(icon);
-  if (clean && (clean.length > GOALS.iconMaxChars || /\s/.test(clean))) return fail('icone_invalido', 'O ícone é um emoji só.');
+  // O ícone só é conferido quando muda: o que já está gravado continua valendo.
+  if (clean && clean !== atual && (clean.length > GOALS.iconMaxChars || !ehUmEmoji(clean))) return fail('icone_invalido', TEXTO_DO_ICONE);
   return ok({ ...(clean ? { icon: clean } : {}), ...(color ? { color } : {}) });
 }
 
@@ -235,6 +244,7 @@ export async function criarMeta(
 ): Promise<Result<Goal, GoalErrorCode>> {
   const title = input.title.trim();
   if (!title) return fail('titulo_vazio', 'Dê um nome à meta.');
+  if (title.length > NAME_MAX_CHARS) return nomeLongo('da meta');
   const goals = await repo.listGoals();
   if (activeCount(goals) >= GOALS.maxActive) return fail('limite_de_metas', LIMITE_DE_METAS);
   const target = checkTarget(input.targetDate, today);
@@ -242,6 +252,7 @@ export async function criarMeta(
   const look = checkLook(input.icon, input.color);
   if (!look.ok) return look;
   const titles = (input.milestones ?? []).map((t) => t.trim()).filter(Boolean);
+  if (titles.some((t) => t.length > NAME_MAX_CHARS)) return nomeLongo('do marco');
   if (titles.length > GOALS.maxMilestones) return fail('limite_de_marcos', LIMITE_DE_MARCOS);
 
   const milestones: GoalMilestone[] = titles.map((t) => ({ id: newId(now, 'marco'), title: t }));
@@ -261,10 +272,11 @@ export async function editarMeta(
   if (!found.ok) return found;
   const title = patch.title.trim();
   if (!title) return fail('titulo_vazio', 'Dê um nome à meta.');
+  if (title.length > NAME_MAX_CHARS) return nomeLongo('da meta');
   const keepsTarget = patch.targetDate === found.value.targetDate;
   const target = keepsTarget ? ok(patch.targetDate) : checkTarget(patch.targetDate, today);
   if (!target.ok) return target;
-  const look = checkLook(patch.icon, patch.color);
+  const look = checkLook(patch.icon, patch.color, found.value.icon);
   if (!look.ok) return look;
   const goal = withOptional({ ...found.value, title, ...look.value }, cleanText(patch.why), target.value);
   await repo.saveGoal(goal);
@@ -281,6 +293,7 @@ export async function adicionarMarco(
   if (!found.ok) return found;
   const clean = title.trim();
   if (!clean) return fail('titulo_vazio', 'Dê um nome ao marco.');
+  if (clean.length > NAME_MAX_CHARS) return nomeLongo('do marco');
   if (found.value.milestones.length >= GOALS.maxMilestones) return fail('limite_de_marcos', LIMITE_DE_MARCOS);
   const goal: Goal = { ...found.value, milestones: [...found.value.milestones, { id: newId(now, 'marco'), title: clean }] };
   await repo.saveGoal(goal);

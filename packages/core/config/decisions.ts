@@ -96,6 +96,9 @@ export const BLOCK_MAX_MINUTES = 120;
 /** Cores de destaque que a pessoa pode escolher (nomes do design system, spec 16). */
 export const ACCENT_COLORS = ['sapo', 'agua', 'foco', 'descanso', 'sol', 'atencao'] as const;
 
+/** Nome de hábito, de meta e de marco. */
+export const NAME_MAX_CHARS = 80;
+
 /**
  * Hábitos (spec 17). O ícone é um emoji curto (vale também para o bloco da rotina).
  * `statsWeeks` é o tamanho do calendário; `statsMaxDays` limita quanto do histórico entra na conta. Proposta.
@@ -375,6 +378,8 @@ export const PREFERENCES = {
  */
 export const ACCOUNT = {
   deleteConfirmation: 'EXCLUIR',
+  /** O que a pessoa digita para apagar os dados sem excluir a conta. */
+  wipeConfirmation: 'APAGAR',
   nameMaxChars: 80,
   imageUrlMaxChars: 2048,
 } as const;

@@ -19,7 +19,7 @@ export const MENSAGENS_DA_API = {
   rota_inexistente: 'Esta versão do app não conversa com o servidor. Atualize o app.',
   conflito_de_id: 'Algo saiu errado ao salvar. Tente de novo.',
   limite_por_dia: 'Um dia comporta poucos hábitos. Que tal deixar um para outro dia?',
-  limite_de_metas: 'Já tem metas ativas demais. Conclua ou apague uma para abrir espaço.',
+  limite_de_metas: 'Já tem metas ativas demais. Conclua ou exclua uma para abrir espaço.',
   meta_inexistente: 'Essa meta não existe mais.',
   meta_nao_concluida: 'Conclua a meta para abrir o baú.',
   bau_ja_aberto: 'Esse baú já foi aberto.',

@@ -1,4 +1,5 @@
-import { DEFAULT_TIMEZONE, HABITS, MAX_HABITS_PER_DAY } from '../config/decisions';
+import { DEFAULT_TIMEZONE, HABITS, MAX_HABITS_PER_DAY, NAME_MAX_CHARS } from '../config/decisions';
+import { ehUmEmoji, TEXTO_DO_ICONE } from './emoji';
 import { newId } from './ids';
 import { fail, ok, type Result } from './result';
 import { addDays, dateKeyOf, weekdayOf } from './day';
@@ -7,6 +8,8 @@ import type { DateKey, EntityId, Habit, HabitLog, HabitState, Repository, Weekda
 export type HabitDayErrorCode = 'data_no_futuro' | 'data_antiga' | 'data_antes_do_habito' | 'habito_arquivado' | 'dia_fora_do_habito';
 export type HabitErrorCode =
   | 'titulo_vazio'
+  | 'titulo_longo'
+  | 'icone_invalido'
   | 'dias_invalidos'
   | 'limite_por_dia'
   | 'habito_inexistente'
@@ -75,6 +78,8 @@ function checkRules(
 ): Result<{ title: string; weekdays: Weekday[] }, HabitErrorCode> {
   const title = input.title.trim();
   if (!title) return fail('titulo_vazio', 'Dê um nome ao hábito.');
+  if (title.length > NAME_MAX_CHARS) return fail('titulo_longo', `O nome do hábito vai até ${NAME_MAX_CHARS} letras.`);
+  if (input.icon && !ehUmEmoji(input.icon.trim())) return fail('icone_invalido', TEXTO_DO_ICONE);
   const weekdays = normalizeWeekdays(input.weekdays);
   if (weekdays.length === 0 || !weekdays.every(validWeekday)) {
     return fail('dias_invalidos', 'Escolha pelo menos um dia da semana.');
@@ -106,7 +111,12 @@ export async function editarHabito(
   const current = habits.find((h) => h.id === id);
   if (!current) return fail('habito_inexistente', 'Hábito não encontrado.');
   const state = patch.state ?? current.state;
-  const input = { title: patch.title ?? current.title, weekdays: patch.weekdays ?? current.weekdays };
+  // O ícone só é conferido quando muda: o que já está gravado continua valendo.
+  const input = {
+    title: patch.title ?? current.title,
+    weekdays: patch.weekdays ?? current.weekdays,
+    icon: patch.icon === current.icon ? undefined : patch.icon,
+  };
   const others = state === 'ativo' ? habits.filter((h) => h.id !== id) : [];
   const checked = checkRules(input, others);
   if (!checked.ok) return checked;
@@ -126,6 +136,11 @@ export async function atrelarHabito(repo: Repository, id: EntityId, goalId: Enti
   const habit: Habit = goalId === null ? rest : { ...rest, goalId };
   await repo.saveHabit(habit);
   return ok(habit);
+}
+
+/** Traz um hábito arquivado de volta, respeitando o limite de ativos por dia. */
+export function restaurarHabito(repo: Repository, id: EntityId): Promise<Result<Habit, HabitErrorCode>> {
+  return editarHabito(repo, id, { state: 'ativo' });
 }
 
 export async function removerHabito(repo: Repository, id: EntityId): Promise<void> {

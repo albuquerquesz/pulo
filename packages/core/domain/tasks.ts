@@ -53,9 +53,15 @@ export function endOfWeekDue(today: DateKey): DateKey {
 
 export type DueFilter = 'hoje' | 'semana';
 
-/** Filtro do quadro. Prazo vencido também aparece (continua sendo para agora). */
-export function matchesDueFilter(task: Pick<Task, 'dueDate'>, filter: DueFilter, today: DateKey): boolean {
+/** Aberta e com o prazo já passado. */
+export function isOverdue(task: Pick<Task, 'dueDate' | 'status'>, today: DateKey): boolean {
+  return task.status !== 'feito' && task.dueDate !== undefined && task.dueDate < today;
+}
+
+/** Filtro do quadro. Prazo vencido aparece enquanto a tarefa está aberta (continua sendo para agora); feita, sai. */
+export function matchesDueFilter(task: Pick<Task, 'dueDate' | 'status'>, filter: DueFilter, today: DateKey): boolean {
   if (task.dueDate === undefined) return false;
+  if (task.status === 'feito' && task.dueDate < today) return false;
   return task.dueDate <= (filter === 'hoje' ? today : weekEndOf(today));
 }
 

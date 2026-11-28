@@ -48,11 +48,14 @@ describe('regras do quadro', () => {
     // 2026-11-24 é terça; a semana termina no domingo 29.
     const today = '2026-11-24';
     expect(endOfWeekDue(today)).toBe('2026-11-29');
-    expect(matchesDueFilter({ dueDate: '2026-11-23' }, 'hoje', today)).toBe(true);
-    expect(matchesDueFilter({ dueDate: '2026-11-29' }, 'hoje', today)).toBe(false);
-    expect(matchesDueFilter({ dueDate: '2026-11-29' }, 'semana', today)).toBe(true);
-    expect(matchesDueFilter({ dueDate: '2026-11-30' }, 'semana', today)).toBe(false);
-    expect(matchesDueFilter({}, 'semana', today)).toBe(false);
+    expect(matchesDueFilter({ status: 'afazer', dueDate: '2026-11-23' }, 'hoje', today)).toBe(true);
+    expect(matchesDueFilter({ status: 'afazer', dueDate: '2026-11-29' }, 'hoje', today)).toBe(false);
+    expect(matchesDueFilter({ status: 'afazer', dueDate: '2026-11-29' }, 'semana', today)).toBe(true);
+    expect(matchesDueFilter({ status: 'afazer', dueDate: '2026-11-30' }, 'semana', today)).toBe(false);
+    expect(matchesDueFilter({ status: 'afazer' }, 'semana', today)).toBe(false);
+    // A feita com prazo passado sai do filtro; a aberta fica.
+    expect(matchesDueFilter({ status: 'feito', dueDate: '2026-11-23' }, 'semana', today)).toBe(false);
+    expect(matchesDueFilter({ status: 'feito', dueDate: today }, 'hoje', today)).toBe(true);
     const list = [
       task('hoje', { dueDate: today, status: 'feito', completedAt: 2 }),
       task('vencida', { dueDate: '2026-11-20' }),
