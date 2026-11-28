@@ -1,8 +1,9 @@
 import { syncQuerySchema } from '@pulo/core/api/schemas';
-import { DAY_ROLLOVER_HOUR } from '@pulo/core/config/decisions';
+import { DAY_ROLLOVER_HOUR, JOIAS } from '@pulo/core/config/decisions';
 import { computeAchievements } from '@pulo/core/domain/achievements';
 import { situacaoDoDescanso } from '@pulo/core/domain/descanso';
 import { resumoDoGelo } from '@pulo/core/domain/gelo';
+import { joiasDosHabitos, joiasDoFoco } from '@pulo/core/domain/joias';
 import { streakToday } from '@pulo/core/domain/streak';
 import { countPomodoros } from '@pulo/core/domain/tasks';
 import {
@@ -99,6 +100,18 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
       ...habitDays.map((day) => restDayMapper.toDomain(day).date),
       ...restDates.map((r) => r.date),
     ]);
+    // O que os registros fora da janela renderam (de todo o histórico já lido), para o saldo do app bater com o do servidor.
+    const naJanela = new Set(sessions.map((session) => session.id));
+    const diasAntigos = habitDays.filter((day) => {
+      const { date: dia } = restDayMapper.toDomain(day);
+      return dia < range.from || dia > range.to;
+    });
+    const joiasForaDaJanela =
+      joiasDosHabitos(diasAntigos.map((day) => day._count.habitId)) +
+      allSessions
+        .filter((session) => !naJanela.has(session.id))
+        .reduce((total, session) => total + joiasDoFoco(focusSessionMapper.toDomain(session)), 0) +
+      (restDates.length - restDays.length) * JOIAS.por.restDay;
     return c.json({
       user: { id: userId, name, email, image },
       metadata,
@@ -118,6 +131,7 @@ export function syncRoutes({ auth, db, now }: RouteDeps) {
       housePurchases: housePurchases.map(islandPurchaseMapper.toDomain),
       roomDecor: roomDecor.map(roomPlacementMapper.toDomain),
       joiaCredit: joiaCredit?.amount ?? 0,
+      joiasForaDaJanela,
       mascot: mascot === null ? (acerto.mascot ?? null) : mascotStateMapper.toDomain(mascot),
       gelo: { guardados, max, recentes },
       gelosComprados: gelos.map(islandPurchaseMapper.toDomain),

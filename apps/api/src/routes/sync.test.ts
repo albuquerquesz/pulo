@@ -1,3 +1,4 @@
+import { JOIAS, MAX_HABITS_PER_DAY } from '@pulo/core/config/decisions';
 import { DEFAULT_USER_METADATA } from '@pulo/core/domain/user-metadata';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
 import { type TestUser, TEST_NOW, createHarness, queriesOf } from '../testing';
@@ -113,6 +114,29 @@ describe('/api/sync', () => {
     const body = await (await b.call('GET', `/api/sync${RANGE}`)).json();
     expect(body).toMatchObject({ blocks: [], habits: [], habitLogs: [], sessions: [], restDays: [], proposals: [], islandPurchases: [], mascot: null });
     expect(body.user.id).toBe(b.id);
+  });
+
+  it('conta as joias dos registros que ficaram fora do intervalo, com os tetos por dia', async () => {
+    const me = await h.newUser();
+    const habits = Array.from({ length: MAX_HABITS_PER_DAY + 2 }, (_, i) => `${me.id}-h${i}`.slice(-60));
+    await database.db.habit.createMany({ data: habits.map((id) => ({ id, userId: me.id, title: 'Ler', weekdays: [0] })) });
+    // Um dia antigo com hábitos acima do teto, um foco antigo e um descanso antigo; e um hábito dentro do intervalo.
+    await database.db.habitLog.createMany({
+      data: [
+        ...habits.map((habitId) => ({ userId: me.id, habitId, date: new Date(Date.UTC(2025, 0, 1)), doneAt: new Date(TEST_NOW) })),
+        { userId: me.id, habitId: habits[0], date: day(16), doneAt: new Date(TEST_NOW) },
+      ],
+    });
+    const antigo = Date.UTC(2025, 0, 2, 15);
+    await database.db.focusSession.create({
+      data: { userId: me.id, plannedMinutes: 25, state: 'concluida', startedAt: new Date(antigo), endedAt: new Date(antigo + 25 * MIN) },
+    });
+    await database.db.restDay.create({ data: { userId: me.id, date: new Date(Date.UTC(2025, 0, 3)) } });
+    const sync = async (range: string) => (await me.call('GET', `/api/sync${range}`)).json();
+
+    const esperado = MAX_HABITS_PER_DAY * JOIAS.por.habitDone + 25 / JOIAS.focusMinutesPerJoia + JOIAS.por.restDay;
+    expect(await sync('?from=2026-11-01&to=2026-11-30')).toMatchObject({ joiasForaDaJanela: esperado });
+    expect(await sync('?from=2025-01-01&to=2025-01-31')).toMatchObject({ joiasForaDaJanela: JOIAS.por.habitDone });
   });
 
   it('queries: número fixo com poucos e com muitos dados', async () => {
