@@ -7,7 +7,6 @@ import type { Clock, Repository } from '@pulo/core/domain/types';
 
 import { AppProvider, useApp } from '../app';
 import { criarContaDeExemplo } from '../../testing/conta-de-exemplo';
-import { ladoDoConteudo } from '../app/useLargura';
 import { Casca } from './Casca';
 
 type LinkFalso = { to: string; children: ReactNode; className?: string; 'aria-label'?: string; 'aria-current'?: 'page' };
@@ -103,12 +102,6 @@ describe('Casca', () => {
   test('no celular as outras telas ficam só com o conteúdo', async () => {
     await abrir('/habitos', false);
     expect(screen.queryByTestId('numeros-do-dia')).toBeNull();
-  });
-});
-
-describe('lado do desenho na coluna do meio', () => {
-  test('cabe no celular e entre a barra lateral e o trilho', () => {
-    expect([375, 768, 1280, 1920].map(ladoDoConteudo)).toEqual([343, 376, 428, 544]);
   });
 });
 

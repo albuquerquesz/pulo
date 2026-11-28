@@ -1,4 +1,3 @@
-import { WEEKLY_AI } from '@pulo/core/config/decisions';
 import { dateKeyOf } from '@pulo/core/domain/day';
 import { newId } from '@pulo/core/domain/ids';
 import {
@@ -117,4 +116,3 @@ export async function desfazer(repo: Repository, clock: Clock, token: UndoToken)
   return r.proposal;
 }
 
-export const JANELA_DE_DESFAZER_MS = WEEKLY_AI.undoSeconds * 1000;
