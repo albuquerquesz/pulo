@@ -3,7 +3,7 @@ import { type BatchRepository, supportsBatch } from '@pulo/core/data/batch';
 import { providesAchievements } from '@pulo/core/domain/achievements';
 import { providesFreezes } from '@pulo/core/domain/gelo';
 import { providesHabitStats } from '@pulo/core/domain/habit-stats';
-import { providesFreezePurchases } from '@pulo/core/domain/joias';
+import { providesFreezePurchases, providesJoiasForaDoCache } from '@pulo/core/domain/joias';
 import { providesMetrics } from '@pulo/core/domain/metricas';
 import { providesStats } from '@pulo/core/domain/stats';
 import { providesStreak } from '@pulo/core/domain/streak';
@@ -142,6 +142,7 @@ export function comAvisosDeErro(repo: Repository, avisos: AvisosDeErro): Reposit
       ? { getFreezes: () => repo.getFreezes(), buyFreeze: guardar(() => repo.buyFreeze()), markFreezesSeen: guardar(() => repo.markFreezesSeen()) }
       : {}),
     ...(providesFreezePurchases(repo) ? { listFreezePurchases: () => repo.listFreezePurchases() } : {}),
+    ...(providesJoiasForaDoCache(repo) ? { getJoiasForaDaJanela: () => repo.getJoiasForaDaJanela() } : {}),
     ...(temDatasDoGelo(repo) ? { getFreezeDates: () => repo.getFreezeDates() } : {}),
     ...(providesMetrics(repo) ? { getMetrics: () => repo.getMetrics() } : {}),
     ...(providesAchievements(repo) ? { getAchievements: () => repo.getAchievements() } : {}),

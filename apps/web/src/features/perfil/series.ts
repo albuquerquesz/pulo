@@ -2,7 +2,7 @@ import { DAY_ROLLOVER_HOUR, DEFAULT_TIMEZONE, JOIAS, METRICAS } from '@pulo/core
 import { MINUTE_MS } from '@pulo/core/domain/clock';
 import { addDays, dateKeyOf, diffDays, weekdayOf, weekStartOf } from '@pulo/core/domain/day';
 import { providesFreezeStore } from '@pulo/core/domain/gelo-store';
-import { focusedMs, joiasDoFoco } from '@pulo/core/domain/joias';
+import { focusedMs, joiasDoFoco, joiasDosHabitos, marcosPagos } from '@pulo/core/domain/joias';
 import { streakDaySets } from '@pulo/core/domain/streak';
 import type {
   Clock,
@@ -300,10 +300,11 @@ export function concluidoDoIntervalo(registros: RegistrosDoRitmo, intervalo: num
   // As mesmas fontes de joias do saldo, cada uma no dia em que rendeu.
   const por = JOIAS.por;
   const joias = contagemPorDia([
-    ...registros.habitLogs.map((log) => ({ date: log.date, quanto: por.habitDone })),
+    // Um item por dia, já com o teto de hábitos pagos.
+    ...[...contagemPorDia(registros.habitLogs.map((log) => ({ date: log.date, quanto: 1 })))].map(([date, feitos]) => ({ date, quanto: joiasDosHabitos([feitos]) })),
     ...registros.sessions.filter((s) => s.state !== 'em_andamento').map((s) => ({ date: dia(s.endedAt ?? s.startedAt), quanto: joiasDoFoco(s) })),
     ...registros.restDays.map((r) => ({ date: r.date, quanto: por.restDay })),
-    ...registros.goals.flatMap((g) => g.milestones.flatMap((m) => (m.doneAt === undefined ? [] : [{ date: dia(m.doneAt), quanto: por.milestoneDone }]))),
+    ...marcosPagos(registros.goals).map((doneAt) => ({ date: dia(doneAt), quanto: por.milestoneDone })),
     ...registros.baus.map((b) => ({ date: dia(b.abertoEm), quanto: b.joias })),
   ]);
   return {
