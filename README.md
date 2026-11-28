@@ -1,12 +1,121 @@
 # Pulo
 
-Um app de hábitos e foco, sem culpa, com um sapo que cresce junto com você.
-Cliente web em TanStack Start (React, Tailwind, mobile first), no Cloudflare Workers.
-Monorepo com npm workspaces e Turborepo. Web: https://pulo-web.albqvictor.workers.dev
+Um app de hábitos e foco, sem culpa, com um sapo que acompanha você.
 
-Cada dia de cuidado conta: foco concluído, uma sessão parada na metade ou um dia de descanso.
-O sapo nunca volta uma fase, e a lagoa ao redor dele muda conforme os dias de cuidado.
-Uma sugestão semanal propõe mudar um horário, e nada muda sem a sua aprovação.
+**Experimente:** https://pulo-web.albqvictor.workers.dev (entrada com a conta Google, no celular ou no computador).
+
+## A ideia
+
+Muita gente desiste de um app de hábitos no primeiro dia ruim: a sequência zera e a tela vira cobrança.
+O Pulo trata o cuidado de outro jeito. Um hábito feito ou um foco já contam o dia, o descanso não quebra a sequência,
+e o gelo protege um dia que ficou vazio. Tudo o que você faz rende joias, e com elas o sapo ganha uma casa.
+
+## Um dia com o Pulo
+
+1. Você abre o app e o sapo mostra os pulos do dia.
+2. Marca um hábito ou uma tarefa e ele avança na lagoa.
+3. Entra na Casa, escolhe os minutos e foca enquanto ele passeia pelo quarto.
+4. Ganha joias e usa para mobiliar o quarto ou construir mais uma parte da casa.
+5. Se o dia pedir pausa, toca em Descansar hoje e a sequência continua viva.
+
+## O que dá para fazer
+
+### Hoje
+
+* **Lagoa dos pulos do dia.** O topo da tela é uma lagoa com o céu da hora. Entrar no Pulo é a primeira folha, já feita,
+  e cada hábito ou tarefa do dia é mais uma. O sapo fica na última folha pulada, então o avanço aparece de relance.
+* **Primeiro hábito.** Quem ainda não tem hábito encontra o sapo pedindo o primeiro, com um botão para criar.
+* **Começar foco.** Um toque leva à Casa já com o próximo foco.
+* **Sequência.** Dias seguidos com o foguinho e a semana inteira marcada: dia feito, descanso ou gelo.
+* **Descansar hoje.** Até duas vezes por semana, o descanso conta como cuidado: não quebra a sequência e ainda rende joias.
+* **Esta semana.** Gráfico dos minutos de foco por dia, com o total de foco e de joias.
+* **Hábitos, tarefas e rotina.** O que há para fazer hoje, para marcar ali mesmo, e a linha do dia com os blocos da rotina.
+
+### Casa e foco
+
+* **Foco com tempo escolhido.** De 15 a 50 minutos, ligado a um hábito, uma meta, uma tarefa ou livre.
+* **Um sapo que faz companhia.** Durante o foco ele anda aos pulinhos pelo quarto, de corpo inteiro,
+  e as joias vão aparecendo conforme o tempo passa.
+* **Mobília com lugar certo.** Cama, baú, tapete, sofá, relógio, quadro, janela, estante, luminária e planta
+  têm cada um o seu lugar no quarto, com dois ou três modelos e oito cores.
+* **Loja do quarto.** Todo modelo está à venda em todas as cores. Você vê a prévia no cômodo antes de comprar,
+  a compra é animada, e o que já é seu pode ser tirado e recolocado sem pagar de novo.
+* **Cômodos.** Conforme a casa cresce, dá para trocar de cômodo e decorar cada um. A tela cheia deixa só o jogo à vista.
+
+### Ilha
+
+* **A casa do sapo em 24 partes.** Cômodos como cozinha, biblioteca e observatório, estruturas como segundo andar e torre,
+  e a área de fora, com jardim, lago, ponte e piscina. O quarto já vem pronto.
+* **Compra que dá gosto.** Depois de confirmar, as joias voam até o lugar, a parte cai quicando e o saldo vai descendo.
+* **Um objetivo à vista.** A tela mostra quantas partes já estão prontas e o que já dá para construir.
+
+### Hábitos
+
+* Escolha ícone, cor, dias da semana e período do dia, com no máximo cinco hábitos por dia para a lista caber na vida real.
+* Cada hábito tem a própria sequência e um calendário do histórico.
+* Pause ou arquive quando precisar, e ligue o hábito a uma meta.
+
+### Tarefas
+
+* Quadro com quatro colunas: Ideias, A fazer, Fazendo e Feito. Dá para arrastar os cartões.
+* Cada tarefa aceita descrição, subtarefas, prioridade, prazo, etiquetas, meta, comentários e uma estimativa de pomodoros.
+* Filtre por hoje ou pela semana e comece um foco direto da tarefa.
+
+### Metas
+
+* Até três metas ativas, para cada uma receber atenção de verdade.
+* Divida a meta em marcos, escolha data, ícone e cor, e atrele os hábitos que empurram você até lá.
+* **Baú.** Meta concluída deixa um baú esperando. Ao abrir, as joias voam para o seu saldo.
+
+### Joias, gelo e conquistas
+
+| O que você faz | O que ganha |
+| --- | --- |
+| Marcar um hábito | 1 joia |
+| Focar 5 minutos | 1 joia |
+| Tirar um dia de descanso | 2 joias |
+| Riscar um marco de meta | 3 joias |
+| Abrir o baú de uma meta | 10 joias |
+
+* **Gelo.** Custa 50 joias, dá para guardar até dois e o primeiro é presente. Quando um dia termina vazio,
+  ele é usado sozinho, a sequência se salva e o sapo avisa.
+* **Conquistas.** São 21 para alcançar, mais uma secreta que ainda é mistério. Foco, hábitos, descanso, tarefas,
+  metas, joias, quarto e casa destravam medalhas, e as que faltam mostram o progresso.
+
+### Perfil
+
+* **Estatísticas.** Sequência atual, recorde, hábitos feitos e minutos de foco.
+* **Ritmo.** Gráficos de foco por dia e de hábitos feitos.
+* **Descanso e concluído.** Gráficos de descansos e gelos usados, e de tarefas, metas e joias.
+  Cada gráfico deixa escolher entre hoje, 7 e 30 dias.
+* **Do seu jeito.** Tema claro, escuro ou do sistema, hora em que o seu dia começa e modo férias,
+  que pausa a sequência sem apagar o fogo.
+* **Sua conta.** Editar o perfil, sair ou excluir a conta com todos os dados.
+
+### Use pelo seu assistente de IA
+
+Em Perfil, Conectar com o Claude, você copia o endereço do Pulo e conecta o Claude ou outro agente compatível com MCP.
+Depois é só pedir em conversa: ver o dia, marcar um hábito, criar uma tarefa, começar um foco.
+Ele segue as mesmas regras das telas, só acessa a sua conta e pode ser desconectado quando você quiser.
+
+### O sapo
+
+Ele reage ao que acontece: comemora conquistas, dorme no descanso, fica concentrado no foco, constrói junto na Ilha
+e mostra quando falta sinal ou algo deu errado.
+
+## Por que isso importa
+
+* **Constância sem punição.** Descanso, gelo e férias reconhecem que a vida tem dias diferentes.
+* **Recompensa visível.** O esforço vira uma casa que é sua e muda a cada conquista.
+* **Tudo no mesmo lugar.** Hábitos, foco, tarefas e metas se ligam uns aos outros.
+
+# Parte técnica
+
+Cliente web em TanStack Start (React, Tailwind, mobile first) e API em Hono, os dois no Cloudflare Workers.
+PostgreSQL com Prisma. Monorepo com npm workspaces e Turborepo.
+
+Documentação: [API](docs/api.md), [banco de dados](docs/banco-de-dados.md), [servidor MCP](docs/mcp.md),
+[sessão e publicação](docs/web-auth.md) e [specs](docs/specs/pulo).
 
 ## Rodar
 
@@ -140,7 +249,7 @@ packages/
   core/     @pulo/core    regras puras: domínio, decisões e repositórios
   client/   @pulo/client  RemoteRepository: o Repository do core sobre a API (cliente tipado do Hono), com cache e erros em português
   db/       @pulo/db      Prisma 7 e PostgreSQL: schema, migrações, cliente, mapeadores e apoio a testes
-docs/specs/pulo           as 10 specs do projeto
+docs/specs/pulo           as specs do projeto
 ```
 
 - `packages/core/config/decisions.ts`: todas as decisões do produto em um lugar
@@ -152,11 +261,11 @@ docs/specs/pulo           as 10 specs do projeto
 
 - **Conta.** O login é com o Google. O servidor guarda seu nome, e-mail e foto do Google, e a sessão.
 - **Seus dados no app.** Nome do sapo, horário do dia, tema, rotina, hábitos e marcações, sessões de foco,
-  dias de descanso, sugestões da semana e o estado do sapo ficam no servidor (PostgreSQL), ligados só à sua conta.
+  tarefas, metas, joias gastas, dias de descanso, sugestões da semana e o estado do sapo ficam no servidor (PostgreSQL), ligados só à sua conta.
   Só quem entrou na conta consegue ler ou mudar esses dados. A sessão fica num cookie HttpOnly do navegador,
   que o app nunca lê.
-- **Apagar.** "Apagar todos os meus dados", no Perfil, remove da conta a rotina, os hábitos, as sessões, os descansos,
-  as sugestões e o sapo, em todos os aparelhos. A conta e o login continuam; sair da conta é outro botão.
+- **Apagar.** "Excluir conta", no Perfil, apaga a conta e tudo o que está ligado a ela, inclusive o sapo.
+  Sair da conta é outro botão.
 - **IA semanal.** Recebe só um resumo agregado da semana (minutos por período do dia, taxas de conclusão, contagens),
   nunca títulos, nome do sapo, e-mail, nome da conta, ids ou texto livre. Na conta, o servidor monta esse resumo e fala com a IA
   (a chave nunca sai dele). Sem IA configurada ou se ela falhar, as sugestões vêm de regras
