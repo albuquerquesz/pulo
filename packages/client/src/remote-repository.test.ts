@@ -1,8 +1,8 @@
 // Roda a API de verdade (Hono + Better Auth + Prisma) no mesmo processo, sobre o Postgres de teste.
 // O `fetch` do cliente é o `app.fetch`: nenhuma rede, nenhum mock da API.
-import { createHarness, TEST_NOW, TEST_ORIGIN, type TestUser } from '@pulo/api/src/testing';
-import { DEFAULT_TIMEZONE, JOIAS, MAX_HABITS_PER_DAY } from '@pulo/core/config/decisions';
-import { dateKeyOf } from '@pulo/core/domain/day';
+import { createHarness, envelhecerHabito, envelhecerMeta, TEST_NOW, TEST_ORIGIN, type TestUser } from '@pulo/api/src/testing';
+import { DEFAULT_TIMEZONE, HOUSE, JOIAS, MAX_HABITS_PER_DAY } from '@pulo/core/config/decisions';
+import { addDays, dateKeyOf } from '@pulo/core/domain/day';
 import { verConquistas } from '@pulo/core/domain/achievements';
 import { verSequencia } from '@pulo/core/domain/streak';
 import { verEstatisticasDoHabito } from '@pulo/core/domain/habit-stats';
@@ -87,7 +87,11 @@ defineRepositoryContract(
     await joiasForaDaJanela(me);
     return { repository: await open(me), userId: me.id };
   },
-  { mascotIsServerDerived: true, now: TEST_NOW },
+  {
+    mascotIsServerDerived: true,
+    now: TEST_NOW,
+    envelhecer: { habito: (id) => envelhecerHabito(database, id), meta: (id) => envelhecerMeta(database, id) },
+  },
 );
 
 // ---------- Comportamento próprio do remoto ----------
@@ -166,7 +170,7 @@ describe('RemoteRepository: sequência', () => {
     expect(await verSequencia(repo, clock)).toMatchObject({ atual: 0, recorde: 0 });
     expect(calls).toEqual(['GET /api/sync']);
 
-    const x = habito();
+    const x = habito({ weekdays: [2] });
     await repo.saveHabit(x);
     const gravando = repo.saveHabitLog({ habitId: x.id, date: dateKeyOf(TEST_NOW, DEFAULT_TIMEZONE), doneAt: TEST_NOW });
     // Pedida com a escrita ainda no ar: espera ela terminar.
@@ -347,7 +351,8 @@ describe('RemoteRepository: erros e rollback', () => {
 
     const habit = habito({ weekdays: [0, 1, 2, 3, 4, 5, 6] });
     await repo.saveHabit(habit);
-    for (let d = 1; d <= 8; d += 1) await repo.saveHabitLog({ habitId: habit.id, date: `2026-11-${String(d).padStart(2, '0')}`, doneAt: TEST_NOW });
+    await envelhecerHabito(database, habit.id);
+    for (let atras = 0; atras < 8; atras += 1) await repo.saveHabitLog({ habitId: habit.id, date: addDays(HOJE, -atras), doneAt: TEST_NOW });
     const comprado = await comprarNaIlha(repo, clock, 'banco');
     expect(comprado).toMatchObject({ ok: true, value: { saldo: 0, gastas: 8 } });
     expect(await (await open(me)).listIslandPurchases()).toEqual([banco]);
@@ -357,9 +362,10 @@ describe('RemoteRepository: erros e rollback', () => {
     const me = await h.newUser();
     let falhar = false;
     const repo = await open(me, (request) => (falhar && request.method === 'DELETE' ? Response.json({ error: 'erro_interno' }, { status: 500 }) : h.app.fetch(request)));
-    const x = habito();
+    const x = habito({ weekdays: [0, 1, 2, 3, 4, 5, 6] });
     await repo.saveHabit(x);
-    await repo.saveHabitLog({ habitId: x.id, date: '2026-11-10', doneAt: 1 });
+    await envelhecerHabito(database, x.id);
+    await repo.saveHabitLog({ habitId: x.id, date: '2026-11-12', doneAt: 1 });
     falhar = true;
     await expect(repo.deleteHabit(x.id)).rejects.toMatchObject({ code: 'erro_interno' });
     expect(await repo.listHabits()).toEqual([x]);
@@ -498,6 +504,7 @@ describe('RemoteRepository: perfil e conta', () => {
     expect(await repo.getPreferences()).toMatchObject({ focusMinutes: 45 });
 
     await repo.saveHabit({ id: 'habito-perfil', title: 'Ler', weekdays: [0], state: 'ativo' });
+    await envelhecerHabito(database, 'habito-perfil');
     await repo.saveHabitLog({ habitId: 'habito-perfil', date: '2026-11-16', doneAt: TEST_NOW });
     expect(await repo.getStats()).toMatchObject({ habitosFeitos: 1 });
     expect(calls).toContain('GET /api/stats');
@@ -522,7 +529,7 @@ describe('RemoteRepository: tarefas', () => {
     const repo = await open(me);
     const nova = tarefa();
     const sub = { id: uuid(), taskId: nova.id, title: 'passo', done: false, position: 1 };
-    const meta = { id: uuid(), title: 'm', state: 'ativa' as const, milestones: [], createdAt: 1 };
+    const meta = { id: uuid(), title: 'm', state: 'ativa' as const, milestones: [], createdAt: TEST_NOW };
     // Tudo disparado junto, como a tela faria.
     await Promise.all([repo.saveGoal(meta), repo.saveTask({ ...nova, goalId: meta.id }), repo.saveSubtask(sub)]);
     expect(await repo.listTasks()).toEqual([{ ...nova, goalId: meta.id }]);
@@ -575,7 +582,10 @@ describe('RemoteRepository: baú e hábito atrelado', () => {
   it('o baú vem do servidor, outro aparelho vê e o recusado sai do cache', async () => {
     const me = await h.newUser();
     const repo = await open(me);
-    const goal = { id: 'meta-bau', title: 'x', state: 'concluida' as const, milestones: [], createdAt: 1, completedAt: 2 };
+    const nova = { id: 'meta-bau', title: 'x', state: 'ativa' as const, milestones: [], createdAt: TEST_NOW };
+    await repo.saveGoal(nova);
+    await envelhecerMeta(database, nova.id);
+    const goal = { ...nova, state: 'concluida' as const, completedAt: TEST_NOW };
     const habit = { id: 'habito-bau', title: 'ler', weekdays: [0 as const], state: 'ativo' as const, goalId: goal.id };
     // Sem esperar: o hábito e o baú aguardam a meta chegar.
     await Promise.all([repo.saveGoal(goal), repo.saveHabit(habit), repo.saveGoalChest({ goalId: goal.id, abertoEm: 1, joias: 999 })]);
@@ -602,6 +612,7 @@ describe('hábitos v2 (spec 17)', () => {
     const completo = habito({ icon: '📚', color: 'sol', period: 'noite', reminderMinutes: 1260, reminderOn: true, state: 'pausado' });
     const icone = bloco({ icon: '🐸' });
     await Promise.all([repo.saveHabit(completo), repo.saveBlock(icone)]);
+    await envelhecerHabito(database, completo.id);
     await repo.saveHabitLog({ habitId: completo.id, date: '2026-11-16', doneAt: TEST_NOW });
     const lido = await open(me);
     expect(await lido.listHabits()).toEqual([completo]);
@@ -618,7 +629,7 @@ describe('hábitos v2 (spec 17)', () => {
 });
 
 describe('RemoteRepository: foco com intenção e vínculo (spec 19)', () => {
-  const meta = () => ({ id: uuid(), title: 'm', state: 'ativa' as const, milestones: [], createdAt: 1 });
+  const meta = () => ({ id: uuid(), title: 'm', state: 'ativa' as const, milestones: [], createdAt: TEST_NOW });
   const foco = (extra: Partial<FocusSession> = {}): FocusSession => ({
     id: uuid(), startedAt: TEST_NOW - 25 * 60_000, plannedMinutes: 25, state: 'em_andamento', pausedMs: 0, ...extra,
   });
@@ -672,5 +683,40 @@ describe('RemoteRepository: foco com intenção e vínculo (spec 19)', () => {
     falhar = true;
     await expect(repo.deleteGoal(goal.id)).rejects.toMatchObject({ code: 'erro_interno' });
     expect(await repo.listSessions()).toEqual([running]);
+  });
+});
+
+describe('RemoteRepository: saldo com histórico fora do intervalo', () => {
+  it('soma o que o servidor contou fora do sync, e o ganho novo entra por cima', async () => {
+    const me = await h.newUser();
+    const habitId = uuid();
+    await database.db.habit.create({
+      data: { id: habitId, userId: me.id, title: 'Ler', weekdays: [0, 1, 2, 3, 4, 5, 6], createdAt: new Date('2024-01-01') },
+    });
+    await database.db.habitLog.createMany({
+      data: Array.from({ length: 40 }, (_, i) => ({ userId: me.id, habitId, date: new Date(Date.UTC(2025, 0, 1 + i)), doneAt: new Date(TEST_NOW) })),
+    });
+    await database.db.restDay.create({ data: { userId: me.id, date: new Date('2025-03-01') } });
+    // Gasta mais do que o intervalo do sync renderia sozinho.
+    const cerca = { item: 'cerca', cost: HOUSE.partCost.cerca, createdAt: TEST_NOW };
+    await database.db.joiaCredit.create({ data: { userId: me.id, amount: 10 } });
+    const antigas = 40 * JOIAS.por.habitDone + JOIAS.por.restDay + 10;
+
+    const repo = await open(me);
+    expect((await verCasa(repo)).saldo).toBe(antigas);
+    await repo.saveHousePurchase(cerca);
+    expect((await verCasa(repo)).saldo).toBe(antigas - cerca.cost);
+    const gravando = repo.saveHabitLog({ habitId, date: HOJE, doneAt: TEST_NOW });
+    expect((await verCasa(repo)).saldo).toBe(antigas - cerca.cost + JOIAS.por.habitDone);
+    await gravando;
+    expect((await verCasa(await open(me))).saldo).toBe(antigas - cerca.cost + JOIAS.por.habitDone);
+
+    // Apagar o hábito leva os registros antigos também.
+    await repo.deleteHabit(habitId);
+    expect((await verCasa(repo)).saldo).toBe((await verCasa(await open(me))).saldo);
+    expect((await verCasa(repo)).ganhas.total).toBe(JOIAS.por.restDay + 10);
+
+    await repo.clearAll();
+    expect((await verCasa(repo)).ganhas.total).toBe(0);
   });
 });

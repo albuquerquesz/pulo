@@ -1,10 +1,11 @@
 // Suíte de contrato do `Repository`, reutilizável por qualquer implementação (memória, armazenamento,
 // cliente remoto). Usa `describe`, `it` e `expect` globais: roda no Jest do core e no Vitest (`globals: true`).
-import { HOUSE, JOIAS } from '../config/decisions';
+import { GOALS, HOUSE, JOIAS, MAX_HABITS_PER_DAY } from '../config/decisions';
+import { DAY_MS, MINUTE_MS } from '../domain/clock';
 import { dateKeyOf, addDays } from '../domain/day';
 import { verSequencia } from '../domain/streak';
 import { endedSession, sp } from '../domain/test-utils';
-import type { Repository, Task, User } from '../domain/types';
+import type { Habit, Repository, Task, User } from '../domain/types';
 
 /** O que cada teste recebe: um repositório vazio e o id que o `User` desse repositório precisa ter. */
 export interface RepositoryUnderTest {
@@ -21,6 +22,8 @@ export interface ContractOptions {
   mascotIsServerDerived?: boolean;
   /** "Agora" para as regras que dependem do dia. No remoto, o mesmo instante do relógio do servidor. */
   now?: number;
+  /** Onde o servidor marca a criação: faz um hábito ou uma meta já existirem há tempo. */
+  envelhecer?: { habito(id: string): Promise<void>; meta(id: string): Promise<void> };
 }
 
 const baseUser: User = {
@@ -56,8 +59,19 @@ export function defineRepositoryContract(
   make: () => RepositoryUnderTest | Promise<RepositoryUnderTest>,
   options: ContractOptions = {},
 ): void {
-  // O servidor só aceita descanso para hoje.
-  const restDate = dateKeyOf(options.now ?? sp(2026, 11, 18), baseUser.timezone);
+  // O servidor só aceita descanso para hoje, e hábitos, metas e focos de poucos dias para cá.
+  const agora = options.now ?? sp(2026, 11, 18);
+  const restDate = dateKeyOf(agora, baseUser.timezone);
+  const dia = (atras: number) => addDays(restDate, -atras);
+  const todosOsDias: Habit['weekdays'] = [0, 1, 2, 3, 4, 5, 6];
+  /** Um hábito de todos os dias, criado há tempo. */
+  const habitoAntigo = async (r: Repository) => {
+    const id = uid('h');
+    await r.saveHabit({ id, title: 'x', weekdays: todosOsDias, state: 'ativo' });
+    await options.envelhecer?.habito(id);
+    return id;
+  };
+  const foco = (diasAtras: number) => ({ ...endedSession(agora - diasAtras * DAY_MS - 60 * MINUTE_MS, 25, 'concluida'), id: uid('s') });
   const subject = async () => {
     const { repository, userId } = await make();
     return { r: repository, user: { ...baseUser, id: userId } };
@@ -101,22 +115,20 @@ export function defineRepositoryContract(
 
     it('registros de hábito: um por hábito e dia, filtro por intervalo, apagar', async () => {
       const { r } = await subject();
-      const h = uid('h');
-      await r.saveHabit({ id: h, title: 'x', weekdays: [0], state: 'ativo' as const });
-      await r.saveHabitLog({ habitId: h, date: '2026-11-10', doneAt: 1 });
-      await r.saveHabitLog({ habitId: h, date: '2026-11-10', doneAt: 2 });
-      await r.saveHabitLog({ habitId: h, date: '2026-11-12', doneAt: 3 });
+      const h = await habitoAntigo(r);
+      await r.saveHabitLog({ habitId: h, date: dia(6), doneAt: 1 });
+      await r.saveHabitLog({ habitId: h, date: dia(6), doneAt: 2 });
+      await r.saveHabitLog({ habitId: h, date: dia(4), doneAt: 3 });
       expect(await r.listHabitLogs()).toHaveLength(2);
-      expect(await r.listHabitLogs({ from: '2026-11-11', to: '2026-11-30' })).toHaveLength(1);
-      await r.deleteHabitLog(h, '2026-11-10');
+      expect(await r.listHabitLogs({ from: dia(5), to: dia(0) })).toHaveLength(1);
+      await r.deleteHabitLog(h, dia(6));
       expect(await r.listHabitLogs()).toHaveLength(1);
     });
 
     it('apagar hábito apaga os registros dele', async () => {
       const { r } = await subject();
-      const h = uid('h');
-      await r.saveHabit({ id: h, title: 'x', weekdays: [0], state: 'ativo' as const });
-      await r.saveHabitLog({ habitId: h, date: '2026-11-10', doneAt: 1 });
+      const h = await habitoAntigo(r);
+      await r.saveHabitLog({ habitId: h, date: dia(1), doneAt: 1 });
       await r.deleteHabit(h);
       expect(await r.listHabits()).toEqual([]);
       expect(await r.listHabitLogs()).toEqual([]);
@@ -124,15 +136,15 @@ export function defineRepositoryContract(
 
     it('sessões: em andamento pode mudar, encerrada é imutável', async () => {
       const { r } = await subject();
-      const running = { id: uid('s'), startedAt: 1, plannedMinutes: 25, state: 'em_andamento' as const, pausedMs: 0 };
+      const running = { id: uid('s'), startedAt: agora - 30 * MINUTE_MS, plannedMinutes: 25, state: 'em_andamento' as const, pausedMs: 0 };
       await r.saveSession(running);
-      await r.saveSession({ ...running, pausedSince: 5 });
-      const ended = { ...running, state: 'concluida' as const, endedAt: 99 };
+      await r.saveSession({ ...running, pausedSince: agora - 29 * MINUTE_MS });
+      const ended = { ...running, state: 'concluida' as const, endedAt: agora - 5 * MINUTE_MS };
       await r.saveSession(ended);
       await expect(r.saveSession({ ...ended, state: 'interrompida' })).rejects.toThrow();
       expect(await r.listSessions()).toEqual([ended]);
       // a fila de escrita continua funcionando depois do erro
-      await r.saveSession({ ...endedSession(sp(2026, 11, 10), 25, 'concluida'), id: uid('s') });
+      await r.saveSession(foco(2));
       expect(await r.listSessions()).toHaveLength(2);
     });
 
@@ -140,7 +152,7 @@ export function defineRepositoryContract(
       const { r } = await subject();
       const habitId = uid('h');
       await r.saveHabit({ id: habitId, title: 'Ler', weekdays: [0], state: 'ativo' });
-      const session = { ...endedSession(sp(2026, 11, 9), 25, 'concluida'), id: uid('s'), intention: 'Capítulo 2', habitId };
+      const session = { ...foco(2), intention: 'Capítulo 2', habitId };
       await r.saveSession(session);
       expect(await r.listSessions()).toEqual([session]);
       await r.deleteHabit(habitId);
@@ -176,12 +188,11 @@ export function defineRepositoryContract(
     it('sequência: hábito e descanso contam, desfazer recalcula', async () => {
       const { r, user } = await subject();
       await r.saveUser(user);
-      const now = options.now ?? sp(2026, 11, 18);
+      const now = agora;
       const today = dateKeyOf(now, user.timezone);
       const clock = { now: () => now };
       expect(await verSequencia(r, clock)).toMatchObject({ atual: 0, recorde: 0 });
-      const h = uid('h');
-      await r.saveHabit({ id: h, title: 'x', weekdays: [0], state: 'ativo' as const });
+      const h = await habitoAntigo(r);
       await r.saveHabitLog({ habitId: h, date: addDays(today, -2), doneAt: 1 });
       await r.saveHabitLog({ habitId: h, date: addDays(today, -1), doneAt: 1 });
       await r.deleteHabitLog(h, addDays(today, -2));
@@ -201,10 +212,10 @@ export function defineRepositoryContract(
       const { r } = await subject();
       const goal = {
         id: uid('g'), title: 'Maratona', why: 'saúde', targetDate: '2027-06-01', state: 'ativa' as const,
-        milestones: [{ id: uid('m'), title: '5 km', doneAt: 3 }, { id: uid('m'), title: '10 km' }], createdAt: 1,
+        milestones: [{ id: uid('m'), title: '5 km', doneAt: agora - 5 }, { id: uid('m'), title: '10 km' }], createdAt: agora - 9,
       };
       await r.saveGoal(goal);
-      const done = { ...goal, state: 'concluida' as const, completedAt: 9 };
+      const done = { ...goal, state: 'concluida' as const, completedAt: agora - 1 };
       await r.saveGoal(done);
       expect(await r.listGoals()).toEqual([done]);
       (await r.listGoals())[0].milestones[0].title = 'mexido';
@@ -217,7 +228,12 @@ export function defineRepositoryContract(
       const { r } = await subject();
       const goalId = uid('g');
       const habitId = uid('h');
-      const goal = { id: goalId, title: 'm', icon: '🏃', color: 'foco' as const, state: 'concluida' as const, milestones: [], createdAt: 1, completedAt: 2 };
+      const nova = { id: goalId, title: 'm', icon: '🏃', color: 'foco' as const, state: 'ativa' as const, milestones: [], createdAt: agora - 9 };
+      await r.saveGoal(nova);
+      await options.envelhecer?.meta(goalId);
+      // No remoto o `createdAt` é o gravado; localmente, envelhecer é salvar a meta com a idade do baú.
+      const createdAt = options.envelhecer ? nova.createdAt : agora - GOALS.bau.idadeMinimaDias * DAY_MS;
+      const goal = { ...nova, createdAt, state: 'concluida' as const, completedAt: agora - 1 };
       await r.saveGoal(goal);
       expect(await r.listGoals()).toEqual([goal]);
       const habit = { id: habitId, title: 'x', weekdays: [0 as const], state: 'ativo' as const };
@@ -226,7 +242,7 @@ export function defineRepositoryContract(
       await r.saveHabit(habit);
       expect(await r.listHabits()).toEqual([habit]);
       await r.saveHabit({ ...habit, goalId });
-      await r.saveGoalChest({ goalId, abertoEm: 3, joias: JOIAS.por.goalCompleted });
+      await r.saveGoalChest({ goalId, abertoEm: agora, joias: JOIAS.por.goalCompleted });
       expect(await r.listGoalChests()).toMatchObject([{ goalId, joias: JOIAS.por.goalCompleted }]);
       await r.deleteGoal(goalId);
       expect(await r.listGoalChests()).toEqual([]);
@@ -277,7 +293,7 @@ export function defineRepositoryContract(
       await expect(r.addTaskComment({ id: uid('c'), taskId: uid('t'), body: 'x', createdAt: 1 })).rejects.toThrow();
       expect(await r.listSubtasks()).toEqual([]);
       const goalId = uid('g');
-      await r.saveGoal({ id: goalId, title: 'm', state: 'ativa', milestones: [], createdAt: 1 });
+      await r.saveGoal({ id: goalId, title: 'm', state: 'ativa', milestones: [], createdAt: agora });
       const id = uid('t');
       await r.saveTask(task(id, { goalId }));
       expect((await r.listTasks())[0].goalId).toBe(goalId);
@@ -313,25 +329,23 @@ export function defineRepositoryContract(
 
     it('escritas concorrentes não se perdem', async () => {
       const { r } = await subject();
-      const h = uid('h');
-      await r.saveHabit({ id: h, title: 'x', weekdays: [0], state: 'ativo' as const });
-      await Promise.all(
-        Array.from({ length: 20 }, (_, i) => r.saveHabitLog({ habitId: h, date: `2026-11-${String(i + 1).padStart(2, '0')}`, doneAt: i })),
-      );
-      expect(await r.listHabitLogs()).toHaveLength(20);
+      // Os hábitos entram um de cada vez: o que se testa em paralelo são as marcas.
+      const habitos: string[] = [];
+      for (let i = 0; i < MAX_HABITS_PER_DAY; i += 1) habitos.push(await habitoAntigo(r));
+      await Promise.all(habitos.flatMap((h) => [0, 1, 2, 3].map((atras) => r.saveHabitLog({ habitId: h, date: dia(atras), doneAt: atras }))));
+      expect(await r.listHabitLogs()).toHaveLength(4 * MAX_HABITS_PER_DAY);
     });
 
     it('clearAll zera tudo, inclusive sessões e mascote', async () => {
       const { r, user } = await subject();
-      const h = uid('h');
       await r.saveUser(user);
       await r.saveBlock({ id: uid('b'), weekday: 1, startMinutes: 0, durationMinutes: 5, kind: 'descanso' });
-      await r.saveHabit({ id: h, title: 'x', weekdays: [0], state: 'ativo' as const });
-      await r.saveHabitLog({ habitId: h, date: '2026-11-10', doneAt: 1 });
-      await r.saveSession({ ...endedSession(1, 25, 'concluida'), id: uid('s') });
+      const h = await habitoAntigo(r);
+      await r.saveHabitLog({ habitId: h, date: dia(1), doneAt: 1 });
+      await r.saveSession(foco(1));
       await r.saveRestDay({ date: restDate });
       await r.saveProposal({ id: uid('p'), weekStart: '2026-11-09', state: 'pendente', patternText: 'x', changes: [], origin: 'ia', createdAt: 1 });
-      await r.saveGoal({ id: uid('g'), title: 'x', state: 'ativa', milestones: [], createdAt: 1 });
+      await r.saveGoal({ id: uid('g'), title: 'x', state: 'ativa', milestones: [], createdAt: agora });
       await r.saveIslandPurchase({ item: 'banco', cost: 8, createdAt: 1 });
       if (!options.mascotIsServerDerived) await r.saveMascotState({ phase: 3, careDays: 9, updatedAt: 1 });
       await r.clearAll();

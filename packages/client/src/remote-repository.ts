@@ -26,7 +26,7 @@ import { systemClock } from '@pulo/core/domain/clock';
 import { dateKeyOf, inRange } from '@pulo/core/domain/day';
 import type { FreezeSource } from '@pulo/core/domain/gelo';
 import type { HabitStatsSource } from '@pulo/core/domain/habit-stats';
-import type { FreezePurchaseList } from '@pulo/core/domain/joias';
+import type { FreezePurchaseList, JoiasForaDoCache } from '@pulo/core/domain/joias';
 import type { MetricsSource } from '@pulo/core/domain/metricas';
 import type { StatsSource } from '@pulo/core/domain/stats';
 import type { StreakSource } from '@pulo/core/domain/streak';
@@ -127,6 +127,7 @@ export interface RemoteRepository
     HabitStatsSource,
     FreezeSource,
     FreezePurchaseList,
+    JoiasForaDoCache,
     MetricsSource {
   readonly account: Account;
   /**
@@ -222,6 +223,8 @@ class ApiRepository implements RemoteRepository {
   private metadata: UserMetadata | null = null;
   private mascot: MascotState | null = null;
   private joiaCredit = 0;
+  /** Joias dos registros que o sync não traz (veja `JoiasForaDoCache`). */
+  private joiasForaDaJanela = 0;
   private streak: Streak | null = null;
   /** Dia (do app) em que a sequência guardada foi lida; `null` quando uma escrita a envelheceu. */
   private streakDay: DateKey | null = null;
@@ -297,6 +300,7 @@ class ApiRepository implements RemoteRepository {
     this.housePurchases.replaceAll(data.housePurchases);
     this.roomDecor.replaceAll(data.roomDecor);
     this.joiaCredit = data.joiaCredit;
+    this.joiasForaDaJanela = data.joiasForaDaJanela;
     this.freezes = data.gelo;
     this.freezesDay = this.today();
     this.freezePurchases.replaceAll(data.gelosComprados);
@@ -523,6 +527,7 @@ class ApiRepository implements RemoteRepository {
       null,
       async () => {
         await readJson(await this.client.api.habits[':id'].$delete({ param: { id } }));
+        await this.refreshJoiasForaDaJanela();
       },
       () => {
         relink();
@@ -897,6 +902,21 @@ class ApiRepository implements RemoteRepository {
     });
   }
 
+  async getJoiasForaDaJanela(): Promise<number> {
+    return this.joiasForaDaJanela;
+  }
+
+  /** Relê só o que veio de fora da janela: apagar um hábito leva registros antigos junto. */
+  private async refreshJoiasForaDaJanela(): Promise<void> {
+    if (this.joiasForaDaJanela === 0) return;
+    try {
+      const query = syncRange(this.clock.now(), this.historyDays);
+      this.joiasForaDaJanela = (await readJson(await this.client.api.sync.$get({ query }))).joiasForaDaJanela;
+    } catch {
+      // A exclusão já valeu; o próximo `reload` acerta o saldo.
+    }
+  }
+
   async getJoiaCredit(): Promise<number> {
     return this.joiaCredit;
   }
@@ -1090,6 +1110,7 @@ class ApiRepository implements RemoteRepository {
     }
     this.mascot = null;
     this.joiaCredit = 0;
+    this.joiasForaDaJanela = 0;
     this.pomodoros = {};
   }
 
