@@ -159,12 +159,11 @@ describe('/api/house e /api/room', () => {
     expect((await casa(me)).purchases.length + (await quarto(me)).length).toBe(1);
   });
 
-  it('quem tinha compras antigas mantém o saldo: elas não gastam joias na casa, e a ilha antiga desconta as novas', async () => {
+  it('quem tinha compras antigas mantém o saldo: elas não gastam joias na casa', async () => {
     const me = await h.newUser();
     await joias(me, HOUSE.partCost.cerca);
     await database.db.islandPurchase.create({ data: { userId: me.id, item: 'praia', cost: 40, createdAt: new Date(TEST_NOW - 5) } });
     expect((await me.call('PUT', '/api/house/cerca', parte('cerca'))).status).toBe(200);
-    expect(await erro(await me.call('PUT', '/api/island/purchases/banco', compra('banco', 8)))).toEqual({ status: 409, error: 'joias_insuficientes' });
     const sync = await (await me.call('GET', '/api/sync?from=2026-11-01&to=2026-11-30')).json();
     expect(sync).toMatchObject({
       islandPurchases: [{ item: 'praia', cost: 40, createdAt: TEST_NOW - 5 }],

@@ -89,6 +89,8 @@ defineRepositoryContract(
   },
   {
     mascotIsServerDerived: true,
+    propostasSaoDoServidor: true,
+    ilhaSomenteLeitura: true,
     now: TEST_NOW,
     envelhecer: { habito: (id) => envelhecerHabito(database, id), meta: (id) => envelhecerMeta(database, id) },
   },
@@ -117,7 +119,7 @@ describe('RemoteRepository: sync e cache', () => {
     await repo.getUser();
     expect(calls).toEqual(['GET /api/sync']);
 
-    const b = bloco();
+    const b = bloco({ weekday: 2 });
     await repo.saveBlock(b);
     await repo.deleteBlock(b.id);
     expect(calls.slice(1)).toEqual([`PUT /api/blocks/${b.id}`, `DELETE /api/blocks/${b.id}`]);
@@ -340,22 +342,27 @@ describe('RemoteRepository: erros e rollback', () => {
     expect(await repo.listHabits()).toHaveLength(MAX_HABITS_PER_DAY);
   });
 
-  it('ilha: compra sem joias é recusada pelo servidor e sai do cache; com joias, comprarNaIlha grava', async () => {
+  it('ilha antiga: só leitura, a compra é recusada e sai do cache', async () => {
     const me = await h.newUser();
+    await database.db.islandPurchase.create({ data: { userId: me.id, item: 'antiga:ponte', cost: 20, createdAt: new Date(TEST_NOW) } });
     const repo = await open(me);
-    const banco = { item: 'banco', cost: 8, createdAt: TEST_NOW };
-    await expect(repo.saveIslandPurchase(banco)).rejects.toMatchObject({
-      kind: 'api', code: 'joias_insuficientes', status: 409, mensagem: MENSAGENS_DA_API.joias_insuficientes,
-    });
-    expect(await repo.listIslandPurchases()).toEqual([]);
+    await expect(repo.saveIslandPurchase({ item: 'banco', cost: 8, createdAt: TEST_NOW })).rejects.toBeInstanceOf(RemoteError);
+    expect(await repo.listIslandPurchases()).toEqual([{ item: 'ponte', cost: 20, createdAt: TEST_NOW }]);
+  });
 
-    const habit = habito({ weekdays: [0, 1, 2, 3, 4, 5, 6] });
-    await repo.saveHabit(habit);
-    await envelhecerHabito(database, habit.id);
-    for (let atras = 0; atras < 8; atras += 1) await repo.saveHabitLog({ habitId: habit.id, date: addDays(HOJE, -atras), doneAt: TEST_NOW });
-    const comprado = await comprarNaIlha(repo, clock, 'banco');
-    expect(comprado).toMatchObject({ ok: true, value: { saldo: 0, gastas: 8 } });
-    expect(await (await open(me)).listIslandPurchases()).toEqual([banco]);
+  it('apagar o bloco de um foco em andamento deixa concluir o foco', async () => {
+    const repo = await open(await h.newUser());
+    const block = bloco();
+    await repo.saveBlock(block);
+    const running: FocusSession = {
+      id: crypto.randomUUID(), blockId: block.id, startedAt: TEST_NOW - 25 * 60_000, plannedMinutes: 25, state: 'em_andamento', pausedMs: 0,
+    };
+    await repo.saveSession(running);
+    await repo.deleteBlock(block.id);
+    const [unlinked] = await repo.listSessions();
+    expect(unlinked.blockId).toBeUndefined();
+    await repo.saveSession({ ...unlinked, state: 'concluida', endedAt: TEST_NOW });
+    expect((await repo.listSessions())[0].state).toBe('concluida');
   });
 
   it('apagar hábito recusado devolve o hábito e os registros', async () => {

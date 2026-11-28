@@ -121,8 +121,8 @@ export function repositorioInterno(api: ClienteInterno): Repository & FreezePurc
     },
 
     listIslandPurchases: async () => (await lerJson(await api.api.island.purchases.$get())).purchases,
-    saveIslandPurchase: async (purchase) => {
-      await lerJson(await api.api.island.purchases[':item'].$put({ param: { item: purchase.item }, json: purchase }));
+    saveIslandPurchase: async () => {
+      throw new ErroDaApi(404, 'rota_inexistente', 'A ilha antiga é só para leitura.');
     },
 
     listHousePurchases: async () => (await lerJson(await api.api.house.$get())).purchases,

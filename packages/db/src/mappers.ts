@@ -337,9 +337,12 @@ export const freezeUseMapper = {
 
 // ---------- IslandPurchase ----------
 
+/** Ids da ilha antiga que colidiam com os da casa, gravados com prefixo (migração `ilha_ids_unicos`). */
+const PREFIXO_DA_ILHA_ANTIGA = /^antiga:/;
+
 export const islandPurchaseMapper = {
   toDomain(row: Omit<IslandPurchaseRow, 'userId' | 'kind'>): IslandPurchase {
-    return { item: row.item, cost: row.cost, createdAt: dateToMs(row.createdAt) };
+    return { item: row.item.replace(PREFIXO_DA_ILHA_ANTIGA, ''), cost: row.cost, createdAt: dateToMs(row.createdAt) };
   },
   fromDomain(userId: string, purchase: IslandPurchase): Prisma.IslandPurchaseUncheckedCreateInput {
     return { userId, item: purchase.item, cost: purchase.cost, createdAt: msToDate(purchase.createdAt) };

@@ -1,5 +1,4 @@
 import { WEEKLY_AI } from '@pulo/core/config/decisions';
-import { PROPOSAL_UNDO_GRACE_MS } from '@pulo/core/api/proposal-state';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
 import { type TestUser, TEST_NOW, createHarness, queriesOf } from '../testing';
 
@@ -30,6 +29,20 @@ const proposal = (id: string, extra: Record<string, unknown> = {}) => ({
 const put = (user: TestUser, body: Record<string, unknown> & { id: string }) => user.call('PUT', `/api/proposals/${body.id}`, body);
 const decided = (id: string, state: string, decidedAt = TEST_NOW, extra: Record<string, unknown> = {}) =>
   proposal(id, { state, decidedAt, ...extra });
+const seed = (user: TestUser, id: string) =>
+  database.db.weeklyProposal.create({
+    data: {
+      id,
+      userId: user.id,
+      weekStart: new Date('2026-11-23'),
+      state: 'pendente',
+      patternText: proposal(id).patternText,
+      reasonText: proposal(id).reasonText,
+      changes: proposal(id).changes,
+      origin: 'regra',
+      createdAt: new Date(TEST_NOW - 1000),
+    },
+  });
 const listOf = async (user: TestUser) => (await (await user.call('GET', '/api/proposals')).json()).proposals;
 
 describe('/api/proposals', () => {
@@ -38,83 +51,37 @@ describe('/api/proposals', () => {
     expect((await h.app.request(`/api/proposals/${uuid()}`, { method: 'PUT' })).status).toBe(401);
   });
 
-  it('cria, lê e decide uma proposta pendente', async () => {
+  it('não cria pelo PUT: ninguém forja uma proposta da IA', async () => {
+    const me = await h.newUser();
+    const res = await put(me, proposal(uuid(), { origin: 'ia' }));
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe('nao_encontrado');
+    expect(await listOf(me)).toEqual([]);
+  });
+
+  it('só expira uma pendente; repetir o gravado é idempotente', async () => {
     const me = await h.newUser();
     const id = uuid();
-    const created = await put(me, proposal(id));
-    expect(created.status).toBe(200);
-    expect(await created.json()).toEqual({ proposal: proposal(id) });
+    await seed(me, id);
     expect((await put(me, proposal(id))).status).toBe(200);
-
-    const weeks = ['2026-11-30', '2026-12-07', '2026-12-14', '2026-12-21'];
-    for (const [i, state] of ['aceita', 'editada', 'negada', 'expirada'].entries()) {
-      const other = uuid();
-      await put(me, proposal(other, { weekStart: weeks[i] }));
-      const res = await put(me, decided(other, state, TEST_NOW, { weekStart: weeks[i] }));
-      expect(res.status, state).toBe(200);
+    const bad = [
+      decided(id, 'aceita'),
+      decided(id, 'editada'),
+      decided(id, 'negada'),
+      decided(id, 'expirada', TEST_NOW, { origin: 'ia' }),
+      decided(id, 'expirada', TEST_NOW, { patternText: 'outro texto' }),
+      proposal(id, { createdAt: TEST_NOW - 5 }),
+    ];
+    for (const body of bad) {
+      const res = await put(me, body);
+      expect(res.status, JSON.stringify(body)).toBe(409);
+      expect((await res.json()).error).toBe('proposta_transicao_invalida');
     }
-    expect((await listOf(me)).length).toBe(5);
-  });
-
-  it('decidida só volta a pendente dentro da janela de desfazer; expirada é final', async () => {
-    const me = await h.newUser();
-    const id = uuid();
-    await put(me, proposal(id));
-    await put(me, decided(id, 'aceita', TEST_NOW));
-
-    // Outra decisão direta: inválida.
-    const other = await put(me, decided(id, 'negada'));
-    expect(other.status).toBe(409);
-    expect((await other.json()).error).toBe('proposta_transicao_invalida');
-
-    // Desfazer a tempo.
-    h.setNow(TEST_NOW + WEEKLY_AI.undoSeconds * 1000);
-    expect((await put(me, proposal(id))).status).toBe(200);
-    expect((await listOf(me))[0].state).toBe('pendente');
-
-    // Depois da janela (mais a folga) não desfaz.
-    await put(me, decided(id, 'negada', TEST_NOW + WEEKLY_AI.undoSeconds * 1000));
-    h.setNow(TEST_NOW + WEEKLY_AI.undoSeconds * 1000 * 2 + PROPOSAL_UNDO_GRACE_MS + 1000);
-    const late = await put(me, proposal(id));
-    expect(late.status).toBe(409);
-    expect((await late.json()).error).toBe('proposta_transicao_invalida');
-    h.setNow(TEST_NOW);
-
-    const expired = uuid();
-    await put(me, proposal(expired, { weekStart: '2026-12-07' }));
-    await put(me, decided(expired, 'expirada', TEST_NOW, { weekStart: '2026-12-07' }));
-    expect((await put(me, proposal(expired, { weekStart: '2026-12-07' }))).status).toBe(409);
-  });
-
-  it('repetir a mesma decisão é idempotente; semana, origem e criação não mudam', async () => {
-    const me = await h.newUser();
-    const id = uuid();
-    await put(me, proposal(id, { weekStart: '2026-12-14' }));
-    const accepted = decided(id, 'aceita', TEST_NOW, { weekStart: '2026-12-14' });
-    expect((await put(me, accepted)).status).toBe(200);
-    expect((await put(me, accepted)).status).toBe(200);
-    expect((await put(me, { ...accepted, id, patternText: 'outro texto' })).status).toBe(409);
-
-    const other = uuid();
-    await put(me, proposal(other, { weekStart: '2026-12-21' }));
-    for (const change of [{ origin: 'ia' }, { createdAt: TEST_NOW - 5 }]) {
-      const res = await put(me, proposal(other, { weekStart: '2026-12-21', ...change }));
-      expect(res.status).toBe(409);
-      expect((await res.json()).error).toBe('proposta_imutavel');
-    }
-    const moved = await put(me, proposal(other, { weekStart: '2026-12-28' }));
-    expect((await moved.json()).error).toBe('proposta_imutavel');
-  });
-
-  it('uma proposta por semana', async () => {
-    const me = await h.newUser();
-    await put(me, proposal(uuid(), { weekStart: '2027-01-04' }));
-    const dup = await put(me, proposal(uuid(), { weekStart: '2027-01-04' }));
-    expect(dup.status).toBe(409);
-    expect((await dup.json()).error).toBe('semana_ja_tem_proposta');
-    // Outra pessoa pode ter a mesma semana.
-    const other = await h.newUser();
-    expect((await put(other, proposal(uuid(), { weekStart: '2027-01-04' }))).status).toBe(200);
+    const expired = await put(me, decided(id, 'expirada'));
+    expect(expired.status).toBe(200);
+    expect(await expired.json()).toEqual({ proposal: decided(id, 'expirada') });
+    expect((await put(me, decided(id, 'expirada'))).status).toBe(200);
+    expect((await put(me, proposal(id))).status).toBe(409);
   });
 
   it('valida o formato: segunda-feira, mudanças, decidedAt e textos', async () => {
@@ -136,18 +103,17 @@ describe('/api/proposals', () => {
       expect(res.status, JSON.stringify(body)).toBe(400);
       expect((await res.json()).error).toBe('corpo_invalido');
     }
-    const future = await put(me, proposal(id, { createdAt: TEST_NOW + 3_600_000 }));
+    const future = await put(me, decided(id, 'expirada', TEST_NOW + 3_600_000));
     expect((await future.json()).error).toBe('horario_no_futuro');
   });
 
-  it('isolamento: outra pessoa não lê nem decide a proposta alheia', async () => {
+  it('isolamento: outra pessoa não lê nem expira a proposta alheia', async () => {
     const a = await h.newUser();
     const b = await h.newUser();
     const id = uuid();
-    await put(a, proposal(id, { weekStart: '2027-02-01' }));
+    await seed(a, id);
     expect(await listOf(b)).toEqual([]);
-    const steal = await put(b, decided(id, 'aceita'));
-    expect(steal.status).toBe(409);
+    expect((await put(b, decided(id, 'expirada'))).status).toBe(404);
     expect((await listOf(a))[0].state).toBe('pendente');
   });
 
@@ -167,17 +133,13 @@ describe('/api/proposals', () => {
       })),
     });
     const first = uuid();
-    await put(small, proposal(first));
+    await seed(small, first);
 
     const get = await queriesOf(database, small, 'GET', '/api/proposals');
     expect(await queriesOf(database, big, 'GET', '/api/proposals')).toBe(get);
     expect(get).toBe(3);
 
-    const bigId = uuid();
-    const same = await queriesOf(database, small, 'PUT', `/api/proposals/${first}`, proposal(first));
-    const created = await queriesOf(database, big, 'PUT', `/api/proposals/${bigId}`, proposal(bigId, { weekStart: '2030-01-07' }));
-    // 2 de sessão + leitura (1) + upsert (1).
-    expect(same).toBe(4);
-    expect(created).toBe(4);
+    // 2 de sessão + leitura (1).
+    expect(await queriesOf(database, small, 'PUT', `/api/proposals/${first}`, proposal(first))).toBe(3);
   });
 });

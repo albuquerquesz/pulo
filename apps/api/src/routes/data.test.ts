@@ -29,8 +29,11 @@ async function populate(user: TestUser, extra = 0) {
   });
   await user.call('PUT', '/api/rest-days/2026-11-18');
   const proposalId = uuid();
-  await user.call('PUT', `/api/proposals/${proposalId}`, {
-    id: proposalId, weekStart: '2026-11-23', state: 'pendente', patternText: 'p', changes: [], origin: 'regra', createdAt: TEST_NOW - 1,
+  await database.db.weeklyProposal.create({
+    data: {
+      id: proposalId, userId: user.id, weekStart: new Date('2026-11-23'), state: 'pendente', patternText: 'p', changes: [],
+      origin: 'regra', createdAt: new Date(TEST_NOW - 1),
+    },
   });
   await database.db.islandPurchase.create({ data: { userId: user.id, item: 'banco', cost: 8, createdAt: new Date(TEST_NOW - 1) } });
   await database.db.restDay.createMany({

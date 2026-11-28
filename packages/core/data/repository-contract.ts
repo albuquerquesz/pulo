@@ -24,6 +24,10 @@ export interface ContractOptions {
   now?: number;
   /** Onde o servidor marca a criação: faz um hábito ou uma meta já existirem há tempo. */
   envelhecer?: { habito(id: string): Promise<void>; meta(id: string): Promise<void> };
+  /** No remoto só o servidor cria e decide propostas (`saveProposal` apenas expira uma pendente). */
+  propostasSaoDoServidor?: boolean;
+  /** No remoto a ilha antiga é só leitura. */
+  ilhaSomenteLeitura?: boolean;
 }
 
 const baseUser: User = {
@@ -171,6 +175,7 @@ export function defineRepositoryContract(
         id: uid('p'), weekStart: '2026-11-09', state: 'pendente' as const, patternText: 'x', changes: [],
         origin: 'regra' as const, createdAt: 1,
       };
+      if (options.propostasSaoDoServidor) return;
       await r.saveProposal(p);
       await r.saveProposal({ ...p, state: 'aceita', decidedAt: 2 });
       expect((await r.listProposals())[0].state).toBe('aceita');
@@ -303,6 +308,11 @@ export function defineRepositoryContract(
 
     it('ilha: compras por item, sem duplicar', async () => {
       const { r } = await subject();
+      if (options.ilhaSomenteLeitura) {
+        await expect(r.saveIslandPurchase({ item: 'banco', cost: 8, createdAt: 1 })).rejects.toThrow();
+        expect(await r.listIslandPurchases()).toEqual([]);
+        return;
+      }
       await r.saveIslandPurchase({ item: 'banco', cost: 8, createdAt: 1 });
       await r.saveIslandPurchase({ item: 'praia', cost: 40, createdAt: 2 });
       const compras = await r.listIslandPurchases();
@@ -344,9 +354,11 @@ export function defineRepositoryContract(
       await r.saveHabitLog({ habitId: h, date: dia(1), doneAt: 1 });
       await r.saveSession(foco(1));
       await r.saveRestDay({ date: restDate });
-      await r.saveProposal({ id: uid('p'), weekStart: '2026-11-09', state: 'pendente', patternText: 'x', changes: [], origin: 'ia', createdAt: 1 });
+      if (!options.propostasSaoDoServidor) {
+        await r.saveProposal({ id: uid('p'), weekStart: '2026-11-09', state: 'pendente', patternText: 'x', changes: [], origin: 'ia', createdAt: 1 });
+      }
       await r.saveGoal({ id: uid('g'), title: 'x', state: 'ativa', milestones: [], createdAt: agora });
-      await r.saveIslandPurchase({ item: 'banco', cost: 8, createdAt: 1 });
+      if (!options.ilhaSomenteLeitura) await r.saveIslandPurchase({ item: 'banco', cost: 8, createdAt: 1 });
       if (!options.mascotIsServerDerived) await r.saveMascotState({ phase: 3, careDays: 9, updatedAt: 1 });
       await r.clearAll();
       expect(await r.getUser()).toBeNull();

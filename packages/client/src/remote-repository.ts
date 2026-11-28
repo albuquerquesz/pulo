@@ -207,6 +207,9 @@ export async function createRemoteRepository(options: RemoteRepositoryOptions): 
 const compareBlocks = (a: RoutineBlock, b: RoutineBlock) => a.weekday - b.weekday || a.startMinutes - b.startMinutes;
 const taskActivitySchema = z.object({ events: z.array(taskEventSchema), comments: z.array(taskCommentSchema) });
 const logKey = (habitId: EntityId, date: DateKey) => `${habitId}|${date}`;
+
+const ilhaSomenteLeitura = () =>
+  new RemoteError({ kind: 'api', status: 404, code: 'rota_inexistente', mensagem: 'A ilha antiga é só para leitura.' });
 /** Chaves das escritas que podem mudar a sequência: hábitos e registros, sessões, descansos, perfil e apagar tudo. */
 const SESSION_OPTIONALS = ['intention', 'habitId', 'goalId', 'taskId'] as const;
 const STREAK_LOCKS = /^(habit|log|session|rest):|^(user|all)$/;
@@ -463,9 +466,18 @@ class ApiRepository implements RemoteRepository {
   }
 
   deleteBlock(id: EntityId): Promise<void> {
-    return this.write(this.blocks, `block:${id}`, id, null, async () => {
-      await readJson(await this.client.api.blocks[':id'].$delete({ param: { id } }));
-    });
+    // O servidor solta os focos do bloco; o cache faz o mesmo, senão concluir um foco em andamento é recusado.
+    const relink = this.unlinkSessions('blockId', id);
+    return this.write(
+      this.blocks,
+      `block:${id}`,
+      id,
+      null,
+      async () => {
+        await readJson(await this.client.api.blocks[':id'].$delete({ param: { id } }));
+      },
+      relink,
+    );
   }
 
   // ---------- Hábitos ----------
@@ -607,7 +619,7 @@ class ApiRepository implements RemoteRepository {
   }
 
   /** Solta no cache os focos ligados ao alvo apagado. Devolve como desfazer (só nas sessões que ninguém mexeu depois). */
-  private unlinkSessions(key: LinkKey, id: EntityId): () => void {
+  private unlinkSessions(key: LinkKey | 'blockId', id: EntityId): () => void {
     const released = this.sessions
       .raw()
       .filter((session) => session[key] === id)
@@ -859,12 +871,9 @@ class ApiRepository implements RemoteRepository {
     return this.islandPurchases.values().sort((a, b) => a.createdAt - b.createdAt);
   }
 
-  /** O servidor confere o saldo, a ordem das áreas e o preço; se recusar, a compra sai do cache e o erro sobe. */
-  saveIslandPurchase(purchase: IslandPurchase): Promise<void> {
-    const { item } = purchase;
-    return this.write(this.islandPurchases, `island:${item}`, item, purchase, async () => {
-      await readJson(await this.client.api.island.purchases[':item'].$put({ param: { item }, json: purchase }));
-    });
+  /** A ilha antiga só é lida: a API não grava mais compras nela (o que vale é a casa). */
+  saveIslandPurchase(_purchase: IslandPurchase): Promise<void> {
+    return Promise.reject(ilhaSomenteLeitura());
   }
 
   // ---------- Casa e quarto ----------
