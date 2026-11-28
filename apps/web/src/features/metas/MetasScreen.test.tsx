@@ -103,6 +103,10 @@ describe('Tela de Metas', () => {
   test('abrir o baú grava uma vez só e soma as joias no saldo', async () => {
     let saldo = 0;
     const repo = await abrir('ex-meta-ingles', async (r) => {
+      // O baú pede idade e todos os marcos riscados.
+      const pronta = (await r.listGoals()).find((g) => g.id === 'ex-meta-ingles');
+      if (!pronta) throw new Error('a conta de exemplo perdeu a meta');
+      await r.saveGoal({ ...pronta, createdAt: 0, milestones: pronta.milestones.map((m) => ({ ...m, doneAt: m.doneAt ?? 1 })) });
       await concluirMeta(r, 'ex-meta-ingles', 1);
       saldo = (await verCasa(r)).saldo;
     });
