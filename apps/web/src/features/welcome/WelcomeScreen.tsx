@@ -3,6 +3,7 @@ import { Copyright, TelaDeEstado } from "@/ui";
 
 import { Tela, useApp } from "../app";
 import { BosqueDeFundo } from "./BosqueDeFundo";
+import { erroDoLoginNaUrl } from "./erroDoLogin";
 
 /** O G colorido do Google, no botão de entrar. */
 function LogoDoGoogle() {
@@ -29,6 +30,9 @@ export function WelcomeScreen() {
     loginDisponivel,
     tentarDeNovo,
   } = useApp();
+
+  // A welcome só aparece no navegador, depois da abertura: no servidor não há URL para ler.
+  const erro = erroDeLogin ?? (typeof window === "undefined" ? null : erroDoLoginNaUrl(window.location.search));
 
   if (fase === "sem_conexao") {
     return (
@@ -73,9 +77,9 @@ export function WelcomeScreen() {
             )}
             Entrar com Google
           </button>
-          {erroDeLogin ? (
+          {erro ? (
             <p role="alert" className="mt-4 font-extrabold text-(--b-tinta)">
-              {erroDeLogin}
+              {erro}
             </p>
           ) : null}
           <Copyright />

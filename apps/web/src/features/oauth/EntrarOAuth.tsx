@@ -4,6 +4,8 @@ import { SapoRosto } from '@/mascot';
 import { Botao, Texto } from '@/ui';
 
 import { Tela } from '../app';
+import { MENSAGEM_LOGIN, urlDeErroDoLogin } from '../sessao/auth';
+import { useVoltaDaPagina } from '../sessao/useVoltaDaPagina';
 import { clienteOAuth } from './cliente';
 
 /**
@@ -19,12 +21,16 @@ export function EntrarOAuth() {
     if (!cliente) return;
     setEntrando(true);
     setErro(null);
-    const { error } = await cliente.signIn.social({ provider: 'google', callbackURL: `${window.location.origin}/` });
-    if (error) {
-      setErro('Não consegui entrar com o Google. Tente de novo.');
+    const resposta = await cliente.signIn
+      .social({ provider: 'google', callbackURL: `${window.location.origin}/`, errorCallbackURL: urlDeErroDoLogin('conexao') })
+      .catch(() => null);
+    // Deu certo: a página está saindo para o Google, então o botão continua ocupado.
+    if (!resposta || resposta.error) {
+      setErro(MENSAGEM_LOGIN);
       setEntrando(false);
     }
   };
+  useVoltaDaPagina(() => setEntrando(false));
 
   return (
     <Tela>

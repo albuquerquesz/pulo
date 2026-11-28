@@ -7,8 +7,9 @@ import type { WeeklyAiClient } from '@pulo/core/domain/ia';
 import type { Clock, FrogEvent, Repository, User } from '@pulo/core/domain/types';
 import { eventoAtivo } from '@/mascot';
 
-import type { Autenticacao, MudancaDeConta, PessoaLogada } from '../sessao/auth';
+import { MENSAGEM_LOGIN, MENSAGEM_SAIR, MENSAGEM_SESSAO_ACABOU, type Autenticacao, type MudancaDeConta, type PessoaLogada } from '../sessao/auth';
 import { ambienteDoApp, endpointDaIa } from '../sessao/config';
+import { useVoltaDaPagina } from '../sessao/useVoltaDaPagina';
 import { apagarTodosOsDados, concluirOnboarding, criarClienteDeIa, salvarPerfil, type DadosDoOnboarding } from './core';
 import { temConta } from './conta';
 import { criarFonteLocal, criarFonteRemota, type PropostaFonte } from '../semana/fonte';
@@ -42,7 +43,7 @@ export interface AppValue {
   fase: FaseDoApp;
   /** Pessoa logada. */
   pessoa: PessoaLogada | null;
-  /** Grava nome e foto. Lança com texto em português se o servidor recusar. */
+  /** Grava nome e foto. Lança com texto em português se o servidor recusar; com a sessão vencida, volta ao login. */
   editarConta(mudanca: MudancaDeConta): Promise<void>;
   /** Exclui a conta de vez e volta à entrada. A tela pede a confirmação antes. */
   excluirConta(): Promise<void>;
@@ -154,6 +155,18 @@ export function AppProvider({ children, repoInicial, relogioInicial, autenticaca
     [],
   );
 
+  // Muda a cada fim de sessão: respostas atrasadas de uma sessão antiga não mexem na tela.
+  const sessaoRef = useRef(0);
+  const encerrarSessao = useCallback((mensagem: string | null) => {
+    sessaoRef.current += 1;
+    setErroDeLogin(mensagem);
+    setPessoa(null);
+    setUser(null);
+    setAtivo(SEM_DADOS);
+    setFase('login');
+    setVersao((v) => v + 1);
+  }, []);
+
   /**
    * ÚNICO lugar que escolhe de onde vêm os dados: com sessão, o RemoteRepository; sem sessão, a tela de login.
    */
@@ -170,11 +183,9 @@ export function AppProvider({ children, repoInicial, relogioInicial, autenticaca
       setPessoa(quem);
       if (auth && quem) {
         const remoto = await createRemoteRepository({ ...auth.rede(), clock: systemClock });
+        const sessao = sessaoRef.current;
         const sessaoExpirou = () => {
-          setPessoa(null);
-          setUser(null);
-          setAtivo(SEM_DADOS);
-          setFase('login');
+          if (sessao === sessaoRef.current) encerrarSessao(MENSAGEM_SESSAO_ACABOU);
         };
         const repo = comAvisosDeErro(remoto, {
           avisar: (mensagem) => mostrarAvisoRef.current({ mensagem, variante: 'atencao' }),
@@ -193,11 +204,12 @@ export function AppProvider({ children, repoInicial, relogioInicial, autenticaca
       setAtivo(SEM_DADOS);
       setUser(null);
       // Sessão que o servidor recusou volta ao login; falta de rede mostra "sem sinal" com nova tentativa.
-      setFase(isRemoteError(erro) && erro.kind === 'sessao' ? 'login' : 'sem_conexao');
+      if (isRemoteError(erro) && erro.kind === 'sessao') encerrarSessao(MENSAGEM_SESSAO_ACABOU);
+      else setFase('sem_conexao');
     } finally {
       setVersao((v) => v + 1);
     }
-  }, [auth, repoInicial, relogioReal, aiClient]);
+  }, [auth, repoInicial, relogioReal, aiClient, encerrarSessao]);
 
   const tentarDeNovo = useCallback(async () => {
     setFase('carregando');
@@ -212,47 +224,46 @@ export function AppProvider({ children, repoInicial, relogioInicial, autenticaca
     setEntrando(true);
     setErroDeLogin(null);
     try {
+      // Deu certo: a página está saindo para o Google, então o botão continua ocupado.
       await auth.entrarComGoogle();
-      setFase('carregando');
-      await abrir();
-    } catch (erro) {
-      setErroDeLogin(erro instanceof Error ? erro.message : 'Não consegui entrar. Tente de novo.');
-    } finally {
+    } catch {
+      setErroDeLogin(MENSAGEM_LOGIN);
       setEntrando(false);
     }
-  }, [auth, abrir]);
+  }, [auth]);
+  useVoltaDaPagina(() => setEntrando(false));
 
   const sair = useCallback(async () => {
     try {
       await auth?.sair();
     } catch {
-      // Sem rede, o cookie local é descartado do mesmo jeito na próxima abertura vencida; a tela volta ao login.
+      // O cookie é HttpOnly e continua valendo: fingir que saiu deixaria a conta aberta no aparelho.
+      mostrarAviso({ mensagem: MENSAGEM_SAIR, variante: 'atencao' });
+      return;
     }
-    setPessoa(null);
-    setUser(null);
-    setAtivo(SEM_DADOS);
-    setFase('login');
-    setVersao((v) => v + 1);
-  }, [auth]);
+    encerrarSessao(null);
+  }, [auth, mostrarAviso, encerrarSessao]);
 
   const editarConta = useCallback(
     async (mudanca: MudancaDeConta) => {
-      await auth?.atualizarConta(mudanca);
+      const sessao = sessaoRef.current;
+      try {
+        await auth?.atualizarConta(mudanca);
+      } catch (erro) {
+        if (isRemoteError(erro) && erro.kind === 'sessao' && sessao === sessaoRef.current) encerrarSessao(MENSAGEM_SESSAO_ACABOU);
+        throw erro;
+      }
       setPessoa((atual) => (atual ? { ...atual, ...mudanca } : atual));
     },
-    [auth],
+    [auth, encerrarSessao],
   );
 
   const excluirConta = useCallback(async () => {
     if (!temConta(ativo.repo)) return;
     await ativo.repo.deleteAccount();
     // O servidor já apagou o cookie: não há sessão para encerrar.
-    setPessoa(null);
-    setUser(null);
-    setAtivo(SEM_DADOS);
-    setFase('login');
-    setVersao((v) => v + 1);
-  }, [ativo]);
+    encerrarSessao(null);
+  }, [ativo, encerrarSessao]);
 
   // Abertura
   useEffect(() => {
@@ -265,7 +276,10 @@ export function AppProvider({ children, repoInicial, relogioInicial, autenticaca
 
   const onboarding = useCallback(
     async (dados: DadosDoOnboarding) => {
+      const sessao = sessaoRef.current;
       const u = await concluirOnboarding(ativo.repo, ativo.clock, dados);
+      // Quem saiu enquanto salvava não volta a ter usuário na tela.
+      if (sessao !== sessaoRef.current) return;
       setUser(u);
       setVersao((v) => v + 1);
     },

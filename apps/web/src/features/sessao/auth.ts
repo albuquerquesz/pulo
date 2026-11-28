@@ -29,14 +29,25 @@ export interface Autenticacao {
   sessaoAtual(): Promise<PessoaLogada | null>;
   /** Abre o login do Google. A página sai para o Google e volta. */
   entrarComGoogle(): Promise<void>;
+  /** Lança se o servidor não confirmou: a sessão continua valendo. */
   sair(): Promise<void>;
-  /** Muda nome e foto da conta. */
+  /** Muda nome e foto da conta. Lança `RemoteError` (`sessao`) se a sessão acabou. */
   atualizarConta(mudanca: MudancaDeConta): Promise<void>;
   rede(): RedeDaSessao;
 }
 
-const MENSAGEM_PERFIL = 'Não consegui salvar seu perfil. Tente de novo.';
-const MENSAGEM_LOGIN = 'Não consegui entrar com o Google. Tente de novo.';
+export const MENSAGEM_PERFIL = 'Não consegui salvar seu perfil. Tente de novo.';
+export const MENSAGEM_LOGIN = 'Não consegui entrar com o Google. Tente de novo.';
+export const MENSAGEM_SAIR = 'Não foi possível sair agora. Confira sua conexão e tente de novo.';
+export const MENSAGEM_SESSAO_ACABOU = 'Sua sessão acabou. Entre de novo para continuar.';
+
+/**
+ * Para onde o servidor devolve a pessoa quando o login do Google falha ou é cancelado: a welcome, com o motivo
+ * (`login` pelo app, `conexao` quando outro app pediu acesso).
+ */
+export function urlDeErroDoLogin(motivo: 'login' | 'conexao'): string {
+  return `${window.location.origin}/welcome?erro=${motivo}`;
+}
 
 /**
  * Cliente do Better Auth no navegador. A sessão é um cookie HttpOnly gerido pelo servidor: as chamadas vão com
@@ -48,13 +59,20 @@ export function criarAutenticacao(baseUrl: string): Autenticacao {
     sessaoAtual: () => lerSessao(client.getSession()),
     entrarComGoogle: async () => {
       // Volta para a própria página do app (a origem precisa estar em PULO_CORS_ORIGIN, as origens confiáveis da API).
-      const { error } = await client.signIn.social({ provider: 'google', callbackURL: `${window.location.origin}/` });
-      if (error) throw new Error(MENSAGEM_LOGIN);
+      const resposta = await client.signIn
+        .social({ provider: 'google', callbackURL: `${window.location.origin}/`, errorCallbackURL: urlDeErroDoLogin('login') })
+        .catch(() => null);
+      if (!resposta || resposta.error) throw new Error(MENSAGEM_LOGIN);
     },
-    sair: async () => void (await client.signOut()),
+    sair: async () => {
+      // Sem a resposta do servidor o cookie HttpOnly continua valendo: quem chama precisa saber que não saiu.
+      const resposta = await client.signOut().catch(() => null);
+      if (!resposta || resposta.error) throw new Error(MENSAGEM_SAIR);
+    },
     atualizarConta: async ({ nome, foto }) => {
-      const { error } = await client.updateUser({ name: nome, image: foto });
-      if (error) throw new Error(MENSAGEM_PERFIL);
+      const resposta = await client.updateUser({ name: nome, image: foto }).catch(() => null);
+      if (resposta?.error?.status === 401) throw new RemoteError({ kind: 'sessao', status: 401, mensagem: MENSAGEM_SESSAO_ACABOU });
+      if (!resposta || resposta.error) throw new Error(MENSAGEM_PERFIL);
     },
     rede: () => ({ baseUrl }),
   };
