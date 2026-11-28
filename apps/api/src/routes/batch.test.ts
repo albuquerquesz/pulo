@@ -71,7 +71,7 @@ describe('PUT /api/blocks (lote)', () => {
     const res = await me.call('PUT', '/api/blocks', { blocks: [dup, block(), dup] });
     expect(res.status).toBe(400);
     expect((await res.json()).issues).toEqual([{ path: 'blocks.2.id', message: 'id repetido no mesmo lote' }]);
-    const max = Array.from({ length: API_LIMITS.batchMaxBlocks }, (_, i) => block({ weekday: i % 7 }));
+    const max = Array.from({ length: API_LIMITS.batchMaxBlocks }, (_, i) => block({ weekday: i % 7, startMinutes: i * 10, durationMinutes: 10 }));
     expect((await me.call('PUT', '/api/blocks', { blocks: max })).status).toBe(200);
   });
 
@@ -81,7 +81,7 @@ describe('PUT /api/blocks (lote)', () => {
     const mine = block({ title: 'da A' });
     await a.call('PUT', `/api/blocks/${mine.id}`, mine);
 
-    const fresh = block();
+    const fresh = block({ weekday: 4 });
     const res = await b.call('PUT', '/api/blocks', { blocks: [fresh, { ...mine, title: 'roubado' }] });
     expect(res.status).toBe(409);
     const body = await res.json();
@@ -99,7 +99,8 @@ describe('PUT /api/blocks (lote)', () => {
       blocks: Array.from({ length: 50 }, (_, i) => block({ weekday: i % 7, startMinutes: i * 10 })),
     });
     expect(fifty).toBe(one);
-    expect(one).toBe(3);
+    // 2 de sessão + trava + leitura + insert.
+    expect(one).toBe(5);
     expect(await blocksOf(big)).toHaveLength(50);
   });
 });

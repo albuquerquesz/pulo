@@ -1,16 +1,20 @@
 import { blocksBatchSchema, idParamSchema, routineBlockInputSchema } from '@pulo/core/api/schemas';
 import { slotOverlaps } from '@pulo/core/domain/ia/candidates';
 import type { RoutineBlock } from '@pulo/core/domain/types';
-import { Prisma, routineBlockMapper } from '@pulo/db';
+import { routineBlockMapper } from '@pulo/db';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { ApiError, type AppEnv, type RouteDeps, jsonBody, pathParams, requireMatch, requireSession } from '../http';
+import { ApiError, type AppEnv, type Client, type RouteDeps, jsonBody, pathParams, requireMatch, requireSession } from '../http';
 import { blockSelect } from '../selects';
 
 const returnedBlocks = z.array(z.object({ id: z.string(), icon: z.string().nullable() }));
 
-// Serializável: dois aparelhos gravando no mesmo horário não passam juntos pela conferência.
-const SERIALIZAVEL = { isolationLevel: Prisma.TransactionIsolationLevel.Serializable };
+/**
+ * Uma escrita de blocos por pessoa de cada vez: dois aparelhos não passam juntos pela conferência de horário. A trava
+ * (em vez de Serializable) deixa o app e o MCP gravarem vários blocos em paralelo sem conflitos falsos.
+ */
+const travarRotina = (tx: Client, userId: string) =>
+  tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`rotina:${userId}`}, 0))`;
 
 type SlotDoBloco = Pick<RoutineBlock, 'id' | 'weekday' | 'startMinutes' | 'durationMinutes'>;
 
@@ -48,6 +52,7 @@ export function blockRoutes({ auth, db }: RouteDeps) {
       const { blocks } = c.req.valid('json');
       const userId = c.var.user.id;
       const saved = await db.$transaction(async (tx) => {
+        await travarRotina(tx, userId);
         const stored = await tx.routineBlock.findMany({ where: { userId }, select: blockSelect });
         conferirHorarios(stored.map(routineBlockMapper.toDomain), blocks);
         const rows = await tx.$queryRaw`
@@ -88,7 +93,7 @@ export function blockRoutes({ auth, db }: RouteDeps) {
           'Algum identificador já pertence a outro registro. Nada foi salvo.',
           blocks.flatMap((b, index) => (taken.has(b.id) ? [{ path: `blocks.${index}.id`, message: 'já existe um registro com este identificador' }] : [])),
         );
-      }, SERIALIZAVEL);
+      });
       return c.json({
         blocks: blocks.map(({ icon: _icon, ...block }) => {
           const icon = saved.get(block.id);
@@ -102,6 +107,7 @@ export function blockRoutes({ auth, db }: RouteDeps) {
       const userId = c.var.user.id;
       const { id: _id, userId: _owner, ...update } = routineBlockMapper.fromDomain(userId, block);
       const row = await db.$transaction(async (tx) => {
+        await travarRotina(tx, userId);
         const stored = await tx.routineBlock.findMany({
           where: { userId, OR: [{ id: block.id }, { weekday: block.weekday }] },
           select: blockSelect,
@@ -113,7 +119,7 @@ export function blockRoutes({ auth, db }: RouteDeps) {
           update,
           select: blockSelect,
         });
-      }, SERIALIZAVEL);
+      });
       return c.json({ block: routineBlockMapper.toDomain(row) });
     })
     .delete('/:id', pathParams(idParamSchema), async (c) => {

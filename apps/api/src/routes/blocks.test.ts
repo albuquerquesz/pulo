@@ -127,7 +127,8 @@ describe('/api/blocks', () => {
     const put = await queriesOf(database, small, 'PUT', `/api/blocks/${id}`, block(id));
     const bigId = uuid();
     expect(await queriesOf(database, big, 'PUT', `/api/blocks/${bigId}`, block(bigId))).toBe(put);
-    expect(put).toBe(3);
+    // 2 de sessão + trava + leitura + upsert.
+    expect(put).toBe(5);
 
     const del = await queriesOf(database, small, 'DELETE', `/api/blocks/${id}`);
     expect(await queriesOf(database, big, 'DELETE', `/api/blocks/${bigId}`)).toBe(del);
