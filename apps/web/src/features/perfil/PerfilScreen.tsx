@@ -39,7 +39,7 @@ export function PerfilScreen() {
   if (!user) return null;
 
   const fuso = user.timezone || DEFAULT_TIMEZONE;
-  const conta = contaNaTela(app.pessoa, user);
+  const conta = contaNaTela(app.pessoa);
   const dados = estado.tipo === 'ok' ? estado.dados : null;
   const fechar = () => setDialogo(null);
 

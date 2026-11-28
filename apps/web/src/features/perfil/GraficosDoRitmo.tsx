@@ -2,6 +2,7 @@ import { useId, useMemo, useState, type ReactNode } from 'react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 import { CARTAO } from './estilos';
+import { ROTULO_DO_NUMERO } from '../hoje/estilos';
 import { duracaoTexto } from '../hoje/logic';
 import { Escolha } from './Linha';
 import { numero } from './logic';
@@ -60,7 +61,7 @@ function CartaoDoGrafico({ titulo, numeros, intervalo, onIntervalo, linhas, chil
         <dl className="flex flex-wrap gap-x-8 gap-y-3">
           {numeros.map((n) => (
             <div key={n.legenda} className="flex min-w-0 flex-col">
-              <dt className="text-[11px] font-extrabold tracking-[0.06em] text-muted uppercase">{n.legenda}</dt>
+              <dt className={ROTULO_DO_NUMERO}>{n.legenda}</dt>
               <dd className="text-[28px] leading-tight font-extrabold">{n.valor}</dd>
             </div>
           ))}
