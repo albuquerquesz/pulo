@@ -34,6 +34,18 @@ export function normalizarHorarios(startHour: number, endHour: number): { startH
   return { startHour: s, endHour: e };
 }
 
+/** O fuso do aparelho, se o `Intl` o reconhece; senão o padrão. */
+export function fusoDoAparelho(): string {
+  const fuso = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (!fuso) return DEFAULT_TIMEZONE;
+  try {
+    new Intl.DateTimeFormat('pt-BR', { timeZone: fuso });
+    return fuso;
+  } catch {
+    return DEFAULT_TIMEZONE;
+  }
+}
+
 /** Cria o User, o plano de exemplo e o estado do sapo. Vai para Hoje depois. */
 export async function concluirOnboarding(repo: Repository, clock: Clock, dados: DadosDoOnboarding): Promise<User> {
   const now = clock.now();
@@ -41,7 +53,7 @@ export async function concluirOnboarding(repo: Repository, clock: Clock, dados: 
   const user: User = {
     id: newId(now, 'user'),
     frogName: dados.frogName.trim() || NOME_PADRAO_DO_SAPO,
-    timezone: DEFAULT_TIMEZONE,
+    timezone: fusoDoAparelho(),
     dayStartMinutes: startHour * 60,
     dayEndMinutes: endHour * 60,
     theme: 'sistema',
