@@ -1,5 +1,5 @@
 import { dateParamSchema, dateRangeQuerySchema } from '@pulo/core/api/schemas';
-import { dateKeyToDate, restDayMapper } from '@pulo/db';
+import { Prisma, dateKeyToDate, restDayMapper } from '@pulo/db';
 import { type RestErrorCode, hojeDoDescanso, validarDescanso, validarDiaDoDescanso } from '@pulo/core/domain/descanso';
 import { addDays, dateKeyOf } from '@pulo/core/domain/day';
 import type { DateKey } from '@pulo/core/domain/types';
@@ -38,7 +38,8 @@ export function restDayRoutes({ auth, db, now }: RouteDeps) {
         // INSERT ... ON CONFLICT DO NOTHING: repetir é idempotente.
         await tx.restDay.createMany({ data: [{ userId, date }], skipDuplicates: true });
         return { restDay: { date: dateKey }, mascot: await refreshMascot(tx, userId, metadata.timezone, serverNow) };
-      });
+        // Serializável: dois dias marcados ao mesmo tempo não passam juntos pelo limite da semana (a perdedora recebe 409).
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       const newAchievements = await unlockAchievements(db, c.var.user, serverNow);
       return c.json({ restDay, mascot, newAchievements });
     })
