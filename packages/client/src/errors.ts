@@ -78,6 +78,8 @@ export interface RemoteErrorInit {
   /** Código da API, quando o corpo seguia o contrato. */
   code?: ApiErrorCode;
   issues?: ApiErrorBody['issues'];
+  /** Em `falta_requisito`: o id da parte que falta. */
+  requer?: string;
   cause?: unknown;
 }
 
@@ -87,6 +89,7 @@ export class RemoteError extends Error {
   readonly status: number | undefined;
   readonly code: ApiErrorCode | undefined;
   readonly issues: ApiErrorBody['issues'];
+  readonly requer: string | undefined;
 
   constructor(init: RemoteErrorInit) {
     super(init.mensagem, { cause: init.cause });
@@ -96,6 +99,7 @@ export class RemoteError extends Error {
     this.status = init.status;
     this.code = init.code;
     this.issues = init.issues;
+    this.requer = init.requer;
   }
 
   /** Vale tentar de novo sem mudar nada (rede ou servidor). */
@@ -128,12 +132,13 @@ export async function errorFromResponse(response: { status: number; json(): Prom
       mensagem: MENSAGENS_DA_API.erro_interno,
     });
   }
-  const { error: code, issues } = parsed.data;
+  const { error: code, issues, requer } = parsed.data;
   return new RemoteError({
     kind: code === 'nao_autenticado' ? 'sessao' : 'api',
     status: response.status,
     code,
     issues,
+    requer,
     // O texto do app, não o do servidor: o código é o contrato estável.
     mensagem: MENSAGENS_DA_API[code],
   });
