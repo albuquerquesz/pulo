@@ -53,6 +53,9 @@ export function createAuth(env: AuthEnv, web: WebConfig, db: Db) {
         return { context: { body: parsed.data } };
       }),
     },
+    // Erros sem um destino próprio (login do Google sem `errorCallbackURL`, estado perdido) vão para a entrada do
+    // app, em português, e não para a página de erro da API.
+    onAPIError: { errorURL: new URL('/welcome?erro=login', mcp.loginPage).toString() },
     // O `/token` do plugin jwt emitiria JWT de sessão; só o OAuth emite tokens (ver docs/mcp.md).
     disabledPaths: ['/token'],
     plugins: [
@@ -71,6 +74,8 @@ export function createAuth(env: AuthEnv, web: WebConfig, db: Db) {
         clientRegistrationDefaultApplicationType: 'infer',
         resources: [{ identifier: mcp.resource, name: 'Pulo MCP', allowedScopes: [...MCP_SCOPES] }],
         clientRegistrationDefaultResources: [mcp.resource],
+        // `merge`: o recurso já gravado ganha os escopos novos da configuração.
+        resourceSeedMode: 'merge',
         // O Worker monta o Better Auth a cada requisição: semear o recurso uma vez por processo.
         resourceSeedScope: 'process',
       }),
