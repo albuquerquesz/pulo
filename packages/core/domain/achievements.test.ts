@@ -17,6 +17,7 @@ const summary = (extra: Partial<AchievementSources> = {}) =>
     gelosUsados: 0,
     timeZone: TZ,
     marcacoesPorHabito: [],
+    marcacoesPorDia: [],
     tarefasConcluidas: 0,
     goals: [],
     baus: [],
@@ -131,6 +132,7 @@ describe('conquistas', () => {
     const { joias } = summary({
       ...focos(1),
       marcacoesPorHabito: [2],
+      marcacoesPorDia: [1, 1],
       descansos: 1,
       goals: [meta('concluida', 1)],
       baus: [{ goalId: 'meta', abertoEm: 1, joias: 10 }],

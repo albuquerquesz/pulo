@@ -3,7 +3,7 @@ import { comodosProntos, partesDaCasa } from './casa';
 import { MINUTE_MS } from './clock';
 import { periodOf } from './day';
 import { listFreezeDatesOf } from './gelo-store';
-import { focusedMs, joiasGanhas } from './joias';
+import { contarPorDia, focusedMs, joiasDosHabitos, joiasGanhas } from './joias';
 import { computeStreak } from './streak';
 import type { Achievement, AchievementId, Clock, FocusSession, Goal, GoalChest, HabitLog, Purchase, Repository, Streak, UnlockedAchievement } from './types';
 
@@ -77,6 +77,8 @@ export interface AchievementSources {
   timeZone: string;
   /** Quantas vezes cada hábito foi marcado, um número por hábito. */
   marcacoesPorHabito: readonly number[];
+  /** Quantos hábitos foram feitos em cada dia (para o teto de joias por dia). */
+  marcacoesPorDia: readonly number[];
   tarefasConcluidas: number;
   goals: readonly Goal[];
   baus: readonly GoalChest[];
@@ -118,7 +120,7 @@ export function summarizeForAchievements(sources: AchievementSources): Achieveme
     tarefasConcluidas: sources.tarefasConcluidas,
     metasConcluidas: goals.filter((goal) => goal.state === 'concluida').length,
     marcosConcluidos: goals.reduce((sum, goal) => sum + goal.milestones.filter((m) => m.doneAt !== undefined).length, 0),
-    joias: outrasJoias + marcacoes * JOIAS.por.habitDone + descansos * JOIAS.por.restDay,
+    joias: outrasJoias + joiasDosHabitos(sources.marcacoesPorDia) + descansos * JOIAS.por.restDay,
     decoracoes: sources.decoracoes,
   };
 }
@@ -201,6 +203,7 @@ export async function verConquistas(repo: Repository, clock: Clock): Promise<Ach
     gelosUsados: freezes.length,
     timeZone,
     marcacoesPorHabito: countByHabit(habitLogs),
+    marcacoesPorDia: contarPorDia(habitLogs),
     tarefasConcluidas: tasks.filter((task) => task.status === 'feito').length,
     goals,
     baus,

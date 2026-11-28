@@ -235,6 +235,7 @@ export const focusSessionSchema = focusSessionFields.superRefine(checkSession) s
  */
 export const focusSessionInputSchema = focusSessionFields
   .extend({
+    pausedMs: z.number().int().min(0).max(FOCUS.pausaMaxHoras * 60 * 60_000),
     intention: intentionSchema.nullable().optional(),
     habitId: idSchema.nullable().optional(),
     goalId: idSchema.nullable().optional(),
@@ -609,6 +610,19 @@ export const API_ERROR_CODES = [
   'meta_inexistente',
   'meta_nao_concluida',
   'bau_ja_aberto',
+  'marcos_pendentes',
+  'meta_nova_demais',
+  'limite_de_baus',
+  'meta_criada_concluida',
+  'data_da_meta_invalida',
+  'data_no_futuro',
+  'data_antiga',
+  'data_antes_do_habito',
+  'habito_arquivado',
+  'dia_fora_do_habito',
+  'foco_antigo_demais',
+  'foco_incompleto',
+  'foco_sobreposto',
   'limite_de_subtarefas',
   'item_inexistente',
   'preco_divergente',

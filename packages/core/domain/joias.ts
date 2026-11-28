@@ -1,6 +1,7 @@
-import { JOIAS } from '../config/decisions';
+import { DEFAULT_TIMEZONE, JOIAS, MAX_HABITS_PER_DAY } from '../config/decisions';
 import { effectiveMs } from './care-days';
-import type { FocusSession, GoalChest, Goal, HabitLog, Purchase, Repository, RestDay } from './types';
+import { dateKeyOf } from './day';
+import type { DateKey, FocusSession, GoalChest, Goal, HabitLog, Purchase, Repository, RestDay } from './types';
 
 /** Repositório que sabe das compras de gelo (spec 29): elas também gastam joias. */
 export interface FreezePurchaseList {
@@ -16,6 +17,22 @@ export async function listFreezePurchasesOf(repo: Repository): Promise<Purchase[
   return providesFreezePurchases(repo) ? repo.listFreezePurchases() : [];
 }
 
+/**
+ * Repositório que só guarda uma janela do histórico (o remoto): o servidor diz quantas joias os registros
+ * de fora dela renderam, para o saldo bater com o dele.
+ */
+export interface JoiasForaDoCache {
+  getJoiasForaDaJanela(): Promise<number>;
+}
+
+export function providesJoiasForaDoCache(repo: Repository): repo is Repository & JoiasForaDoCache {
+  return 'getJoiasForaDaJanela' in repo && typeof repo.getJoiasForaDaJanela === 'function';
+}
+
+export async function joiasForaDaJanelaDe(repo: Repository): Promise<number> {
+  return providesJoiasForaDoCache(repo) ? repo.getJoiasForaDaJanela() : 0;
+}
+
 /** O que gera joias. Tudo vem dos registros que o app já guarda, mais o crédito histórico. */
 export interface FontesDeJoias {
   habitLogs: readonly HabitLog[];
@@ -26,6 +43,8 @@ export interface FontesDeJoias {
   baus: readonly GoalChest[];
   /** Joias dadas na troca de regra, para ninguém perder saldo. */
   credito: number;
+  /** Joias de registros que não vieram nas listas acima (histórico fora da janela do sync). */
+  foraDaJanela?: number;
 }
 
 export interface JoiasGanhas {
@@ -49,15 +68,40 @@ export function joiasDoFoco(session: FocusSession): number {
   return Math.floor(focusedMs(session) / (JOIAS.focusMinutesPerJoia * 60_000));
 }
 
+/** Quantas vezes cada dia aparece. */
+export function contarPorDia(registros: readonly { date: DateKey }[]): number[] {
+  const dias = new Map<DateKey, number>();
+  for (const { date } of registros) dias.set(date, (dias.get(date) ?? 0) + 1);
+  return [...dias.values()];
+}
+
+/** Joias dos hábitos, a partir de quantos foram feitos em cada dia: cada dia paga no máximo `MAX_HABITS_PER_DAY`. */
+export function joiasDosHabitos(feitosPorDia: readonly number[]): number {
+  return feitosPorDia.reduce((n, feitos) => n + Math.min(feitos, MAX_HABITS_PER_DAY), 0) * JOIAS.por.habitDone;
+}
+
+/** Os instantes dos marcos riscados que pagam: no máximo `maxMarcosPorDia` por dia. */
+export function marcosPagos(goals: readonly Goal[]): number[] {
+  const porDia = new Map<DateKey, number>();
+  return goals
+    .flatMap((g) => g.milestones.flatMap((m) => (m.doneAt === undefined ? [] : [m.doneAt])))
+    .filter((doneAt) => {
+      const dia = dateKeyOf(doneAt, DEFAULT_TIMEZONE);
+      const pagos = porDia.get(dia) ?? 0;
+      porDia.set(dia, pagos + 1);
+      return pagos < JOIAS.maxMarcosPorDia;
+    });
+}
+
 /** Joias ganhas desde sempre. Calculado, nunca gravado: desmarcar um hábito devolve a joia. */
 export function joiasGanhas(fontes: FontesDeJoias): JoiasGanhas {
   const por = JOIAS.por;
-  const habitos = fontes.habitLogs.length * por.habitDone;
+  const habitos = joiasDosHabitos(contarPorDia(fontes.habitLogs));
   const focos = fontes.sessions.reduce((n, s) => n + joiasDoFoco(s), 0);
   const descansos = fontes.restDays.length * por.restDay;
-  const marcos = fontes.goals.reduce((n, g) => n + g.milestones.filter((m) => m.doneAt !== undefined).length, 0) * por.milestoneDone;
+  const marcos = marcosPagos(fontes.goals).length * por.milestoneDone;
   const metas = fontes.baus.reduce((n, b) => n + b.joias, 0);
-  const anteriores = fontes.credito;
+  const anteriores = fontes.credito + (fontes.foraDaJanela ?? 0);
   return { habitos, focos, descansos, marcos, metas, anteriores, total: habitos + focos + descansos + marcos + metas + anteriores };
 }
 

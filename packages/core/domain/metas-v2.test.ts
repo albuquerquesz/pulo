@@ -1,8 +1,9 @@
-import { GOALS, JOIAS } from '../config/decisions';
+import { GOALS, JOIAS, MAX_HABITS_PER_DAY } from '../config/decisions';
 import { createMemoryRepository } from '../data/memory-repository';
-import { abrirBau, apagarMeta, concluirMeta, criarMeta, editarMeta, estadoDoBau, numerosDaMeta, reabrirMeta, ritmo } from './goals';
+import { DAY_MS, HOUR_MS } from './clock';
+import { abrirBau, apagarMeta, concluirMeta, criarMeta, editarMeta, estadoDoBau, numerosDaMeta, podeAbrirBau, reabrirMeta, ritmo, validarEscritaDaMeta } from './goals';
 import { atrelarHabito, criarHabito, editarHabito } from './habits';
-import { joiasGanhas } from './joias';
+import { joiasDosHabitos, joiasGanhas, marcosPagos } from './joias';
 import type { Goal } from './types';
 
 const meiaNoite = (dia: number) => Date.UTC(2026, 10, dia, 15);
@@ -90,6 +91,9 @@ describe('números da meta', () => {
   });
 });
 
+/** Um instante em que uma meta criada em 1 já tem idade para o baú. */
+const MADURA = GOALS.bau.idadeMinimaDias * DAY_MS + 1;
+
 describe('baú, ícone e hábitos atrelados', () => {
   async function preparar() {
     const repo = createMemoryRepository();
@@ -106,11 +110,11 @@ describe('baú, ícone e hábitos atrelados', () => {
     const concluida = await concluirMeta(repo, goal.id, 3);
     expect(concluida.ok && estadoDoBau(concluida.value, [])).toBe('fechado');
     expect(await joias(repo)).toBe(0);
-    expect(await abrirBau(repo, goal.id, 4)).toEqual({ ok: true, value: { goalId: goal.id, abertoEm: 4, joias: JOIAS.por.goalCompleted } });
-    expect(await abrirBau(repo, goal.id, 5)).toMatchObject({ ok: false, error: { code: 'bau_ja_aberto' } });
+    expect(await abrirBau(repo, goal.id, MADURA)).toEqual({ ok: true, value: { goalId: goal.id, abertoEm: MADURA, joias: JOIAS.por.goalCompleted } });
+    expect(await abrirBau(repo, goal.id, MADURA + 1)).toMatchObject({ ok: false, error: { code: 'bau_ja_aberto' } });
     await reabrirMeta(repo, goal.id);
     await concluirMeta(repo, goal.id, 6);
-    expect(await abrirBau(repo, goal.id, 7)).toMatchObject({ ok: false, error: { code: 'bau_ja_aberto' } });
+    expect(await abrirBau(repo, goal.id, MADURA + 3)).toMatchObject({ ok: false, error: { code: 'bau_ja_aberto' } });
     expect(await joias(repo)).toBe(JOIAS.por.goalCompleted);
   });
 
@@ -133,9 +137,76 @@ describe('baú, ícone e hábitos atrelados', () => {
     expect((await repo.listHabits())[0]).not.toHaveProperty('goalId');
     await atrelarHabito(repo, id, goal.id);
     await concluirMeta(repo, goal.id, 2);
-    await abrirBau(repo, goal.id, 3);
+    await abrirBau(repo, goal.id, MADURA);
     await apagarMeta(repo, goal.id);
     expect((await repo.listHabits())[0]).not.toHaveProperty('goalId');
     expect(await repo.listGoalChests()).toEqual([]);
+  });
+});
+
+describe('regras do baú', () => {
+  const now = meiaNoite(20);
+  const pronta = meta({ state: 'concluida', completedAt: now, createdAt: now - GOALS.bau.idadeMinimaDias * DAY_MS });
+  const codigo = (m: Goal, baus: Parameters<typeof podeAbrirBau>[1] = []) => {
+    const r = podeAbrirBau(m, baus, now);
+    return r.ok ? 'ok' : r.error.code;
+  };
+
+  it('pede idade, todos os marcos e respeita o teto do período', () => {
+    expect(codigo(pronta)).toBe('ok');
+    expect(codigo({ ...pronta, createdAt: pronta.createdAt + 1 })).toBe('meta_nova_demais');
+    expect(codigo({ ...pronta, milestones: marcos(1, 2) })).toBe('marcos_pendentes');
+    const baus = Array.from({ length: GOALS.bau.maxPorPeriodo }, (_, i) => ({ goalId: `${i}`, abertoEm: now - DAY_MS, joias: 10 }));
+    expect(codigo(pronta, baus)).toBe('limite_de_baus');
+    const antigos = baus.map((b) => ({ ...b, abertoEm: now - GOALS.bau.periodoDias * DAY_MS }));
+    expect(codigo(pronta, antigos)).toBe('ok');
+  });
+});
+
+describe('datas da meta', () => {
+  const now = meiaNoite(20);
+  const nova = meta({ createdAt: now, targetDate: '2027-01-01' });
+  const valida = (m: Goal, anterior?: Goal) => {
+    const r = validarEscritaDaMeta({ meta: m, anterior, now, timeZone: 'America/Sao_Paulo', folgaMs: 0 });
+    return r.ok ? 'ok' : r.error.code;
+  };
+  const velho = now - GOALS.datasMaxHorasAtras * HOUR_MS - 1;
+
+  it('meta nova começa ativa e com datas de agora', () => {
+    expect(valida(nova)).toBe('ok');
+    expect(valida({ ...nova, state: 'concluida', completedAt: now })).toBe('meta_criada_concluida');
+    for (const extra of [
+      { createdAt: velho },
+      { createdAt: now + 1 },
+      { targetDate: '2026-11-01' },
+      { targetDate: '2999-01-01' },
+      { milestones: [{ id: 'm', title: 'x', doneAt: velho }] },
+    ]) {
+      expect(valida({ ...nova, ...extra })).toBe('data_da_meta_invalida');
+    }
+  });
+
+  it('o que já estava gravado continua valendo; o que muda precisa ser de agora', () => {
+    const gravada = meta({ createdAt: 1, targetDate: '2020-01-01', milestones: [{ id: 'm', title: 'x', doneAt: 5 }] });
+    expect(valida({ ...gravada, title: 'y' }, gravada)).toBe('ok');
+    expect(valida({ ...gravada, state: 'concluida', completedAt: now }, gravada)).toBe('ok');
+    expect(valida({ ...gravada, state: 'concluida', completedAt: velho }, gravada)).toBe('data_da_meta_invalida');
+    expect(valida({ ...gravada, milestones: [{ id: 'm', title: 'x', doneAt: 6 }] }, gravada)).toBe('data_da_meta_invalida');
+  });
+});
+
+describe('tetos de joias por dia', () => {
+  it(`paga no máximo ${MAX_HABITS_PER_DAY} hábitos por dia`, () => {
+    expect(joiasDosHabitos([MAX_HABITS_PER_DAY + 3, 2])).toBe((MAX_HABITS_PER_DAY + 2) * JOIAS.por.habitDone);
+    const habitLogs = Array.from({ length: 9 }, (_, i) => ({ habitId: `${i}`, date: '2026-11-02', doneAt: 1 }));
+    const vazio = { sessions: [], restDays: [], goals: [], baus: [], credito: 0 };
+    expect(joiasGanhas({ ...vazio, habitLogs }).habitos).toBe(MAX_HABITS_PER_DAY);
+    expect(joiasGanhas({ ...vazio, habitLogs: [], foraDaJanela: 7 }).total).toBe(7);
+  });
+
+  it(`paga no máximo ${JOIAS.maxMarcosPorDia} marcos por dia, somando as metas`, () => {
+    const feitos = (dia: number) => meta({ milestones: [0, 1, 2].map((i) => ({ id: `${dia}-${i}`, title: 'x', doneAt: meiaNoite(dia) })) });
+    expect(marcosPagos([feitos(2), feitos(2)])).toHaveLength(JOIAS.maxMarcosPorDia);
+    expect(marcosPagos([feitos(2), feitos(3)])).toHaveLength(2 * JOIAS.maxMarcosPorDia);
   });
 });

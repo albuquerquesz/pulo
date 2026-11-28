@@ -1,21 +1,24 @@
 import { DEFAULT_TIMEZONE, GOALS, JOIAS } from '../config/decisions';
-import { MINUTE_MS } from './clock';
+import { DAY_MS, HOUR_MS, MINUTE_MS } from './clock';
 import { dateKeyOf, diffDays } from './day';
 import { newId } from './ids';
 import { focusedMs } from './joias';
 import { fail, ok, type Result } from './result';
 import type { AccentColor, DateKey, EntityId, FocusSession, Goal, GoalChest, GoalMilestone, Habit, HabitLog, Repository } from './types';
 
+export type ChestErrorCode = 'meta_nao_concluida' | 'bau_ja_aberto' | 'marcos_pendentes' | 'meta_nova_demais' | 'limite_de_baus';
+export type GoalWriteErrorCode = 'meta_criada_concluida' | 'data_da_meta_invalida';
+
 export type GoalErrorCode =
+  | ChestErrorCode
+  | GoalWriteErrorCode
   | 'titulo_vazio'
   | 'limite_de_metas'
   | 'limite_de_marcos'
   | 'meta_inexistente'
   | 'marco_inexistente'
   | 'prazo_no_passado'
-  | 'icone_invalido'
-  | 'meta_nao_concluida'
-  | 'bau_ja_aberto';
+  | 'icone_invalido';
 
 export interface GoalInput {
   title: string;
@@ -49,8 +52,66 @@ function withOptional(goal: Goal, why: string | undefined, targetDate: DateKey |
   return { ...rest, ...(why ? { why } : {}), ...(targetDate ? { targetDate } : {}) };
 }
 
+/** O último prazo aceito a partir de `today`. */
+const limiteDoPrazo = (today: DateKey): DateKey => `${Number(today.slice(0, 4)) + GOALS.prazoMaxAnos}${today.slice(4)}`;
+
+export interface DatasDaMeta {
+  meta: Goal;
+  /** A versão gravada; ausente numa meta nova. */
+  anterior?: Goal;
+  now: number;
+  timeZone: string;
+  /** Folga entre o relógio do aparelho e o de quem confere, em ms. */
+  folgaMs: number;
+}
+
+/**
+ * Confere o que uma escrita mudou nas datas da meta (o que já estava gravado continua valendo). Meta nova não nasce
+ * concluída; criação, marco riscado e conclusão são de agora (até `datasMaxHorasAtras`); o prazo fica entre ontem e
+ * `prazoMaxAnos`.
+ */
+export function validarEscritaDaMeta({ meta, anterior, now, timeZone, folgaMs }: DatasDaMeta): Result<Goal, GoalWriteErrorCode> {
+  if (!anterior && meta.state === 'concluida') return fail('meta_criada_concluida', 'Uma meta nova começa ativa.');
+  const recente = (instante: number) => instante >= now - GOALS.datasMaxHorasAtras * HOUR_MS - folgaMs && instante <= now + folgaMs;
+  const invalida = (campo: string) => fail('data_da_meta_invalida', `A data ${campo} não é válida.`);
+  if (!anterior && !recente(meta.createdAt)) return invalida('de criação');
+  if (meta.completedAt !== undefined && meta.completedAt !== anterior?.completedAt && !recente(meta.completedAt)) {
+    return invalida('de conclusão');
+  }
+  const riscados = new Map(anterior?.milestones.map((m) => [m.id, m.doneAt]));
+  if (meta.milestones.some((m) => m.doneAt !== undefined && m.doneAt !== riscados.get(m.id) && !recente(m.doneAt))) {
+    return invalida('de um marco');
+  }
+  if (meta.targetDate !== undefined && meta.targetDate !== anterior?.targetDate) {
+    const hoje = dateKeyOf(now, timeZone);
+    if (diffDays(meta.targetDate, hoje) < -1 || meta.targetDate > limiteDoPrazo(hoje)) return invalida('alvo');
+  }
+  return ok(meta);
+}
+
+/**
+ * Se o baú pode ser aberto: meta concluída, com todos os marcos riscados, com `bau.idadeMinimaDias` de vida,
+ * e no máximo `bau.maxPorPeriodo` baús a cada `bau.periodoDias`.
+ */
+export function podeAbrirBau(meta: Goal, baus: readonly GoalChest[], now: number): Result<Goal, ChestErrorCode> {
+  const { idadeMinimaDias, maxPorPeriodo, periodoDias } = GOALS.bau;
+  if (baus.some((b) => b.goalId === meta.id)) return fail('bau_ja_aberto', 'Esse baú já foi aberto.');
+  if (meta.state !== 'concluida') return fail('meta_nao_concluida', 'Conclua a meta para abrir o baú.');
+  if (meta.milestones.some((m) => m.doneAt === undefined)) return fail('marcos_pendentes', 'Risque todos os marcos para abrir o baú.');
+  if (now - meta.createdAt < idadeMinimaDias * DAY_MS) {
+    return fail('meta_nova_demais', `O baú abre quando a meta completar ${idadeMinimaDias} dias.`);
+  }
+  if (baus.filter((b) => now - b.abertoEm < periodoDias * DAY_MS).length >= maxPorPeriodo) {
+    return fail('limite_de_baus', `Abrem até ${maxPorPeriodo} baús a cada ${periodoDias} dias. Esse espera a vez.`);
+  }
+  return ok(meta);
+}
+
 function checkTarget(targetDate: DateKey | undefined, today: DateKey): Result<DateKey | undefined, GoalErrorCode> {
   if (targetDate && diffDays(targetDate, today) < 0) return fail('prazo_no_passado', 'O prazo precisa ser hoje ou depois.');
+  if (targetDate && targetDate > limiteDoPrazo(today)) {
+    return fail('data_da_meta_invalida', `O prazo vai no máximo até ${GOALS.prazoMaxAnos} anos à frente.`);
+  }
   return ok(targetDate);
 }
 
@@ -150,9 +211,8 @@ export function estadoDoBau(meta: Goal, baus: readonly GoalChest[]): ChestState 
 export async function abrirBau(repo: Repository, goalId: EntityId, now: number): Promise<Result<GoalChest, GoalErrorCode>> {
   const found = await findGoal(repo, goalId);
   if (!found.ok) return found;
-  const estado = estadoDoBau(found.value, await repo.listGoalChests());
-  if (estado === 'aberto') return fail('bau_ja_aberto', 'Esse baú já foi aberto.');
-  if (estado === 'nenhum') return fail('meta_nao_concluida', 'Conclua a meta para abrir o baú.');
+  const pode = podeAbrirBau(found.value, await repo.listGoalChests(), now);
+  if (!pode.ok) return pode;
   await repo.saveGoalChest({ goalId, abertoEm: now, joias: JOIAS.por.goalCompleted });
   const saved = (await repo.listGoalChests()).find((b) => b.goalId === goalId);
   return saved ? ok(saved) : fail('meta_inexistente', 'Essa meta não existe mais.');

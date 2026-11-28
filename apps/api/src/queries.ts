@@ -162,7 +162,8 @@ export function achievementReads(db: Db, userId: string) {
   ] as const;
 }
 
-type AchievementRows = StreakRows & {
+type AchievementRows = Omit<StreakRows, 'habitDays'> & {
+  habitDays: { date: Date; _count: { habitId: number } }[];
   casa: Parameters<typeof islandPurchaseMapper.toDomain>[0][];
   habitMarks: { _count: { date: number } }[];
   tarefasConcluidas: number;
@@ -182,6 +183,7 @@ export function achievementSummaryFromRows(metadata: UserMetadata, streak: Strea
     gelosUsados: rows.freezeUses.length,
     timeZone: metadata.timezone,
     marcacoesPorHabito: rows.habitMarks.map((row) => row._count.date),
+    marcacoesPorDia: rows.habitDays.map((row) => row._count.habitId),
     tarefasConcluidas: rows.tarefasConcluidas,
     goals: rows.goals.map(goalMapper.toDomain),
     baus: rows.goalChests.map(goalChestMapper.toDomain),

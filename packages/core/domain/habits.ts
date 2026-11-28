@@ -1,10 +1,18 @@
-import { MAX_HABITS_PER_DAY } from '../config/decisions';
+import { DEFAULT_TIMEZONE, HABITS, MAX_HABITS_PER_DAY } from '../config/decisions';
 import { newId } from './ids';
 import { fail, ok, type Result } from './result';
-import { weekdayOf } from './day';
+import { addDays, dateKeyOf, weekdayOf } from './day';
 import type { DateKey, EntityId, Habit, HabitLog, HabitState, Repository, Weekday } from './types';
 
-export type HabitErrorCode = 'titulo_vazio' | 'dias_invalidos' | 'limite_por_dia' | 'habito_inexistente' | 'data_invalida' | 'meta_inexistente';
+export type HabitDayErrorCode = 'data_no_futuro' | 'data_antiga' | 'data_antes_do_habito' | 'habito_arquivado' | 'dia_fora_do_habito';
+export type HabitErrorCode =
+  | 'titulo_vazio'
+  | 'dias_invalidos'
+  | 'limite_por_dia'
+  | 'habito_inexistente'
+  | 'data_invalida'
+  | 'meta_inexistente'
+  | HabitDayErrorCode;
 
 /** Campos de apresentação (spec 17). Na edição, `undefined` mantém e `null` tira. */
 export interface HabitLook {
@@ -124,6 +132,36 @@ export async function removerHabito(repo: Repository, id: EntityId): Promise<voi
   await repo.deleteHabit(id);
 }
 
+export interface RegistroDeHabito {
+  habit: Pick<Habit, 'weekdays' | 'state'>;
+  date: DateKey;
+  now: number;
+  timeZone: string;
+  /** Começo do dia da pessoa, em minutos desde 00:00. Ausente: a virada do app. */
+  dayStartMinutes?: number;
+  /** Quando o hábito foi criado (só o servidor sabe). */
+  createdAt?: number;
+}
+
+/**
+ * Se o hábito pode ser marcado nesse dia: ativo ou pausado, num dia da frequência, não no futuro, não antes de existir
+ * e dentro de `HABITS.registroMaxDiasAtras`. Entre a virada do app e o começo do dia da pessoa valem os dois dias.
+ */
+export function validarDiaDoRegistro(registro: RegistroDeHabito): Result<DateKey, HabitDayErrorCode> {
+  const { habit, date, now, timeZone, dayStartMinutes, createdAt } = registro;
+  const dias = (instante: number) =>
+    [dateKeyOf(instante, timeZone), dateKeyOf(instante, timeZone, dayStartMinutes)].sort();
+  const [maisCedo, maisTarde] = dias(now);
+  if (date > maisTarde) return fail('data_no_futuro', 'Esse dia ainda não chegou.');
+  if (date < addDays(maisCedo, -HABITS.registroMaxDiasAtras)) {
+    return fail('data_antiga', `Dá para marcar até ${HABITS.registroMaxDiasAtras} dias atrás.`);
+  }
+  if (createdAt !== undefined && date < dias(createdAt)[0]) return fail('data_antes_do_habito', 'O hábito ainda não existia nesse dia.');
+  if (habit.state === 'arquivado') return fail('habito_arquivado', 'Esse hábito está arquivado.');
+  if (!habit.weekdays.includes(weekdayOf(date))) return fail('dia_fora_do_habito', 'Esse hábito não vale nesse dia da semana.');
+  return ok(date);
+}
+
 /** Marca como feito. Uma única marca por hábito e dia: repetir mantém a primeira. */
 export async function marcarHabito(
   repo: Repository,
@@ -131,10 +169,19 @@ export async function marcarHabito(
   date: DateKey,
   now: number,
 ): Promise<Result<HabitLog, HabitErrorCode>> {
-  const habits = await repo.listHabits();
-  if (!habits.some((h) => h.id === habitId)) return fail('habito_inexistente', 'Hábito não encontrado.');
+  const habit = (await repo.listHabits()).find((h) => h.id === habitId);
+  if (!habit) return fail('habito_inexistente', 'Hábito não encontrado.');
   const existing = (await repo.listHabitLogs({ from: date, to: date })).find((l) => l.habitId === habitId);
   if (existing) return ok(existing);
+  const user = await repo.getUser();
+  const dia = validarDiaDoRegistro({
+    habit,
+    date,
+    now,
+    timeZone: user?.timezone ?? DEFAULT_TIMEZONE,
+    dayStartMinutes: user?.dayStartMinutes,
+  });
+  if (!dia.ok) return dia;
   const log: HabitLog = { habitId, date, doneAt: now };
   await repo.saveHabitLog(log);
   return ok(log);

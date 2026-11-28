@@ -3,6 +3,7 @@ import {
   type FontesDeJoias,
   type JoiasGanhas,
   joiasGanhas,
+  joiasForaDaJanelaDe,
   joiasGastas,
   listFreezePurchasesOf,
   saldoDeJoias,
@@ -294,7 +295,7 @@ export function validarCompraDaDecoracao(
 
 /** Estado atual da casa, lido do repositório. */
 export async function verCasa(repo: Repository): Promise<EstadoDaCasa> {
-  const [habitLogs, sessions, restDays, goals, baus, credito, casa, quarto, gelos] = await Promise.all([
+  const [habitLogs, sessions, restDays, goals, baus, credito, casa, quarto, gelos, foraDaJanela] = await Promise.all([
     repo.listHabitLogs(),
     repo.listSessions(),
     repo.listRestDays(),
@@ -304,8 +305,9 @@ export async function verCasa(repo: Repository): Promise<EstadoDaCasa> {
     repo.listHousePurchases(),
     repo.listRoomDecor(),
     listFreezePurchasesOf(repo),
+    joiasForaDaJanelaDe(repo),
   ]);
-  return estadoDaCasa({ habitLogs, sessions, restDays, goals, baus, credito }, casa, quarto, gelos);
+  return estadoDaCasa({ habitLogs, sessions, restDays, goals, baus, credito, foraDaJanela }, casa, quarto, gelos);
 }
 
 /** Constrói uma parte da casa com joias. */

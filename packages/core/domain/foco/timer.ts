@@ -14,6 +14,8 @@ export interface ShortBreak {
   minutes: number;
 }
 
+export const MAX_PAUSED_MS = FOCUS.pausaMaxHoras * 60 * 60_000;
+
 export interface TimerSnapshot {
   state: TimerState;
   /** Restante do foco (ou da pausa curta, em `em_pausa_curta`), em ms. */
@@ -106,6 +108,10 @@ export function completeSession(session: FocusSession): FocusSession {
  * Uma sessão pausada nunca acaba sozinha (o restante não anda durante a pausa).
  */
 export function reconcileSession(session: FocusSession, now: number): FocusSession {
+  // Pausa além do teto: o foco se encerra onde pausou (o que passou parado não vira foco).
+  if (session.state === 'em_andamento' && session.pausedSince !== undefined && pausedTotalMs(session, now) > MAX_PAUSED_MS) {
+    return closed(session, 'interrompida', session.pausedSince);
+  }
   return hasTimeRunOut(session, now) ? completeSession(session) : session;
 }
 

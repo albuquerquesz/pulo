@@ -106,6 +106,8 @@ export const HABITS = {
   defaultColor: 'sapo',
   statsWeeks: 16,
   statsMaxDays: 3660,
+  /** Um hábito feito pode ser registrado até este número de dias atrás (nunca antes de o hábito existir). */
+  registroMaxDiasAtras: 7,
 } as const;
 
 /** Metas de longo prazo. Poucas ativas de cada vez, para cada uma receber atenção de verdade. Proposta. */
@@ -118,6 +120,12 @@ export const GOALS = {
   defaultColor: 'agua',
   /** Ritmo: quanto o feito pode ficar abaixo do esperado (0 a 1) e ainda estar no ritmo. */
   paceTolerance: 0.1,
+  /** Quanto no passado pode estar uma data nova de criação, marco riscado ou conclusão. */
+  datasMaxHorasAtras: 24,
+  /** A data alvo vai no máximo até tantos anos à frente. */
+  prazoMaxAnos: 50,
+  /** O baú pede a meta com esta idade, e abrem no máximo `maxPorPeriodo` a cada `periodoDias`. */
+  bau: { idadeMinimaDias: 7, maxPorPeriodo: 3, periodoDias: 30 },
 } as const;
 
 /**
@@ -144,6 +152,8 @@ export const JOIAS = {
   por: { habitDone: 1, restDay: 2, milestoneDone: 3, goalCompleted: 10 },
   /** O foco rende 1 joia a cada tantos minutos focados, por sessão terminada (até o tempo planejado). */
   focusMinutesPerJoia: 5,
+  /** Marcos que pagam joias num mesmo dia; os hábitos param em `MAX_HABITS_PER_DAY` por dia. */
+  maxMarcosPorDia: 3,
 } as const;
 
 /** As camadas da casa (spec 31), na ordem em que aparecem. */
@@ -325,6 +335,12 @@ export const FOCUS = {
   maxBreakMinutes: 15,
   /** Intenção do foco, em texto curto (spec 19). */
   intentionMaxChars: 140,
+  /** Uma sessão nova não pode ter começado antes disto. */
+  inicioMaxDiasAtras: 7,
+  /** Folga ao conferir o tempo focado de uma sessão concluída e a sobreposição entre sessões. */
+  toleranciaSegundos: 30,
+  /** Pausa total de uma sessão; passando disto, o foco se encerra onde pausou. */
+  pausaMaxHoras: 24,
 } as const;
 
 /** Sons de fundo do foco (spec 15). */
