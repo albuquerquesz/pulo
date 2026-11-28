@@ -73,7 +73,7 @@ describe('hábitos v2: campos novos', () => {
 
   it('valida os campos novos', async () => {
     const me = await h.newUser();
-    for (const extra of [{ state: 'sumido' }, { icon: 'dois emojis' }, { icon: 'x'.repeat(HABITS.iconMaxChars + 1) }, { color: '#fff' }, { period: 'madrugada' }, { reminderMinutes: 1440 }]) {
+    for (const extra of [{ state: 'sumido' }, { icon: 'dois emojis' }, { icon: 'teste' }, { icon: 'x'.repeat(HABITS.iconMaxChars + 1) }, { color: '#fff' }, { period: 'madrugada' }, { reminderMinutes: 1440 }]) {
       const id = uuid();
       expect((await me.call('PUT', `/api/habits/${id}`, base(id, extra))).status).toBe(400);
     }
@@ -89,7 +89,12 @@ describe('hábitos v2: campos novos', () => {
 });
 
 describe('ícone do bloco', () => {
-  const bloco = (id: string, extra: Record<string, unknown> = {}) => ({ id, weekday: 0, startMinutes: 540, durationMinutes: 25, kind: 'foco', ...extra });
+  // Cada bloco num dia da semana: blocos no mesmo horário do mesmo dia são recusados por sobreposição.
+  const dias = new Map<string, number>();
+  const bloco = (id: string, extra: Record<string, unknown> = {}) => {
+    if (!dias.has(id)) dias.set(id, dias.size);
+    return { id, weekday: dias.get(id), startMinutes: 540, durationMinutes: 25, kind: 'foco', ...extra };
+  };
 
   it('um bloco e lote: grava, mantém quando omitido e tira com null', async () => {
     const me = await h.newUser();

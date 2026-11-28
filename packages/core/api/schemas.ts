@@ -50,6 +50,7 @@ import type {
 } from '../domain/types';
 import { linkCount } from '../domain/foco/targets';
 import { ehComodo } from '../domain/comodos';
+import { ehUmEmoji, TEXTO_DO_ICONE } from '../domain/emoji';
 
 /**
  * Contrato da API REST do Pulo: os mesmos schemas validam o corpo no servidor (apps/api) e servem
@@ -114,7 +115,7 @@ const titleSchema = z.string().trim().min(1).max(API_LIMITS.titleMaxChars);
 // ---------- Entidades ----------
 
 /** Emoji curto de hábitos e blocos (spec 17). */
-const iconSchema = z.string().trim().min(1).max(HABITS.iconMaxChars).regex(/^\S+$/);
+const iconSchema = z.string().trim().min(1).max(HABITS.iconMaxChars).refine(ehUmEmoji, TEXTO_DO_ICONE);
 
 const blockObjectSchema = z.object({
   id: idSchema,
@@ -465,7 +466,7 @@ export const goalSchema = z
     milestones: z.array(goalMilestoneSchema).max(GOALS.maxMilestones),
     createdAt: msSchema,
     completedAt: msSchema.optional(),
-    icon: z.string().trim().min(1).max(GOALS.iconMaxChars).regex(/^\S+$/).optional(),
+    icon: z.string().trim().min(1).max(GOALS.iconMaxChars).refine(ehUmEmoji, TEXTO_DO_ICONE).optional(),
     color: z.enum(ACCENT_COLORS).optional(),
   })
   .superRefine((goal, ctx) => {
