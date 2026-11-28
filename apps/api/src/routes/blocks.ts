@@ -1,11 +1,34 @@
 import { blocksBatchSchema, idParamSchema, routineBlockInputSchema } from '@pulo/core/api/schemas';
-import { routineBlockMapper } from '@pulo/db';
+import { slotOverlaps } from '@pulo/core/domain/ia/candidates';
+import type { RoutineBlock } from '@pulo/core/domain/types';
+import { Prisma, routineBlockMapper } from '@pulo/db';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { ApiError, type AppEnv, type RouteDeps, jsonBody, pathParams, requireMatch, requireSession } from '../http';
 import { blockSelect } from '../selects';
 
 const returnedBlocks = z.array(z.object({ id: z.string(), icon: z.string().nullable() }));
+
+// Serializável: dois aparelhos gravando no mesmo horário não passam juntos pela conferência.
+const SERIALIZAVEL = { isolationLevel: Prisma.TransactionIsolationLevel.Serializable };
+
+type SlotDoBloco = Pick<RoutineBlock, 'id' | 'weekday' | 'startMinutes' | 'durationMinutes'>;
+
+/**
+ * A regra de sobreposição do core, no servidor. Só vale para bloco novo ou que mudou de horário: um par que já
+ * estava cruzado não trava a troca de título ou de ícone.
+ */
+function conferirHorarios(stored: readonly RoutineBlock[], written: readonly SlotDoBloco[]): void {
+  const before = new Map(stored.map((b) => [b.id, b]));
+  const after = new Map<string, SlotDoBloco>([...stored, ...written].map((b) => [b.id, b]));
+  const clashes = written.flatMap((block, index) => {
+    const old = before.get(block.id);
+    if (old && old.weekday === block.weekday && old.startMinutes === block.startMinutes && old.durationMinutes === block.durationMinutes) return [];
+    const busy = [...after.values()].some((other) => other.id !== block.id && slotOverlaps(block, other));
+    return busy ? [{ path: `blocks.${index}`, message: 'já existe um bloco nesse horário' }] : [];
+  });
+  if (clashes.length > 0) throw new ApiError(409, 'horario_ocupado', 'Já existe um bloco nesse horário.', clashes);
+}
 
 /** Rotina semanal: `/api/blocks`. */
 export function blockRoutes({ auth, db }: RouteDeps) {
@@ -25,6 +48,8 @@ export function blockRoutes({ auth, db }: RouteDeps) {
       const { blocks } = c.req.valid('json');
       const userId = c.var.user.id;
       const saved = await db.$transaction(async (tx) => {
+        const stored = await tx.routineBlock.findMany({ where: { userId }, select: blockSelect });
+        conferirHorarios(stored.map(routineBlockMapper.toDomain), blocks);
         const rows = await tx.$queryRaw`
           INSERT INTO "routine_block" ("id", "userId", "weekday", "startMinutes", "durationMinutes", "kind", "title", "icon")
           SELECT t."id", ${userId}, t."weekday", t."startMinutes", t."durationMinutes", t."kind", t."title",
@@ -63,7 +88,7 @@ export function blockRoutes({ auth, db }: RouteDeps) {
           'Algum identificador já pertence a outro registro. Nada foi salvo.',
           blocks.flatMap((b, index) => (taken.has(b.id) ? [{ path: `blocks.${index}.id`, message: 'já existe um registro com este identificador' }] : [])),
         );
-      });
+      }, SERIALIZAVEL);
       return c.json({
         blocks: blocks.map(({ icon: _icon, ...block }) => {
           const icon = saved.get(block.id);
@@ -76,12 +101,19 @@ export function blockRoutes({ auth, db }: RouteDeps) {
       requireMatch(c.req.valid('param').id, block.id, 'id_divergente');
       const userId = c.var.user.id;
       const { id: _id, userId: _owner, ...update } = routineBlockMapper.fromDomain(userId, block);
-      const row = await db.routineBlock.upsert({
-        where: { id_userId: { id: block.id, userId } },
-        create: routineBlockMapper.fromDomain(userId, block),
-        update,
-        select: blockSelect,
-      });
+      const row = await db.$transaction(async (tx) => {
+        const stored = await tx.routineBlock.findMany({
+          where: { userId, OR: [{ id: block.id }, { weekday: block.weekday }] },
+          select: blockSelect,
+        });
+        conferirHorarios(stored.map(routineBlockMapper.toDomain), [block]);
+        return tx.routineBlock.upsert({
+          where: { id_userId: { id: block.id, userId } },
+          create: routineBlockMapper.fromDomain(userId, block),
+          update,
+          select: blockSelect,
+        });
+      }, SERIALIZAVEL);
       return c.json({ block: routineBlockMapper.toDomain(row) });
     })
     .delete('/:id', pathParams(idParamSchema), async (c) => {
