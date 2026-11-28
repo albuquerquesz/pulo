@@ -20,7 +20,7 @@ const day = (key: string) => new Date(`${key}T00:00:00.000Z`);
 async function person(dates: string[], resolvidoAte?: string): Promise<TestUser> {
   const me = await h.newUser();
   const habitId = crypto.randomUUID();
-  await database.db.habit.create({ data: { id: habitId, userId: me.id, title: 'Ler', weekdays: [0], state: 'ativo' } });
+  await database.db.habit.create({ data: { id: habitId, userId: me.id, title: 'Ler', weekdays: [0, 1, 2, 3, 4, 5, 6], state: 'ativo', createdAt: day('2026-01-01') } });
   await database.db.habitLog.createMany({ data: dates.map((date) => ({ userId: me.id, habitId, date: day(date), doneAt: new Date(TEST_NOW) })) });
   if (resolvidoAte !== undefined) {
     await database.db.mascotState.create({

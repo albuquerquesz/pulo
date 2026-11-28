@@ -95,8 +95,8 @@ export function validarEscritaDaMeta({ meta, anterior, now, timeZone, folgaMs }:
  */
 export function podeAbrirBau(meta: Goal, baus: readonly GoalChest[], now: number): Result<Goal, ChestErrorCode> {
   const { idadeMinimaDias, maxPorPeriodo, periodoDias } = GOALS.bau;
-  if (baus.some((b) => b.goalId === meta.id)) return fail('bau_ja_aberto', 'Esse baú já foi aberto.');
   if (meta.state !== 'concluida') return fail('meta_nao_concluida', 'Conclua a meta para abrir o baú.');
+  if (baus.some((b) => b.goalId === meta.id)) return fail('bau_ja_aberto', 'Esse baú já foi aberto.');
   if (meta.milestones.some((m) => m.doneAt === undefined)) return fail('marcos_pendentes', 'Risque todos os marcos para abrir o baú.');
   if (now - meta.createdAt < idadeMinimaDias * DAY_MS) {
     return fail('meta_nova_demais', `O baú abre quando a meta completar ${idadeMinimaDias} dias.`);

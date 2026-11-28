@@ -1,5 +1,7 @@
+import { HABITS } from '@pulo/core/config/decisions';
+import { addDays } from '@pulo/core/domain/day';
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
-import { type TestUser, createHarness, queriesOf } from '../testing';
+import { type TestUser, createHarness, envelhecerHabito, queriesOf } from '../testing';
 
 let database: TestDatabase;
 let h: ReturnType<typeof createHarness>;
@@ -18,6 +20,7 @@ const DONE_AT = 1_794_900_000_000;
 async function newHabit(user: TestUser) {
   const id = uuid();
   await user.call('PUT', `/api/habits/${id}`, { id, title: 'Ler', weekdays: [0, 1, 2, 3, 4, 5, 6], active: true });
+  await envelhecerHabito(database, id);
   return id;
 }
 const log = (habitId: string, date: string, doneAt = DONE_AT) => ({ habitId, date, doneAt });
@@ -37,10 +40,10 @@ describe('/api/habit-logs', () => {
     // Repetir não troca o doneAt.
     expect(await (await put(me, log(habitId, '2026-11-16', DONE_AT + 5000))).json()).toEqual({ habitLog: log(habitId, '2026-11-16'), newAchievements: [] });
     await put(me, log(habitId, '2026-11-18'));
-    await put(me, log(habitId, '2026-11-25'));
+    await put(me, log(habitId, '2026-11-12'));
 
     const all = (await (await me.call('GET', '/api/habit-logs')).json()).habitLogs;
-    expect(all.map((l: { date: string }) => l.date)).toEqual(['2026-11-16', '2026-11-18', '2026-11-25']);
+    expect(all.map((l: { date: string }) => l.date)).toEqual(['2026-11-12', '2026-11-16', '2026-11-18']);
     const week = (await (await me.call('GET', '/api/habit-logs?from=2026-11-16&to=2026-11-22')).json()).habitLogs;
     expect(week.map((l: { date: string }) => l.date)).toEqual(['2026-11-16', '2026-11-18']);
 
@@ -98,23 +101,49 @@ describe('/api/habit-logs', () => {
       data: Array.from({ length: 50 }, (_, i) => ({
         habitId: bigHabit,
         userId: big.id,
-        date: new Date(Date.UTC(2026, 10, 1 + (i % 28))),
+        date: new Date(Date.UTC(2026, 8, 1 + i)),
         doneAt: new Date(DONE_AT),
-      })).filter((row, i, rows) => rows.findIndex((r) => r.date.getTime() === row.date.getTime()) === i),
+      })),
     });
 
     // Grava o que o histórico já destrava, para a contagem abaixo não incluir o INSERT de uma conquista.
-    await put(big, log(bigHabit, '2026-11-01'));
+    await put(big, log(bigHabit, '2026-11-15'));
 
     const get = await queriesOf(database, small, 'GET', '/api/habit-logs?from=2026-11-01&to=2026-11-30');
     expect(await queriesOf(database, big, 'GET', '/api/habit-logs?from=2026-11-01&to=2026-11-30')).toBe(get);
     expect(get).toBe(3);
     const putCount = await queriesOf(database, small, 'PUT', `/api/habit-logs/${smallHabit}/2026-11-17`, log(smallHabit, '2026-11-17'));
-    expect(await queriesOf(database, big, 'PUT', `/api/habit-logs/${bigHabit}/2026-12-01`, log(bigHabit, '2026-12-01'))).toBe(putCount);
-    expect(putCount).toBe(18);
+    expect(await queriesOf(database, big, 'PUT', `/api/habit-logs/${bigHabit}/2026-11-17`, log(bigHabit, '2026-11-17'))).toBe(putCount);
+    expect(putCount).toBe(20);
     const del = await queriesOf(database, small, 'DELETE', `/api/habit-logs/${smallHabit}/2026-11-17`);
-    expect(await queriesOf(database, big, 'DELETE', `/api/habit-logs/${bigHabit}/2026-12-01`)).toBe(del);
+    expect(await queriesOf(database, big, 'DELETE', `/api/habit-logs/${bigHabit}/2026-11-17`)).toBe(del);
     // 2 de sessão + o acerto do gelo (6 leituras) + o delete.
     expect(del).toBe(9);
+  });
+
+  it('recusa o dia fora das regras, sem dar joia, mas repetir uma marca antiga continua valendo', async () => {
+    const me = await h.newUser();
+    const habitId = await newHabit(me);
+    const recusa = async (date: string, id = habitId) => {
+      const res = await put(me, log(id, date));
+      return [res.status, (await res.json()).error];
+    };
+    expect(await recusa('2026-11-19')).toEqual([409, 'data_no_futuro']);
+    expect(await recusa(addDays('2026-11-18', -HABITS.registroMaxDiasAtras - 1))).toEqual([409, 'data_antiga']);
+
+    // Criado agora pela API: ontem ele ainda não existia.
+    const novo = uuid();
+    await me.call('PUT', `/api/habits/${novo}`, { id: novo, title: 'Novo', weekdays: [0, 1, 2, 3, 4, 5, 6], state: 'ativo' });
+    expect(await recusa('2026-11-17', novo)).toEqual([409, 'data_antes_do_habito']);
+    expect((await put(me, log(novo, '2026-11-18'))).status).toBe(200);
+
+    // 18/11/2026 é quarta (2); 16 é segunda.
+    await me.call('PUT', `/api/habits/${habitId}`, { id: habitId, title: 'Ler', weekdays: [0], state: 'ativo' });
+    expect(await recusa('2026-11-18')).toEqual([409, 'dia_fora_do_habito']);
+    expect((await put(me, log(habitId, '2026-11-16'))).status).toBe(200);
+    await me.call('PUT', `/api/habits/${habitId}`, { id: habitId, title: 'Ler', weekdays: [0], state: 'arquivado' });
+    expect((await put(me, log(habitId, '2026-11-16'))).status).toBe(200);
+    expect(await recusa('2026-11-11')).toEqual([409, 'habito_arquivado']);
+    expect(await database.db.habitLog.count({ where: { userId: me.id } })).toBe(2);
   });
 });

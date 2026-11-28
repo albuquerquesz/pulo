@@ -1,11 +1,13 @@
 import { dateRangeQuerySchema, habitLogParamSchema, habitLogSchema } from '@pulo/core/api/schemas';
-import { dateKeyToDate, habitLogMapper } from '@pulo/db';
+import { validarDiaDoRegistro } from '@pulo/core/domain/habits';
+import { dateKeyToDate, habitLogMapper, habitMapper } from '@pulo/db';
 import { Hono } from 'hono';
 import { unlockAchievements } from '../achievements';
 import { acertarGeloDaPessoa } from '../gelo';
 import {
   ApiError,
   type AppEnv,
+  CLOCK_SKEW_MS,
   type RouteDeps,
   assertNotInFuture,
   jsonBody,
@@ -15,7 +17,7 @@ import {
   requireSession,
 } from '../http';
 import { dateFilter } from '../queries';
-import { habitLogSelect } from '../selects';
+import { habitLogSelect, habitSelect } from '../selects';
 
 /** Hábitos feitos: `/api/habit-logs`. */
 export function habitLogRoutes({ auth, db, now }: RouteDeps) {
@@ -36,16 +38,27 @@ export function habitLogRoutes({ auth, db, now }: RouteDeps) {
       requireMatch(params.habitId, log.habitId, 'id_divergente');
       requireMatch(params.date, log.date, 'data_divergente');
       assertNotInFuture(log.doneAt, now(), 'doneAt');
-      const userId = c.var.user.id;
-      // Uma marca por hábito e dia: repetir mantém a primeira (INSERT ... ON CONFLICT DO NOTHING).
-      // Hábito inexistente falha na chave estrangeira composta (habitId, userId) e vira 404.
-      await db.habitLog.createMany({ data: [habitLogMapper.fromDomain(userId, log)], skipDuplicates: true });
-      // Se a marca existente é de outra pessoa (hábito alheio), ela não aparece aqui: responde como inexistente.
-      const row = await db.habitLog.findFirst({
-        where: { habitId: log.habitId, date: dateKeyToDate(log.date), userId },
-        select: habitLogSelect,
-      });
-      if (row === null) throw new ApiError(404, 'referencia_inexistente', 'O hábito não existe.');
+      const { id: userId, metadata } = c.var.user;
+      const where = { habitId: log.habitId, date: dateKeyToDate(log.date), userId };
+      // Uma marca por hábito e dia: repetir mantém a primeira, mesmo que o dia já não aceite uma nova.
+      let row = await db.habitLog.findFirst({ where, select: habitLogSelect });
+      if (row === null) {
+        const habit = await db.habit.findFirst({ where: { id: log.habitId, userId }, select: { ...habitSelect, createdAt: true } });
+        // Hábito de outra pessoa responde como inexistente.
+        if (habit === null) throw new ApiError(404, 'referencia_inexistente', 'O hábito não existe.');
+        const dia = validarDiaDoRegistro({
+          habit: habitMapper.toDomain(habit),
+          date: log.date,
+          now: now() + CLOCK_SKEW_MS,
+          timeZone: metadata.timezone,
+          dayStartMinutes: metadata.profile?.dayStartMinutes,
+          ...(habit.createdAt === null ? {} : { createdAt: habit.createdAt.getTime() }),
+        });
+        if (!dia.ok) throw new ApiError(409, dia.error.code, dia.error.message);
+        // Duas marcas ao mesmo tempo: vale a primeira (INSERT ... ON CONFLICT DO NOTHING).
+        await db.habitLog.createMany({ data: [habitLogMapper.fromDomain(userId, log)], skipDuplicates: true });
+        row = await db.habitLog.findFirstOrThrow({ where, select: habitLogSelect });
+      }
       const newAchievements = await unlockAchievements(db, c.var.user, now());
       return c.json({ habitLog: habitLogMapper.toDomain(row), newAchievements });
     })

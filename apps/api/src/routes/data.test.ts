@@ -1,5 +1,5 @@
 import { type TestDatabase, createTestDatabase } from '@pulo/db/testing';
-import { type TestUser, TEST_NOW, createHarness, queriesOf } from '../testing';
+import { type TestUser, TEST_NOW, createHarness, queriesOf, envelhecerHabito } from '../testing';
 
 let database: TestDatabase;
 let h: ReturnType<typeof createHarness>;
@@ -22,6 +22,7 @@ async function populate(user: TestUser, extra = 0) {
   const sessionId = uuid();
   await user.call('PUT', `/api/blocks/${blockId}`, { id: blockId, weekday: 0, startMinutes: 480, durationMinutes: 30, kind: 'foco' });
   await user.call('PUT', `/api/habits/${habitId}`, { id: habitId, title: 'Ler', weekdays: [0], active: true });
+  await envelhecerHabito(database, habitId);
   await user.call('PUT', `/api/habit-logs/${habitId}/2026-11-16`, { habitId, date: '2026-11-16', doneAt: TEST_NOW });
   await user.call('PUT', `/api/sessions/${sessionId}`, {
     id: sessionId, blockId, startedAt: TEST_NOW - 30 * MIN, endedAt: TEST_NOW - 5 * MIN, plannedMinutes: 25, state: 'concluida', pausedMs: 0,

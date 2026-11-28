@@ -108,9 +108,9 @@ export function habitRoutes({ auth, db, now }: RouteDeps) {
           }
 
           const rows = await tx.$queryRaw`
-            INSERT INTO "habit" ("id", "userId", "title", "weekdays", "state", "goalId", "icon", "color", "period", "reminderMinutes", "reminderOn")
+            INSERT INTO "habit" ("id", "userId", "title", "weekdays", "state", "goalId", "icon", "color", "period", "reminderMinutes", "reminderOn", "createdAt")
             SELECT t."id", ${userId}, t."title", string_to_array(t."weekdays", ',')::smallint[], t."state", t."goalId",
-              t."icon", t."color", t."period", t."reminderMinutes", t."reminderOn"
+              t."icon", t."color", t."period", t."reminderMinutes", t."reminderOn", ${new Date(now())}::timestamptz
             FROM unnest(
               ${habits.map((h) => h.id)}::text[],
               ${habits.map((h) => h.title)}::text[],
@@ -174,7 +174,8 @@ export function habitRoutes({ auth, db, now }: RouteDeps) {
           const { id: _id, userId: _owner, ...update } = data;
           return tx.habit.upsert({
             where: { id_userId: { id: habit.id, userId } },
-            create: data,
+            // A hora de criação vem do relógio do servidor: os registros não podem ser anteriores a ela.
+            create: { ...data, createdAt: new Date(now()) },
             update,
             select: habitSelect,
           });

@@ -1,6 +1,7 @@
 // Apoio só para os testes da API: ambiente fictício e login sem passar pelo Google.
 // O banco é o Postgres de teste do @pulo/db (createTestDatabase), um banco novo por arquivo.
 import { randomUUID } from 'node:crypto';
+import { GOALS } from '@pulo/core/config/decisions';
 import { DEFAULT_USER_METADATA, type UserMetadata } from '@pulo/core/domain/user-metadata';
 import type { TestDatabase } from '@pulo/db/testing';
 import { serializeSignedCookie } from 'better-call';
@@ -66,6 +67,16 @@ export function createHarness(database: TestDatabase, options: AppOptions = {}) 
   }
 
   return { app, auth, newUser, setNow: (value: number) => void (now = value), now: () => now };
+}
+
+/** Faz o hábito já existir há tempo: pela API ele nasce agora, e não dá para marcar dias anteriores. */
+export async function envelhecerHabito(database: TestDatabase, id: string): Promise<void> {
+  await database.db.habit.update({ where: { id }, data: { createdAt: new Date('2025-01-01T12:00:00Z') } });
+}
+
+/** Dá à meta idade para o baú (pela API ela nasce agora). */
+export async function envelhecerMeta(database: TestDatabase, id: string): Promise<void> {
+  await database.db.goal.update({ where: { id }, data: { createdAt: new Date(TEST_NOW - GOALS.bau.idadeMinimaDias * 24 * 60 * 60_000) } });
 }
 
 /** Quantas queries SQL uma chamada faz (inclui as 2 da sessão do Better Auth). Falha mostrando o SQL se a resposta não for a esperada. */

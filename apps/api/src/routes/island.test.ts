@@ -19,15 +19,12 @@ const comprar = (user: TestUser, item: string, cost: number, createdAt?: number)
   user.call('PUT', `/api/island/purchases/${item}`, compra(item, cost, createdAt));
 const listar = async (user: TestUser) => (await (await user.call('GET', '/api/island/purchases')).json()).purchases;
 
-/** Marca `n` hábitos feitos pela própria API (uma joia cada), como o app faria. */
+/** `n` hábitos feitos em dias diferentes (uma joia cada), direto no banco: pela API só os últimos dias. */
 async function joiasPorHabito(user: TestUser, n: number) {
-  const habitId = uuid();
-  await user.call('PUT', `/api/habits/${habitId}`, { id: habitId, title: 'Ler', weekdays: [0, 1, 2, 3, 4, 5, 6], active: true });
-  for (let i = 0; i < n; i += 1) {
-    const date = `2026-10-${String(i + 1).padStart(2, '0')}`;
-    const res = await user.call('PUT', `/api/habit-logs/${habitId}/${date}`, { habitId, date, doneAt: TEST_NOW - 1 });
-    expect(res.status).toBe(200);
-  }
+  const { id: habitId } = await database.db.habit.create({ data: { userId: user.id, title: 'Ler', weekdays: [0] }, select: { id: true } });
+  await database.db.habitLog.createMany({
+    data: Array.from({ length: n }, (_, i) => ({ userId: user.id, habitId, date: new Date(Date.UTC(2026, 9, 1 + i)), doneAt: new Date(TEST_NOW - 1) })),
+  });
 }
 
 /** Muitas joias de uma vez, direto no banco: `n` dias de descanso valem `n * JOIAS.por.restDay`. */
